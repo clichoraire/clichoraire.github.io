@@ -41,13 +41,13 @@ Sans la rondelle, le bouton de lancer déclenche une mise en échec.
 ## Équipes et personnages
 
 Cinq équipes, dans `HK.TEAMS` : Les Matt (bleu : Matthieu, Josée, Richard), Les Bibi (couleurs des Canadiens :
-Mickael, Marie, Mike, Adam), Les Jay (rouge : Jérémie, Jessica, Diddy), Les Jo (vert : Josué, Zachary, Émily, Elliot)
+Mickael, Marie, Adam, Milo), Les Jay (rouge : Jérémie, Jessica, Edison), Les Jo (vert : Josué, Zachary, Émily, Alexie, Eliott)
 et Les Boys (noir et or, les personnages des films : Bob n° 9, Ti-Guy n° 10, Julien n° 18, Méo n° 99, Mario n° 66,
 Jean-Charles n° 11, Popol n° 30, François n° 15, Marcel n° 88, Stan le coach, Roger toujours au banc, et Fern n° 1
 dans les buts — une équipe peut nommer son gardien avec `goalie`). Les trois premiers de la liste commencent
 sur la glace ; les autres attendent au banc et remplacent les plus fatigués à une mise au jeu (barres d'énergie en bas).
 
-Chaque personnage dans `HK.PLAYERS` a : `name`, `age` (c'est aussi son numéro de chandail), `role` (étiquette :
+Chaque personnage dans `HK.PLAYERS` a : `name`, `birth` (date de naissance : l'âge est calculé chaque jour et sert de numéro de chandail, avec un 🎂 le jour de la fête ; les Boys ont un `number` fixe), `role` (étiquette :
 grand-papa, grand-maman, papa, maman, mononcle, enfant, tout-petit, ado), `size` (1 = adulte, les enfants sont
 plus petits avec une plus grosse tête), `stats` (vitesse, tir, force, contrôle de 1 à 5), `look` (peau, cheveux,
 style de cheveux, lunettes, barbe, moustache, suce, tuque, casquette, rides, bedaine…) et `power`.
@@ -59,9 +59,9 @@ déposséder ; les grands-parents sont lents mais solides.
 ## Pouvoirs (touche V / J, recharge de 15 à 22 s)
 
 Code de triche (Matthieu), Biscuits chauds (Josée), Charge du vétéran (Richard), Lunettes laser (Mickael),
-Bulle de savon (Marie), Zoom-zoom (Mike), Crise de bacon (Adam), Téléportation (Jérémie), Aimant à rondelle (Jessica),
-Glissade sur le ventre (Diddy), Cri du capitaine (Josué), Lancer frappé d'ado (Zachary), Blizzard (Émily),
-Fantôme (Elliot). Les Boys : Temps d'arrêt (Stan), Charme de Bob, Deal du siècle (Ti-Guy), Objection ! (Jean-Charles,
+Bulle de savon (Marie), Zoom-zoom (Adam), Crise de bacon (Milo), Téléportation (Jérémie), Aimant à rondelle (Jessica),
+Glissade sur le ventre (Edison), Cri du capitaine (Josué), Lancer frappé d'ado (Zachary), Blizzard (Émily),
+Fantôme (Eliott), Flash de selfie (Alexie). Les Boys : Temps d'arrêt (Stan), Charme de Bob, Deal du siècle (Ti-Guy), Objection ! (Jean-Charles,
 banc des punitions), Trousse du docteur (François), Pétage de coche (Julien), Mur de Popol, Le 66 (Mario), Crise de
 nerfs (Marcel), Boucane de Méo, Chaise musicale (Roger). La description de chacun est dans `HK.POWERS` et s'affiche
 au survol dans l'écran de sélection.

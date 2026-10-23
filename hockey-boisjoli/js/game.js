@@ -752,6 +752,10 @@
           O.goalie.slowT = 4; O.goalie.slowM = 0.5; fx('blizzard', { t: 4, t0: 4, side: O.side }); break;
         case 'fantome': s.ghost = 4; fx('fantome', { t: 0.5, t0: 0.5 }); break;
         case 'slap': s.slap = 6; fx('slap', { t: 0.8, t0: 0.8 }); break;
+        case 'flash':
+          for (const o of O.skaters) if (near(o, 200)) this.stunSkater(o, 1.5, 'dizzy');
+          if (near(O.goalie, 260)) O.goalie.down = Math.max(O.goalie.down, 1.2);
+          fx('flash', { t: 0.6, t0: 0.6 }); break;
         // --- Les Boys
         case 'tempsmort': for (const o of O.skaters) this.stunSkater(o, 2, 'dizzy'); fx('tempsmort', { t: 1.5, t0: 1.5 }); break;
         case 'charme': {

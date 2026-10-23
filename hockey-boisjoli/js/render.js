@@ -138,6 +138,7 @@
         if (f.kind === 'blizzard') { ctx.fillStyle = 'rgba(200,235,255,0.18)'; const x0 = f.side < 0 ? R.x : CX(); ctx.fillRect(x0, R.y, R.w / 2, R.h); ctx.fillStyle = 'rgba(255,255,255,0.85)'; const rnd = HK.makeRand(3); for (let i = 0; i < 60; i++) { const px = x0 + rnd() * R.w / 2, ph = (now / 1500 + rnd()) % 1; S.circle(ctx, px + Math.sin(now / 300 + i) * 8, R.y + ph * R.h, 2 + rnd() * 2); ctx.fill(); } }
         if (f.kind === 'docteur') { ctx.strokeStyle = `rgba(80,255,120,${1 - k})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(f.x, f.y, 30 + 180 * k, 0, TAU); ctx.stroke(); }
         if (f.kind === 'tempsmort') { ctx.fillStyle = `rgba(255,255,255,${0.15 * (1 - k)})`; ctx.fillRect(R.x, R.y, R.w, R.h); }
+        if (f.kind === 'flash') { ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - k)})`; ctx.fillRect(R.x, R.y, R.w, R.h); }
         if (f.kind === 'cheat') { ctx.fillStyle = 'rgba(40,200,90,0.08)'; ctx.fillRect(R.x, R.y, R.w, R.h); ctx.fillStyle = 'rgba(60,255,120,0.5)'; ctx.font = 'bold 12px monospace'; const rnd = HK.makeRand(5); for (let i = 0; i < 40; i++) { const px = R.x + rnd() * R.w, ph = (now / 2000 + rnd()) % 1; ctx.fillText(((now / 90 + i) | 0) % 2 ? '1' : '0', px, R.y + ph * R.h); } }
       } else {
         if (f.kind === 'biscuits') { for (let i = 0; i < 8; i++) { const a = i * TAU / 8, rr = f.r * Math.min(1, k * 3), bounce = Math.abs(Math.sin(Math.min(1, k * 3) * Math.PI)) * 30; cookie(ctx, f.x + Math.cos(a) * rr, f.y - 10 + Math.sin(a) * rr * 0.6 - bounce, 6); } }
@@ -299,7 +300,7 @@
       const who = ui.humans.find(h => g.controlled[h.team] === s);
       const hum = ui.humans.find(h => h.team === s.team), idx = hum && !s.bot ? g.teams[s.team].skaters.indexOf(s) : -1;
       const keys = hum ? (hum.n === 1 ? ['1', '2', '3'] : ['8', '9', '0']) : [];
-      label(ctx, s.x, top, (idx >= 0 && idx < 3 ? keys[idx] + ' · ' : '') + s.def.name, who ? who.color : 'rgba(0,0,0,0.6)', who ? '#000' : '#fff');
+      label(ctx, s.x, top, (idx >= 0 && idx < 3 ? keys[idx] + ' · ' : '') + s.def.name + (s.def.birth && HK.isBirthday(s.def.birth) ? ' 🎂' : ''), who ? who.color : 'rgba(0,0,0,0.6)', who ? '#000' : '#fff');
       if (who) { ctx.fillStyle = who.color; const by = top - 14 + Math.sin(now / 120) * 2; ctx.beginPath(); ctx.moveTo(s.x - 7, by - 8); ctx.lineTo(s.x + 7, by - 8); ctx.lineTo(s.x, by); ctx.closePath(); ctx.fill(); }
     }
     for (const T of g.teams) for (const s of T.box) { S.drawPerson(ctx, s.x, s.y, s.def, T.def, { dir: s.dir, frame: 0, scale: 0.8 }); label(ctx, s.x, s.y + 12, s.def.name + ' · punition ' + Math.ceil(s.penalty) + ' s', '#d9342b', '#fff', true); }

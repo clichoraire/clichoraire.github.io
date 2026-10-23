@@ -76,7 +76,7 @@
         const d = HK.PLAYERS[pid], P = HK.POWERS[d.power];
         const row = document.createElement('div'); row.className = 'pl' + (k >= HK.ON_ICE ? ' bench' : '');
         row.appendChild(S.portrait(d, t, 64, 78, 1.15));
-        row.insertAdjacentHTML('beforeend', `<div class="pl-info"><b>${d.name}</b> <em>${roleOf(d)} · ${d.age} ans</em>
+        row.insertAdjacentHTML('beforeend', `<div class="pl-info"><b>${d.name}${d.birth && HK.isBirthday(d.birth) ? ' 🎂' : ''}</b> <em>${roleOf(d)} · ${d.age} an${d.age > 1 ? 's' : ''}${d.birth && HK.isBirthday(d.birth) ? ' · Bonne fête !' : ''}</em>
           <div class="stats">${statBar(d.stats.speed, 'Vitesse')}${statBar(d.stats.shot, 'Tir')}${statBar(d.stats.force, 'Force')}${statBar(d.stats.control, 'Contrôle')}</div>
           <div class="power" title="${P.desc}">${P.icon} ${P.name}</div></div>`);
         list.appendChild(row);

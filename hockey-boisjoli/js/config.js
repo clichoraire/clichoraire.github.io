@@ -13,6 +13,14 @@ window.HK = window.HK || {};
   HK.DIFFICULTIES = ['Facile', 'Normal', 'Difficile'];
   HK.ON_ICE = 3;                        // joueurs par équipe sur la glace (plus le gardien)
 
+  // Âge réel à partir de la date de naissance (le numéro de chandail des Boisjoli est leur âge). 🎂 le jour de leur fête.
+  HK.ageOf = function (birth, today) {
+    const b = new Date(birth + 'T00:00:00'), t = today || new Date();
+    let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--;
+    return a;
+  };
+  HK.isBirthday = function (birth, today) { const b = new Date(birth + 'T00:00:00'), t = today || new Date(); return b.getMonth() === t.getMonth() && b.getDate() === t.getDate(); };
+
   HK.ROLES = {
     grandpapa: 'Grand-papa', grandmaman: 'Grand-maman', papa: 'Papa', maman: 'Maman',
     mononcle: 'Mononcle', enfant: 'Enfant', toutpetit: 'Tout-petit', ado: 'Ado',
@@ -34,6 +42,7 @@ window.HK = window.HK || {};
     capitaine: { name: 'Cri du capitaine', icon: '📣', cd: 22, desc: 'Toute son équipe est plus rapide et tire plus fort pendant 5 s.' },
     blizzard:  { name: 'Blizzard',         icon: '❄️', cd: 20, desc: 'Une tempête ralentit tous les adversaires (et leur gardien) pendant 4 s.' },
     fantome:   { name: 'Fantôme',          icon: '👻', cd: 18, desc: 'Passe à travers tout le monde pendant 4 s, impossible à plaquer.' },
+    flash:     { name: 'Flash de selfie',  icon: '📸', cd: 18, desc: 'Un flash aveuglant : les adversaires autour (et leur gardien) sont étourdis 1,5 s.' },
     slap:      { name: 'Lancer frappé d\'ado', icon: '🔥', cd: 16, desc: 'Son prochain tir est une fusée : une chance sur deux de passer à travers le gardien.' },
     // Les Boys
     tempsmort: { name: 'Temps d\'arrêt',     icon: '📋', cd: 28, desc: 'Stan siffle : tous les adversaires s\'arrêtent 2 s pour écouter le coach.' },
@@ -52,49 +61,52 @@ window.HK = window.HK || {};
   // Personnages : stats de 1 à 5, taille (1 = adulte), apparence.
   // Le numéro de chandail est l'âge. Pour renommer quelqu'un, il suffit de changer `name`.
   HK.PLAYERS = {
-    matthieu: { name: 'Matthieu', age: 36, role: 'mononcle', size: 1.0, power: 'cheat',
+    matthieu: { name: 'Matthieu', birth: '1990-01-15', role: 'mononcle', size: 1.0, power: 'cheat',
       stats: { speed: 3, shot: 3, force: 2, control: 4 },
       look: { skin: '#f0c8a0', hair: '#4a2f1b', hairStyle: 'short', beard: '#3d2616' } },
-    josee: { name: 'Josée', age: 63, role: 'grandmaman', size: 0.92, power: 'biscuits',
+    josee: { name: 'Josée', birth: '1960-06-29', role: 'grandmaman', size: 0.92, power: 'biscuits',
       stats: { speed: 2, shot: 2, force: 2, control: 5 },
       look: { skin: '#f3d2b4', hair: '#d8d2c8', hairStyle: 'bun', lipstick: true, earrings: true, wrinkles: true } },
-    richard: { name: 'Richard', age: 69, role: 'grandpapa', size: 1.0, power: 'charge',
+    richard: { name: 'Richard', birth: '1956-03-15', role: 'grandpapa', size: 1.0, power: 'charge',
       stats: { speed: 1, shot: 5, force: 4, control: 2 },
       look: { skin: '#edc39c', hair: '#f2f2f2', hairStyle: 'bald', mustache: '#f2f2f2', glasses: 'reading', eyebrows: 'bushy', belly: true, wrinkles: true } },
 
-    mickael: { name: 'Mickael', age: 33, role: 'papa', size: 0.98, power: 'laser',
+    mickael: { name: 'Mickael', birth: '1993-01-04', role: 'papa', size: 0.98, power: 'laser',
       stats: { speed: 3, shot: 3, force: 4, control: 4 },
       look: { skin: '#f0c8a0', hair: '#2b1d12', hairStyle: 'short', glasses: 'round', stubble: true } },
-    marie: { name: 'Marie', age: 32, role: 'maman', size: 0.92, power: 'bulle',
-      stats: { speed: 4, shot: 3, force: 2, control: 4 },
+    marie: { name: 'Marie', birth: '1994-01-06', role: 'maman', size: 0.92, power: 'bulle',
+      stats: { speed: 4, shot: 3, force: 3, control: 4 },
       look: { skin: '#f6d6bd', hair: '#5a3a22', hairStyle: 'long', lipstick: true } },
-    mike: { name: 'Mike', age: 5, role: 'enfant', size: 0.6, power: 'zoom',
-      stats: { speed: 5, shot: 1, force: 1, control: 3 },
+    adam: { name: 'Adam', birth: '2021-09-11', role: 'enfant', size: 0.6, power: 'zoom',
+      stats: { speed: 5, shot: 2, force: 1, control: 4 },
       look: { skin: '#f6d6bd', hair: '#4a2f1b', hairStyle: 'spiky', cheeks: true } },
-    adam: { name: 'Adam', age: 3, role: 'toutpetit', size: 0.5, power: 'crise',
+    milo: { name: 'Milo', birth: '2024-03-12', role: 'toutpetit', size: 0.45, power: 'crise',
       stats: { speed: 2, shot: 1, force: 1, control: 2 },
       look: { skin: '#f6d6bd', hair: '#6b4a2b', hairStyle: 'tuque', hat: '#ff6b6b', pacifier: true, cheeks: true } },
 
-    jeremie: { name: 'Jérémie', age: 35, role: 'papa', size: 1.0, power: 'teleport',
+    jeremie: { name: 'Jérémie', birth: '1988-03-06', role: 'papa', size: 1.0, power: 'teleport',
       stats: { speed: 4, shot: 4, force: 3, control: 3 },
       look: { skin: '#eec49b', hair: '#2b1d12', hairStyle: 'buzz', goatee: '#2b1d12' } },
-    jessica: { name: 'Jessica', age: 33, role: 'maman', size: 0.92, power: 'aimant',
+    jessica: { name: 'Jessica', birth: '1991-07-01', role: 'maman', size: 0.92, power: 'aimant',
       stats: { speed: 4, shot: 4, force: 2, control: 5 },
       look: { skin: '#f6d6bd', hair: '#e5c06b', hairStyle: 'ponytail', lipstick: true, earrings: true } },
-    diddy: { name: 'Diddy', age: 5, role: 'enfant', size: 0.6, power: 'glissade',
-      stats: { speed: 5, shot: 2, force: 1, control: 4 },
-      look: { skin: '#eec49b', hair: '#2b1d12', hairStyle: 'curly', cheeks: true } },
+    edison: { name: 'Edison', birth: '2023-02-08', role: 'toutpetit', size: 0.5, power: 'glissade',
+      stats: { speed: 4, shot: 1, force: 1, control: 4 },
+      look: { skin: '#eec49b', hair: '#2b1d12', hairStyle: 'curly', cheeks: true, pacifier: true } },
 
-    josue: { name: 'Josué', age: 37, role: 'papa', size: 1.0, power: 'capitaine',
+    josue: { name: 'Josué', birth: '1985-10-29', role: 'papa', size: 1.0, power: 'capitaine',
       stats: { speed: 3, shot: 4, force: 4, control: 3 },
       look: { skin: '#f0c8a0', hair: '#3b2a1a', hairStyle: 'cap', hat: '#1b1b1b', stubble: true } },
-    emily: { name: 'Émily', age: 34, role: 'maman', size: 0.94, power: 'blizzard',
+    emily: { name: 'Émily', birth: '1984-12-25', role: 'maman', size: 0.94, power: 'blizzard',
       stats: { speed: 3, shot: 2, force: 2, control: 4 },
       look: { skin: '#f6d6bd', hair: '#b5452a', hairStyle: 'long', lipstick: true, earrings: true } },
-    elliot: { name: 'Elliot', age: 8, role: 'enfant', size: 0.7, power: 'fantome',
+    eliott: { name: 'Eliott', birth: '2016-10-06', role: 'enfant', size: 0.78, power: 'fantome',
       stats: { speed: 4, shot: 2, force: 1, control: 3 },
       look: { skin: '#f0c8a0', hair: '#3b2a1a', hairStyle: 'short', cheeks: true, freckles: true } },
-    zachary: { name: 'Zachary', age: 19, role: 'ado', size: 1.05, power: 'slap',
+    alexie: { name: 'Alexie', birth: '2014-11-01', role: 'enfant', size: 0.82, power: 'flash',
+      stats: { speed: 4, shot: 2, force: 1, control: 4 },
+      look: { skin: '#f6d6bd', hair: '#5a3a22', hairStyle: 'ponytail', cheeks: true, freckles: true } },
+    zachary: { name: 'Zachary', birth: '2007-08-02', role: 'ado', size: 1.05, power: 'slap',
       stats: { speed: 5, shot: 4, force: 2, control: 3 },
       look: { skin: '#f0c8a0', hair: '#1b1b1b', hairStyle: 'fringe', tall: true, earbuds: true } },
 
@@ -140,12 +152,13 @@ window.HK = window.HK || {};
   // Équipes : les 3 premiers joueurs commencent sur la glace, les autres au banc (changements aux mises au jeu).
   HK.TEAMS = [
     { id: 'matt', name: 'Les Matt', short: 'MATT', color: '#1e5bd8', color2: '#ffffff', dark: '#0f2f73', players: ['matthieu', 'josee', 'richard'] },
-    { id: 'bibi', name: 'Les Bibi', short: 'BIBI', color: '#af1e2d', color2: '#ffffff', stripe: '#192168', dark: '#192168', players: ['mickael', 'marie', 'mike', 'adam'] },
-    { id: 'jay',  name: 'Les Jay',  short: 'JAY',  color: '#d9342b', color2: '#ffffff', stripe: '#1b1b1b', dark: '#1b1b1b', players: ['jeremie', 'jessica', 'diddy'] },
-    { id: 'jo',   name: 'Les Jo',   short: 'JO',   color: '#1f9d4a', color2: '#ffffff', dark: '#0f5a2a', players: ['josue', 'zachary', 'emily', 'elliot'] },
+    { id: 'bibi', name: 'Les Bibi', short: 'BIBI', color: '#af1e2d', color2: '#ffffff', stripe: '#192168', dark: '#192168', players: ['mickael', 'marie', 'adam', 'milo'] },
+    { id: 'jay',  name: 'Les Jay',  short: 'JAY',  color: '#d9342b', color2: '#ffffff', stripe: '#1b1b1b', dark: '#1b1b1b', players: ['jeremie', 'jessica', 'edison'] },
+    { id: 'jo',   name: 'Les Jo',   short: 'JO',   color: '#1f9d4a', color2: '#ffffff', dark: '#0f5a2a', players: ['josue', 'zachary', 'emily', 'alexie', 'eliott'] },
     { id: 'boys', name: 'Les Boys', short: 'BOYS', initial: 'LB', color: '#161616', color2: '#f2c230', accent: '#f2c230', dark: '#2e2e2e', goalie: 'fern',
       players: ['bob', 'tiguy', 'julien', 'meo', 'mario', 'jeancharles', 'popol', 'francois', 'marcel', 'stan', 'roger'] },
   ];
+  for (const id in HK.PLAYERS) { const d = HK.PLAYERS[id]; if (d.birth) d.age = HK.ageOf(d.birth); }
   HK.teamById = id => HK.TEAMS.find(t => t.id === id);
 
   // Conversion des stats en valeurs physiques.

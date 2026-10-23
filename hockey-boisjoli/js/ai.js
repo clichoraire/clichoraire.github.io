@@ -162,6 +162,7 @@
       case 'blizzard': return oppHas && (c.x - ownGX) * dir < 480;
       case 'fantome': return mine && opps.some(o => near(o, 120));
       case 'slap': return mine && dNet < 380 && (oppGX - s.x) * dir > 60;
+      case 'flash': return (oppHas && near(c, 180)) || (mine && dNet < 260 && opps.some(o => near(o, 150)));
       case 'tempsmort': return oppHas && (c.x - ownGX) * dir < 420;
       case 'charme': return (oppHas && near(c, 110)) || (mine && opps.some(o => near(o, 100)));
       case 'deal': return oppHas && HK.dist(s, c) < 300 && HK.dist(s, c) > 60;
