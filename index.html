@@ -263,7 +263,7 @@
         if (!vivant) return; vivant = false; bulle.style.display = 'none';
         for (const e of [oeil, oeil2, bouche]) if (e.className) e.classList.add('fuite');
         timers.push(setTimeout(() => { oeil.className = ''; oeil2.className = ''; bouche.className = ''; }, 650));
-        timers.push(setTimeout(apparaitre, vite ? 5000 : 2500 + Math.random() * 1500)); // revient toutes les 7 à 8 s
+        timers.push(setTimeout(apparaitre, vite ? 8000 : 5500 + Math.random() * 5000)); // revient toutes les 10 à 15 s
       };
       addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; regarder(); });
       for (const e of [oeil2, bouche]) e.addEventListener('click', () => oeil.click());
