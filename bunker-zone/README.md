@@ -222,3 +222,6 @@ Paramètres d'URL utiles en développement : `index.html?autostart&ff=60&ai=3&di
 (démarre directement, avance la simulation de 60 s, sélectionne vos unités).
 
 Équilibrage : `node tools/headless.js 4 7 normal 900` ou `node tools/headless.js 3 7 normal 900 --passive`.
+
+
+Les bâtiments (centre de commandement, bunker, extracteur) et le dropship ont des variantes par race dans `js/sprites.js` (`S.bunker_insect`, `S.hq_energy`, `S.dropship_mecha`, etc.) : chair et carapace pour l'essaim, or et cristaux pour les guerriers d'énergie, acier, voyants et rotors pour les mécas. `ZC.drawUnitSprite` reçoit la race du propriétaire en dernier paramètre.

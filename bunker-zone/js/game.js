@@ -908,7 +908,7 @@
       const fx = u.def.deathFx;
       this.addEffect({ type: fx, x: u.x, y: u.y, life: fx === 'explosion' ? 0.5 : fx === 'bigExplosion' ? 1.2 : 0.6, r: u.radius, color: owner.hex, race: u.def.race });
       if (!u.def.structure) {
-        this.addEffect({ type: 'corpse', x: u.x, y: u.y, life: u.def.air ? 0.8 : 0.7, unitType: u.type, facing: u.facing, color: owner.hex, air: !!u.def.air, up: { weapons: u.up.weapons, armor: u.up.armor } });
+        this.addEffect({ type: 'corpse', x: u.x, y: u.y, life: u.def.air ? 0.8 : 0.7, unitType: u.type, facing: u.facing, color: owner.hex, race: owner.race, air: !!u.def.air, up: { weapons: u.up.weapons, armor: u.up.armor } });
       }
       if (fx === 'blood' || fx === 'blood2' || fx === 'explosion' || fx === 'bigExplosion') {
         this.decals.push({ type: fx, x: u.x, y: u.y, t: 0, life: fx === 'bigExplosion' ? 60 : 25, r: u.radius, seed: Math.random() * 1000 });

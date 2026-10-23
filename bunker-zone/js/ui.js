@@ -410,7 +410,7 @@
       icons.forEach((ic, i) => {
         const u = sel[i], c = ic.querySelector('canvas'), ctx = c.getContext('2d');
         ctx.save(); ctx.translate(17, 17); ctx.scale(u.type === 'dropship' ? 0.9 : 1.3, u.type === 'dropship' ? 0.9 : 1.3); if (!ZC.spriteIsImage(u.type)) ctx.rotate(-Math.PI / 2);
-        ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, 0, false, 0, 0, u.up);
+        ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, 0, false, 0, 0, u.up, undefined, undefined, g.players[u.owner].race);
         ctx.restore();
         ic.addEventListener('click', () => { g.select([u], false); ZC.Audio.play('select'); });
       });
@@ -475,7 +475,7 @@
       else if (u.type === 'dropship') { ctx.scale(1.4, 1.4); ctx.rotate(-Math.PI / 2 + Math.sin(t * 0.8) * 0.15); }
       else if (ZC.spriteIsImage(u.type)) { ctx.scale(2, 2); }
       else { ctx.scale(2.4, 2.4); ctx.rotate(-Math.PI / 2 + Math.sin(t * 0.8) * 0.15); }
-      ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, t * 6, !u.def.structure, 0, t, u.up);
+      ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, t * 6, !u.def.structure, 0, t, u.up, undefined, undefined, g.players[u.owner].race);
       ctx.restore();
     }
 

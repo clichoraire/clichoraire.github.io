@@ -252,9 +252,143 @@
   ZC.drawRuins = function (ctx, seed) { S.ruins(ctx, seed); };
 
   // up = { weapons, armor } : niveaux d'amélioration (pastilles sous l'unité)
+  // ------------------------------------------------------------ Variantes par race des bâtiments et du dropship
+  // (S[type + '_' + race] est utilisé s'il existe ; sinon le dessin humain par défaut)
+  const spike = (ctx, x, y, ang, len, w, fill) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(0, -w); ctx.lineTo(len, 0); ctx.lineTo(0, w); ctx.closePath(); ctx.fill(); ctx.restore(); };
+  const glow = (ctx, x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
+
+  // --- Essaim insectoïde : chair, carapace, orifices qui palpitent
+  S.bunker_insect = function (ctx, c, a, m, atk, t) {
+    const pulse = 1 + 0.04 * Math.sin(t * 3);
+    ell(ctx, 0, 4, 26, 19, '#5a2a3a', '#2a1018', 2);
+    ell(ctx, 0, 0, 22 * pulse, 16 * pulse, '#8a3a4e');
+    ell(ctx, -4, -4, 13, 9, '#a85268');
+    for (let i = 0; i < 6; i++) { const ang = i * TAU / 6 + 0.4; spike(ctx, Math.cos(ang) * 20, Math.sin(ang) * 14, ang, 9, 3, '#e9d8c2'); }
+    for (const [x, y] of [[-10, 2], [8, 4], [0, -9]]) { const o = 2.5 + 1.2 * Math.sin(t * 4 + x); circ(ctx, x, y, o, '#2a0a12', '#120408', 1); }
+    ctx.fillStyle = c; for (let i = 0; i < 4; i++) { const ang = i * TAU / 4 + TAU / 8; circ(ctx, Math.cos(ang) * 15, Math.sin(ang) * 10, 2.4, c); }
+    glow(ctx, 0, -2, 8, ZC.rgba(c, 0.25 + 0.2 * Math.sin(t * 3)));
+  };
+  S.hq_insect = function (ctx, c, a, m, atk, t) {
+    const pulse = 1 + 0.03 * Math.sin(t * 2.5);
+    ell(ctx, 0, 8, 36, 24, '#4a2030', '#200a12', 2.5);
+    ell(ctx, 0, 0, 31 * pulse, 23 * pulse, '#7e3348');
+    ell(ctx, -6, -6, 18, 12, '#9c4a62');
+    for (let i = 0; i < 8; i++) { const ang = i * TAU / 8; spike(ctx, Math.cos(ang) * 29, Math.sin(ang) * 21, ang, 12, 3.5, '#e9d8c2'); }
+    for (const [x, y, r] of [[-16, 6, 5], [14, 8, 5], [2, -14, 4], [16, -8, 3.5], [-14, -10, 3.5]]) { const o = r * (0.8 + 0.25 * Math.sin(t * 3 + x)); circ(ctx, x, y, o, '#2a0a12', '#120408', 1); circ(ctx, x, y, o * 0.4, ZC.rgba(c, 0.6)); }
+    ell(ctx, 0, 0, 7, 5, '#1a0610', '#0a0206', 1); glow(ctx, 0, 0, 14, ZC.rgba(c, 0.3 + 0.25 * Math.sin(t * 2.5)));
+    ctx.strokeStyle = '#c86e86'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { const ang = t * 0.8 + i * 2.1; ctx.beginPath(); ctx.moveTo(Math.cos(ang) * 10, Math.sin(ang) * 7); ctx.quadraticCurveTo(Math.cos(ang) * 22, Math.sin(ang) * 16 + 4, Math.cos(ang + 0.5) * 30, Math.sin(ang + 0.5) * 22); ctx.stroke(); }
+  };
+  S.extractor_insect = function (ctx, c, a, m, atk, t) {
+    ell(ctx, 0, 5, 17, 11, '#4a2030', '#200a12', 2);
+    const s = 1 + 0.08 * Math.sin(t * 5);
+    ell(ctx, 0, -2, 11 * s, 12 * s, '#8a3a4e', '#3a1020', 1);
+    ell(ctx, -3, -6, 5, 4, '#b05a72');
+    for (let i = 0; i < 5; i++) { const ang = i * TAU / 5 + t * 0.5; ctx.strokeStyle = '#c86e86'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(Math.cos(ang) * 8, Math.sin(ang) * 6); ctx.lineTo(Math.cos(ang) * 17, Math.sin(ang) * 12 + 3); ctx.stroke(); }
+    circ(ctx, 0, -2, 3.5, '#2a0a12'); circ(ctx, 0, -2, 2, 'rgba(57,255,20,' + (0.5 + 0.5 * Math.sin(t * 6)) + ')');
+    ctx.fillStyle = c; circ(ctx, 8, -8, 2.2, c); circ(ctx, -8, -8, 2.2, c);
+  };
+  S.dropship_insect = function (ctx, c, a, m, atk, t) {   // surveillant volant : sac gonflé, tentacules qui ondulent
+    const b = 1 + 0.05 * Math.sin(t * 3);
+    for (let i = 0; i < 4; i++) { const y = -9 + i * 6, ph = t * 5 + i; ctx.strokeStyle = '#8a3a4e'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(-10, y); ctx.quadraticCurveTo(-18, y + Math.sin(ph) * 3, -24, y + Math.sin(ph + 1) * 4); ctx.stroke(); }
+    ell(ctx, 0, 0, 18 * b, 11 * b, '#9c4a62', '#3a1020', 1.5);
+    ell(ctx, 4, -3, 10, 5, '#b86a82');
+    ctx.fillStyle = c; for (const [x, y] of [[-8, 0], [0, 6], [8, 2]]) circ(ctx, x, y, 2.3, c);
+    circ(ctx, 11, 0, 3.2, '#2a0a12', '#120408', 1); circ(ctx, 12, -0.5, 1.4, '#ffd14a');
+    spike(ctx, -14, -8, -2.2, 6, 2, '#e9d8c2'); spike(ctx, -14, 8, 2.2, 6, 2, '#e9d8c2');
+  };
+
+  // --- Guerriers d'énergie : or, cristal et champs bleutés
+  S.bunker_energy = function (ctx, c, a, m, atk, t) {
+    ctx.fillStyle = '#b8912e'; ctx.strokeStyle = '#4a3a10'; ctx.lineWidth = 2;
+    ctx.beginPath(); for (let i = 0; i < 6; i++) { const ang = i * TAU / 6; ctx.lineTo(Math.cos(ang) * 24, Math.sin(ang) * 19); } ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e2c05a'; ctx.beginPath(); for (let i = 0; i < 6; i++) { const ang = i * TAU / 6; ctx.lineTo(Math.cos(ang) * 17, Math.sin(ang) * 13); } ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c; for (let i = 0; i < 3; i++) { const ang = i * TAU / 3 + TAU / 12; ctx.fillRect(Math.cos(ang) * 19 - 2, Math.sin(ang) * 14 - 2, 4, 4); }
+    const h = 6 + 2 * Math.sin(t * 2);
+    glow(ctx, 0, -h, 13, 'rgba(90,180,255,0.45)');
+    ctx.fillStyle = '#9fe0ff'; ctx.strokeStyle = '#2a6ab0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -h - 11); ctx.lineTo(6, -h); ctx.lineTo(0, -h + 8); ctx.lineTo(-6, -h); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(120,200,255,' + (0.3 + 0.3 * Math.sin(t * 4)) + ')'; ctx.lineWidth = 1.5; ell(ctx, 0, 2, 21, 15, null, ctx.strokeStyle, 1.5);
+  };
+  S.hq_energy = function (ctx, c, a, m, atk, t) {
+    ctx.fillStyle = '#a8862a'; ctx.strokeStyle = '#3a2c0c'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(-34, 14); ctx.lineTo(-22, -24); ctx.lineTo(22, -24); ctx.lineTo(34, 14); ctx.lineTo(0, 28); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e2c05a'; ctx.beginPath(); ctx.moveTo(-24, 10); ctx.lineTo(-15, -17); ctx.lineTo(15, -17); ctx.lineTo(24, 10); ctx.lineTo(0, 20); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c; ctx.fillRect(-20, -22, 10, 4); ctx.fillRect(10, -22, 10, 4); ctx.fillRect(-6, 20, 12, 4);
+    for (let i = 0; i < 4; i++) { const ang = t * 1.2 + i * TAU / 4, r = 20; ctx.fillStyle = '#9fe0ff'; ctx.beginPath(); const x = Math.cos(ang) * r, y = -2 + Math.sin(ang) * r * 0.6; ctx.moveTo(x, y - 6); ctx.lineTo(x + 3, y); ctx.lineTo(x, y + 4); ctx.lineTo(x - 3, y); ctx.closePath(); ctx.fill(); }
+    const h = 8 + 2 * Math.sin(t * 2);
+    glow(ctx, 0, -h, 20, 'rgba(90,180,255,0.5)');
+    circ(ctx, 0, -h, 9, '#cfeeff', '#2a6ab0', 1.5); circ(ctx, -3, -h - 3, 3, 'rgba(255,255,255,0.8)');
+    ctx.strokeStyle = 'rgba(120,200,255,' + (0.35 + 0.3 * Math.sin(t * 3)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -h + 9); ctx.lineTo(0, 12); ctx.stroke();
+  };
+  S.extractor_energy = function (ctx, c, a, m, atk, t) {
+    ell(ctx, 0, 5, 17, 11, '#a8862a', '#3a2c0c', 2); ell(ctx, 0, 4, 11, 7, '#e2c05a');
+    ctx.fillStyle = c; ctx.fillRect(-13, 2, 4, 4); ctx.fillRect(9, 2, 4, 4);
+    const h = 10 + 2 * Math.sin(t * 2.5);
+    ctx.strokeStyle = 'rgba(57,255,20,' + (0.4 + 0.4 * Math.sin(t * 8)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 4); ctx.lineTo(0, -h + 6); ctx.stroke();
+    ctx.save(); ctx.translate(0, -h); ctx.rotate(a * 0.5);
+    ctx.fillStyle = '#9fe0ff'; ctx.strokeStyle = '#2a6ab0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(6, 0); ctx.lineTo(0, 9); ctx.lineTo(-6, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore(); glow(ctx, 0, -h, 11, 'rgba(90,180,255,0.4)');
+  };
+  S.dropship_energy = function (ctx, c, a, m, atk, t) {   // navette : coque dorée effilée, anneau d'énergie
+    ctx.fillStyle = '#c9a33a'; ctx.strokeStyle = '#3a2c0c'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(2, -9); ctx.lineTo(-16, -6); ctx.lineTo(-20, 0); ctx.lineTo(-16, 6); ctx.lineTo(2, 9); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e8cf6a'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(2, -5); ctx.lineTo(-12, -3); ctx.lineTo(-12, 3); ctx.lineTo(2, 5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c; ctx.fillRect(-10, -8, 8, 2.5); ctx.fillRect(-10, 5.5, 8, 2.5);
+    ctx.strokeStyle = 'rgba(120,200,255,' + (0.5 + 0.4 * Math.sin(t * 6)) + ')'; ctx.lineWidth = 2; ell(ctx, -6, 0, 6, 11, null, ctx.strokeStyle, 2);
+    ell(ctx, 8, 0, 4, 3, '#9fe0ff', '#2a6ab0', 1);
+    glow(ctx, -20, 0, 7, 'rgba(120,200,255,0.6)');
+  };
+
+  // --- Mécas cybernétiques : acier sombre, voyants, antennes et rotors
+  S.bunker_mecha = function (ctx, c, a, m, atk, t) {
+    ctx.fillStyle = '#2b3038'; ctx.strokeStyle = '#0c0e12'; ctx.lineWidth = 2;
+    ctx.beginPath(); for (let i = 0; i < 8; i++) { const ang = i * TAU / 8 + TAU / 16; ctx.lineTo(Math.cos(ang) * 25, Math.sin(ang) * 20); } ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#4a525e'; ctx.beginPath(); for (let i = 0; i < 8; i++) { const ang = i * TAU / 8 + TAU / 16; ctx.lineTo(Math.cos(ang) * 18, Math.sin(ang) * 14); } ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#1a1e24'; ctx.lineWidth = 1; for (let i = 0; i < 4; i++) { const ang = i * TAU / 4 + TAU / 8; ctx.beginPath(); ctx.moveTo(Math.cos(ang) * 18, Math.sin(ang) * 14); ctx.lineTo(Math.cos(ang) * 25, Math.sin(ang) * 20); ctx.stroke(); }
+    ctx.fillStyle = c; ctx.fillRect(-22, -3, 5, 6); ctx.fillRect(17, -3, 5, 6);
+    circ(ctx, 0, 0, 9, '#20242b', '#0c0e12', 1.5);
+    ctx.save(); ctx.rotate(t * 1.5); ctx.strokeStyle = '#9fb0c4'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, 0); ctx.stroke(); ctx.restore();
+    for (let i = 0; i < 4; i++) { const on = ((t * 3 + i) % 4) < 1; circ(ctx, -12 + i * 8, 15, 1.8, on ? '#ff5a3a' : '#5a2a22'); }
+    ctx.strokeStyle = '#c0c8d0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(14, -12); ctx.lineTo(20, -22); ctx.stroke(); circ(ctx, 20, -22, 2, ZC.rgba(c, 0.5 + 0.5 * Math.sin(t * 4)));
+  };
+  S.hq_mecha = function (ctx, c, a, m, atk, t) {
+    roundRect(ctx, -34, -28, 68, 56, 3); ctx.fillStyle = '#23272e'; ctx.fill(); ctx.strokeStyle = '#0c0e12'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#3d454f'; ctx.fillRect(-30, -24, 60, 48);
+    ctx.fillStyle = '#596270'; ctx.fillRect(-30, -24, 60, 6); ctx.fillRect(-30, 18, 60, 6);
+    ctx.strokeStyle = '#1a1e24'; ctx.lineWidth = 1; for (let i = -24; i <= 24; i += 12) { ctx.beginPath(); ctx.moveTo(i, -18); ctx.lineTo(i, 18); ctx.stroke(); }
+    for (let i = 0; i < 3; i++) { circ(ctx, -22 + i * 9, -12, 3.5, '#2b3038', '#0c0e12', 1); const sm = (t * 0.7 + i * 0.4) % 1; circ(ctx, -22 + i * 9 + sm * 4, -16 - sm * 10, 2 + sm * 3, 'rgba(160,170,180,' + (0.35 * (1 - sm)) + ')'); }
+    ctx.fillStyle = c; ctx.fillRect(-33, -27, 12, 4); ctx.fillRect(21, -27, 12, 4); ctx.fillRect(-33, 23, 12, 4); ctx.fillRect(21, 23, 12, 4);
+    roundRect(ctx, -12, -6, 24, 16, 2); ctx.fillStyle = '#20242b'; ctx.fill(); ctx.strokeStyle = '#9fb0c4'; ctx.lineWidth = 1; ctx.stroke();
+    for (let i = 0; i < 6; i++) { const on = ((t * 4 + i * 0.7) % 3) < 1; ctx.fillStyle = on ? '#4fff6a' : '#1e3a24'; ctx.fillRect(-9 + i * 3.5, -3, 2, 2); }
+    ctx.fillStyle = '#4fb8ff'; ctx.fillRect(-9, 2, 18 * (0.5 + 0.5 * Math.sin(t)), 3);
+    ctx.save(); ctx.translate(18, 2); ctx.rotate(t * 0.9); ctx.strokeStyle = '#c0c8d0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 7, -1.2, 1.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(7, 0); ctx.stroke(); ctx.restore();
+    circ(ctx, 18, 2, 2, '#596270');
+  };
+  S.extractor_mecha = function (ctx, c, a, m, atk, t) {
+    roundRect(ctx, -16, -4, 32, 16, 3); ctx.fillStyle = '#23272e'; ctx.fill(); ctx.strokeStyle = '#0c0e12'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#3d454f'; ctx.fillRect(-13, -2, 26, 11);
+    ctx.fillStyle = c; ctx.fillRect(-14, 0, 3, 6); ctx.fillRect(11, 0, 3, 6);
+    ctx.fillStyle = '#596270'; ctx.fillRect(-6, -16, 12, 13); ctx.strokeStyle = '#14171c'; ctx.lineWidth = 1; ctx.strokeRect(-6, -16, 12, 13);
+    ctx.save(); ctx.translate(0, -8); ctx.rotate(a * 1.5); ctx.strokeStyle = '#c8d0d8'; ctx.lineWidth = 2; for (let i = 0; i < 4; i++) { ctx.rotate(TAU / 4); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(7, 0); ctx.stroke(); } ctx.restore();
+    circ(ctx, 0, -8, 2.5, '#20242b');
+    const bl = (Math.sin(t * 6) + 1) / 2; for (let i = 0; i < 3; i++) circ(ctx, -8 + i * 8, 12, 1.6, i / 3 < bl ? '#39ff14' : '#1e3a24');
+  };
+  S.dropship_mecha = function (ctx, c, a, m, atk, t) {   // drone quadrirotor avec nacelle
+    ctx.strokeStyle = '#20242b'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, 12); ctx.moveTo(-12, 12); ctx.lineTo(12, -12); ctx.stroke();
+    for (const [x, y] of [[-12, -12], [12, -12], [-12, 12], [12, 12]]) {
+      circ(ctx, x, y, 7.5, 'rgba(180,190,200,0.22)'); ctx.save(); ctx.translate(x, y); ctx.rotate(t * 40 + x); ctx.strokeStyle = 'rgba(220,228,236,0.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.stroke(); ctx.restore();
+      circ(ctx, x, y, 2, '#596270', '#0c0e12', 1);
+    }
+    roundRect(ctx, -10, -7, 20, 14, 3); ctx.fillStyle = '#3d454f'; ctx.fill(); ctx.strokeStyle = '#0c0e12'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = c; ctx.fillRect(-7, -4, 14, 3);
+    roundRect(ctx, -7, 3, 14, 7, 2); ctx.fillStyle = '#23272e'; ctx.fill();
+    circ(ctx, 7, 0, 2.5, '#4fb8ff', '#0c0e12', 1);
+    circ(ctx, -8, 0, 1.6, ((t * 3) % 1) < 0.5 ? '#ff5a3a' : '#5a2a22');
+  };
+
   // facing : angle de l'unité (le contexte est déjà tourné d'autant ; les sprites de la feuille s'en servent pour se remettre droits)
   // death : progression 0..1 de l'animation de mort (cadavre), sinon undefined
-  ZC.drawUnitSprite = function (ctx, type, color, anim, moving, atk, t, up, facing, death) {
+  // race : race du propriétaire, pour les variantes de bâtiments et de dropship
+  ZC.drawUnitSprite = function (ctx, type, color, anim, moving, atk, t, up, facing, death, race) {
     const def = ZC.UNITS[type];
     const base = def && def.hero ? def.base : type;
     const w = up ? up.weapons | 0 : 0, ar = up ? up.armor | 0 : 0;
@@ -265,7 +399,8 @@
       ctx.strokeStyle = 'rgba(255,240,160,0.35)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
     }
-    if (S[base]) { S[base](ctx, color, anim, moving, atk, t || 0, facing); return; }
+    const fn = (race && S[base + '_' + race]) || S[base];
+    if (fn) { fn(ctx, color, anim, moving, atk, t || 0, facing); return; }
     const spec = SPEC[base];
     if (spec && sheet.ready) { sheetUnit(ctx, spec, color, anim, moving, atk, facing, w, ar, death); return; }
     if (facing !== undefined && death !== undefined) ctx.rotate(-facing);

@@ -318,7 +318,7 @@
       ctx.save();
       ctx.translate(u.rx, u.ry + bob);
       ctx.rotate(u.rf);
-      ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, u.anim, u.moving, u.attackAnim > 0 ? u.attackAnim / 0.15 : 0, t + u.id * 0.37, u.up, u.rf);
+      ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, u.anim, u.moving, u.attackAnim > 0 ? u.attackAnim / 0.15 : 0, t + u.id * 0.37, u.up, u.rf, undefined, g.players[u.owner].race);
       if (u.building) { ctx.globalAlpha = 0.55; ctx.fillStyle = 'rgba(255,220,80,0.25)'; ctx.beginPath(); ctx.arc(0, 0, u.radius + 4, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
       if (u.def.worker) {
         if (u.carry > 0) { // cristal transporté
@@ -570,7 +570,7 @@
             ctx.rotate(e.facing + (e.air ? p * 2 : 0));
             const s = e.air ? 1 - p * 0.5 : 1 - p * 0.25;
             ctx.scale(s, s);
-            ZC.drawUnitSprite(ctx, e.unitType, e.color, 0, false, 0, t, e.up, e.facing, e.air ? undefined : p);
+            ZC.drawUnitSprite(ctx, e.unitType, e.color, 0, false, 0, t, e.up, e.facing, e.air ? undefined : p, e.race);
             ctx.restore();
             break;
           }
