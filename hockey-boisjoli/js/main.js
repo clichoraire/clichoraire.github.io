@@ -370,6 +370,7 @@
     if (app.screen === 'result' && e.code === 'Enter') { const f = $('#result-buttons button'); if (f && document.activeElement !== f) f.click(); }
     if (app.screen === 'select' && e.code === 'Escape') show('menu');
   });
+  $('#version').textContent = 'v' + HK.VERSION;
   HK.input.init(); buildMenu(); show('menu');
   // Mode test : ?demo=1 lance tout de suite ordi contre ordi.
   const q = new URLSearchParams(location.search);

@@ -485,7 +485,7 @@
         <div id="menu-title" class="screen hidden">
           <div class="corner tl">SECTEURS ACTIFS : <b id="t-zones">49</b></div>
           <div class="corner tr">STATUT : <b class="crit">CRITIQUE</b></div>
-          <div class="corner bl">v<span id="t-ver">1.0</span> · BUNKER ZONE</div>
+          <div class="corner bl">v<span id="t-ver">${ZC.VERSION}</span> · BUNKER ZONE</div>
           <div class="corner br">STATUT : <b class="crit">CRITIQUE</b></div>
           <div id="logo"><div class="plate"><span class="acc red"></span><span class="acc blue"></span><div class="word">BUNKER</div><div class="word">ZONE</div></div></div>
           <div id="title-menu">

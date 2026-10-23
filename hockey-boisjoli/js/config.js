@@ -1,6 +1,7 @@
 // Hockey Boisjoli — constantes, équipes, personnages et pouvoirs.
 // Tout est dans l'espace de noms HK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.HK = window.HK || {};
+window.HK.VERSION = '1.3';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (HK) {
   'use strict';
   HK.W = 1280; HK.H = 720;              // canevas logique

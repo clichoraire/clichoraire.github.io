@@ -118,6 +118,7 @@
       .hero { padding: 56px 0 44px; } .facts { gap: 16px; }
       .section-title { flex-wrap: wrap; } h2 { white-space: nowrap; }
     }
+      .ver { color: #7f8aa8; font-size: 12px; font-weight: 400; margin-left: 4px; }
   </style>
 </head>
 <body>
@@ -172,6 +173,7 @@
   </footer>
 
   <script src="config.js"></script>
+  <script src="versions.js"></script>
   <script>
     // Réveille le relais Sosaria (hébergement gratuit qui s'endort) pendant que le visiteur lit la page
     if (window.SITE_CONFIG && SITE_CONFIG.sosariaApi) fetch(SITE_CONFIG.sosariaApi + '/api/relais', { mode: 'no-cors' }).catch(() => {});
@@ -202,7 +204,7 @@
           <img src="${g.cover}" alt="Capture d'écran de ${esc(g.title)}" loading="lazy">
         </a>
         <div class="body">
-          <h3>${esc(g.title)}</h3>
+          <h3>${esc(g.title)} <small class="ver">${window.GAME_VERSIONS && GAME_VERSIONS[g.path] ? 'v' + esc(GAME_VERSIONS[g.path]) : ''}</small></h3>
           <div class="tags">${g.tags.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
           <p>${esc(g.desc)}</p>
           <div class="actions">

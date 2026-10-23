@@ -17,6 +17,7 @@ select { background: #1a2033; color: #fff; border: 1px solid #3a4466; border-rad
 h1 { font-family: "Arial Black", Arial, sans-serif; font-size: clamp(42px, 8vw, 84px); margin: 0; letter-spacing: 2px; line-height: 1; color: #fff; text-shadow: 0 4px 0 #7f1c15, 0 8px 24px rgba(0,0,0,.6); }
 h1 span { color: #ffd166; }
 .tagline { color: #9aa4bf; margin: 8px 0 0; font-size: 18px; }
+#version { color: #5a6a9a; font-size: 13px; margin-left: 6px; }
 #menu-anim { width: 100%; max-width: 900px; height: auto; display: block; margin: 6px auto 0; }
 #logos { display: flex; justify-content: center; gap: 10px; margin: 4px 0 10px; }
 #logos canvas { width: 70px; height: 78px; }

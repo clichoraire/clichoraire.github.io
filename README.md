@@ -14,6 +14,10 @@ deploy.sh         recopie la dernière version des jeux, commit, push
 
 ## Mettre à jour les jeux en ligne
 
+Chaque jeu affiche sa version (`ZC.VERSION` dans `ZoneControl/js/config.js`, `HK.VERSION` dans
+`HockeyBoisjoli/js/config.js`) : il faut l'augmenter à chaque mise en ligne. `deploy.sh` refuse de publier un jeu dont le
+code a changé sans changement de version (`--force` pour passer outre) et écrit `versions.js`, affiché sur les cartes.
+
 ```bash
 ./deploy.sh "Bunker Zone : nouvelles missions"
 ```
