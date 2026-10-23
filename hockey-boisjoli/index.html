@@ -19,27 +19,18 @@
         <button id="btn-duo">2 joueurs (même clavier ou manettes)</button>
         <button id="btn-cup">Coupe Boisjoli</button>
         <button id="btn-practice">Pratique <small id="stars-total"></small></button>
-        <button id="btn-help">Contrôles</button>
+        <button id="btn-help">Comment jouer ?</button>
       </div>
       <div class="options">
         <label>Période <select id="opt-period"></select></label>
         <label>Ordi <select id="opt-diff"></select></label>
         <label><input type="checkbox" id="opt-sound"> Son</label>
       </div>
-      <div id="help" class="hidden">
-        <table>
-          <tr><th></th><th>Joueur 1</th><th>Joueur 2</th><th>Manette</th></tr>
-          <tr><td>Patiner</td><td>Flèches</td><td>W A S D</td><td>Stick / croix</td></tr>
-          <tr><td>Passe</td><td>X</td><td>G</td><td>A</td></tr>
-          <tr><td>Choisir son joueur</td><td>1 · 2 · 3</td><td>8 · 9 · 0</td><td>LB / RB</td></tr>
-          <tr><td>Lancer (tenir pour charger) · mise en échec</td><td>C</td><td>H</td><td>B</td></tr>
-          <tr><td>Pouvoir spécial</td><td>V</td><td>J</td><td>X</td></tr>
-          <tr><td>Pause · son</td><td colspan="3">Échap ou P · M</td></tr>
-        </table>
-        <p>Sans la rondelle, le bouton de lancer fait une mise en échec : fonce sur l'adversaire pour le faire tomber (les petits tombent facilement, grand-papa presque jamais).
-        Le joueur contrôlé ne change jamais tout seul : appuie sur 1, 2 ou 3 (le numéro est devant le nom de chacun). Les équipes de 4 et plus font des changements aux mises au jeu quand quelqu'un est fatigué (barres d'énergie en bas).
-        En Pratique : seul contre le gardien, et des exercices à réussir en trois difficultés (bouton « Pratiques » en haut à droite, Retour arrière pour abandonner).</p>
-      </div>
+      <section id="howto">
+        <h2>Comment jouer ?</h2>
+        <p class="howto-intro">C'est simple : patine, passe, lance, et marque plus de buts que l'autre équipe en 3 périodes. Chaque joueur a un pouvoir magique !</p>
+        <div id="howto-grid"></div>
+      </section>
     </div>
   </section>
 

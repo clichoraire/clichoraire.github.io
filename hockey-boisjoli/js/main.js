@@ -55,7 +55,8 @@
     $('#btn-cup').onclick = () => startSelect('cup');
     $('#btn-practice').onclick = () => startSelect('practice');
     $('#stars-total').textContent = HK.drillStars.total() + ' / ' + HK.DRILLS.length * 3;
-    $('#btn-help').onclick = () => { $('#help').classList.toggle('hidden'); };
+    $('#btn-help').onclick = () => { $('#howto').scrollIntoView({ behavior: 'smooth' }); };
+    buildHowto();
     // petite animation : les joueurs patinent sous le titre
     const c = $('#menu-anim'), ctx = c.getContext('2d'); const all = Object.keys(HK.PLAYERS);
     const skaters = all.map((id, i) => ({ d: HK.PLAYERS[id], team: HK.TEAMS.find(t => t.players.includes(id) || t.goalie === id), goalie: HK.TEAMS.some(t => t.goalie === id), x: Math.random() * c.width, y: 50 + (i % 3) * 30, v: 40 + Math.random() * 50, dir: Math.random() < 0.5 ? 1 : -1, f: Math.random() * 6 })).filter(s => s.team);
@@ -79,6 +80,24 @@
       }
       requestAnimationFrame(loop);
     })(last);
+  }
+
+  // ----- Comment jouer (cartes pour les enfants) -----
+  const KEY = k => `<kbd class="kcap">${k}</kbd>`;
+  const HOWTO = [
+    { icon: '⛸️', cat: 'Déplacement', color: '#5fe3ff', title: 'Patiner partout', text: 'Dirige ton joueur sur la glace dans toutes les directions !', keys: `<div class="krow">${KEY('⬆')}</div><div class="krow">${KEY('⬅')}${KEY('⬇')}${KEY('➡')}</div>`, label: 'Flèches du clavier · joueur 2 : W A S D' },
+    { icon: '🏒', cat: 'Passe', color: '#7dffa0', title: 'Faire une passe', text: 'Envoie la rondelle à un coéquipier. Vise-le avec ton joueur et appuie !', keys: `<div class="krow">${KEY('X')}</div>`, label: 'Touche X · joueur 2 : G' },
+    { icon: '🥅', cat: 'Tir', color: '#ffd166', title: 'Lancer au but', text: 'Appuie pour lancer. Garde la touche enfoncée pour charger un gros lancer frappé, puis relâche !', keys: `<div class="krow">${KEY('C')}</div>`, label: 'Touche C (tenir pour charger) · joueur 2 : H' },
+    { icon: '💥', cat: 'Défense', color: '#ff8a7a', title: 'Mise en échec', text: 'Sans la rondelle, la même touche fait foncer ton joueur : rentre dans l\'adversaire pour le faire tomber et lui voler la rondelle !', keys: `<div class="krow">${KEY('C')}</div>`, label: 'Touche C sans la rondelle · joueur 2 : H' },
+    { icon: '✨', cat: 'Magie', color: '#d7a6ff', title: 'Pouvoir spécial', text: 'Chaque joueur a son pouvoir : biscuits, laser, téléportation… Regarde la barre en haut : quand elle brille, c\'est prêt !', keys: `<div class="krow">${KEY('V')}</div>`, label: 'Touche V · joueur 2 : J' },
+    { icon: '👨‍👩‍👧', cat: 'Équipe', color: '#5fe3ff', title: 'Choisir ton joueur', text: 'Tu décides qui tu contrôles. Le numéro est écrit devant le nom de chacun sur la glace.', keys: `<div class="krow">${KEY('1')}${KEY('2')}${KEY('3')}</div>`, label: 'Touches 1, 2, 3 · joueur 2 : 8, 9, 0' },
+    { icon: '🎮', cat: 'Manette', color: '#7dffa0', title: 'Avec une manette', text: 'Branche une manette : le stick pour patiner, A pour passer, B pour lancer ou plaquer, X pour le pouvoir, LB / RB pour changer de joueur.', keys: `<div class="krow">${KEY('A')}${KEY('B')}${KEY('X')}</div>`, label: 'Manette Xbox ou autre' },
+    { icon: '⏯️', cat: 'Pratique', color: '#ffd166', title: 'Pause, son et entrée', text: 'Échap ou P pour la pause, M pour couper le son. Au début du match, Entrée ou Espace saute l\'entrée des joueurs et l\'hymne.', keys: `<div class="krow">${KEY('Échap')}${KEY('M')}${KEY('Espace')}</div>`, label: 'Pause · son · passer' },
+    { icon: '🏆', cat: 'Le but du jeu', color: '#ff8a7a', title: 'Gagner le match', text: 'Marque plus de buts que l\'autre équipe en 3 périodes. Égalité ? Le premier but en prolongation gagne ! Dans la Coupe, bats toutes les autres équipes.', keys: `<div class="krow"><span class="kbig">🥅 + 🏒 = ⭐</span></div>`, label: 'Et amuse-toi !' },
+  ];
+  function buildHowto() {
+    const grid = $('#howto-grid'); if (!grid) return;
+    grid.innerHTML = HOWTO.map(h => `<div class="howto-card" style="--c:${h.color}"><div class="howto-top"><span class="howto-icon">${h.icon}</span><span class="howto-cat">${h.cat}</span></div><h3>${h.title}</h3><p>${h.text}</p><div class="howto-keys">${h.keys}<div class="klabel">${h.label}</div></div></div>`).join('');
   }
 
   // ----- Sélection -----

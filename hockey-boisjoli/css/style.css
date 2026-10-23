@@ -23,11 +23,24 @@ h1 span { color: #ffd166; }
 .menu-box .buttons { flex-direction: column; align-items: center; }
 .menu-box .buttons button { width: 360px; max-width: 100%; font-size: 18px; }
 .options { display: flex; gap: 22px; justify-content: center; margin-top: 12px; color: #9aa4bf; flex-wrap: wrap; }
-#help { margin: 16px auto 0; max-width: 760px; background: #131827; border-radius: 12px; padding: 12px 16px; text-align: left; font-size: 14px; }
-#help table { width: 100%; border-collapse: collapse; }
-#help th, #help td { padding: 5px 8px; border-bottom: 1px solid #263050; }
-#help th { color: #ffd166; text-align: left; }
-#help p { color: #9aa4bf; margin: 10px 0 0; }
+/* comment jouer : cartes pour les enfants */
+#howto { margin: 40px auto 20px; max-width: 1100px; text-align: left; font-family: "Arial Rounded MT Bold", "Nunito", "Segoe UI", Arial, sans-serif; }
+#howto h2 { font-size: 34px; margin: 0 0 6px; text-align: center; }
+.howto-intro { color: #c9d2ea; text-align: center; font-size: 18px; margin: 0 0 18px; }
+#howto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.howto-card { background: #141a2b; border: 3px solid rgba(255,255,255,.08); border-radius: 22px; padding: 18px 20px; transition: transform .12s, border-color .15s, box-shadow .15s; }
+.howto-card:hover { transform: translateY(-3px); border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent), 0 14px 30px rgba(0,0,0,.45); }
+.howto-top { display: flex; justify-content: space-between; align-items: center; }
+.howto-icon { font-size: 38px; }
+.howto-cat { color: var(--c); border: 2px solid color-mix(in srgb, var(--c) 45%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent); border-radius: 999px; padding: 5px 14px; font-weight: 700; font-size: 14px; }
+.howto-card h3 { margin: 12px 0 6px; font-size: 26px; }
+.howto-card p { margin: 0 0 14px; color: #c9d2ea; font-size: 16px; line-height: 1.45; }
+.howto-keys { background: #0f1320; border: 2px solid #263050; border-radius: 16px; padding: 16px 10px 10px; text-align: center; }
+.krow { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+.kcap { display: inline-flex; align-items: center; justify-content: center; min-width: 54px; height: 54px; padding: 0 12px; border-radius: 12px; background: linear-gradient(#ffffff, #dfe6f3); color: #1b2a4a; font: 700 22px "Arial Rounded MT Bold", Arial, sans-serif; box-shadow: 0 5px 0 #9aa9c4, 0 8px 14px rgba(0,0,0,.4); }
+.kbig { font-size: 30px; line-height: 54px; }
+.klabel { color: #9aa4bf; font-weight: 700; font-size: 13px; margin-top: 6px; }
+@media (max-width: 600px) { .howto-card h3 { font-size: 22px; } .kcap { min-width: 46px; height: 46px; font-size: 18px; } }
 
 /* sélection */
 #sel-title { font-size: 26px; margin: 0 0 14px; }
