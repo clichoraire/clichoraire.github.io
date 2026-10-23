@@ -14,7 +14,7 @@
       this.p = player;
       this.cfg = ZC.DIFFICULTY[diffKey] || ZC.DIFFICULTY.normal;
       this.timer = 1 + Math.random() * this.cfg.think;
-      this.upgradeOrder = ['weapons', 'weapons', 'armor', 'range', 'weapons', 'armor', 'range', 'stim', 'armor', 'range', 'evolve'];
+      this.upgradeOrder = ['weapons', 'weapons', 'armor', 'range', 'weapons', 'siege', 'armor', 'range', 'stim', 'siege', 'armor', 'range', 'siege', 'evolve'];
     }
 
     update(dt) {
@@ -308,7 +308,7 @@
       for (const u of g.units) {
         if (u.dead || u.owner !== me || !u.def.structure || u.def.extractor || u.def.tower || !u.zone) continue;
         const front = map.neighbors(u.zone, true).some(n => !(n.owner >= 0 && g.allied(me, n.owner))) ? 1 : 0;
-        const lvl = u.up.weapons + u.up.armor + u.up.range + u.up.stim + u.up.evolve * 3 + u.research.length * 2;
+        const lvl = u.up.weapons + u.up.armor + u.up.range + u.up.siege + u.up.stim + u.up.evolve * 3 + u.research.length * 2;
         if (u.research.length >= ZC.RESEARCH_QUEUE_MAX) continue;
         const s = front * 10 - lvl + (u.def.hq ? 2 : 0) + Math.random();
         if (s > bs) { bs = s; best = u; }

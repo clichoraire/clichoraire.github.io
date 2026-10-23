@@ -872,6 +872,7 @@
 
     applyDamage(target, dmg, hits, dtype, att) {
       if (target.dead) return;
+      if (target.def.structure && att && att.up && att.up.siege > 0) dmg *= 1 + ZC.SIEGE_BONUS * att.up.siege; // démolition
       const mult = ZC.DAMAGE_MULT[dtype][target.def.size];
       const armor = target.armor;
       for (let h = 0; h < hits; h++) {

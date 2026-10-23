@@ -265,7 +265,7 @@
         case 'dropship':
           buy('dropship', g.selectedBunker);
           break;
-        case 'fortify': case 'evolve': case 'weapons': case 'armor': case 'range': case 'stimResearch': { // sur tous les bunkers sélectionnés
+        case 'fortify': case 'evolve': case 'weapons': case 'armor': case 'range': case 'siege': case 'stimResearch': { // sur tous les bunkers sélectionnés
           const what = cmd === 'stimResearch' ? 'stim' : cmd, bs = g.selectedBunkers;
           let ok = false;
           for (const b of bs) if (g.buy(me, what, b)) ok = true;
@@ -339,6 +339,7 @@
         case 'KeyW': if (bunkerSel) this.command('weapons'); break;
         case 'KeyR': if (bunkerSel) this.command('armor'); else if (workerSel) this.command('repair'); break;
         case 'KeyE': if (bunkerSel) this.command('range'); break;
+        case 'KeyX': if (bunkerSel) this.command('siege'); break;
         case 'KeyT': this.command(bunkerSel ? 'stimResearch' : workerSel ? 'tower' : 'stim'); break;
         case 'KeyZ': { const all = g.units.filter(u => u.owner === g.humanId && !u.def.structure && !u.def.air && !u.def.worker); if (all.length) { g.select(all, false); ZC.Audio.play('select'); } break; }
         case 'KeyC': { const sel = g.selection.filter(u => u.owner === g.humanId); if (sel.length) this.centerOnUnits(sel); break; }

@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '1.7';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -97,11 +97,13 @@ window.ZC.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
     weapons: { name: 'Armes',     hotkey: 'W', max: 3, cost: (lvl) => 100 + lvl * 75,  time: (lvl) => 30 + lvl * 15, desc: '+1 dégâts par niveau' },
     armor:   { name: 'Armure',    hotkey: 'R', max: 3, cost: (lvl) => 100 + lvl * 75,  time: (lvl) => 30 + lvl * 15, desc: '+1 armure par niveau' },
     range:   { name: 'Portée',    hotkey: 'E', max: 3, cost: (lvl) => 125 + lvl * 75,  time: (lvl) => 35 + lvl * 15, desc: '+1 case de portée (unités à distance), +0,5 au corps à corps' },
+    siege:   { name: 'Démolition', hotkey: 'X', max: 3, cost: (lvl) => 125 + lvl * 75, time: (lvl) => 35 + lvl * 15, desc: '+25 % de dégâts contre les bâtiments (bunkers, centres, tours, extracteurs) par niveau' },
     stim:    { name: 'Stimpack',  hotkey: 'T', max: 1, cost: () => 200,                time: () => 45,              desc: 'Recherche : les unités biologiques peuvent se stimuler (T)' },
     evolve:  { name: 'Évolution', hotkey: 'V', max: 1, cost: () => 350,                time: () => 60,              desc: 'Transforme les soldats de ce bunker (présents et futurs) en unité de niveau 2. Requiert armes, armure et portée au niveau 3', requires: 3 },
     fortify: { name: 'Centre de commandement', hotkey: 'Q', max: 1, cost: () => 400,   time: () => 75,              desc: 'Transforme ce bunker en centre de commandement : 6 places en garnison, 6000 PV, armure 8, et il produit dropships, travailleurs et héros comme votre QG' },
   };
   ZC.RESEARCH_QUEUE_MAX = 3;  // recherches en attente par bunker
+  ZC.SIEGE_BONUS = 0.25;      // bonus de dégâts contre les bâtiments par niveau de démolition
   ZC.BUNKER_CAPACITY = 4;     // unités en garnison par bunker ; un bunker vide ne tire pas
   ZC.HQ_CAPACITY = 6;         // le centre de commandement en accueille six
   ZC.capacity = (b) => !b || !b.def ? ZC.BUNKER_CAPACITY : b.def.hq ? ZC.HQ_CAPACITY : b.def.capacity !== undefined ? b.def.capacity : b.def.extractor ? 0 : ZC.BUNKER_CAPACITY;

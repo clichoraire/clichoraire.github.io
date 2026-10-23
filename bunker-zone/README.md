@@ -17,7 +17,7 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
 - Chaque joueur commence avec un **centre de commandement** (6000 PV, armure 8), 8 marines, un dropship
   et 50 minerais. Seul le centre de commandement produit des dropships ; s'il est détruit, plus
   d'expansion possible (sauf si le joueur perd tout : son prochain bunker devient le nouveau QG).
-- **Chaque bunker a ses propres améliorations** (armes, armure, portée, stimpack), recherchées en le
+- **Chaque bunker a ses propres améliorations** (armes, armure, portée, démolition, stimpack), recherchées en le
   sélectionnant (30 à 45 s, plus long à chaque niveau, une recherche à la fois), et qui ne
   s'appliquent qu'aux marines qu'il a produits. Détruire un bunker rapporte 100 minerais, un centre
   de commandement 250. Les niveaux se lisent sur les unités : **chaque niveau d'armes change la forme
@@ -35,7 +35,7 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
 - **Centre de commandement** (Q, 400 minerais, 75 s) : promeut un bunker au niveau du QG : 6 places en
   garnison, 6000 PV, armure 8, et il produit lui aussi dropships (D), travailleurs et héros (F). Si le QG
   d'origine tombe, les autres centres prennent le relais.
-- **Améliorations** : armes, armure et portée vont jusqu'au niveau 3. Quand les trois sont au niveau 3
+- **Améliorations** : armes, armure, portée et démolition (+25 % de dégâts contre les bâtiments par niveau, touche X) vont jusqu'au niveau 3. Quand armes, armure et portée sont au niveau 3
   sur un bunker (terminées ou encore en file de recherche), l'**Évolution** (V, 350 minerais, 60 s) transforme ses soldats présents et futurs
   en unité de niveau 2.
 - **Garnison** : un bunker (ou le QG) accueille jusqu'à 4 unités au sol à distance : clic droit sur son propre bunker avec des unités sélectionnées. Les
@@ -49,7 +49,7 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
   que 1 dégât par tir, d'où l'intérêt des améliorations d'armes) libère la zone, mais ne la donne pas :
   il faut ensuite y poser un dropship comme pour une zone libre.
 - **Minerais** : gagnés par les zones tenues et les kills (10 par marine, 150 par bunker). Ils achètent
-  des dropships (produits par un bunker en 12 s, puis de plus en plus longs à chaque commande ; coût croissant avec le nombre de bunkers) et des améliorations : armes, armure, portée,
+  des dropships (produits par un bunker en 12 s, puis de plus en plus longs à chaque commande ; coût croissant avec le nombre de bunkers) et des améliorations : armes, armure, portée, démolition,
   stimpack (touche T sur les marines : +50 % de vitesse et de cadence pendant 10 s, coûte 10 PV).
 - Un joueur qui perd son dernier bunker reçoit de quoi racheter un dropship.
 - Un joueur sans bunker ni unité est éliminé. Le dernier survivant gagne.
@@ -109,7 +109,7 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 | Sélectionner / cadre | clic gauche / glisser |
 | Déplacer / attaquer | clic droit |
 | Dropship : construire un bunker | clic droit sur une zone libre, ou B puis clic |
-| Bunker sélectionné | clic droit : point de ralliement ; G envoyer toutes ses troupes vers un point ; D dropship ; W armes ; R armure ; E portée ; T stimpack ; V évolution |
+| Bunker sélectionné | clic droit : point de ralliement ; G envoyer toutes ses troupes vers un point ; D dropship ; W armes ; R armure ; E portée ; X démolition ; T stimpack ; V évolution (inactif tant que les conditions ne sont pas remplies) |
 | Stimpack sur les marines sélectionnés | T |
 | Acheter un dropship / bunker suivant | D / N |
 | Évolution (bunker sélectionné, armes, armure et portée au niveau 3) | V |

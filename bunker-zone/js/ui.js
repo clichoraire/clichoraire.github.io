@@ -33,6 +33,8 @@
     weapons: svg('<path d="M7 20V9a3 3 0 0 1 6 0v11H7z"/><path d="M15 20v-9a2 2 0 0 1 4 0v9h-4z"/><path d="M7 15h6M15 16h4"/>', '#ffd040'),
     armor: svg('<path d="' + SHIELD + '"/><path d="M12 8v8M8 12h8"/>', '#5cc8ff'),
     range: svg('<circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>', '#7dffb0'),
+    // bombe à mèche allumée (démolition : dégâts contre les bâtiments)
+    siege: svg('<circle cx="10" cy="14.5" r="6.5"/><path d="M13.5 9l2-2.5"/><path d="M15.5 6.5c1.5-1 3 0 2.5 2"/><path style="color:#ffd040" d="M19.5 4.5l1.5-1.5M20.5 7.5h2M18 2.5V1"/>', '#ff8a5a'),
     stimResearch: svg('<path d="M18 3l3 3M16 5l3 3M13 8L5 16l-1 4 4-1 8-8M9 12l3 3M17 4l-4 4 3 3 4-4"/>', '#ffb347'),
     send: svg('<path d="M3 7h12M11 3l4 4-4 4M3 12h7M3 17h12M11 13l4 4-4 4"/>', '#ff8a8a'),
     evolve: svg('<path d="M6 13l6-6 6 6M6 20l6-6 6 6"/>', '#ffd040'),
@@ -53,7 +55,7 @@
     <div class="help-grid">
       <div><b>Clic gauche</b> sélection / glisser pour un cadre &nbsp; <b>Clic droit</b> déplacer / attaquer</div>
       <div><b>Dropship + clic droit</b> sur une zone libre : construire un bunker (ou <b>B</b> puis clic)</div>
-      <div><b>Bunker sélectionné</b> : clic droit = point de ralliement ; <b>W</b> armes, <b>R</b> armure, <b>E</b> portée, <b>T</b> stimpack (pour ses marines)</div>
+      <div><b>Bunker sélectionné</b> : clic droit = point de ralliement ; <b>W</b> armes, <b>R</b> armure, <b>E</b> portée, <b>X</b> démolition (dégâts contre les bâtiments), <b>T</b> stimpack (pour ses marines)</div>
       <div><b>G</b> (bunker sélectionné) envoyer toutes ses troupes vers le point cliqué &nbsp; <b>N</b> bunker suivant</div>
       <div><b>Clic droit sur un bunker allié</b> : les unités sélectionnées entrent en garnison (4 max ; un bunker vide ne tire pas) &nbsp; <b>U</b> décharger &nbsp; <b>V</b> évolution (armes, armure et portée au niveau 3) : les soldats du bunker passent au niveau 2</div>
       <div><b>D</b> dropship (centre de commandement) &nbsp; <b>F</b> carte « Unités » du QG : <b>W</b> travailleur, <b>H</b> ressusciter le héros (aventure), <b>X</b> retour &nbsp; <b>T</b> stimuler les marines sélectionnés</div>
@@ -171,13 +173,15 @@
 
     // ------------------------------------------------------------ carte de commandes
     // lvl = { done, queued, max } : pastilles de niveau (vert = acquis, jaune = en file, gris = à venir)
+    // disabled : true = pas assez de minerai (réactivé dès qu'on en a) ; 'lock' = indisponible quoi qu'il arrive (max atteint,
+    // conditions non remplies...) : le bouton reste inactif jusqu'à ce que la carte soit redessinée
     cardButton(cmd, ico, key, label, cost, disabled, lvl) {
       let pips = '';
       if (lvl) {
         if (lvl.done >= lvl.max) pips = '<span class="lv max">MAX</span>';
         else { pips = '<span class="lv">'; for (let i = 0; i < lvl.max; i++) pips += '<i class="' + (i < lvl.done ? 'on' : i < lvl.done + lvl.queued ? 'q' : '') + '"></i>'; pips += '</span>'; }
       }
-      return '<button data-cmd="' + cmd + '" class="' + (disabled ? 'disabled' : '') + '" title="' + esc(label) + (cost ? ' — ' + cost + ' minerais' : '') + '">' +
+      return '<button data-cmd="' + cmd + '" class="' + (disabled ? 'disabled' : '') + '"' + (disabled === 'lock' ? ' data-lock="1"' : '') + ' title="' + esc(label) + (cost ? ' — ' + cost + ' minerais' : '') + '">' +
         '<span class="ico">' + (ICONS[cmd] || ico) + '</span>' + pips + '<span class="key">' + key + '</span>' + (cost ? '<span class="cost">' + cost + '</span>' : '') + '</button>';
     }
     // Retour visuel : le bouton s'enfonce (ok) ou tremble en rouge (refus)
@@ -191,57 +195,73 @@
     cardSignature() {
       const g = this.app.game, b = g.selectedBunker;
       if (!b) return 'n' + g.ownSelection.length;
-      return b.id + ':' + Object.values(b.up).join('') + ':' + b.research.map(r => r.what[0]).join('') + ':' + b.queue.length + ':' + b.garrison.length + ':' + (g.hero ? (g.hero.dead ? 'd' : 'v') : '');
+      return b.id + ':' + Object.values(b.up).join('') + ':' + b.research.map(r => r.what[0]).join('') + ':' + b.queue.length + ':' + b.garrison.length + ':' + (g.hero ? (g.hero.dead ? 'd' : 'v') : '') + ':' + (g.workers(g.humanId).length + g.workersQueued(g.humanId));
     }
+    // Un groupe de la carte : un titre et une grille 3 x 3 (les cases vides complètent la grille)
+    cardGroup(title, buttons) {
+      let html = buttons.join('');
+      for (let i = buttons.length; i < 9; i++) html += '<button class="empty"></button>';
+      return '<div class="cgrp"><div class="cgt">' + esc(title) + '</div><div class="cgrid">' + html + '</div></div>';
+    }
+    // Carte de commandes en deux groupes côte à côte : à gauche les ordres et la gestion des unités,
+    // à droite les améliorations, les constructions ou les coups spéciaux (stimpack)
     buildCommandCard(kind) {
-      const g = this.app.game, me = g.human, e = '<button class="empty"></button>';
-      let html = '';
+      const g = this.app.game, me = g.human;
+      const cb = (...a) => this.cardButton(...a);
+      const move = () => cb('move', '➜', 'M', 'Déplacer'), stop = () => cb('stop', '■', 'S', 'Stop'), hold = () => cb('hold', '⛨', 'H', 'Tenir la position');
+      let groups;
       if (kind === 'units') {
         const bio = g.ownSelection.some(u => u.def.bio && (u.up.stim > 0 || u.def.hero));
-        html = this.cardButton('move', '➜', 'M', 'Déplacer') + this.cardButton('stop', '■', 'S', 'Stop') + this.cardButton('attack', '⚔', 'A', 'Attaquer') +
-          this.cardButton('patrol', '↻', 'P', 'Patrouiller') + this.cardButton('hold', '⛨', 'H', 'Tenir la position') + e +
-          (bio ? this.cardButton('stim', '⚡', 'T', 'Stimpack : +50% vitesse et cadence pendant ' + ZC.STIM.duration + ' s, coûte ' + ZC.STIM.hpCost + ' PV') : e) + e + e;
+        groups = [['Ordres', [move(), stop(), cb('attack', '⚔', 'A', 'Attaquer'), cb('patrol', '↻', 'P', 'Patrouiller'), hold()]],
+          ['Coups spéciaux', bio ? [cb('stim', '⚡', 'T', 'Stimpack : +50% vitesse et cadence pendant ' + ZC.STIM.duration + ' s, coûte ' + ZC.STIM.hpCost + ' PV')] : []]];
       } else if (kind === 'workers') {
-        html = this.cardButton('move', '➜', 'M', 'Déplacer') + this.cardButton('stop', '■', 'S', 'Stop') + this.cardButton('hold', '⛨', 'H', 'Tenir la position') +
-          this.cardButton('gather', '◆', 'G', 'Récolter : cliquez sur un gisement de minerai (' + ZC.MINERALS.carry + ' minerais par voyage)') +
-          this.cardButton('repair', '🔧', 'R', 'Réparer : cliquez sur un bunker allié (' + ZC.REPAIR.hpPerSec + ' PV/s, coûte ' + ZC.REPAIR.costPerSec + ' minerais/s)') +
-          this.cardButton('extract', '⛏', 'B', ZC.RACES[me.race].extractor + ' : construire sur un gisement (' + ZC.EXTRACTOR.buildTime + ' s). Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s directement dans votre banque, sans transport. Un seul par gisement', g.extractorCost(me.id), me.minerals < g.extractorCost(me.id)) +
-          this.cardButton('tower', '⌂', 'T', ZC.UNITS[ZC.RACES[me.race].tower].name + ' : construire dans une de vos zones (' + ZC.TOWER.buildTime + ' s, ' + ZC.TOWER.perZone + ' par zone max). ' + (ZC.UNITS[ZC.RACES[me.race].tower].manned ? 'Pas de robots chez les humains : la tour ne tire que si des soldats y montent (clic droit, ' + ZC.UNITS[ZC.RACES[me.race].tower].capacity + ' places, portée +' + ZC.UNITS[ZC.RACES[me.race].tower].rangeBonus + ' cases)' : 'Tourelle autonome'), g.towerCost(me.id), me.minerals < g.towerCost(me.id)) + e + e;
+        const tw = ZC.UNITS[ZC.RACES[me.race].tower];
+        groups = [['Ordres', [move(), stop(), hold(),
+            cb('gather', '◆', 'G', 'Récolter : cliquez sur un gisement de minerai (' + ZC.MINERALS.carry + ' minerais par voyage)'),
+            cb('repair', '🔧', 'R', 'Réparer : cliquez sur un bunker allié (' + ZC.REPAIR.hpPerSec + ' PV/s, coûte ' + ZC.REPAIR.costPerSec + ' minerais/s)')]],
+          ['Constructions', [
+            cb('extract', '⛏', 'B', ZC.RACES[me.race].extractor + ' : construire sur un gisement (' + ZC.EXTRACTOR.buildTime + ' s). Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s directement dans votre banque, sans transport. Un seul par gisement', g.extractorCost(me.id), me.minerals < g.extractorCost(me.id)),
+            cb('tower', '⌂', 'T', tw.name + ' : construire dans une de vos zones (' + ZC.TOWER.buildTime + ' s, ' + ZC.TOWER.perZone + ' par zone max). ' + (tw.manned ? 'Pas de robots chez les humains : la tour ne tire que si des soldats y montent (clic droit, ' + tw.capacity + ' places, portée +' + tw.rangeBonus + ' cases)' : 'Tourelle autonome'), g.towerCost(me.id), me.minerals < g.towerCost(me.id))]]];
       } else if (kind === 'tower') {
         const tw = g.selectedTower;
-        html = (tw.garrison.length ? this.cardButton('unload', '⇩', 'U', 'Faire descendre la garnison (' + tw.garrison.length + ' unités)') : e) + e + e + e + e + e + e + e + e;
+        groups = [['Garnison', tw.garrison.length ? [cb('unload', '⇩', 'U', 'Faire descendre la garnison (' + tw.garrison.length + ' unités)')] : []], ['', []]];
       } else if (kind === 'hqUnits') { // carte « Unités » du centre de commandement
         const wk = ZC.UNITS[ZC.RACES[me.race].worker], wc = g.workerCost(me.id), wn = g.workers(me.id).length + g.workersQueued(me.id), wmax = g.workerCap(me.id), cap = wn >= wmax;
-        const worker = this.cardButton('worker', '⚒', 'W', wk.name + ' (' + wn + '/' + wmax + ', ' + ZC.WORKER.perBunker + ' par bunker) : récolte le minerai des gisements et répare les bunkers — ' + Math.round(g.workerTime(me.id)) + ' s de production', wc, cap || me.minerals < wc);
-        let hero = e;
+        const prod = [cb('worker', '⚒', 'W', wk.name + ' (' + wn + '/' + wmax + ', ' + ZC.WORKER.perBunker + ' par bunker) : récolte le minerai des gisements et répare les bunkers — ' + Math.round(g.workerTime(me.id)) + ' s de production', wc, cap ? 'lock' : me.minerals < wc)];
         if (g.campaign && g.hero) {
           const h = g.hero, can = g.canReviveHero(me.id), hc = g.heroReviveCost(me.id);
-          hero = this.cardButton('hero', '★', 'H', h.dead ? (g.heroQueued(me.id) ? h.def.name + ' : résurrection en cours' : 'Ressusciter ' + h.def.name + ' (niveau ' + h.heroLevel + ') — ' + Math.round(ZC.HERO_RESPAWN) + ' s') : h.def.name + ' est en vie', h.dead && can ? hc : 0, !can || me.minerals < hc);
+          prod.push(cb('hero', '★', 'H', h.dead ? (g.heroQueued(me.id) ? h.def.name + ' : résurrection en cours' : 'Ressusciter ' + h.def.name + ' (niveau ' + h.heroLevel + ') — ' + Math.round(ZC.HERO_RESPAWN) + ' s') : h.def.name + ' est en vie', h.dead && can ? hc : 0, !can ? 'lock' : me.minerals < hc));
         }
-        html = worker + hero + e + e + e + e + e + e + this.cardButton('back', '↩', 'X', 'Retour');
+        groups = [['Production', prod], ['Retour', [cb('back', '↩', 'X', 'Retour à la carte du centre de commandement')]]];
       } else if (kind === 'dropship') {
-        html = this.cardButton('move', '➜', 'M', 'Déplacer') + this.cardButton('stop', '■', 'S', 'Stop') + this.cardButton('build', '⌂', 'B', 'Construire un bunker sur une zone libre') + e + e + e + e + e + e;
+        groups = [['Ordres', [move(), stop()]], ['Constructions', [cb('build', '⌂', 'B', 'Construire un bunker sur une zone libre')]]];
       } else if (kind === 'bunker') {
         const b = g.selectedBunker, nb = g.selectedBunkers.length, multi = nb > 1 ? ' — ' + nb + ' bunkers sélectionnés' : '';
         const up = (k, ico) => {
           const d = ZC.UPGRADES[k], lvl = g.pendingLevel(b, k), cost = g.upgradeCost(b, k);
           const maxed = cost < 0;
-          return this.cardButton(k === 'stim' ? 'stimResearch' : k, ico, d.hotkey, d.name + (maxed ? ' (max)' : ' niveau ' + (lvl + 1) + ' — recherche ' + Math.round(d.time(lvl)) + ' s') + ' — ' + d.desc + ' (unités de ce bunker uniquement)' + multi, maxed ? 0 : cost, maxed || me.minerals < cost, { done: b.up[k], queued: lvl - b.up[k], max: d.max });
+          return cb(k === 'stim' ? 'stimResearch' : k, ico, d.hotkey, d.name + (maxed ? ' (max)' : ' niveau ' + (lvl + 1) + ' — recherche ' + Math.round(d.time(lvl)) + ' s') + ' — ' + d.desc + ' (unités de ce bunker uniquement)' + multi, maxed ? 0 : cost, maxed ? 'lock' : me.minerals < cost, { done: b.up[k], queued: lvl - b.up[k], max: d.max });
         };
-        const ft = ZC.UPGRADES.fortify, ftCost = g.upgradeCost(b, 'fortify');
-        const drop = b.def.hq ? this.cardButton('dropship', '✈', 'D', 'Dropship : construit un bunker sur une zone libre (' + Math.round(g.dropshipBuildTime(me.id)) + ' s de production)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id))
-          : this.cardButton('fortify', '⌂', ft.hotkey, ft.name + ' (' + ft.time() + ' s) : ' + ft.desc, ftCost < 0 ? 0 : ftCost, ftCost < 0 || me.minerals < ftCost, { done: b.up.fortify, queued: g.pendingLevel(b, 'fortify') - b.up.fortify, max: 1 });
         const ev = ZC.UPGRADES.evolve, evCost = g.upgradeCost(b, 'evolve'), can = g.canEvolve(b);
         const l2 = ZC.UNITS[ZC.UNITS[g.spawnTypeFor(me)].evolvesTo || g.spawnTypeFor(me)];
-        const evolve = this.cardButton('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires + ' (terminées ou en file)'), evCost < 0 ? 0 : evCost, evCost < 0 || !can || me.minerals < evCost, { done: b.up.evolve, queued: g.pendingLevel(b, 'evolve') - b.up.evolve, max: 1 });
-        const unload = b.garrison.length ? this.cardButton('unload', '⇩', 'U', 'Décharger la garnison (' + b.garrison.length + ' unités)') : e;
-        const units = b.def.hq ? this.cardButton('units', '⚒', 'F', 'Unités spéciales : travailleurs' + (g.campaign ? ' et résurrection du héros' : '')) : e;
-        html = drop + up('weapons', '✦') + up('armor', '⛨') + up('range', '⟶') + up('stim', '⚡') +
-          this.cardButton('send', '⇶', 'G', 'Envoyer les troupes : toutes les unités produites par ce bunker partent en attaque-déplacement vers le point cliqué') + evolve + unload + units;
-      } else if (kind === 'none') {
-        html = (me.hq ? this.cardButton('dropship', '✈', 'D', 'Dropship (produit au centre de commandement)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id)) : e) + e + e + e + e + e + e + e + e;
+        const evolve = cb('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires + ' (terminées ou en file)'), evCost < 0 ? 0 : evCost, evCost < 0 || !can ? 'lock' : me.minerals < evCost, { done: b.up.evolve, queued: g.pendingLevel(b, 'evolve') - b.up.evolve, max: 1 });
+        const upgrades = [up('weapons', '✦'), up('armor', '⛨'), up('range', '⟶'), up('siege', '💣'), up('stim', '⚡'), evolve];
+        if (!b.def.hq) {
+          const ft = ZC.UPGRADES.fortify, ftCost = g.upgradeCost(b, 'fortify');
+          upgrades.push(cb('fortify', '⌂', ft.hotkey, ft.name + ' (' + ft.time() + ' s) : ' + ft.desc, ftCost < 0 ? 0 : ftCost, ftCost < 0 ? 'lock' : me.minerals < ftCost, { done: b.up.fortify, queued: g.pendingLevel(b, 'fortify') - b.up.fortify, max: 1 }));
+        }
+        const units = [];
+        if (b.def.hq) {
+          units.push(cb('dropship', '✈', 'D', 'Dropship : construit un bunker sur une zone libre (' + Math.round(g.dropshipBuildTime(me.id)) + ' s de production)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id)));
+          units.push(cb('units', '⚒', 'F', 'Unités spéciales : travailleurs' + (g.campaign ? ' et résurrection du héros' : '')));
+        }
+        units.push(cb('send', '⇶', 'G', 'Envoyer les troupes : toutes les unités produites par ce bunker partent en attaque-déplacement vers le point cliqué'));
+        if (b.garrison.length) units.push(cb('unload', '⇩', 'U', 'Décharger la garnison (' + b.garrison.length + ' unités)'));
+        groups = [['Unités', units], ['Améliorations', upgrades]];
+      } else {
+        groups = [['Production', me.hq ? [cb('dropship', '✈', 'D', 'Dropship (produit au centre de commandement)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id))] : []], ['', []]];
       }
-      this.el.cmd.innerHTML = html;
+      this.el.cmd.innerHTML = groups.map(([t, bs]) => this.cardGroup(t, bs)).join('');
       this.cardKind = kind;
       if (this.app.input) this.setActiveCommand(this.app.input.mode);
     }
@@ -251,7 +271,7 @@
         const costEl = b.querySelector('.cost');
         if (!costEl) return;
         const cost = +costEl.textContent;
-        b.classList.toggle('disabled', me.minerals < cost);
+        b.classList.toggle('disabled', b.dataset.lock === '1' || me.minerals < cost);
       });
     }
 
@@ -378,7 +398,7 @@
         let extra = '';
         if (u.def.tower) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">' + (u.def.manned ? 'Tour habitée : clic droit avec des soldats pour y monter (' + u.def.capacity + ' places, portée +' + u.def.rangeBonus + ' cases) · U faire descendre' : 'Tourelle autonome · portée ' + (u.def.range / ZC.TILE) + ' cases · dégâts ' + u.def.dmg) + '</div>';
         else if (u.def.extractor) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s du gisement, directement dans votre banque</div>';
-        else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : 'Q centre de commandement · ') + 'W/R/E/T améliorations · V évolution · G envoyer les troupes · U décharger la garnison</div>';
+        else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : 'Q centre de commandement · ') + 'W/R/E/X/T améliorations · V évolution · G envoyer les troupes · U décharger la garnison</div>';
         else if (u.def.worker) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Clic droit sur un gisement vert : récolter (G) · clic droit sur un bunker allié abîmé : réparer (R, ' + ZC.REPAIR.costPerSec + ' minerais/s)</div>';
         else if (u.type === 'dropship') extra = '<div class="line sub">Clic droit sur une zone libre : construire un bunker (' + g.settings.landingTime + ' s)</div>';
         else extra = '<div class="line sub">' + (u.def.level ? 'Niveau ' + u.def.level + ' · ' : '') + 'Dégâts ' + u.damage + (u.def.hits > 1 ? ' x' + u.def.hits : '') + ' (' + u.def.dtype + ') · Armure ' + u.armor + ' · Portée ' + (u.def.range ? (u.range / ZC.TILE) : 'mêlée') + (u.home && u.home.zone ? ' · Bunker ' + (u.home.zone.ix + 1) + '-' + (u.home.zone.iy + 1) : '') + '</div><div class="line sub" id="u-kills"></div>' + (u.canGarrison ? '<div class="line sub">Clic droit sur un bunker allié : entrer en garnison</div>' : '');
@@ -432,7 +452,7 @@
         const ex = info.querySelector('#u-extra');
         if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + g.workerCap(u.owner) + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
         const upl = info.querySelector('#u-up');
-        if (upl) upl.textContent = (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.stim ? ' · Stimpack' : '');
+        if (upl) upl.textContent = (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.siege ? ' · Démolition +' + u.up.siege : '') + (u.up.stim ? ' · Stimpack' : '');
         // Files d'attente en icônes : le premier élément porte sa barre de progression, les suivants attendent
         const qIcon = (cmd, key, pct, title, gold, kind, i) => '<span class="qi' + (pct !== undefined ? ' cur' : '') + '" data-q="' + kind + '" data-i="' + i + '" title="' + esc(title) + ' — clic : annuler et rembourser">' + (ICONS[cmd] || '') + '<i>' + key + '</i>' + (pct !== undefined ? '<b class="' + (gold ? 'gold' : '') + '" style="width:' + pct.toFixed(0) + '%"></b>' : '') + '</span>';
         const rd = info.querySelector('#u-research');
@@ -548,7 +568,7 @@
           <h1>OPTIONS</h1>
           <p class="tag">Chaque zone a un bunker en son centre : qui tient le bunker tient la zone, et chaque bunker produit des marines à chaque vague.<br>
           Votre centre de commandement est le seul à produire des dropships, qui construisent des bunkers sur les zones libres. Détruire un bunker ennemi libère sa zone.<br>
-          Chaque bunker a ses propres améliorations (armes, armure, portée, stimpack), qui ne s'appliquent qu'aux marines qu'il produit. Gagnez des minerais par les zones et les kills.<br>
+          Chaque bunker a ses propres améliorations (armes, armure, portée, démolition, stimpack), qui ne s'appliquent qu'aux marines qu'il produit. Gagnez des minerais par les zones et les kills.<br>
           Le joueur qui détruit tous les bunkers adverses l'emporte.</p>
           <div class="cols">
             <div class="form" id="start-form"></div>

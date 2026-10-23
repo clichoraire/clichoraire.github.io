@@ -8,25 +8,28 @@ MSG="${1:-Mise à jour des jeux}"; [ "$MSG" = "--force" ] && MSG="Mise à jour d
 
 # Versions : chaque jeu affiche sa version (ZC.VERSION, HK.VERSION). Si le code d'un jeu a changé depuis la dernière
 # mise en ligne mais pas sa version, on refuse (sauf --force), pour ne jamais republier un « 1.0 » périmé.
-ver_of() { node -e "const w={};global.window=w;require('$1');process.stdout.write((w.ZC||w.HK).VERSION)"; }
-VER_ZC=$(ver_of "$PROJETS/ZoneControl/js/config.js"); VER_HK=$(ver_of "$PROJETS/HockeyBoisjoli/js/config.js")
-HEAD_ZC=$(git -C "$PROJETS/ZoneControl" rev-parse HEAD); HEAD_HK=$(git -C "$PROJETS/HockeyBoisjoli" rev-parse HEAD)
+ver_of() { node -e "const w={};global.window=w;require('$1');process.stdout.write((w.ZC||w.HK||w.SK).VERSION)"; }
+VER_ZC=$(ver_of "$PROJETS/ZoneControl/js/config.js"); VER_HK=$(ver_of "$PROJETS/HockeyBoisjoli/js/config.js"); VER_SK=$(ver_of "$PROJETS/SnowKids/js/config.js")
+HEAD_ZC=$(git -C "$PROJETS/ZoneControl" rev-parse HEAD); HEAD_HK=$(git -C "$PROJETS/HockeyBoisjoli" rev-parse HEAD); HEAD_SK=$(git -C "$PROJETS/SnowKids" rev-parse HEAD)
 if [ -f versions.json ] && [[ " $* " != *" --force "* ]]; then
-  for j in "bunker $VER_ZC $HEAD_ZC" "hockey $VER_HK $HEAD_HK"; do set -- $j
+  for j in "bunker $VER_ZC $HEAD_ZC" "hockey $VER_HK $HEAD_HK" "snow $VER_SK $HEAD_SK"; do set -- $j
     OLDV=$(node -e "const v=require('./versions.json');process.stdout.write(v['$1']?v['$1'].version:'')")
     OLDC=$(node -e "const v=require('./versions.json');process.stdout.write(v['$1']?v['$1'].commit:'')")
     if [ "$OLDC" != "$3" ] && [ "$OLDV" = "$2" ]; then echo "✖ $1 : le code a changé mais la version est encore $2. Augmente VERSION dans js/config.js (ou ./deploy.sh --force)."; exit 1; fi
   done
 fi
-echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"hockey\": { \"version\": \"$VER_HK\", \"commit\": \"$HEAD_HK\" } }" > versions.json
-echo "window.GAME_VERSIONS = { 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK' };" > versions.js
-echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK"
+echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"hockey\": { \"version\": \"$VER_HK\", \"commit\": \"$HEAD_HK\" }, \"snow\": { \"version\": \"$VER_SK\", \"commit\": \"$HEAD_SK\" } }" > versions.json
+echo "window.GAME_VERSIONS = { 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK', 'snow-kids/': '$VER_SK' };" > versions.js
+echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK · Snow Kids $VER_SK"
 
 echo "▸ Bunker Zone (copie de ZoneControl/)"
 rsync -a --delete --exclude .git --exclude .DS_Store --exclude '_extract.html' "$PROJETS/ZoneControl/" bunker-zone/
 
 echo "▸ Hockey Boisjoli (copie de HockeyBoisjoli/)"
 rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/HockeyBoisjoli/" hockey-boisjoli/
+
+echo "▸ Snow Kids (copie de SnowKids/)"
+rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/SnowKids/" snow-kids/
 
 echo "▸ Sosaria Online (bundle + assets chargés à l'exécution)"
 (cd "$PROJETS/sosaria" && node build.js >/dev/null)

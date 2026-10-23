@@ -41,7 +41,7 @@
       this.landT = 0;
       this.rally = null;                    // point de ralliement (bunker)
       this.queue = [];                      // dropships en construction (centre de commandement)
-      this.up = { weapons: 0, armor: 0, range: 0, stim: 0, evolve: 0, fortify: 0 }; // améliorations du bunker (les unités partagent celles de leur bunker d'origine)
+      this.up = { weapons: 0, armor: 0, range: 0, siege: 0, stim: 0, evolve: 0, fortify: 0 }; // améliorations du bunker (les unités partagent celles de leur bunker d'origine)
       this.home = null;                     // bunker d'origine (unités mobiles)
       this.research = [];                   // recherches en cours { what, t, total } (bunker)
       this.zone = null;                     // zone possédée (bunker)
