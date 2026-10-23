@@ -228,17 +228,17 @@
         place(); vivant = true; oeil.className = 'on'; regarder();
         timers.push(setTimeout(parler, 900));
         timers.push(setTimeout(() => { oeil.classList.add('cligne'); setTimeout(() => oeil.classList.remove('cligne'), 300); }, 2200));
-        timers.push(setTimeout(partir, 6000));
+        timers.push(setTimeout(partir, 4500));
       };
       const partir = (vite) => {
         if (!vivant) return; vivant = false; bulle.style.display = 'none';
         oeil.classList.add('fuite');
         timers.push(setTimeout(() => { oeil.className = ''; }, 650));
-        timers.push(setTimeout(apparaitre, vite ? 9000 : 18000 + Math.random() * 15000));
+        timers.push(setTimeout(apparaitre, vite ? 5000 : 2500 + Math.random() * 1500)); // revient toutes les 7 à 8 s
       };
       addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; regarder(); });
       oeil.addEventListener('click', () => { bulle.textContent = 'AÏE ! Mon œil !'; bulle.style.display = 'block'; bulle.style.left = (x + 20) + 'px'; bulle.style.top = (y - 48) + 'px'; setTimeout(() => partir(true), 500); });
-      timers.push(setTimeout(apparaitre, 6500));
+      timers.push(setTimeout(apparaitre, 7000));
     })();
 
   </script>
