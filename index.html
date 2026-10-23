@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Les jeux de Matthieu</title>
+  <meta name="description" content="Des jeux en JavaScript qui tournent directement dans le navigateur : Bunker Zone, Sosaria Online, et d'autres à venir.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d1117'/%3E%3Cpath d='M8 20 L12 10 L16 15 L19 9 L24 20 Z' fill='%2339ff14'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0e14; --bg2: #11161f; --panel: #161c27; --line: #27303f;
+      --text: #e8edf5; --muted: #98a4b8; --accent: #39ff14; --accent2: #ffd040; --blue: #5ab8ff;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+    /* ------------------------------------------------ en-tête */
+    header { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: rgba(11,14,20,0.8); border-bottom: 1px solid var(--line); }
+    header .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 20px; letter-spacing: 1px; text-transform: uppercase; }
+    .brand svg { width: 28px; height: 28px; }
+    nav a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: 14px; margin-left: 22px; }
+    nav a:hover { color: var(--text); }
+
+    /* ------------------------------------------------ bandeau */
+    .hero { position: relative; overflow: hidden; padding: 84px 0 64px; text-align: center; }
+    .hero::before { content: ""; position: absolute; inset: 0; background:
+      radial-gradient(600px 320px at 20% 10%, rgba(57,255,20,0.14), transparent 60%),
+      radial-gradient(700px 360px at 80% 20%, rgba(90,184,255,0.14), transparent 60%),
+      radial-gradient(500px 300px at 50% 100%, rgba(255,208,64,0.08), transparent 60%); }
+    .hero::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%); }
+    .hero .wrap { position: relative; }
+    .kicker { display: inline-block; font-family: Rajdhani, sans-serif; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; color: var(--accent); border: 1px solid rgba(57,255,20,0.35); padding: 4px 12px; border-radius: 999px; background: rgba(57,255,20,0.06); }
+    h1 { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: clamp(40px, 7vw, 76px); line-height: 1; margin: 18px 0 14px; letter-spacing: 1px; text-transform: uppercase; }
+    h1 span { color: transparent; background: linear-gradient(90deg, #fff, #9ad0ff); -webkit-background-clip: text; background-clip: text; }
+    .lead { max-width: 640px; margin: 0 auto 28px; color: var(--muted); font-size: 18px; }
+    .cta { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; padding: 12px 24px; border-radius: 10px; background: var(--accent); color: #06130a; box-shadow: 0 0 0 1px rgba(57,255,20,0.6), 0 10px 30px rgba(57,255,20,0.25); transition: transform .15s, box-shadow .15s; }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(57,255,20,0.8), 0 14px 36px rgba(57,255,20,0.35); }
+    .facts { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin-top: 34px; color: var(--muted); font-size: 14px; }
+    .facts b { color: var(--text); font-weight: 600; }
+
+    /* ------------------------------------------------ jeux */
+    section { padding: 40px 0 70px; }
+    .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    h2 { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 30px; letter-spacing: 1px; text-transform: uppercase; margin: 0; }
+    .section-title p { margin: 0; color: var(--muted); font-size: 14px; }
+    .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .game { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: transform .2s, border-color .2s, box-shadow .2s; }
+    .game:hover { transform: translateY(-4px); border-color: #3b4759; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+    .cover { position: relative; aspect-ratio: 16 / 10; background: #000; overflow: hidden; }
+    .cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s; }
+    .game:hover .cover img { transform: scale(1.04); }
+    .cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(22,28,39,0.95)); }
+    .badge { position: absolute; top: 12px; left: 12px; z-index: 1; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.18); color: #fff; }
+    .badge.alpha { color: var(--accent2); border-color: rgba(255,208,64,0.5); }
+    .body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .game h3 { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 26px; margin: 0; letter-spacing: 0.5px; text-transform: uppercase; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; background: var(--bg2); }
+    .game p { margin: 0; color: var(--muted); font-size: 15px; flex: 1; }
+    .actions { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+    .play { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 17px; letter-spacing: 1px; text-transform: uppercase; padding: 10px 18px; border-radius: 10px; background: #fff; color: #0b0e14; transition: background .15s, transform .15s; }
+    .play:hover { background: var(--accent); transform: translateY(-1px); }
+    .play svg { width: 14px; height: 14px; }
+    .ghost { font-size: 13px; color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line); }
+    .ghost:hover { color: var(--text); }
+    .soon { border-style: dashed; justify-content: center; align-items: center; text-align: center; min-height: 260px; color: var(--muted); background: transparent; }
+    .soon:hover { transform: none; box-shadow: none; }
+    .soon .big { font-family: Rajdhani, sans-serif; font-size: 40px; font-weight: 700; color: var(--line); line-height: 1; }
+    .soon h3 { font-size: 20px; margin-top: 8px; }
+
+    /* ------------------------------------------------ à propos */
+    .about { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    .about div { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+    .about h4 { margin: 0 0 6px; font-family: Rajdhani, sans-serif; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; color: var(--blue); }
+    .about p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 13px; }
+    footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    @media (max-width: 600px) { nav a { margin-left: 14px; } .hero { padding: 56px 0 44px; } .facts { gap: 16px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="#">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#161c27" stroke="#27303f"/><path d="M8 21 L12 10 L16 15 L19 9 L24 21 Z" fill="#39ff14"/></svg>
+        Les jeux de Matthieu
+      </a>
+      <nav><a href="#jeux">Jeux</a><a href="#apropos">À propos</a></nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <span class="kicker">Jouable dans le navigateur · gratuit</span>
+      <h1>Des jeux <span>faits maison</span></h1>
+      <p class="lead">Des jeux écrits en JavaScript, sans rien à installer : cliquez sur « Jouer » et c'est parti. Stratégie en temps réel, jeu de rôle en monde ouvert, et d'autres à venir.</p>
+      <a class="cta" href="#jeux">Voir les jeux ↓</a>
+      <div class="facts"><span><b>0</b> installation</span><span><b>0 $</b> pour jouer</span><span><b>100 %</b> navigateur</span></div>
+    </div>
+  </section>
+
+  <section id="jeux">
+    <div class="wrap">
+      <div class="section-title"><h2>Les jeux</h2><p>Chrome, Firefox, Safari ou Edge, sur ordinateur de préférence.</p></div>
+      <div class="games" id="games"></div>
+    </div>
+  </section>
+
+  <section id="apropos">
+    <div class="wrap">
+      <div class="section-title"><h2>À propos</h2></div>
+      <div class="about">
+        <div><h4>Fait maison</h4><p>Chaque jeu est codé à la main en JavaScript et HTML5, avec un canvas pour l'affichage. Pas de moteur du commerce, pas de gros téléchargement.</p></div>
+        <div><h4>Vos sauvegardes</h4><p>Les parties, l'aventure et les options sont gardées dans votre navigateur (stockage local). Rien n'est envoyé sur un serveur.</p></div>
+        <div><h4>En évolution</h4><p>Les jeux s'améliorent régulièrement et d'autres s'ajouteront à cette page. Revenez de temps en temps.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap"><span>© <span id="year"></span> Matthieu Boisjoli · Les jeux de Matthieu</span><span>Hébergé sur GitHub Pages</span></div>
+  </footer>
+
+  <script>
+    // Pour ajouter un jeu : une entrée ici, un dossier à côté (avec son index.html) et une image dans covers/.
+    const GAMES = [
+      {
+        title: 'Bunker Zone', path: 'bunker-zone/', cover: 'covers/bunker-zone.jpg', badge: 'Stratégie',
+        tags: ['STR', 'Solo contre IA', 'Aventure en 4 mondes', '4 races'],
+        desc: 'Stratégie en temps réel inspirée de la carte Zone Control de StarCraft : prenez des zones au dropship, garnissez vos bunkers, récoltez le minerai vert avec vos travailleurs et faites évoluer vos soldats. Mode classique, évolution, tournoi et une aventure en quatre mondes avec héros et boutique.',
+      },
+      {
+        title: 'Sosaria Online', path: 'sosaria/', cover: 'covers/sosaria.jpg', badge: 'Alpha', badgeClass: 'alpha',
+        tags: ['RPG', 'Monde ouvert', 'Isométrique', 'Compétences à l\'usage'],
+        desc: 'Jeu de rôle isométrique en monde ouvert inspiré d\'Ultima Online : pas de classes ni de niveaux, seulement des compétences qui montent en les pratiquant. Explorez, forgez, combattez, bâtissez. Sauvegarde automatique dans le navigateur.',
+      },
+    ];
+    const el = document.getElementById('games');
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    el.innerHTML = GAMES.map(g => `
+      <article class="game">
+        <a class="cover" href="${g.path}" aria-label="Jouer à ${esc(g.title)}">
+          <span class="badge ${g.badgeClass || ''}">${esc(g.badge)}</span>
+          <img src="${g.cover}" alt="Capture d'écran de ${esc(g.title)}" loading="lazy">
+        </a>
+        <div class="body">
+          <h3>${esc(g.title)}</h3>
+          <div class="tags">${g.tags.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
+          <p>${esc(g.desc)}</p>
+          <div class="actions">
+            <a class="play" href="${g.path}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2 L14 8 L3 14 Z" fill="currentColor"/></svg>Jouer</a>
+            <a class="ghost" href="${g.path}" target="_blank" rel="noopener">Ouvrir dans un nouvel onglet</a>
+          </div>
+        </div>
+      </article>`).join('') + `
+      <article class="game soon"><div class="body"><div class="big">+</div><h3>Prochain jeu</h3><p>D'autres jeux arriveront ici.</p></div></article>`;
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
