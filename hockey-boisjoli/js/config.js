@@ -73,7 +73,7 @@ window.HK = window.HK || {};
 
     mickael: { name: 'Mickael', birth: '1993-01-04', role: 'papa', size: 0.98, power: 'laser',
       stats: { speed: 3, shot: 3, force: 4, control: 4 },
-      look: { skin: '#f0c8a0', hair: '#2b1d12', hairStyle: 'short', glasses: 'round', stubble: true } },
+      look: { skin: '#f3d2b4', hair: '#3b2614', hairStyle: 'swept', glasses: 'round', beard: '#6b4a2b', grin: true } },
     marie: { name: 'Marie', birth: '1994-01-06', role: 'maman', size: 0.92, power: 'bulle',
       stats: { speed: 4, shot: 3, force: 3, control: 4 },
       look: { skin: '#f6d6bd', hair: '#5a3a22', hairStyle: 'long', lipstick: true } },
@@ -86,7 +86,7 @@ window.HK = window.HK || {};
 
     jeremie: { name: 'Jérémie', birth: '1988-03-06', role: 'papa', size: 1.0, power: 'teleport',
       stats: { speed: 4, shot: 4, force: 3, control: 3 },
-      look: { skin: '#eec49b', hair: '#2b1d12', hairStyle: 'buzz', goatee: '#2b1d12' } },
+      look: { skin: '#f0c8a0', hair: '#8a6a3e', hairStyle: 'quiff', beard: '#7a5a35', eyes: '#4a7fb5' } },
     jessica: { name: 'Jessica', birth: '1991-07-01', role: 'maman', size: 0.92, power: 'aimant',
       stats: { speed: 4, shot: 4, force: 2, control: 5 },
       look: { skin: '#f6d6bd', hair: '#e5c06b', hairStyle: 'ponytail', lipstick: true, earrings: true } },
@@ -96,7 +96,7 @@ window.HK = window.HK || {};
 
     josue: { name: 'Josué', birth: '1985-10-29', role: 'papa', size: 1.0, power: 'capitaine',
       stats: { speed: 3, shot: 4, force: 4, control: 3 },
-      look: { skin: '#f0c8a0', hair: '#3b2a1a', hairStyle: 'cap', hat: '#1b1b1b', stubble: true } },
+      look: { skin: '#e8b98f', hair: '#1b1b1b', hairStyle: 'buzz', beard: '#1b1b1b', broad: true, squint: true, grin: true } },
     emily: { name: 'Émily', birth: '1984-12-25', role: 'maman', size: 0.94, power: 'blizzard',
       stats: { speed: 3, shot: 2, force: 2, control: 4 },
       look: { skin: '#f6d6bd', hair: '#b5452a', hairStyle: 'long', lipstick: true, earrings: true } },

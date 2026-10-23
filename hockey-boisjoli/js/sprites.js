@@ -21,7 +21,7 @@
   S.drawPerson = function (ctx, x, y, d, team, o) {
     o = o || {};
     const look = d.look, s = d.size * (o.scale || 1), dir = o.dir || 1;
-    const legH = 13 * s, bodyH = (look.belly ? 23 : 21) * s, bodyW = (look.belly ? 31 : look.tall ? 20 : 24) * s;
+    const legH = 13 * s, bodyH = (look.belly ? 23 : 21) * s, bodyW = (look.belly ? 31 : look.broad ? 29 : look.tall ? 20 : 24) * s;
     const headR = 10 * s * (1 + Math.max(0, 1 - d.size) * 0.9);
     const H = legH + bodyH + headR * 2;
     const color = team.color, color2 = team.color2, pants = team.dark || '#222';
@@ -135,6 +135,14 @@
         ctx.beginPath(); ctx.arc(0, hy - R * 0.05, R * 1.05, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.fillRect(-R * 1.05, hy - R * 0.1, R * 0.4, R * 1.1); break;
       case 'toupee': ctx.fillStyle = '#2a1a0a'; rr(ctx, -R * 1.0, hy - R * 1.25, R * 1.9, R * 0.75, R * 0.35); ctx.fill();
         ctx.strokeStyle = look.skin; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-R * 0.95, hy - R * 0.55); ctx.lineTo(R * 0.85, hy - R * 0.6); ctx.stroke(); break;
+      case 'swept':   // mèche de côté sur le front
+        ctx.beginPath(); ctx.arc(0, hy - R * 0.05, R * 1.08, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-R * 1.05, hy - R * 0.5); ctx.quadraticCurveTo(R * 0.2, hy - R * 0.2, R * 1.02, hy - R * 0.55); ctx.lineTo(R * 1.05, hy - R * 0.9); ctx.lineTo(-R * 1.05, hy - R * 0.9); ctx.closePath(); ctx.fill();
+        ctx.fillRect(-R * 1.08, hy - R * 0.3, R * 0.3, R * 0.75); break;
+      case 'quiff':   // banane relevée, côtés courts
+        ctx.beginPath(); ctx.arc(0, hy - R * 0.1, R * 1.02, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-R * 0.9, hy - R * 0.8); ctx.quadraticCurveTo(-R * 0.3, hy - R * 1.75, R * 0.6, hy - R * 1.6); ctx.quadraticCurveTo(R * 1.1, hy - R * 1.45, R * 1.0, hy - R * 0.7); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = shade(hair, 0.8); ctx.fillRect(-R * 1.05, hy - R * 0.4, R * 0.25, R * 0.6); ctx.fillStyle = hair; break;
       case 'mullet': ctx.beginPath(); ctx.arc(0, hy - R * 0.05, R * 1.06, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
         rr(ctx, -R * 1.2, hy - R * 0.3, R * 0.7, R * 1.7, R * 0.25); ctx.fill(); break;
       case 'none': break;
@@ -152,8 +160,10 @@
     const eyeY = hy - R * 0.08, er = R * (kid ? 0.16 : 0.12);
     const exs = [-R * 0.38 + ex, R * 0.42 + ex];
     if (o.stunKind === 'dizzy' || o.down) { ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; for (const x of exs) { ctx.beginPath(); ctx.moveTo(x - er, eyeY - er); ctx.lineTo(x + er, eyeY + er); ctx.moveTo(x + er, eyeY - er); ctx.lineTo(x - er, eyeY + er); ctx.stroke(); } }
+    else if (look.squint) { ctx.strokeStyle = '#222'; ctx.lineWidth = R * 0.13; ctx.lineCap = 'round'; for (const x of exs) { ctx.beginPath(); ctx.arc(x, eyeY + er * 1.3, er * 1.1, Math.PI + 0.35, Math.PI * 2 - 0.35); ctx.stroke(); } }
     else {
       if (kid || look.crazyEyes) { ctx.fillStyle = '#fff'; for (const x of exs) { circle(ctx, x, eyeY, er * (look.crazyEyes ? 2 : 1.5)); ctx.fill(); } }
+      if (look.eyes) { ctx.fillStyle = look.eyes; for (const x of exs) { circle(ctx, x, eyeY, er * 1.25); ctx.fill(); } }
       ctx.fillStyle = '#222'; for (const x of exs) { circle(ctx, x + (kid ? er * 0.3 : 0) + (look.crazyEyes ? er * 0.6 : 0), eyeY - (look.crazyEyes ? er * 0.4 : 0), er * (look.crazyEyes ? 0.8 : 1)); ctx.fill(); }
       if (!kid) { ctx.fillStyle = '#fff'; for (const x of exs) { circle(ctx, x + er * 0.35, eyeY - er * 0.35, er * 0.35); ctx.fill(); } }
     }
@@ -174,14 +184,14 @@
     // nez
     ctx.strokeStyle = shade(look.skin, 0.75); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(R * 0.1 + ex, hy); ctx.lineTo(R * 0.22 + ex, hy + R * 0.28); ctx.stroke();
     // barbe, bouc
-    if (look.beard) { ctx.fillStyle = look.beard; ctx.beginPath(); ctx.arc(0, hy, R * 0.98, 0.25, Math.PI - 0.25); ctx.closePath(); ctx.fill(); ctx.fillStyle = look.skin; circle(ctx, R * 0.05 + ex, hy + R * 0.42, R * 0.26); ctx.fill(); }
+    if (look.beard) { ctx.fillStyle = look.beard; ctx.beginPath(); ctx.arc(0, hy, R * 0.98, 0.25, Math.PI - 0.25); ctx.closePath(); ctx.fill(); ctx.fillStyle = look.skin; circle(ctx, R * 0.05 + ex, hy + R * 0.42, R * (look.grin ? 0.4 : 0.26)); ctx.fill(); ctx.fillStyle = look.beard; ctx.beginPath(); ctx.ellipse(R * 0.1 + ex, hy + R * 0.3, R * 0.42, R * 0.1, 0, 0, Math.PI * 2); ctx.fill(); }
     if (look.goatee) { ctx.fillStyle = look.goatee; rr(ctx, -R * 0.2 + ex, hy + R * 0.55, R * 0.5, R * 0.45, R * 0.15); ctx.fill(); }
     if (look.stubble) { ctx.fillStyle = 'rgba(40,30,20,0.18)'; ctx.beginPath(); ctx.arc(0, hy, R * 0.97, 0.35, Math.PI - 0.35); ctx.closePath(); ctx.fill(); }
     // bouche
     const my = hy + R * 0.5;
     if (look.pacifier) { ctx.fillStyle = '#5ec8ff'; circle(ctx, R * 0.12 + ex, my, R * 0.3); ctx.fill(); ctx.fillStyle = '#fff'; circle(ctx, R * 0.12 + ex, my, R * 0.12); ctx.fill(); }
     else if (o.stunKind === 'eat' || o.scream) { ctx.fillStyle = o.scream ? '#5a1a1a' : '#6b2a2a'; ctx.beginPath(); ctx.ellipse(R * 0.12 + ex, my, R * (o.scream ? 0.3 : 0.2), R * (o.scream ? 0.4 : 0.25), 0, 0, Math.PI * 2); ctx.fill(); if (o.stunKind === 'eat') { ctx.fillStyle = '#c98b4a'; circle(ctx, R * 0.5 + ex, my + R * 0.1, R * 0.28); ctx.fill(); ctx.fillStyle = '#5a3a1a'; circle(ctx, R * 0.45 + ex, my + R * 0.05, R * 0.06); ctx.fill(); circle(ctx, R * 0.6 + ex, my + R * 0.18, R * 0.06); ctx.fill(); } }
-    else if (o.smile) { ctx.fillStyle = '#5a1a1a'; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.42, 0.15, Math.PI - 0.15); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(R * 0.1 + ex - R * 0.3, my - R * 0.15, R * 0.6, R * 0.12); if (look.lipstick) { ctx.strokeStyle = '#d6264a'; ctx.lineWidth = R * 0.1; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.42, 0.15, Math.PI - 0.15); ctx.stroke(); } }
+    else if (o.smile || look.grin) { ctx.fillStyle = '#5a1a1a'; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.42, 0.15, Math.PI - 0.15); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(R * 0.1 + ex - R * 0.3, my - R * 0.15, R * 0.6, R * 0.12); if (look.lipstick) { ctx.strokeStyle = '#d6264a'; ctx.lineWidth = R * 0.1; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.42, 0.15, Math.PI - 0.15); ctx.stroke(); } }
     else if (look.lipstick) { ctx.strokeStyle = '#d6264a'; ctx.lineWidth = R * 0.14; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.1, R * 0.3, 0.2, Math.PI - 0.2); ctx.stroke(); }
     else { ctx.strokeStyle = shade(look.skin, 0.6); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.3, 0.3, Math.PI - 0.3); ctx.stroke(); }
     if (look.mustache) { ctx.fillStyle = look.mustache; ctx.beginPath(); ctx.ellipse(R * 0.1 + ex, hy + R * 0.33, R * 0.45, R * 0.13, 0, 0, Math.PI * 2); ctx.fill(); }
