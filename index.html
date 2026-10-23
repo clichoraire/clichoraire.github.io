@@ -135,7 +135,10 @@
     <div class="wrap"><span>© <span id="year"></span> Matthieu Boisjoli · Les jeux de Matthieu</span><span>Hébergé sur GitHub Pages</span></div>
   </footer>
 
+  <script src="config.js"></script>
   <script>
+    // Réveille le relais Sosaria (hébergement gratuit qui s'endort) pendant que le visiteur lit la page
+    if (window.SITE_CONFIG && SITE_CONFIG.sosariaApi) fetch(SITE_CONFIG.sosariaApi + '/api/relais', { mode: 'no-cors' }).catch(() => {});
     // Pour ajouter un jeu : une entrée ici, un dossier à côté (avec son index.html) et une image dans covers/.
     const GAMES = [
       {

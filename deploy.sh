@@ -16,6 +16,18 @@ for d in NPC battle donjon interface inventory misc music other portraits tool w
   rsync -a --delete --exclude .DS_Store "$PROJETS/sosaria/assets/$d/" "sosaria/assets/$d/"
 done
 
+echo "▸ Relais Sosaria (LLM) : adresse lue dans config.js"
+API=$(node -e "const w={};global.window=w;require('./config.js');process.stdout.write(w.SITE_CONFIG.sosariaApi||'')")
+if [ -n "$API" ]; then
+  # Le bundle appelle /api/... en relatif : on redirige ces appels vers le relais hébergé.
+  python3 - "$API" <<'PY'
+import sys; api=sys.argv[1]; p='sosaria/index.html'; s=open(p).read()
+inj='<script>/* relais LLM hébergé */(function(){var B='+repr(api)+';var f=window.fetch;window.fetch=function(u,o){if(typeof u==="string"&&u.indexOf("/api/")===0)u=B+u;return f.call(this,u,o);};})();</script>'
+s=s.replace('<head>','<head>'+inj,1); open(p,'w').write(s)
+PY
+  echo "  → $API"
+else echo "  (aucun relais : les âmes resteront muettes en ligne)"; fi
+
 echo "▸ Commit et envoi"
 git add -A
 git commit -q -m "$MSG" || echo "  (rien à commiter)"

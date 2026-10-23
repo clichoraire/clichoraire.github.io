@@ -27,6 +27,16 @@ puis commit et pousse. GitHub Pages republie en une ou deux minutes.
 3. Ajouter une entrée dans `GAMES` au bas de `index.html` (titre, dossier, image, tags, description).
 4. `./deploy.sh "Nouveau jeu : …"` (ou ajouter la copie dans le script si le jeu se rebâtit).
 
+## Relais LLM de Sosaria (les âmes qui parlent)
+
+En ligne, le jeu n'a plus le serveur `serve.js` qui relayait les appels à Claude avec la clé. On héberge ce serveur
+gratuitement sur Render (https://render.com) : New → Blueprint → dépôt `clichoraire/sosaria` (le fichier `render.yaml`
+y décrit le service). Render demande `ANTHROPIC_API_KEY` ; la clé reste chez Render, jamais dans ce site public.
+`SOSARIA_BUDGET` plafonne la dépense et `SOSARIA_ORIGINES` n'autorise que ce site. Puis coller l'adresse du service
+(ex. `https://sosaria-relais.onrender.com`) dans `config.js` et lancer `./deploy.sh "Relais Sosaria"`.
+L'offre gratuite s'endort après 15 min sans visite : la page d'accueil le réveille, le premier appel peut prendre
+une minute.
+
 ## Première mise en ligne
 
 1. Sur github.com, créer un dépôt **public** et vide nommé `clichoraire.github.io` (ce nom précis donne l'adresse
