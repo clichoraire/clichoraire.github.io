@@ -67,7 +67,7 @@
       for (const z of myZones) {
         const b = z.bunker;
         if (!b || b.dead) continue;
-        const free = ZC.BUNKER_CAPACITY - b.garrison.length;
+        const free = ZC.capacity(b) - b.garrison.length;
         if (free <= 0) continue;
         const cands = idle[z.id].filter(u => u.canGarrison && u.inside === null).slice(0, free);
         if (cands.length) { g.issueOrder(cands, { type: 'enter', bunker: b }); for (const u of cands) { const i = idle[z.id].indexOf(u); if (i >= 0) idle[z.id].splice(i, 1); } }

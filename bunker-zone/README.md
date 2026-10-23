@@ -105,7 +105,7 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 | Stimpack sur les marines sélectionnés | T |
 | Acheter un dropship / bunker suivant | D / N |
 | Évolution (bunker sélectionné, armes, armure et portée au niveau 3) | V |
-| Garnison | clic droit sur un bunker allié avec des unités sélectionnées (4 max) ; U (bunker sélectionné) décharger |
+| Garnison | clic droit sur un bunker allié avec des unités sélectionnées (4 max, 6 dans le centre de commandement) ; U (bunker sélectionné) décharger |
 | Même type à l'écran | double-clic ou Ctrl+clic |
 | Ajouter à la sélection | Maj+clic |
 | Attaque-déplacement, Déplacer, Stop, Tenir, Patrouille | A, M, S, H, P |

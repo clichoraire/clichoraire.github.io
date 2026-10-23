@@ -95,6 +95,8 @@ window.ZC = window.ZC || {};
   };
   ZC.RESEARCH_QUEUE_MAX = 3;  // recherches en attente par bunker
   ZC.BUNKER_CAPACITY = 4;     // unités en garnison par bunker ; un bunker vide ne tire pas
+  ZC.HQ_CAPACITY = 6;         // le centre de commandement en accueille six
+  ZC.capacity = (b) => b && b.def && b.def.hq ? ZC.HQ_CAPACITY : ZC.BUNKER_CAPACITY;
   ZC.SPEEDS = [1, 2, 3, 5];   // vitesses de lecture disponibles en partie (bouton du HUD, touches + / -)
   // Économie : gisements de minerai vert (style StarCraft) récoltés par les travailleurs
   ZC.MINERALS = {

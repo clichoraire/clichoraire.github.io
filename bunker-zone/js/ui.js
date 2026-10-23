@@ -261,24 +261,25 @@
       }
       this.txt(this.el.time, ZC.formatTime(g.time));
       const ru = g.roundUnit, adm = s.admin ? '⚙ ADMIN · ' : '';
+      const diff = ' · ' + (g.campaign ? (ZC.DIFFICULTIES[g.campaign.difficulty] || {}).label || '' : 'IA ' + (ZC.DIFFICULTY[s.difficulty] || {}).label || '').toUpperCase(); // difficulté toujours visible
       if (g.isTournament) {
-        this.txt(this.el.roundName, adm + 'ROUND ' + (g.roundIndex + 1) + ' — ' + ru.name.toUpperCase());
+        this.txt(this.el.roundName, adm + 'ROUND ' + (g.roundIndex + 1) + ' — ' + ru.name.toUpperCase() + diff);
         if (g.state === 'intermission') this.txt(this.el.roundTimer, 'Round suivant dans ' + Math.ceil(g.intermissionT) + ' s');
         else {
           const limit = s.roundTimeLimit > 0 ? 'Temps restant ' + ZC.formatTime(Math.max(0, s.roundTimeLimit - g.roundTime)) + '  ·  ' : '';
           this.txt(this.el.roundTimer, limit + 'Premier à ' + s.roundsToWin + ' round' + (s.roundsToWin > 1 ? 's' : '') + '  ·  Vague dans ' + Math.ceil(g.spawnTimer) + ' s');
         }
       } else if (s.mode === 'evolution') {
-        this.txt(this.el.roundName, adm + 'ROUND ' + (g.roundIndex + 1) + ' — ' + ru.name.toUpperCase());
+        this.txt(this.el.roundName, adm + 'ROUND ' + (g.roundIndex + 1) + ' — ' + ru.name.toUpperCase() + diff);
         const nextRound = g.roundIndex < ZC.ROUNDS.length - 1 ? 'Round suivant ' + ZC.formatTime(s.roundDuration - g.roundTimer) + '  ·  ' : '';
         this.txt(this.el.roundTimer, nextRound + 'Vague dans ' + Math.ceil(g.spawnTimer) + ' s');
       } else if (g.campaign) {
         const m = this.app.campaign.mission(g.campaign.mission), o = g.campaign.objective;
-        this.txt(this.el.roundName, adm + m.name.toUpperCase());
+        this.txt(this.el.roundName, adm + m.name.toUpperCase() + diff);
         const alive = g.players.filter(p => p.alive && !p.isHuman).length;
         this.txt(this.el.roundTimer, (o.type === 'survive' ? 'Tenir encore ' + ZC.formatTime(Math.max(0, o.time - g.time)) : 'Chefs de guerre restants : ' + alive) + (s.invasion ? '  ·  Assaut par le ' + (g.nextInvasion ? g.nextInvasion.sideName : '?') + ' dans ' + Math.ceil(g.invasionT) + ' s (vague ' + (g.invasionCount + 1) + ')' : '') + '  ·  Vague dans ' + Math.ceil(g.spawnTimer) + ' s');
       } else {
-        this.txt(this.el.roundName, adm + 'BUNKER ZONE');
+        this.txt(this.el.roundName, adm + 'BUNKER ZONE' + diff);
         this.txt(this.el.roundTimer, 'Prochaine vague (' + ru.name + ') dans ' + Math.ceil(g.spawnTimer) + ' s');
       }
       if (this.waveFlashT > 0) { this.waveFlashT -= dt; this.el.roundTimer.classList.add('flash'); } else this.el.roundTimer.classList.remove('flash');
@@ -395,7 +396,7 @@
         const ex = info.querySelector('#u-extra');
         if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + ZC.WORKER.max + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
         const upl = info.querySelector('#u-up');
-        if (upl) upl.textContent = (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.BUNKER_CAPACITY + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.stim ? ' · Stimpack' : '');
+        if (upl) upl.textContent = (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.stim ? ' · Stimpack' : '');
         // Files d'attente en icônes : le premier élément porte sa barre de progression, les suivants attendent
         const qIcon = (cmd, key, pct, title, gold, kind, i) => '<span class="qi' + (pct !== undefined ? ' cur' : '') + '" data-q="' + kind + '" data-i="' + i + '" title="' + esc(title) + ' — clic : annuler et rembourser">' + (ICONS[cmd] || '') + '<i>' + key + '</i>' + (pct !== undefined ? '<b class="' + (gold ? 'gold' : '') + '" style="width:' + pct.toFixed(0) + '%"></b>' : '') + '</span>';
         const rd = info.querySelector('#u-research');
@@ -482,7 +483,7 @@
         <div id="menu-mission" class="menu hidden">
           <h1 id="mis-title"></h1>
           <div id="mis-dialog" class="dialog">
-            <canvas id="mis-portrait" width="96" height="96"></canvas>
+            <div class="dlg-who"><canvas id="mis-portrait" width="96" height="96"></canvas><div class="dlg-side" id="dlg-side"></div></div>
             <div class="dlg-text"><div class="dlg-name" id="dlg-name"></div><div class="dlg-role" id="dlg-role"></div><div class="dlg-line" id="dlg-line"></div></div>
             <div class="dlg-btns"><button id="dlg-next">Suivant ▸</button><button id="dlg-skip">Passer</button></div>
           </div>
@@ -681,7 +682,11 @@
     dialogShow() {
       const q = (s) => this.menus.querySelector(s), [who, line] = this.mis.lines[this.mis.i], ch = ZC.CHARACTERS[who];
       const cv = q('#mis-portrait'); ZC.drawCharPortrait(cv.getContext('2d'), ch.portrait, cv.width, ch.tint);
-      q('#dlg-name').textContent = ch.name; q('#dlg-name').style.color = ch.color; q('#dlg-role').textContent = ch.role; q('#dlg-line').textContent = line;
+      q('#dlg-name').textContent = ch.name; q('#dlg-name').style.color = ch.color; q('#dlg-role').textContent = ch.role; q('#dlg-line').textContent = (ch.side === 'enemy' ? '« ' + line + ' »' : line);
+      // Camp bien visible : les nôtres en bleu à gauche, l'ennemi en rouge à droite
+      const side = ch.side || 'ally', dlg = q('#mis-dialog');
+      dlg.classList.remove('ally', 'hero', 'enemy'); dlg.classList.add(side);
+      q('#dlg-side').textContent = side === 'enemy' ? '☠ ENNEMI' : side === 'hero' ? '★ VOTRE HÉROS' : '✚ ALLIÉ';
       q('#dlg-next').textContent = this.mis.i < this.mis.lines.length - 1 ? 'Suivant ▸' : 'Briefing ▸';
     }
     dialogNext() { this.mis.i++; if (this.mis.i >= this.mis.lines.length) this.dialogEnd(); else this.dialogShow(); }

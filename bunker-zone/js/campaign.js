@@ -8,15 +8,15 @@
 
   // ------------------------------------------------------------ Personnages (dialogues)
   ZC.CHARACTERS = {
-    orsk:  { name: 'Général Orsk',      role: 'Commandement de la Division Bunker', portrait: 'a_idleN',     tint: 'rgba(255,200,80,0.28)', color: '#ffd040' },
-    ops:   { name: 'Opératrice Lin',    role: 'Centre des opérations',              portrait: 'm_idleW',     tint: 'rgba(80,160,255,0.3)',  color: '#c8d4e8' },
-    kael:  { name: 'Sergent Kael',      role: 'Héros · exo-marine',                 portrait: 'exo_idle',    tint: null,                    color: '#8ad88a' },
-    voss:  { name: 'Lieutenante Voss',  role: 'Héros · archonte',                   portrait: 'archon_idle', tint: null,                    color: '#7fd0ff' },
-    dax:   { name: 'Commandant Dax',    role: 'Héros · mech de siège',              portrait: 'siege_idle',  tint: null,                    color: '#c8d4e8' },
-    varek: { name: 'Seigneur Varek',    role: 'Chef des renégats humains',          portrait: 'a_idleE',     tint: 'rgba(255,40,40,0.35)',  color: '#ff5050' },
-    szeth: { name: 'Matriarche Szeth',  role: 'Esprit-ruche de Nidus',              portrait: 'beast_idle',  tint: null,                    color: '#ff8a6a' },
-    aelon: { name: 'Hiérarque Aelon',   role: 'Conclave de Lumen',                  portrait: 'archon_idle', tint: 'rgba(200,120,255,0.3)', color: '#c8a0ff' },
-    core:  { name: 'Noyau-Directeur 7', role: 'Intelligence de Forge-Oméga',        portrait: 'siege_idle',  tint: 'rgba(255,60,60,0.3)',   color: '#ff7070' },
+    orsk:  { name: 'Général Orsk',      side: 'ally',  role: 'Commandement de la Division Bunker', portrait: 'a_idleN',     tint: 'rgba(255,200,80,0.28)', color: '#ffd040' },
+    ops:   { name: 'Opératrice Lin',    side: 'ally',  role: 'Centre des opérations',              portrait: 'm_idleW',     tint: 'rgba(80,160,255,0.3)',  color: '#c8d4e8' },
+    kael:  { name: 'Sergent Kael',      side: 'hero',  role: 'Héros · exo-marine',                 portrait: 'exo_idle',    tint: null,                    color: '#8ad88a' },
+    voss:  { name: 'Lieutenante Voss',  side: 'hero',  role: 'Héros · archonte',                   portrait: 'archon_idle', tint: null,                    color: '#7fd0ff' },
+    dax:   { name: 'Commandant Dax',    side: 'hero',  role: 'Héros · mech de siège',              portrait: 'siege_idle',  tint: null,                    color: '#c8d4e8' },
+    varek: { name: 'Seigneur Varek',    side: 'enemy', role: 'Chef des renégats humains',          portrait: 'a_idleE',     tint: 'rgba(255,40,40,0.35)',  color: '#ff5050' },
+    szeth: { name: 'Matriarche Szeth',  side: 'enemy', role: 'Esprit-ruche de Nidus',              portrait: 'beast_idle',  tint: null,                    color: '#ff8a6a' },
+    aelon: { name: 'Hiérarque Aelon',   side: 'enemy', role: 'Conclave de Lumen',                  portrait: 'archon_idle', tint: 'rgba(200,120,255,0.3)', color: '#c8a0ff' },
+    core:  { name: 'Noyau-Directeur 7', side: 'enemy', role: 'Intelligence de Forge-Oméga',        portrait: 'siege_idle',  tint: 'rgba(255,60,60,0.3)',   color: '#ff7070' },
   };
 
   // ------------------------------------------------------------ Héros

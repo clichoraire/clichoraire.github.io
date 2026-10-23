@@ -51,8 +51,12 @@
       }
     }
 
-    loadSettings() { try { const s = JSON.parse(localStorage.getItem('zc-settings') || '{}'); delete s.campaign; return s; } catch (e) { return {}; } }
-    saveSettings() { try { const s = Object.assign({}, this.settings); delete s.campaign; localStorage.setItem('zc-settings', JSON.stringify(s)); } catch (e) { /* ignore */ } }
+    // Réglages propres à une mission : jamais gardés dans les réglages généraux (sinon « Tenir la ligne » laissait
+    // ses envahisseurs et son absence d'IA aux missions et parties suivantes)
+    static get MISSION_KEYS() { return ['mode', 'mapZones', 'mapZonesY', 'aiCount', 'teams', 'humanStart', 'extraZones', 'startUnits', 'startMinerals', 'spawnInterval', 'unitCap', 'roundsToWin', 'roundTimeLimit', 'roundDuration', 'invasion', 'mineralZones', 'startWorkers', 'aiRace', 'playerRace', 'difficulty', 'incomePerBunker', 'dropshipCost', 'landingTime', 'tileset', 'admin']; }
+    static get TRANSIENT_KEYS() { return ['campaign', 'invasion', 'teams', 'extraZones', 'humanStart', 'aiRace', 'startMinerals']; }
+    loadSettings() { try { const s = JSON.parse(localStorage.getItem('zc-settings') || '{}'); for (const k of App.TRANSIENT_KEYS) delete s[k]; return s; } catch (e) { return {}; } }
+    saveSettings() { try { const s = Object.assign({}, this.settings); for (const k of App.TRANSIENT_KEYS) delete s[k]; localStorage.setItem('zc-settings', JSON.stringify(s)); } catch (e) { /* ignore */ } }
     // Réglages généraux (sans mission) pour une partie simple
     get plainSettings() { const s = Object.assign({}, this.settings); s.campaign = null; return s; }
 
@@ -93,13 +97,22 @@
     start(settings) {
       if (this.input) this.input.detach();
       this.stopDemo();
-      this.settings = Object.assign({}, this.settings, settings);
-      if (!this.settings.campaign) this.saveSettings();
+      if (settings && settings.campaign) {
+        // Mission : on part des valeurs par défaut pour tout ce qu'une mission peut régler, puis la mission s'applique
+        const base = Object.assign({}, this.settings);
+        for (const k of App.MISSION_KEYS) base[k] = ZC.DEFAULTS[k];
+        this.gs = Object.assign(base, settings);
+      } else {
+        this.settings = Object.assign({}, this.settings, settings);
+        for (const k of App.TRANSIENT_KEYS) delete this.settings[k];
+        this.saveSettings();
+        this.gs = Object.assign({}, this.settings, { campaign: null });
+      }
       ZC.Audio.init();
       ZC.Audio.setEnabled(!!this.settings.sound);
       ZC.Music.setEnabled(this.settings.music !== false);
       ZC.Music.start();
-      this.game = new ZC.Game(this.settings);
+      this.game = new ZC.Game(this.gs);
       this.renderer = new ZC.Renderer(this.canvas, this.game);
       this.ui.showHud(true); // avant resize : le canvas doit laisser la place à la console
       this.resize();
@@ -117,9 +130,9 @@
       this.paused = false; this.running = true; this.lastT = performance.now(); this.acc = 0;
       this.setSpeed(1);
       const h = this.game.human;
-      if (this.settings.campaign) { const m = this.campaign.mission(this.settings.campaign.mission); this.ui.announce(m.name.toUpperCase(), m.objective.type === 'survive' ? 'Tenez ' + ZC.formatTime(m.objective.time) : m.objective.type === 'rounds' ? 'Premier à ' + m.objective.wins + ' rounds' : 'Éliminez tous les chefs de guerre'); }
-      else if (this.settings.mode === 'rounds') this.ui.announce('ROUND 1 — ' + ZC.UNITS[ZC.ROUNDS[0]].name.toUpperCase(), 'Tournoi : le premier à remporter ' + this.settings.roundsToWin + ' round' + (this.settings.roundsToWin > 1 ? 's' : '') + ' gagne la partie');
-      else if (this.settings.mode === 'evolution') this.ui.announce('ROUND 1 — ' + ZC.UNITS[ZC.ROUNDS[0]].name.toUpperCase(), 'Les bunkers produisent des unités à chaque vague');
+      if (this.gs.campaign) { const m = this.campaign.mission(this.gs.campaign.mission); this.ui.announce(m.name.toUpperCase(), m.objective.type === 'survive' ? 'Tenez ' + ZC.formatTime(m.objective.time) : m.objective.type === 'rounds' ? 'Premier à ' + m.objective.wins + ' rounds' : 'Éliminez tous les chefs de guerre'); }
+      else if (this.gs.mode === 'rounds') this.ui.announce('ROUND 1 — ' + ZC.UNITS[ZC.ROUNDS[0]].name.toUpperCase(), 'Tournoi : le premier à remporter ' + this.gs.roundsToWin + ' round' + (this.gs.roundsToWin > 1 ? 's' : '') + ' gagne la partie');
+      else if (this.gs.mode === 'evolution') this.ui.announce('ROUND 1 — ' + ZC.UNITS[ZC.ROUNDS[0]].name.toUpperCase(), 'Les bunkers produisent des unités à chaque vague');
       else this.ui.announce('BUNKER ZONE', 'Prenez des zones avec votre dropship, garnissez vos bunkers, détruisez les bunkers ennemis');
       this.ui.message('Vous jouez en ' + h.colorName.toLowerCase() + '. Votre dropship peut construire un bunker sur une zone libre (clic droit).', h.hex);
     }
@@ -166,7 +179,7 @@
       if (changed && this.running) this.ui.message('Vitesse x' + v, '#9ad0ff');
     }
     stepSpeed(dir) { const i = ZC.SPEEDS.indexOf(this.speed); this.setSpeed(ZC.SPEEDS[Math.max(0, Math.min(ZC.SPEEDS.length - 1, i + dir))]); }
-    restart() { this.start(this.settings); }
+    restart() { this.start(this.gs || this.settings); }
     // Lance une mission de l'aventure (les réglages de la mission priment sur les réglages généraux)
     startMission(id, diff) {
       const ms = this.campaign.missionSettings(id, diff);
@@ -219,7 +232,7 @@
           }
           break;
         case 'enter':
-          if (d.player === me) { A.play('order', 0); ui.message(d.unit.def.name + ' en garnison (' + d.bunker.garrison.length + '/' + ZC.BUNKER_CAPACITY + ').', '#9ad0ff'); }
+          if (d.player === me) { A.play('order', 0); ui.message(d.unit.def.name + ' en garnison (' + d.bunker.garrison.length + '/' + ZC.capacity(d.bunker) + ').', '#9ad0ff'); }
           break;
         case 'unload':
           if (d.player === me) { A.play('order', 0); ui.message(d.count + ' unités sorties du bunker.', '#9ad0ff'); }

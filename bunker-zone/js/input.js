@@ -167,9 +167,9 @@
         else if (target && target.owner !== g.humanId && !g.allied(target.owner, g.humanId)) { g.issueOrder(others, { type: 'attack', target }); this.marker(target.x, target.y, '#f02020'); }
         else if (target && target.owner === g.humanId && target.def.structure && others.some(u => u.canGarrison)) {
           // Clic droit sur son propre bunker : les unités éligibles entrent en garnison, les autres s'en approchent
-          const free = ZC.BUNKER_CAPACITY - target.garrison.length;
+          const free = ZC.capacity(target) - target.garrison.length;
           const can = others.filter(u => u.canGarrison), rest = others.filter(u => !u.canGarrison);
-          if (free <= 0) { ZC.Audio.play('error', 0); this.app.ui.message('Ce bunker est plein (' + ZC.BUNKER_CAPACITY + ' unités).', '#ff5050'); }
+          if (free <= 0) { ZC.Audio.play('error', 0); this.app.ui.message('Ce ' + (target.def.hq ? 'centre de commandement' : 'bunker') + ' est plein (' + ZC.capacity(target) + ' unités).', '#ff5050'); }
           g.issueOrder(can.slice(0, Math.max(0, free)), { type: 'enter', bunker: target });
           const near = can.slice(Math.max(0, free)).concat(rest);
           if (near.length) g.issueOrder(near, { type: 'move', x: target.x, y: target.y + target.radius + 20 });

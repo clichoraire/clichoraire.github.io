@@ -192,7 +192,17 @@ body { font-family: Verdana, Tahoma, Geneva, sans-serif; font-size: 12px; color:
 #menu-mission { min-width: 680px; }
 .dialog { display: flex; gap: 14px; align-items: flex-start; background: rgba(0,0,0,0.4); border: 1px solid #3f4a5a; padding: 14px; }
 .dialog.hidden, #mis-sheet.hidden { display: none; }
-.dialog canvas { border: 2px solid #5f6b7c; box-shadow: 0 0 0 1px #0a0c10; flex: 0 0 auto; }
+.dialog canvas { border: 2px solid #5f6b7c; box-shadow: 0 0 0 1px #0a0c10; flex: 0 0 auto; display: block; }
+.dlg-who { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dlg-side { font-size: 10px; font-weight: bold; letter-spacing: 1.5px; padding: 3px 8px; border: 1px solid; text-transform: uppercase; }
+/* camps : alliés (bleu, à gauche), héros (or), ennemis (rouge, portrait et bandeau à droite) */
+.dialog.ally { border-color: #4a8ad8; background: linear-gradient(90deg, rgba(40,90,160,0.25), rgba(0,0,0,0.4)); }
+.dialog.ally canvas { border-color: #5ab8ff; } .dialog.ally .dlg-side { color: #9ad0ff; border-color: #4a8ad8; background: rgba(40,90,160,0.4); }
+.dialog.hero { border-color: #d8b030; background: linear-gradient(90deg, rgba(160,120,30,0.25), rgba(0,0,0,0.4)); }
+.dialog.hero canvas { border-color: #ffd040; } .dialog.hero .dlg-side { color: #ffd040; border-color: #d8b030; background: rgba(160,120,30,0.4); }
+.dialog.enemy { border-color: #d83030; background: linear-gradient(270deg, rgba(160,30,30,0.3), rgba(0,0,0,0.4)); flex-direction: row-reverse; }
+.dialog.enemy canvas { border-color: #ff5050; box-shadow: 0 0 0 1px #0a0c10, 0 0 14px rgba(255,60,40,0.5); } .dialog.enemy .dlg-side { color: #ff7070; border-color: #d83030; background: rgba(160,30,30,0.45); }
+.dialog.enemy .dlg-text { text-align: right; } .dialog.enemy .dlg-line { font-style: italic; }
 .dlg-text { flex: 1; min-height: 96px; }
 .dlg-name { font-weight: bold; font-size: 15px; }
 .dlg-role { font-size: 10px; color: #8fa7c7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }

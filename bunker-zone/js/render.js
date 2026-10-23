@@ -319,7 +319,7 @@
         }
       }
       if (u.def.structure && u.garrison.length) { // meurtrières occupées
-        const ports = u.def.hq ? [[-26, -16, 6, 4], [20, -16, 6, 4], [-26, -3, 6, 4], [20, -3, 6, 4]] : [[-11, -14, 7, 3], [4, -14, 7, 3], [-11, 11, 7, 3], [4, 11, 7, 3]];
+        const ports = u.def.hq ? [[-26, -16, 6, 4], [20, -16, 6, 4], [-26, -3, 6, 4], [20, -3, 6, 4], [-26, 10, 6, 4], [20, 10, 6, 4]] : [[-11, -14, 7, 3], [4, -14, 7, 3], [-11, 11, 7, 3], [4, 11, 7, 3]];
         const hot = u.attackAnim > 0;
         for (let i = 0; i < u.garrison.length && i < ports.length; i++) {
           const p = ports[i];

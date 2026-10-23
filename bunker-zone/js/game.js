@@ -207,7 +207,7 @@
     // ---------------------------------------------------------- garnison des bunkers
     enterBunker(u, b) {
       if (b.def.extractor) return false;
-      if (u.dead || b.dead || u.inside || b.garrison.length >= ZC.BUNKER_CAPACITY || !u.canGarrison) return false;
+      if (u.dead || b.dead || u.inside || b.garrison.length >= ZC.capacity(b) || !u.canGarrison) return false;
       u.inside = b; u.order = { type: 'idle' }; u.target = null; u.moving = false; u.stimT = 0;
       u.x = b.x; u.y = b.y; u.prevX = b.x; u.prevY = b.y;
       b.garrison.push(u);

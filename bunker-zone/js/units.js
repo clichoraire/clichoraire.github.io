@@ -312,7 +312,7 @@
 
         case 'enter': { // rejoindre un bunker allié et y entrer s'il reste de la place
           const b = o.bunker;
-          if (!b || b.dead || b.owner !== this.owner || b.garrison.length >= ZC.BUNKER_CAPACITY) { this.order = { type: 'idle' }; break; }
+          if (!b || b.dead || b.owner !== this.owner || b.garrison.length >= ZC.capacity(b)) { this.order = { type: 'idle' }; break; }
           if (ZC.dist(this.x, this.y, b.x, b.y) > b.radius + this.radius + 6) this.moveTo(b.x, b.y, dt);
           else { this.game.enterBunker(this, b); return; }
           break;
