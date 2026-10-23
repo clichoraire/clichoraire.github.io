@@ -93,15 +93,18 @@
     footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 
     /* ------------------------------------------------ l'œil qui surveille (easter egg) */
-    #oeil, #oeil2, #bouche { position: fixed; z-index: 50; width: 170px; height: 170px; border-radius: 50%; overflow: hidden; border: 4px solid #fff; box-shadow: 0 0 0 4px #000, 0 0 40px rgba(57,255,20,0.6), 0 20px 60px rgba(0,0,0,0.8); cursor: pointer; transition: transform .25s; display: none; }
+    #scene { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 50; }
+    #oeil, #oeil2, #bouche { position: absolute; pointer-events: auto; width: 170px; height: 170px; border-radius: 50%; overflow: hidden; border: 4px solid #fff; box-shadow: 0 0 0 4px #000, 0 0 40px rgba(57,255,20,0.6), 0 20px 60px rgba(0,0,0,0.8); cursor: pointer; transition: transform .25s; display: none; }
     #oeil.on, #oeil2.on, #bouche.on { display: block; animation: surgir .7s cubic-bezier(.2,1.6,.4,1) both, flotter 3s ease-in-out .7s infinite; }
     #oeil img, #oeil2 img, #bouche img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.15); transition: transform .15s; }
     #oeil.fuite, #oeil2.fuite, #bouche.fuite { animation: fuite .6s ease-in both !important; }
     #oeil2 img { transform: scale(1.15) scaleX(-1); }
     #bouche.parle img { animation: parler .22s ease-in-out infinite alternate; }
     @keyframes parler { from { transform: scale(1.15, 1.05); } to { transform: scale(1.15, 1.3); } }
-    #bulle { position: fixed; z-index: 51; background: #fff; color: #0b0e14; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 14px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,0.5); display: none; }
-    #bulle::after { content: ""; position: absolute; left: 18px; bottom: -8px; border: 8px solid transparent; border-top-color: #fff; border-bottom: 0; }
+    #bulle { position: absolute; z-index: 51; background: #fff; color: #0b0e14; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 14px; white-space: nowrap; max-width: calc(100vw - 16px); overflow: hidden; text-overflow: ellipsis; box-shadow: 0 6px 20px rgba(0,0,0,0.5); display: none; }
+    #bulle::after { content: ""; position: absolute; left: 18px; border: 8px solid transparent; }
+    #bulle.bas::after { bottom: -8px; border-top-color: #fff; border-bottom: 0; }    /* flèche vers le bas : l'œil est dessous */
+    #bulle.haut::after { top: -8px; border-bottom-color: #fff; border-top: 0; }   /* flèche vers le haut : l'œil est dessus */
     @keyframes surgir { from { transform: scale(0) rotate(-540deg); } to { transform: scale(1) rotate(0); } }
     @keyframes flotter { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
     @keyframes fuite { to { transform: scale(0) rotate(720deg); opacity: 0; } }
@@ -158,10 +161,12 @@
     </div>
   </section>
 
-  <div id="oeil" title="…"><img src="covers/oeil.jpg" alt=""></div>
-  <div id="oeil2" title="…"><img src="covers/oeil.jpg" alt=""></div>
-  <div id="bouche" title="…"><img src="covers/bouche.jpg" alt=""></div>
-  <div id="bulle"></div>
+  <div id="scene">
+    <div id="oeil" title="…"><img src="covers/oeil.jpg" alt=""></div>
+    <div id="oeil2" title="…"><img src="covers/oeil.jpg" alt=""></div>
+    <div id="bouche" title="…"><img src="covers/bouche.jpg" alt=""></div>
+    <div id="bulle"></div>
+  </div>
   <footer>
     <div class="wrap"><span>© <span id="year"></span> Matthieu Boisjoli · Les jeux de Matthieu</span><span>Hébergé sur GitHub Pages</span></div>
   </footer>
@@ -225,11 +230,18 @@
         img.style.transform = 'scale(1.15) translate(' + (dx / d * k) + 'px,' + (dy / d * k) + 'px)';
         if (visage) { const dx2 = mx - (x2 + 85), dy2 = my - (y2 + 85), d2 = Math.hypot(dx2, dy2) || 1, k2 = Math.min(14, d2 / 20); img2.style.transform = 'scale(1.15) scaleX(-1) translate(' + (-dx2 / d2 * k2) + 'px,' + (dy2 / d2 * k2) + 'px)'; }
       };
-      const parler = () => {
-        bulle.textContent = PHRASES[phrase++ % PHRASES.length];
-        bulle.style.display = 'block';
-        const bx = Math.max(8, Math.min(innerWidth - bulle.offsetWidth - 8, visage ? x + 60 : x + 20)), by = visage ? y + 330 : y < innerHeight / 2 ? y + 185 : y - 48;
+      // La bulle se pose sous l'ancre si elle est dans la moitié haute, au-dessus sinon, flèche tournée vers elle, et reste dans l'écran
+      const placerBulle = (texte, ax, ay, ah) => {
+        bulle.textContent = texte; bulle.style.display = 'block';
+        const sous = ay + ah / 2 < innerHeight / 2;
+        bulle.className = sous ? 'haut' : 'bas';
+        const bx = Math.max(8, Math.min(innerWidth - bulle.offsetWidth - 8, Math.max(8, ax) + 10));
+        const by = sous ? Math.min(innerHeight - bulle.offsetHeight - 8, ay + ah + 14) : Math.max(8, ay - bulle.offsetHeight - 14);
         bulle.style.left = bx + 'px'; bulle.style.top = by + 'px';
+      };
+      const parler = () => {
+        const texte = PHRASES[phrase++ % PHRASES.length];
+        if (visage) placerBulle(texte, x + 95, y + 190, 170); else placerBulle(texte, x, y, 170);
         if (visage) bouche.classList.add('parle');
         timers.push(setTimeout(() => { bulle.style.display = 'none'; bouche.classList.remove('parle'); }, 2600));
       };
@@ -255,7 +267,7 @@
       };
       addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; regarder(); });
       for (const e of [oeil2, bouche]) e.addEventListener('click', () => oeil.click());
-      oeil.addEventListener('click', () => { bulle.textContent = 'AÏE ! Mon œil !'; bulle.style.display = 'block'; bulle.style.left = (x + 20) + 'px'; bulle.style.top = (y - 48) + 'px'; setTimeout(() => partir(true), 500); });
+      oeil.addEventListener('click', () => { placerBulle('AÏE ! Mon œil !', x, y, 170); setTimeout(() => partir(true), 500); });
       timers.push(setTimeout(apparaitre, 7000));
     })();
 
