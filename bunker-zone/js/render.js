@@ -272,6 +272,7 @@
         }
       }
       this.drawEffects(ctx, vx, vy, vw, vh, t);
+      if (g.settings.invasion && g.nextInvasion && g.state === 'playing') this.drawInvasionWarning(ctx, t);
       // Unités volantes (ombre décalée + oscillation)
       for (let i = 0; i < air.length; i++) {
         const u = air[i];
@@ -297,6 +298,7 @@
       ctx.restore();
       ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
       ctx.strokeRect(-vx + 1, -vy + 1, m.w - 2, m.h - 2);
+      if (g.settings.invasion && g.nextInvasion && g.state === 'playing') this.drawInvasionEdgeArrow(ctx, t);
     }
 
     drawUnit(ctx, u, t, bob) {
@@ -362,6 +364,64 @@
         ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(p.x - 62, p.y - 44, 124, 13);
         ctx.fillStyle = M.color; ctx.fillText(label, p.x, p.y - 34);
       }
+    }
+
+    // Balise d'assaut : là où la prochaine vague va surgir. Anneaux radar, chevrons qui foncent vers l'intérieur,
+    // compte à rebours ; tout s'accélère et rougit dans les 5 dernières secondes.
+    drawInvasionWarning(ctx, t) {
+      const g = this.game, n = g.nextInvasion, m = g.map, left = Math.max(0, g.invasionT);
+      const urgent = left < 5, speed = urgent ? 3 : 1.2, col = urgent ? '255,60,40' : '255,120,60';
+      const dir = n.side === 0 ? [0, 1] : n.side === 1 ? [0, -1] : n.side === 2 ? [1, 0] : [-1, 0]; // vers l'intérieur de la carte
+      const ang = Math.atan2(dir[1], dir[0]);
+      // halo au sol
+      const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 110);
+      gr.addColorStop(0, 'rgba(' + col + ',' + (urgent ? 0.35 + 0.2 * Math.sin(t * 12) : 0.18) + ')'); gr.addColorStop(1, 'rgba(' + col + ',0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(n.x, n.y, 110, 0, TAU); ctx.fill();
+      // anneaux radar qui s'étendent
+      for (let k = 0; k < 3; k++) {
+        const ph = ((t * speed * 0.5) + k / 3) % 1, r = 12 + ph * 95;
+        ctx.strokeStyle = 'rgba(' + col + ',' + ((1 - ph) * 0.9) + ')'; ctx.lineWidth = 2.5 - ph * 1.5;
+        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, TAU); ctx.stroke();
+      }
+      // chevrons qui avancent vers l'intérieur
+      ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(ang);
+      for (let k = 0; k < 4; k++) {
+        const ph = ((t * speed * 0.7) + k / 4) % 1, d = 30 + ph * 90, a = (1 - ph) * 0.9;
+        ctx.strokeStyle = 'rgba(' + col + ',' + a + ')'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(d - 14, -16); ctx.lineTo(d, 0); ctx.lineTo(d - 14, 16); ctx.stroke();
+      }
+      ctx.restore();
+      // point central qui clignote et compte à rebours
+      const blink = urgent ? (Math.sin(t * 14) > 0 ? 1 : 0.3) : 0.6 + 0.4 * Math.sin(t * 4);
+      ctx.fillStyle = 'rgba(' + col + ',' + blink + ')'; ctx.beginPath(); ctx.arc(n.x, n.y, 7, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(n.x, n.y, 7, 0, TAU); ctx.stroke();
+      const label = (urgent ? '⚠ ASSAUT IMMINENT ' : 'ASSAUT PAR LE ' + n.sideName.toUpperCase() + ' · ') + Math.ceil(left) + ' s', lx = ZC.clamp(n.x, 90, m.w - 90), ly = n.side === 0 ? n.y + 44 : n.y - 36;
+      ctx.font = 'bold 11px Verdana, sans-serif'; ctx.textAlign = 'center';
+      const w = ctx.measureText(label).width + 16;
+      ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(lx - w / 2, ly - 11, w, 16);
+      ctx.strokeStyle = 'rgba(' + col + ',0.9)'; ctx.lineWidth = 1; ctx.strokeRect(lx - w / 2 + 0.5, ly - 10.5, w - 1, 15);
+      ctx.fillStyle = urgent && Math.sin(t * 14) < 0 ? '#fff' : 'rgb(' + col + ')'; ctx.fillText(label, lx, ly + 1);
+    }
+    // Flèche au bord de l'écran quand la balise est hors champ (espace écran)
+    drawInvasionEdgeArrow(ctx, t) {
+      const g = this.game, n = g.nextInvasion, vx = this.viewX, vy = this.viewY, vw = this.vw, vh = this.vh;
+      const sx = n.x - vx, sy = n.y - vy;
+      if (sx > 0 && sx < vw && sy > 0 && sy < vh) return;
+      const cx = vw / 2, cy = vh / 2, dx = sx - cx, dy = sy - cy, M = 46;
+      const k = Math.min((vw / 2 - M) / Math.abs(dx || 1e-6), (vh / 2 - M) / Math.abs(dy || 1e-6));
+      const ax = cx + dx * k, ay = cy + dy * k, ang = Math.atan2(dy, dx), left = Math.max(0, g.invasionT), urgent = left < 5;
+      const col = urgent ? '255,60,40' : '255,120,60', pulse = 1 + 0.12 * Math.sin(t * (urgent ? 14 : 5));
+      ctx.save(); ctx.translate(ax, ay);
+      ctx.fillStyle = 'rgba(' + col + ',0.25)'; ctx.beginPath(); ctx.arc(0, 0, 30 * pulse, 0, TAU); ctx.fill();
+      ctx.rotate(ang); ctx.scale(pulse, pulse);
+      ctx.fillStyle = 'rgb(' + col + ')'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(-8, -14); ctx.lineTo(-2, 0); ctx.lineTo(-8, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      ctx.font = 'bold 11px Verdana, sans-serif'; ctx.textAlign = 'center';
+      const label = (urgent ? '⚠ ' : '') + 'ASSAUT · ' + Math.ceil(left) + ' s', w = ctx.measureText(label).width + 12;
+      const lx = ZC.clamp(ax, w / 2 + 4, vw - w / 2 - 4), ly = ZC.clamp(ay + 40, 50, vh - 10);
+      ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(lx - w / 2, ly - 11, w, 15);
+      ctx.fillStyle = 'rgb(' + col + ')'; ctx.fillText(label, lx, ly);
     }
 
     drawFlag(ctx, x, y, hex, t) {
@@ -694,6 +754,11 @@
         mctx.beginPath(); mctx.arc(cx, cy, 3 + ph * Math.max(8, zs * 0.6), 0, Math.PI * 2); mctx.stroke();
         mctx.fillStyle = 'rgba(255,255,255,' + (0.4 + 0.6 * blink) * (1 - age / ALERT) + ')';
         mctx.fillRect(cx - 2.5, cy - 2.5, 5, 5);
+      }
+      if (g.settings.invasion && g.nextInvasion && g.state === 'playing') { // prochaine vague : losange rouge qui clignote au bord
+        const n = g.nextInvasion, px = ox + n.x * sc, py = oy + n.y * sc, on = Math.sin(t * (g.invasionT < 5 ? 14 : 5)) > 0;
+        mctx.fillStyle = on ? '#ff3c28' : '#ffb0a0'; mctx.strokeStyle = '#000'; mctx.lineWidth = 1;
+        mctx.beginPath(); mctx.moveTo(px, py - 5); mctx.lineTo(px + 5, py); mctx.lineTo(px, py + 5); mctx.lineTo(px - 5, py); mctx.closePath(); mctx.fill(); mctx.stroke();
       }
       mctx.strokeStyle = '#fff'; mctx.lineWidth = 1;
       mctx.strokeRect(ox + this.viewX * sc + 0.5, oy + this.viewY * sc + 0.5, this.vw * sc, this.vh * sc);

@@ -41,7 +41,9 @@
       this.hero = null; this.heroDown = false; this.heroXpGained = 0;
       this.patches = [];         // gisements de minerai { zone, x, y, amount, max, crystals, busy }
       this.invasionT = s.invasion ? 25 : 0; this.invasionCount = 0; // vagues d'envahisseurs (missions de survie)
+      this.nextInvasion = null;  // point du bord d'où la prochaine vague surgira (annoncé à l'avance)
       this.setupPlayers();
+      if (s.invasion) this.planInvasion();
       if (this.campaign && this.human) this.spawnHero();
     }
 
@@ -407,7 +409,7 @@
           p.minerals -= cost;
           const total = this.dropshipBuildTime(player);
           p.dropshipsBuilt++;
-          b.queue.push({ what: 'dropship', t: 0, total });
+          b.queue.push({ what: 'dropship', t: 0, total, cost });
           this.emit('buy', { player, what, bunker: b, total, queued: b.queue.length });
           return true;
         }
@@ -433,7 +435,7 @@
         if (b.queue.length >= this.settings.dropshipQueueMax) { this.emit('queueFull', { player }); return false; }
         p.minerals -= cost;
         const total = what === 'worker' ? this.workerTime(player) : ZC.HERO_RESPAWN * (p.bonus ? p.bonus.timeMult : 1);
-        b.queue.push({ what, t: 0, total });
+        b.queue.push({ what, t: 0, total, cost });
         this.emit('buy', { player, what, bunker: b, total, queued: b.queue.length });
         return true;
       }
@@ -448,8 +450,21 @@
       if (p.minerals < cost) { this.emit('notEnough', { player }); return false; }
       p.minerals -= cost;
       const total = def.time(lvl);
-      bunker.research.push({ what, t: 0, total });
+      bunker.research.push({ what, t: 0, total, cost });
       this.emit('buy', { player, what, level: lvl + 1, bunker, total, queued: bunker.research.length });
+      return true;
+    }
+    // Annule un élément d'une file (recherche ou production) et rembourse ce qui a été payé
+    cancelQueued(player, bunker, kind, index) {
+      const p = this.players[player];
+      if (!bunker || bunker.dead || bunker.owner !== player) return false;
+      const list = kind === 'research' ? bunker.research : bunker.queue;
+      const item = list[index]; if (!item) return false;
+      list.splice(index, 1);
+      const refund = item.cost || 0;
+      p.minerals += refund;
+      if (item.what === 'dropship') p.dropshipsBuilt = Math.max(0, p.dropshipsBuilt - 1);
+      this.emit('cancel', { player, what: item.what, refund, bunker, kind });
       return true;
     }
     // Niveau atteint une fois les recherches en attente terminées
@@ -573,7 +588,9 @@
       // Envahisseurs
       if (this.settings.invasion) {
         this.invasionT -= dt;
+        const before = this.invasionT;
         if (this.invasionT <= 0) { this.spawnInvasion(); const inv = this.settings.invasion; this.invasionT = ZC.rand(inv.min || 15, inv.max || 35); }
+        else if (before > 5 && this.invasionT <= 5 && this.nextInvasion) this.emit('invasionSoon', this.nextInvasion);
       }
 
       // Vagues
@@ -705,14 +722,21 @@
     // ---------------------------------------------------------- envahisseurs (missions de survie)
     // Une vague apparaît sur un bord de la carte et fonce sur la structure du joueur la plus proche.
     // Elle grossit avec le temps, passe aux unités de niveau 2 et gagne des améliorations.
-    spawnInvasion() {
-      const inv = this.players.find(p => p.invader); if (!inv) return;
-      const s = this.settings, scale = s.invasion.scale || 1, map = this.map, t = this.time;
-      const targets = this.units.filter(u => !u.dead && u.def.structure && !this.players[u.owner].invader);
-      if (!targets.length) return;
-      const side = Math.floor(Math.random() * 4), f = 0.1 + Math.random() * 0.8, m = 20;
+    // Choisit à l'avance le bord et le point d'arrivée de la prochaine vague (affiché au joueur)
+    planInvasion() {
+      const map = this.map, side = Math.floor(Math.random() * 4), f = 0.1 + Math.random() * 0.8, m = 20;
       const x = side === 0 ? map.w * f : side === 1 ? map.w * f : side === 2 ? m : map.w - m;
       const y = side === 0 ? m : side === 1 ? map.h - m : map.h * f;
+      this.nextInvasion = { x, y, side, sideName: ['nord', 'sud', 'ouest', 'est'][side] };
+    }
+    spawnInvasion() {
+      const inv = this.players.find(p => p.invader); if (!inv) return;
+      const s = this.settings, scale = s.invasion.scale || 1, t = this.time;
+      const targets = this.units.filter(u => !u.dead && u.def.structure && !this.players[u.owner].invader);
+      if (!targets.length) return;
+      if (!this.nextInvasion) this.planInvasion();
+      const { x, y, side } = this.nextInvasion;
+      this.planInvasion(); // la suivante est déjà annoncée
       let target = null, bd = Infinity;
       for (const u of targets) { const d = ZC.dist(x, y, u.x, u.y); if (d < bd) { bd = d; target = u; } }
       const n = Math.min(30, Math.max(2, Math.round((3 + t / 40) * scale)));

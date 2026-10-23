@@ -106,9 +106,10 @@
       this.input = new ZC.Input(this);
       this.input.attach();
       this.game.on((t, d) => this.onGameEvent(t, d));
-      const hz = this.game.map.zones.find(z => z.owner === this.game.humanId);
-      if (hz) this.renderer.centerOn(hz.cx, hz.cy);
-      this.lastEvent = hz ? { x: hz.cx, y: hz.cy } : null;
+      // Caméra sur le centre de commandement du joueur (jamais sur une zone bonus ni sur l'ennemi)
+      const me0 = this.game.human, hq = me0 && me0.hq, hz = hq ? hq.zone : this.game.map.zones.find(z => z.owner === this.game.humanId);
+      if (hq) this.renderer.centerOn(hq.x, hq.y); else if (hz) this.renderer.centerOn(hz.cx, hz.cy);
+      this.lastEvent = hq ? { x: hq.x, y: hq.y } : hz ? { x: hz.cx, y: hz.cy } : null;
       this.lastAlertT = -100;
       this.ui.reset();
       this.ui.showHud(true);
@@ -254,6 +255,9 @@
           if (d.player === me && d.what === 'evolve') { A.play('upgrade', 0); ui.announce('ÉVOLUTION', 'Les soldats du bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' passent au niveau 2'); ui.message('Évolution terminée : ce bunker produit et transforme ses soldats en ' + ZC.UNITS[g.bunkerSpawnType(d.bunker)].name + '.', '#ffd040'); break; }
           if (d.player === me) { A.play('upgrade', 0); ui.message(ZC.UPGRADES[d.what].name + ' niveau ' + d.level + ' terminé sur le bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + '.', '#ffd040'); }
           break;
+        case 'cancel':
+          if (d.player === me) ui.message((d.kind === 'research' ? 'Recherche annulée : ' + ZC.UPGRADES[d.what].name : 'Production annulée : ' + (d.what === 'worker' ? ZC.UNITS[ZC.RACES[g.human.race].worker].name : d.what === 'hero' ? 'résurrection du héros' : 'dropship')) + (d.refund ? ' (+' + d.refund + ' minerais remboursés)' : '') + '.', '#ffd040');
+          break;
         case 'queueFull':
           if (d.player === me) { A.play('error', 0); ui.message('File d\'attente pleine sur ce bunker.', '#ff5050'); }
           break;
@@ -268,6 +272,9 @@
           break;
         case 'grant':
           if (d.player === me) ui.message('Plus aucun bunker : vous recevez de quoi acheter un dropship (D) ; le prochain bunker sera votre nouveau QG.', '#ffd040');
+          break;
+        case 'invasionSoon':
+          A.play('round', 0); ui.message('Assaut imminent par le ' + d.sideName + ' ! (Espace pour y aller)', '#ff5050'); this.lastEvent = { x: d.x, y: d.y };
           break;
         case 'invasion': {
           A.play('round', 0);
@@ -284,7 +291,7 @@
           A.play('round', 0);
           if (g.isTournament) {
             // Nouvelle carte : recentrer sur le nouveau QG
-            const hz = g.map.zones.find(z => z.owner === me);
+            const hq = g.human && g.human.hq, hz = hq ? hq.zone : g.map.zones.find(z => z.owner === me);
             if (hz) { this.renderer.centerOn(hz.cx, hz.cy); this.lastEvent = { x: hz.cx, y: hz.cy }; }
             ui.announce('ROUND ' + (d.index + 1) + ' — ' + d.unit.name.toUpperCase(), 'Score : ' + this.scoreLine() + '  ·  Premier à ' + g.settings.roundsToWin);
             ui.message('Round ' + (d.index + 1) + ' : ' + d.unit.name + '. La carte est remise à zéro.', '#ffd040');

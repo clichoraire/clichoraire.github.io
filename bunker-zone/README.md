@@ -114,6 +114,8 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 | Caméra | flèches, bord de l'écran, minimap (clic droit sur la minimap : déplacer les unités) ; un bunker attaqué clignote en rouge sur la minimap |
 | Scores / menu | Tab / Échap ou F10 |
 | Centre de commandement : carte « Unités » | F, puis W travailleur, H ressusciter le héros (aventure), X ou Échap retour |
+| Files d'attente | affichées en icônes dans le panneau du bunker (barre de progression sur l'élément en cours) ; un clic sur une icône annule l'élément et rembourse son coût |
+| Carte de commandes | icônes dessinées ; pastilles de niveau sur chaque amélioration (vert acquis, jaune en file, « MAX ») ; le bouton s'enfonce quand l'ordre passe et tremble en rouge s'il est refusé |
 | Travailleurs | clic droit sur un gisement vert : récolter (G) ; clic droit sur un bunker allié abîmé : réparer (R) ; B : construire un extracteur sur un gisement ; les travailleurs ne font pas partie de « toute l'armée » (Z) |
 | Vitesse de lecture x1, x2, x3, x5 | boutons dans la barre du haut, ou + / − (la vitesse revient à x1 à chaque nouvelle partie) |
 | Musique | 3 pistes de `assets/` jouées en boucle (ordre mélangé) pendant les parties, atténuées en pause ; réglable dans Options et le menu pause |
@@ -145,8 +147,9 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 « Tenir la ligne » et « Le siège » n'ont plus d'ennemi installé sur la carte : un joueur **envahisseur** sans base
 envoie des vagues par les bords de la carte toutes les 15 à 35 secondes (12 à 28 en difficile), vers la structure du
 joueur la plus proche. Les vagues grossissent avec le temps, passent aux unités de niveau 2 après 2 min 30 et gagnent
-des améliorations. La barre du haut affiche le compte à rebours de l'assaut suivant ; Espace centre la caméra sur
-la dernière vague. Facile / moyen / difficile règlent la taille des vagues (x0,7 / x1 / x1,5).
+des améliorations. Le bord d'arrivée est tiré au hasard mais annoncé à l'avance : balise rouge animée sur le bord de la carte (anneaux,
+chevrons, compte à rebours, qui s'emballe dans les 5 dernières secondes), flèche au bord de l'écran si la balise est hors
+champ, losange clignotant sur la minimap, direction dans la barre du haut. Espace centre la caméra sur la dernière alerte. Facile / moyen / difficile règlent la taille des vagues (x0,7 / x1 / x1,5).
 Test : `node tools/headless.js 0 5 normal 300 --passive --invasion=1`.
 
 ## Options du menu

@@ -10,7 +10,9 @@
       this.game = app.game;
       this.renderer = app.renderer;
       this.canvas = app.canvas;
-      this.mouse = { x: 0, y: 0, sx: 0, sy: 0, down: false, dragging: false, inWindow: true, overCanvas: false };
+      // inWindow reste faux tant que la souris n'a pas bougé : sinon, la souris étant « en (0,0) », le défilement par le bord
+      // emmenait la caméra au coin haut-gauche (souvent chez l'ennemi) dès le début de la partie
+      this.mouse = { x: 0, y: 0, sx: 0, sy: 0, down: false, dragging: false, inWindow: false, overCanvas: false };
       this.mode = 'normal';   // normal | attack | move | patrol | build | send
       this.hover = null;
       this.hoverPatch = null;   // gisement sous la souris
@@ -222,7 +224,9 @@
 
     // Commandes de la carte de commandes / raccourcis
     command(cmd) {
-      const g = this.game, sel = g.ownSelection, me = g.humanId;
+      const g = this.game, sel = g.ownSelection, me = g.humanId, ui = this.app.ui;
+      const buy = (what, b) => { const ok = g.buy(me, what, b); ui.pressButton(cmd, ok); return ok; };
+      ui.pressButton(cmd, true);
       switch (cmd) {
         case 'attack': case 'move': case 'patrol':
           if (sel.length) this.setMode(cmd);
@@ -232,8 +236,8 @@
           break;
         case 'units': this.app.ui.openSub('units'); break;
         case 'back': this.app.ui.openSub(null); break;
-        case 'worker': g.buy(me, 'worker'); break;
-        case 'hero': g.buy(me, 'hero'); break;
+        case 'worker': buy('worker'); break;
+        case 'hero': buy('hero'); break;
         case 'build':
           if (this.hasDropship()) this.setMode('build');
           break;
@@ -253,16 +257,16 @@
           break;
         }
         case 'dropship':
-          g.buy(me, 'dropship');
+          buy('dropship');
           break;
         case 'evolve':
-          if (g.selectedBunker) g.buy(me, 'evolve', g.selectedBunker);
+          if (g.selectedBunker) buy('evolve', g.selectedBunker);
           break;
         case 'unload':
           if (g.selectedBunker && g.unloadBunker(g.selectedBunker)) ZC.Audio.play('order', 0);
           break;
         case 'weapons': case 'armor': case 'range': case 'stimResearch':
-          if (g.selectedBunker) g.buy(me, cmd === 'stimResearch' ? 'stim' : cmd, g.selectedBunker);
+          if (g.selectedBunker) buy(cmd === 'stimResearch' ? 'stim' : cmd, g.selectedBunker);
           break;
       }
     }

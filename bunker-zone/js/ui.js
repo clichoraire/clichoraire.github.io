@@ -15,6 +15,37 @@
   ZC.ICON_MINERAL = ICON_MINERAL;
   const ICON_SUPPLY = '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 14 L2 8 L8 3 L14 8 L14 14 Z" fill="#8fa7c7" stroke="#2a3a50" stroke-width="1"/><rect x="6.5" y="9" width="3" height="5" fill="#2a3a50"/></svg>';
 
+
+  // Icônes de la carte de commandes (SVG 24x24, trait en couleur courante)
+  const svg = (body, color, fill) => '<svg viewBox="0 0 24 24" width="22" height="22" fill="' + (fill ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="color:' + (color || '#eef3ff') + '">' + body + '</svg>';
+  const SHIELD = 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z';
+  const ICONS = {
+    move: svg('<path d="M4 12h13M12 6l6 6-6 6"/>', '#9ad0ff'),
+    stop: svg('<rect x="6" y="6" width="12" height="12" rx="1.5"/>', '#ff8a8a', true),
+    // pistolet en contour, vu de côté, qui tire (flamme orange au bout du canon)
+    attack: svg('<path d="M2 8h14v4h-4.5l-1 2.5h-2L8 12H7l-1.5 7H2.5L4 12H2z"/><path d="M7.5 12v2M12 8v-1.5"/><path style="color:#ffb347" d="M18.5 10h3.5M18 7.5l2-2M18 12.5l2 2"/><path style="color:#fff0b0" d="M17 10h1"/>', '#ff6a5a'),
+    patrol: svg('<path d="M16 3l3 3-3 3M19 6H9a5 5 0 0 0 0 10h1M8 21l-3-3 3-3M5 18h10a5 5 0 0 0 0-10h-1"/>', '#9ad0ff'),
+    hold: svg('<path d="' + SHIELD + '"/><path d="M10 9v6M14 9v6"/>', '#c8d4e8'),
+    stim: svg('<path d="M18 3l3 3M16 5l3 3M13 8L5 16l-1 4 4-1 8-8M9 12l3 3M17 4l-4 4 3 3 4-4"/>', '#ffb347'),
+    build: svg('<path d="M3 20v-7l9-6 9 6v7H3z"/><path d="M10 20v-5h4v5"/><path d="M12 7V4"/>', '#9ad0ff'),
+    dropship: svg('<path d="M2 12l5-1 4-6h3l-2 6h7l2 2-2 2h-7l2 6h-3l-4-6-5-1z"/>', '#9ad0ff', true),
+    weapons: svg('<path d="M7 20V9a3 3 0 0 1 6 0v11H7z"/><path d="M15 20v-9a2 2 0 0 1 4 0v9h-4z"/><path d="M7 15h6M15 16h4"/>', '#ffd040'),
+    armor: svg('<path d="' + SHIELD + '"/><path d="M12 8v8M8 12h8"/>', '#5cc8ff'),
+    range: svg('<circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>', '#7dffb0'),
+    stimResearch: svg('<path d="M18 3l3 3M16 5l3 3M13 8L5 16l-1 4 4-1 8-8M9 12l3 3M17 4l-4 4 3 3 4-4"/>', '#ffb347'),
+    send: svg('<path d="M3 7h12M11 3l4 4-4 4M3 12h7M3 17h12M11 13l4 4-4 4"/>', '#ff8a8a'),
+    evolve: svg('<path d="M6 13l6-6 6 6M6 20l6-6 6 6"/>', '#ffd040'),
+    unload: svg('<path d="M12 3v10M8 9l4 4 4-4"/><path d="M4 21h16M4 16v5M20 16v5"/>', '#c8d4e8'),
+    units: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', '#eef3ff'),
+    worker: svg('<path d="M3 21l9-9"/><path d="M8 5c4-2 9 0 11 4"/><path d="M10 7l7 7"/>', '#ffd040'),
+    hero: svg('<path d="M12 2l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7L2 9.5 9 9z"/>', '#ffd040', true),
+    back: svg('<path d="M10 5L4 11l6 6M4 11h12a4 4 0 0 1 0 8h-2"/>', '#c8d4e8'),
+    gather: svg('<path d="M12 2l5 7-5 13-5-13z"/><path d="M7 9h10"/>', '#39ff14'),
+    repair: svg('<path d="M14 4a5 5 0 0 0-5 7L3 17l4 4 6-6a5 5 0 0 0 7-5l-3 3-3-1-1-3 3-3z"/>', '#ffd040'),
+    extract: svg('<path d="M5 9h14v4H5z"/><path d="M8 13v3l4 5 4-5v-3"/><path d="M9 5h6v4H9z"/>', '#39ff14'),
+  };
+  ZC.CMD_ICONS = ICONS;
+
   const HELP = `
     <div class="help-grid">
       <div><b>Clic gauche</b> sélection / glisser pour un cadre &nbsp; <b>Clic droit</b> déplacer / attaquer</div>
@@ -92,6 +123,11 @@
       this.updateSpeed(1);
       this.minimap = q('#minimap');
       this.mctx = this.minimap.getContext('2d');
+      this.el.info.addEventListener('mousedown', e => { if (e.target.closest('.qi')) { e.preventDefault(); e.stopPropagation(); } });
+      this.el.info.addEventListener('click', e => {
+        const q = e.target.closest('.qi[data-q]'), g = this.app.game; if (!q || !g) return;
+        const b = g.selectedBunker; if (b && g.cancelQueued(g.humanId, b, q.dataset.q, +q.dataset.i)) { ZC.Audio.play('order', 0); this.refreshSelection(); }
+      });
       this.el.cmd.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); });
       this.el.cmd.addEventListener('click', e => {
         const b = e.target.closest('button[data-cmd]');
@@ -130,9 +166,28 @@
     waveFlash() { this.waveFlashT = 0.6; }
 
     // ------------------------------------------------------------ carte de commandes
-    cardButton(cmd, ico, key, label, cost, disabled) {
+    // lvl = { done, queued, max } : pastilles de niveau (vert = acquis, jaune = en file, gris = à venir)
+    cardButton(cmd, ico, key, label, cost, disabled, lvl) {
+      let pips = '';
+      if (lvl) {
+        if (lvl.done >= lvl.max) pips = '<span class="lv max">MAX</span>';
+        else { pips = '<span class="lv">'; for (let i = 0; i < lvl.max; i++) pips += '<i class="' + (i < lvl.done ? 'on' : i < lvl.done + lvl.queued ? 'q' : '') + '"></i>'; pips += '</span>'; }
+      }
       return '<button data-cmd="' + cmd + '" class="' + (disabled ? 'disabled' : '') + '" title="' + esc(label) + (cost ? ' — ' + cost + ' minerais' : '') + '">' +
-        '<span class="ico">' + ico + '</span><span class="key">' + key + '</span>' + (cost ? '<span class="cost">' + cost + '</span>' : '') + '</button>';
+        '<span class="ico">' + (ICONS[cmd] || ico) + '</span>' + pips + '<span class="key">' + key + '</span>' + (cost ? '<span class="cost">' + cost + '</span>' : '') + '</button>';
+    }
+    // Retour visuel : le bouton s'enfonce (ok) ou tremble en rouge (refus)
+    pressButton(cmd, ok) {
+      const b = this.el.cmd.querySelector('button[data-cmd="' + cmd + '"]'); if (!b) return;
+      b.classList.remove('pressed', 'refused'); void b.offsetWidth;
+      b.classList.add(ok === false ? 'refused' : 'pressed');
+      setTimeout(() => b.classList.remove('pressed', 'refused'), 400);
+    }
+    // Empreinte de la carte : niveaux, files, garnison. Si elle change, la carte se redessine (pastilles à jour)
+    cardSignature() {
+      const g = this.app.game, b = g.selectedBunker;
+      if (!b) return 'n' + g.ownSelection.length;
+      return b.id + ':' + Object.values(b.up).join('') + ':' + b.research.map(r => r.what[0]).join('') + ':' + b.queue.length + ':' + b.garrison.length + ':' + (g.hero ? (g.hero.dead ? 'd' : 'v') : '');
     }
     buildCommandCard(kind) {
       const g = this.app.game, me = g.human, e = '<button class="empty"></button>';
@@ -163,12 +218,12 @@
         const up = (k, ico) => {
           const d = ZC.UPGRADES[k], lvl = g.pendingLevel(b, k), cost = g.upgradeCost(b, k);
           const maxed = cost < 0;
-          return this.cardButton(k === 'stim' ? 'stimResearch' : k, ico, d.hotkey, d.name + (maxed ? ' (max)' : ' niveau ' + (lvl + 1) + ' — recherche ' + Math.round(d.time(lvl)) + ' s') + ' — ' + d.desc + ' (unités de ce bunker uniquement)', maxed ? 0 : cost, maxed || me.minerals < cost);
+          return this.cardButton(k === 'stim' ? 'stimResearch' : k, ico, d.hotkey, d.name + (maxed ? ' (max)' : ' niveau ' + (lvl + 1) + ' — recherche ' + Math.round(d.time(lvl)) + ' s') + ' — ' + d.desc + ' (unités de ce bunker uniquement)', maxed ? 0 : cost, maxed || me.minerals < cost, { done: b.up[k], queued: lvl - b.up[k], max: d.max });
         };
         const drop = b.def.hq ? this.cardButton('dropship', '✈', 'D', 'Dropship : construit un bunker sur une zone libre (' + Math.round(g.dropshipBuildTime(me.id)) + ' s de production)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id)) : e;
         const ev = ZC.UPGRADES.evolve, evCost = g.upgradeCost(b, 'evolve'), can = g.canEvolve(b);
         const l2 = ZC.UNITS[ZC.UNITS[g.spawnTypeFor(me)].evolvesTo || g.spawnTypeFor(me)];
-        const evolve = this.cardButton('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires), evCost < 0 ? 0 : evCost, evCost < 0 || !can || me.minerals < evCost);
+        const evolve = this.cardButton('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires), evCost < 0 ? 0 : evCost, evCost < 0 || !can || me.minerals < evCost, { done: b.up.evolve, queued: g.pendingLevel(b, 'evolve') - b.up.evolve, max: 1 });
         const unload = b.garrison.length ? this.cardButton('unload', '⇩', 'U', 'Décharger la garnison (' + b.garrison.length + ' unités)') : e;
         const units = b.def.hq ? this.cardButton('units', '⚒', 'F', 'Unités spéciales : travailleurs' + (g.campaign ? ' et résurrection du héros' : '')) : e;
         html = drop + up('weapons', '✦') + up('armor', '⛨') + up('range', '⟶') + up('stim', '⚡') +
@@ -221,7 +276,7 @@
         const m = this.app.campaign.mission(g.campaign.mission), o = g.campaign.objective;
         this.txt(this.el.roundName, adm + m.name.toUpperCase());
         const alive = g.players.filter(p => p.alive && !p.isHuman).length;
-        this.txt(this.el.roundTimer, (o.type === 'survive' ? 'Tenir encore ' + ZC.formatTime(Math.max(0, o.time - g.time)) : 'Chefs de guerre restants : ' + alive) + (s.invasion ? '  ·  Assaut ennemi dans ' + Math.ceil(g.invasionT) + ' s (vague ' + (g.invasionCount + 1) + ')' : '') + '  ·  Vague dans ' + Math.ceil(g.spawnTimer) + ' s');
+        this.txt(this.el.roundTimer, (o.type === 'survive' ? 'Tenir encore ' + ZC.formatTime(Math.max(0, o.time - g.time)) : 'Chefs de guerre restants : ' + alive) + (s.invasion ? '  ·  Assaut par le ' + (g.nextInvasion ? g.nextInvasion.sideName : '?') + ' dans ' + Math.ceil(g.invasionT) + ' s (vague ' + (g.invasionCount + 1) + ')' : '') + '  ·  Vague dans ' + Math.ceil(g.spawnTimer) + ' s');
       } else {
         this.txt(this.el.roundName, adm + 'BUNKER ZONE');
         this.txt(this.el.roundTimer, 'Prochaine vague (' + ru.name + ') dans ' + Math.ceil(g.spawnTimer) + ' s');
@@ -260,9 +315,13 @@
       if (g.selectionVersion !== this.lastSelVersion || kind !== this.cardKind) {
         this.lastSelVersion = g.selectionVersion;
         this.buildSelection();
-        this.buildCommandCard(kind);
+        this.buildCommandCard(kind); this.cardSig = this.cardSignature();
         this.selRefreshT = 0;
-      } else if (this.selRefreshT > 0.2) { this.selRefreshT = 0; this.refreshSelection(); this.refreshCardAffordability(); }
+      } else if (this.selRefreshT > 0.2) {
+        this.selRefreshT = 0; this.refreshSelection();
+        const sig = this.cardSignature();
+        if (sig !== this.cardSig) { this.cardSig = sig; this.buildCommandCard(kind); } else this.refreshCardAffordability();
+      }
       if (g.selection.length === 1) this.drawPortrait(g.selection[0]);
     }
 
@@ -337,18 +396,23 @@
         if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + ZC.WORKER.max + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
         const upl = info.querySelector('#u-up');
         if (upl) upl.textContent = (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.BUNKER_CAPACITY + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.stim ? ' · Stimpack' : '');
+        // Files d'attente en icônes : le premier élément porte sa barre de progression, les suivants attendent
+        const qIcon = (cmd, key, pct, title, gold, kind, i) => '<span class="qi' + (pct !== undefined ? ' cur' : '') + '" data-q="' + kind + '" data-i="' + i + '" title="' + esc(title) + ' — clic : annuler et rembourser">' + (ICONS[cmd] || '') + '<i>' + key + '</i>' + (pct !== undefined ? '<b class="' + (gold ? 'gold' : '') + '" style="width:' + pct.toFixed(0) + '%"></b>' : '') + '</span>';
         const rd = info.querySelector('#u-research');
         if (rd && u.def.structure) {
           if (u.research.length) {
-            const r = u.research[0], pct = Math.min(100, r.t / r.total * 100), d = ZC.UPGRADES[r.what];
-            rd.innerHTML = '<span class="k">Recherche</span> <span class="bbar"><span class="bfill gold" style="width:' + pct.toFixed(0) + '%"></span></span> <span class="bt">' + d.name + ' +' + g.pendingLevel(u, r.what) + ' · ' + Math.ceil(r.total - r.t) + ' s' + (u.research.length > 1 ? ' · ' + (u.research.length - 1) + ' en attente' : '') + '</span>';
+            const r0 = u.research[0], lvls = {};
+            rd.innerHTML = '<span class="k">Recherche</span> ' + u.research.map((r, i) => {
+              const d = ZC.UPGRADES[r.what]; lvls[r.what] = (lvls[r.what] || u.up[r.what]) + 1;
+              return qIcon(r.what === 'stim' ? 'stimResearch' : r.what, d.hotkey, i === 0 ? Math.min(100, r.t / r.total * 100) : undefined, d.name + ' niveau ' + lvls[r.what] + (i === 0 ? ' · ' + Math.ceil(r.total - r.t) + ' s' : ' · en attente'), true, 'research', i);
+            }).join('') + ' <span class="bt">' + ZC.UPGRADES[r0.what].name + ' +' + (u.up[r0.what] + 1) + ' · ' + Math.ceil(r0.total - r0.t) + ' s' + (u.research.length > 1 ? ' · ' + (u.research.length - 1) + ' en attente' : '') + '</span>';
           } else rd.innerHTML = '<span class="k">Recherche</span> <span class="bt">aucune en cours</span>';
         }
         const bd = info.querySelector('#u-build');
         if (bd && u.def.structure) {
           if (u.queue.length) {
-            const q = u.queue[0], pct = Math.min(100, q.t / q.total * 100);
-            bd.innerHTML = '<span class="k">' + (q.what === 'worker' ? ZC.UNITS[ZC.RACES[g.players[u.owner].race].worker].name : q.what === 'hero' ? 'Héros' : 'Dropship') + '</span> <span class="bbar"><span class="bfill" style="width:' + pct.toFixed(0) + '%"></span></span> <span class="bt">' + Math.ceil(q.total - q.t) + ' s' + (u.queue.length > 1 ? ' · ' + (u.queue.length - 1) + ' en attente' : '') + '</span>';
+            const q0 = u.queue[0], nom = w => w === 'worker' ? ZC.UNITS[ZC.RACES[g.players[u.owner].race].worker].name : w === 'hero' ? 'Héros' : 'Dropship';
+            bd.innerHTML = '<span class="k">Production</span> ' + u.queue.map((q, i) => qIcon(q.what, q.what === 'worker' ? 'W' : q.what === 'hero' ? 'H' : 'D', i === 0 ? Math.min(100, q.t / q.total * 100) : undefined, nom(q.what) + (i === 0 ? ' · ' + Math.ceil(q.total - q.t) + ' s' : ' · en attente'), false, 'queue', i)).join('') + ' <span class="bt">' + nom(q0.what) + ' · ' + Math.ceil(q0.total - q0.t) + ' s' + (u.queue.length > 1 ? ' · ' + (u.queue.length - 1) + ' en attente' : '') + '</span>';
           } else bd.innerHTML = '<span class="k">Production</span> <span class="bt">' + (u.def.hq ? 'aucune · dropship : ' + Math.round(g.dropshipBuildTime(u.owner)) + ' s · ' : '') + 'vague : ' + ZC.UNITS[g.bunkerSpawnType(u)].name + (u.up.evolve ? ' (évolué)' : '') + '</span>';
         }
         const pb = info.querySelector('#portrait-hp');
@@ -630,7 +694,7 @@
       const c = this.app.campaign, m = c.mission(this.mis.id), q = (s) => this.menus.querySelector(s);
       q('#mis-diffs').innerHTML = ['easy', 'medium', 'hard'].map(d => {
         const done = c.done(m.id, d), D = ZC.DIFFICULTIES[d];
-        return '<button class="diff ' + d + (this.mis.diff === d ? ' sel' : '') + '" data-d="' + d + '"><b>' + D.label + '</b><span class="pts">' + (done ? '✓ ' + m.points[d] + ' points obtenus' : '★ ' + m.points[d] + ' points') + '</span><small>' + D.desc + '</small></button>';
+        return '<button class="diff ' + d + (this.mis.diff === d ? ' sel' : '') + (done ? ' done' : '') + '" data-d="' + d + '"' + (done ? ' title="Difficulté réussie : les points sont déjà encaissés"' : '') + '>' + (done ? '<span class="ribbon">RÉUSSI</span><span class="check">✓</span>' : '') + '<b>' + D.label + '</b><span class="pts">' + (done ? m.points[d] + ' points encaissés' : '★ ' + m.points[d] + ' points') + '</span><small>' + D.desc + '</small></button>';
       }).join('');
       q('#mis-diffs').querySelectorAll('.diff').forEach(b => b.addEventListener('click', () => { this.mis.diff = b.dataset.d; this.renderMissionSheet(); }));
       q('#mis-heroes').innerHTML = this.heroCards(false);
