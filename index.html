@@ -84,7 +84,12 @@
 
     footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 13px; }
     footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-    @media (max-width: 600px) { nav a { margin-left: 14px; } .hero { padding: 56px 0 44px; } .facts { gap: 16px; } }
+    @media (max-width: 600px) {
+      nav { white-space: nowrap; } nav a { margin-left: 14px; }
+      .brand { font-size: 16px; }
+      .hero { padding: 56px 0 44px; } .facts { gap: 16px; }
+      .section-title { flex-wrap: wrap; } h2 { white-space: nowrap; }
+    }
   </style>
 </head>
 <body>
