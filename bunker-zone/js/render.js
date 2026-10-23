@@ -130,7 +130,10 @@
       this.viewX = 0; this.viewY = 0; this.vw = 800; this.vh = 600;
       this.hpColors = ['#fc3838', '#fcfc38', '#10fc18'];
       this.frameT = 0;
+      this.miniPings = [];   // ordres donnés sur la minimap : { x, y, color, t } (monde)
     }
+
+    miniPing(x, y, color) { this.miniPings.push({ x, y, color, t: this.frameT }); if (this.miniPings.length > 6) this.miniPings.shift(); }
 
     resize(w, h) {
       this.canvas.width = w; this.canvas.height = h;
@@ -770,6 +773,21 @@
         const n = g.nextInvasion, px = ox + n.x * sc, py = oy + n.y * sc, on = Math.sin(t * (g.invasionT < 5 ? 14 : 5)) > 0;
         mctx.fillStyle = on ? '#ff3c28' : '#ffb0a0'; mctx.strokeStyle = '#000'; mctx.lineWidth = 1;
         mctx.beginPath(); mctx.moveTo(px, py - 5); mctx.lineTo(px + 5, py); mctx.lineTo(px, py + 5); mctx.lineTo(px - 5, py); mctx.closePath(); mctx.fill(); mctx.stroke();
+      }
+      // Pings : un ordre donné sur la minimap -> trois anneaux qui s'étendent et s'estompent, sans bouger la caméra
+      const PING = 1.1;
+      this.miniPings = this.miniPings.filter(p => t - p.t < PING);
+      for (const p of this.miniPings) {
+        const age = (t - p.t) / PING, px = ox + p.x * sc, py = oy + p.y * sc, R = Math.max(10, zs * 0.7);
+        for (let k = 0; k < 3; k++) {
+          const ph = age - k * 0.18;
+          if (ph < 0) continue;
+          mctx.strokeStyle = p.color; mctx.globalAlpha = Math.max(0, 1 - ph) * 0.9; mctx.lineWidth = 1.5;
+          mctx.beginPath(); mctx.arc(px, py, 2 + ph * R, 0, Math.PI * 2); mctx.stroke();
+        }
+        mctx.globalAlpha = 1 - age;
+        mctx.fillStyle = '#fff'; mctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+        mctx.globalAlpha = 1;
       }
       mctx.strokeStyle = '#fff'; mctx.lineWidth = 1;
       mctx.strokeRect(ox + this.viewX * sc + 0.5, oy + this.viewY * sc + 0.5, this.vw * sc, this.vh * sc);

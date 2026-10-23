@@ -259,7 +259,10 @@
       if (me) {
         this.txt(this.el.zones, String(me.zones));
         this.txt(this.el.units, String(me.unitCount));
-        this.txt(this.el.supply, Math.round(me.supply) + '/' + s.unitCap);
+        const cap = g.supplyCap(me.id);
+        this.txt(this.el.supply, Math.round(me.supply) + '/' + cap);
+        this.el.supply.parentNode.classList.toggle('maxed', me.supply >= cap);
+        this.el.supply.parentNode.title = 'Supply : ' + Math.round(me.supply) + ' sur ' + cap + ' (' + s.supplyBase + ' + ' + s.supplyPerBunker + ' par bunker, max ' + s.unitCap + ')';
         this.txt(this.el.kills, String(me.kills));
         this.txt(this.el.minerals, String(Math.floor(me.minerals)));
         this.txt(this.el.bunkers, String(me.bunkers) + (me.hq ? '' : ' (sans QG)'));
@@ -477,6 +480,7 @@
           <div class="btns"><button id="btn-play-back">Retour</button></div>
         </div>
         <div id="menu-campaign" class="screen hidden">
+          <canvas id="adv-planet"></canvas>
           <div class="adv-top">
             <div class="adv-title" id="adv-title">AVENTURE</div>
             <div class="adv-points">★ <b id="adv-points">0</b> points</div>
@@ -484,7 +488,8 @@
           </div>
           <div class="adv-worlds" id="adv-worlds"></div>
           <div class="adv-desc" id="adv-desc"></div>
-          <div id="adv-map"><svg id="adv-links" viewBox="0 0 100 100" preserveAspectRatio="none"></svg><div id="adv-nodes"></div></div>
+          <div id="adv-strip"><div id="adv-cards"></div></div>
+          <div id="adv-info"></div>
           <div class="adv-races" id="adv-races"></div>
           <div class="adv-foot" id="adv-foot">Cliquez sur une mission. Chaque difficulté réussie rapporte ses propres points : refaire une mission en plus difficile est conseillé.</div>
         </div>
@@ -604,6 +609,7 @@
         <label>Intervalle des vagues<select name="spawnInterval">${opt([5, 8, 10, 15, 20], ['5 s', '8 s', '10 s', '15 s', '20 s'], s.spawnInterval)}</select></label>
         <label>Unités de départ<select name="startUnits">${opt([4, 8, 12, 20], null, s.startUnits)}</select></label>
         <label>Supply max<select name="unitCap">${opt([60, 100, 150, 200], null, s.unitCap)}</select></label>
+        <label>Supply par bunker<select name="supplyPerBunker">${opt([10, 15, 20, 30, 50], ['+10', '+15', '+20', '+30', '+50'], s.supplyPerBunker)}</select></label>
         <label>Revenu par bunker / vague<select name="incomePerBunker">${opt([0, 2, 3, 5], ['Aucun (kills seulement)', '2 minerais', '3 minerais', '5 minerais'], s.incomePerBunker)}</select></label>
         <label>Coût d'un dropship<select name="dropshipCost">${opt([100, 150, 250], null, s.dropshipCost)}</select></label>
         <label>Temps d'atterrissage<select name="landingTime">${opt([2, 3, 5], ['2 s', '3 s', '5 s'], s.landingTime)}</select></label>
@@ -626,7 +632,7 @@
         mode: v('mode'), aiCount: +v('aiCount'), difficulty: v('difficulty'), mapZones: +v('mapZones'), mapZonesY: +v('mapZonesY'), playerRace: v('playerRace'), zoneTiles: +v('zoneTiles'), tileset: v('tileset'),
         playerColor: +f.querySelector('[name="playerColor"]:checked').value,
         spawnInterval: +v('spawnInterval'), roundDuration: +v('roundDuration'), roundsToWin: +v('roundsToWin'), roundTimeLimit: +v('roundTimeLimit'),
-        startUnits: +v('startUnits'), unitCap: +v('unitCap'),
+        startUnits: +v('startUnits'), unitCap: +v('unitCap'), supplyPerBunker: +v('supplyPerBunker'),
         incomePerBunker: +v('incomePerBunker'), dropshipCost: +v('dropshipCost'),
         landingTime: +v('landingTime'), gameSpeed: +v('gameSpeed'), selectionLimit: +v('selectionLimit'), mineralZones: +v('mineralZones'), startWorkers: +v('startWorkers'),
         sound: v('sound') === '1', music: v('music') === '1', edgeScroll: v('edgeScroll') === '1', admin: v('admin') === '1', humanPlayer: true,
@@ -654,23 +660,88 @@
       }).join('');
       q('#adv-worlds').querySelectorAll('.world').forEach(b => b.addEventListener('click', () => { if (c.worldUnlocked(b.dataset.id)) this.showCampaign(b.dataset.id); else { ZC.Audio.play('error', 0); q('#adv-foot').textContent = 'Monde verrouillé : terminez les 13 missions du monde précédent (dans n\'importe quelle difficulté).'; } }));
       q('#adv-desc').textContent = w.desc + ' Ennemis : ' + ZC.RACES[w.race].name.toLowerCase() + '.';
-      // liaisons et missions du monde
+      // planète du monde en fond (redessinée si la taille de l'écran change)
+      this.drawAdvPlanet(w);
+      // missions du monde : grosses cases défilantes, infos de la mission choisie en dessous
       const ms = w.missions;
-      q('#adv-links').innerHTML = ms.slice(1).map((m, i) => { const a = ms[i]; return '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + m.x + '" y2="' + m.y + '" class="' + (c.completed(a.id) ? 'on' : '') + '"/>'; }).join('');
-      q('#adv-nodes').innerHTML = ms.map((m, i) => {
-        const unlocked = c.unlocked(m.id), done = c.completed(m.id);
+      const cards = q('#adv-cards');
+      cards.innerHTML = ms.map((m, i) => {
+        const unlocked = c.unlocked(m.id), done = c.completed(m.id), st = m.settings, o = m.objective;
         const pips = ['easy', 'medium', 'hard'].map(d => '<span class="pip ' + d + (c.done(m.id, d) ? ' on' : '') + '" title="' + ZC.DIFFICULTIES[d].label + ' : ' + m.points[d] + ' points"></span>').join('');
-        return '<div class="node' + (unlocked ? '' : ' locked') + (done ? ' done' : '') + '" data-id="' + m.id + '" style="left:' + m.x + '%;top:' + m.y + '%"><div class="num">' + (unlocked ? i + 1 : '🔒') + '</div><div class="nm">' + esc(m.name) + '</div><div class="pips">' + pips + '</div></div>';
+        const kind = o.type === 'survive' ? 'Survie · ' + ZC.formatTime(o.time) : o.type === 'rounds' ? 'Tournoi · ' + o.wins + ' rounds' : st.teams ? 'Équipes' : st.mode === 'evolution' ? 'Évolution' : 'Élimination';
+        const earned = ['easy', 'medium', 'hard'].reduce((t, d) => t + (c.done(m.id, d) ? m.points[d] : 0), 0), total = m.points.easy + m.points.medium + m.points.hard;
+        return '<div class="mcard' + (unlocked ? '' : ' locked') + (done ? ' done' : '') + '" data-id="' + m.id + '" style="--wc:' + w.color + '">' +
+          '<div class="mc-top"><span class="mc-num">' + (unlocked ? i + 1 : '🔒') + '</span><span class="mc-kind">' + kind + '</span></div>' +
+          this.missionPreview(m, w) +
+          '<div class="mc-name">' + esc(m.name) + '</div>' +
+          '<div class="mc-foot"><span class="pips">' + pips + '</span><span class="mc-pts">' + earned + ' / ' + total + ' ★</span></div></div>';
       }).join('');
-      q('#adv-nodes').querySelectorAll('.node').forEach(n => {
+      const strip = q('#adv-strip');
+      if (!strip.dataset.wheel) { strip.dataset.wheel = '1'; strip.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { strip.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); }
+      const select = (m, scroll) => {
+        this.advSel = m.id;
+        cards.querySelectorAll('.mcard').forEach(n => n.classList.toggle('sel', n.dataset.id === m.id));
+        this.renderAdvInfo(m, w);
+        if (scroll) { const n = cards.querySelector('.mcard[data-id="' + m.id + '"]'); if (n) n.scrollIntoView({ block: 'nearest', inline: 'center', behavior: scroll === 'smooth' ? 'smooth' : 'auto' }); }
+      };
+      cards.querySelectorAll('.mcard').forEach(n => {
         const m = c.mission(n.dataset.id);
-        n.addEventListener('mouseenter', () => { q('#adv-foot').textContent = m.name + ' — ' + m.brief + (c.unlocked(m.id) ? ' Points restants : ' + c.remaining(m.id) + ' / ' + (m.points.easy + m.points.medium + m.points.hard) + '.' : ' Terminez la mission précédente pour la débloquer.'); });
-        n.addEventListener('click', () => { if (c.unlocked(m.id)) this.showMission(m.id); else ZC.Audio.play('error', 0); });
+        n.addEventListener('click', () => {
+          if (this.advSel === m.id && c.unlocked(m.id)) { this.showMission(m.id); return; }  // second clic : on lance
+          if (!c.unlocked(m.id)) ZC.Audio.play('error', 0);
+          select(m, 'smooth');
+        });
       });
+      // mission choisie : la précédente, sinon la première non terminée, sinon la dernière débloquée
+      const prev = this.advSel && ms.find(m => m.id === this.advSel);
+      select(prev || ms.find(m => c.unlocked(m.id) && !c.completed(m.id)) || ms.filter(m => c.unlocked(m.id)).pop() || ms[0], true);
       // races : seule la race humaine est jouable dans l'aventure
       q('#adv-races').innerHTML = '<span class="rl">Votre race :</span>' + Object.keys(ZC.RACES).map(k => '<span class="race' + (k === ZC.ADVENTURE_RACE ? ' sel' : ' locked') + '" title="' + esc(ZC.RACES[k].desc) + '">' + (k === ZC.ADVENTURE_RACE ? '✓ ' : '🔒 ') + esc(ZC.RACES[k].name) + '</span>').join('') + '<small>Les autres races se débloqueront dans une prochaine version de l\'aventure ; elles sont jouables en partie simple.</small>';
       q('#adv-foot').textContent = 'Monde ' + (wi + 1) + ' : ' + wp.earned + ' / ' + wp.total + ' ★ · Total : ' + c.data.earned + ' / ' + c.totalPoints() + ' ★. Chaque difficulté réussie rapporte ses propres points : refaire une mission en plus difficile est conseillé.';
       this.m.campaign.classList.remove('hidden');
+    }
+
+    // Planète du monde en fond de l'écran d'aventure, redessinée quand la fenêtre change de taille
+    drawAdvPlanet(w) {
+      const cv = this.menus.querySelector('#adv-planet'), W = window.innerWidth, H = window.innerHeight;
+      const key = w.id + ':' + W + 'x' + H;
+      if (cv.dataset.key === key) return;
+      cv.dataset.key = key;
+      ZC.drawPlanetBackground(cv, w, W, H);
+      if (!this._advResize) { this._advResize = true; window.addEventListener('resize', () => { if (!this.m.campaign.classList.contains('hidden')) this.drawAdvPlanet(this.app.campaign.world(this.app.campaign.data.world)); }); }
+    }
+
+    // Aperçu de la carte d'une mission (SVG) : grille de zones, départ du joueur, ennemis, alliés, vagues
+    missionPreview(m, w) {
+      const st = m.settings, zx = st.mapZones, zy = st.mapZonesY || zx, pal = ZC.TILESET_PALETTES[st.tileset] || ZC.TILESET_PALETTES.jungle;
+      const cell = Math.min(100 / zx, 60 / zy), ox = (100 - zx * cell) / 2, oy = (60 - zy * cell) / 2;
+      const rect = (x, y, fill, extra) => '<rect x="' + (ox + x * cell + 0.6).toFixed(1) + '" y="' + (oy + y * cell + 0.6).toFixed(1) + '" width="' + (cell - 1.2).toFixed(1) + '" height="' + (cell - 1.2).toFixed(1) + '" fill="' + fill + '"' + (extra || '') + '/>';
+      let s = '<svg class="mc-map" viewBox="0 0 100 60">';
+      for (let y = 0; y < zy; y++) for (let x = 0; x < zx; x++) s += rect(x, y, pal.mini);
+      const cx = Math.floor(zx / 2), cy = Math.floor(zy / 2);
+      if (zx * zy > 1 && zx % 2 && zy % 2) s += rect(cx, cy, 'rgba(255,208,64,0.55)');  // zone centrale (x2)
+      const me = st.humanStart === 'center' ? [cx, cy] : [0, zy - 1];
+      s += rect(me[0], me[1], '#5a9ad8');  // le joueur en bleu
+      const allies = st.teams ? st.teams.filter(t => t === 0).length - 1 : 0, enemies = st.aiCount - allies;
+      const corners = [[zx - 1, 0], [zx - 1, zy - 1], [0, 0], [cx, 0], [cx, zy - 1], [0, cy], [zx - 1, cy]].filter(p => !(p[0] === me[0] && p[1] === me[1]));
+      for (let i = 0; i < allies && corners.length; i++) s += rect(...corners.shift(), '#ffd040');
+      for (let i = 0; i < enemies && corners.length; i++) s += rect(...corners.shift(), '#ff5050');
+      if (st.invasion) s += '<path d="M3 30 L10 26 L10 34 Z M97 30 L90 26 L90 34 Z M50 3 L46 10 L54 10 Z M50 57 L46 50 L54 50 Z" fill="#ff5050"/>';
+      return s + '</svg>';
+    }
+
+    // Panneau d'infos sous les cases : briefing, objectif, carte, points par difficulté et bouton de lancement
+    renderAdvInfo(m, w) {
+      const c = this.app.campaign, q = (s) => this.menus.querySelector(s), unlocked = c.unlocked(m.id);
+      const o = m.objective, st = m.settings, allies = st.teams ? st.teams.filter(t => t === 0).length - 1 : 0, enemies = st.aiCount - allies;
+      const obj = o.type === 'survive' ? 'tenir ' + ZC.formatTime(o.time) : o.type === 'rounds' ? 'remporter ' + o.wins + ' rounds' : 'éliminer tous les chefs de guerre';
+      const diffs = ['easy', 'medium', 'hard'].map(d => '<span class="ai-diff' + (c.done(m.id, d) ? ' on' : '') + '"><span class="pip ' + d + (c.done(m.id, d) ? ' on' : '') + '"></span>' + ZC.DIFFICULTIES[d].label + ' · ' + m.points[d] + ' ★' + (c.done(m.id, d) ? ' ✓' : '') + '</span>').join('');
+      q('#adv-info').innerHTML = '<div class="ai-head"><span class="ai-title" style="color:' + w.color + '">Mission ' + (m.index + 1) + ' — ' + esc(m.name) + '</span>' +
+        (unlocked ? '<button id="adv-play">Jouer la mission ▸</button>' : '<span class="ai-lock">🔒 Terminez la mission précédente</span>') + '</div>' +
+        '<div class="ai-brief">' + esc(m.brief) + '</div>' +
+        '<div class="ai-meta">Objectif : ' + obj + ' · Carte ' + st.mapZones + 'x' + (st.mapZonesY || st.mapZones) + ' · ' + (st.invasion ? 'vagues d\'envahisseurs' : enemies + ' IA ennemie' + (enemies > 1 ? 's' : '')) + (allies ? ' + ' + allies + ' allié' + (allies > 1 ? 's' : '') : '') + ' · Points restants : ' + c.remaining(m.id) + ' / ' + (m.points.easy + m.points.medium + m.points.hard) + '</div>' +
+        '<div class="ai-diffs">' + diffs + '</div>';
+      const b = q('#adv-play'); if (b) b.addEventListener('click', () => this.showMission(m.id));
     }
 
     showMission(id) {

@@ -385,6 +385,12 @@
       return u;
     }
 
+    // Plafond de supply : la base + un bonus par bunker (QG compris), borné par unitCap.
+    supplyCap(player) {
+      const s = this.settings, p = this.players[player];
+      return Math.min(s.unitCap, (s.supplyBase || 0) + (s.supplyPerBunker || 0) * p.bunkers);
+    }
+
     recount() {
       for (const p of this.players) { p.zones = 0; p.bunkers = 0; p.unitCount = 0; p.supply = 0; p.hq = null; }
       for (const z of this.map.zones) if (z.owner >= 0) this.players[z.owner].zones++;
@@ -740,8 +746,12 @@
         const income = (s.incomePerBunker + (p.bonus ? p.bonus.income : 0)) * (z.super ? s.superZoneMult : 1);
         p.minerals += income;
         p.mineralsEarned += income;
+        const cap = this.supplyCap(z.owner);
         for (let k = 0; k < n; k++) {
-          if (p.supply + def.supply > s.unitCap) break;
+          if (p.supply + def.supply > cap) {
+            if (this.time - (p.supplyBlockedT || -99) > 45) { p.supplyBlockedT = this.time; this.emit('supplyBlocked', { player: p.id, cap }); }
+            break;
+          }
           const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, r = b.radius + def.radius + 6 + Math.random() * 10;
           const u = this.spawnUnit(z.owner, type, b.x + Math.cos(a) * r, b.y + Math.sin(a) * r);
           u.facing = a; u.up = b.up; u.home = b;

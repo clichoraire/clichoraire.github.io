@@ -6,6 +6,7 @@ Page d'accueil qui présente les jeux et les héberge sur GitHub Pages : https:/
 index.html        page d'accueil (la liste des jeux est dans le tableau GAMES, en bas du fichier)
 covers/           images de couverture (jpg, 1200 px de large)
 bunker-zone/      copie du projet ZoneControl (tel quel, aucun build)
+hockey-boisjoli/  copie du projet HockeyBoisjoli (tel quel, aucun build)
 sosaria/          index.html = dist/sosaria.html du projet sosaria, + assets/ chargés à l'exécution
 deploy.sh         recopie la dernière version des jeux, commit, push
 .nojekyll         dit à GitHub Pages de servir les fichiers tels quels
@@ -17,7 +18,7 @@ deploy.sh         recopie la dernière version des jeux, commit, push
 ./deploy.sh "Bunker Zone : nouvelles missions"
 ```
 
-Le script recopie `../ZoneControl/` dans `bunker-zone/`, rebâtit le bundle de `../sosaria/` dans `sosaria/`,
+Le script recopie `../ZoneControl/` dans `bunker-zone/` et `../HockeyBoisjoli/` dans `hockey-boisjoli/`, rebâtit le bundle de `../sosaria/` dans `sosaria/`,
 puis commit et pousse. GitHub Pages republie en une ou deux minutes.
 
 ## Ajouter un jeu

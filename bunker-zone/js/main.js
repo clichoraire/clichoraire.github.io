@@ -261,6 +261,9 @@
         case 'towerRefused':
           if (d.player === me) { A.play('error', 0); ui.message('Construction annulée : ' + ({ zone: 'la zone n\'est plus à vous', centre: 'trop près du centre', structure: 'trop près d\'une structure', gisement: 'trop près du gisement', max: 'maximum de tours atteint' }[d.reason] || 'emplacement impossible') + '.', '#ff5050'); }
           break;
+        case 'supplyBlocked':
+          if (d.player === me) ui.message('Supply max atteinte (' + d.cap + ') : ' + (d.cap < g.settings.unitCap ? 'chaque nouveau bunker ajoute +' + g.settings.supplyPerBunker + '.' : 'limite absolue de la partie.'), '#ffd040');
+          break;
         case 'workerCap':
           if (d.player === me) { A.play('error', 0); ui.message('Maximum de ' + ZC.WORKER.max + ' travailleurs atteint.', '#ff5050'); }
           break;

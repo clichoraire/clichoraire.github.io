@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hockey Boisjoli</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <section id="screen-menu" class="screen">
+    <div class="menu-box">
+      <h1>HOCKEY <span>BOISJOLI</span></h1>
+      <p class="tagline">La coupe de famille, avec pouvoirs spéciaux · 3 contre 3</p>
+      <canvas id="menu-anim" width="900" height="150"></canvas>
+      <div id="logos"></div>
+      <div class="buttons">
+        <button id="btn-solo" class="primary">1 joueur contre l'ordi</button>
+        <button id="btn-duo">2 joueurs (même clavier ou manettes)</button>
+        <button id="btn-cup">Coupe Boisjoli</button>
+        <button id="btn-help">Contrôles</button>
+      </div>
+      <div class="options">
+        <label>Période <select id="opt-period"></select></label>
+        <label>Ordi <select id="opt-diff"></select></label>
+        <label><input type="checkbox" id="opt-sound"> Son</label>
+      </div>
+      <div id="help" class="hidden">
+        <table>
+          <tr><th></th><th>Joueur 1</th><th>Joueur 2</th><th>Manette</th></tr>
+          <tr><td>Patiner</td><td>Flèches</td><td>W A S D</td><td>Stick / croix</td></tr>
+          <tr><td>Passe · changer de joueur</td><td>X</td><td>G</td><td>A</td></tr>
+          <tr><td>Lancer (tenir pour charger) · mise en échec</td><td>C</td><td>H</td><td>B</td></tr>
+          <tr><td>Pouvoir spécial</td><td>V</td><td>J</td><td>X</td></tr>
+          <tr><td>Pause · son</td><td colspan="3">Échap ou P · M</td></tr>
+        </table>
+        <p>Sans la rondelle, le bouton de lancer fait une mise en échec : fonce sur l'adversaire pour le faire tomber (les petits tombent facilement, grand-papa presque jamais).
+        Le joueur contrôlé change tout seul vers le plus proche de la rondelle. Les équipes de 4 font des changements aux mises au jeu quand quelqu'un est fatigué (barres d'énergie en bas).</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-select" class="screen hidden">
+    <h2 id="sel-title"></h2>
+    <div id="cards"></div>
+    <div class="buttons"><button id="btn-sel-back">Retour</button></div>
+  </section>
+
+  <section id="screen-match" class="screen hidden">
+    <div class="canvas-wrap"><canvas id="game" width="1280" height="720"></canvas>
+      <div id="pause" class="hidden">
+        <div class="pause-box">
+          <h2>PAUSE</h2>
+          <p>Flèches / WASD : patiner · X / G : passe ou changer de joueur · C / H : lancer (tenir) ou mise en échec · V / J : pouvoir</p>
+          <button id="btn-resume" class="primary">Reprendre</button>
+          <button id="btn-quit">Quitter le match</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-result" class="screen hidden">
+    <div class="result-box">
+      <h2>Résultat</h2>
+      <div id="result"></div>
+      <div id="result-buttons" class="buttons"></div>
+    </div>
+  </section>
+</div>
+<script src="js/config.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -73,7 +73,10 @@ joue avec la race humaine (les autres races sont verrouillées pour l'aventure, 
 partie simple) et traverse **quatre mondes**, un par race ennemie : Terra Prime (renégats humains de
 Varek), Nidus (essaim de la matriarche Szeth), Lumen (Conclave du hiérarque Aelon) et Forge-Oméga
 (mécas du Noyau-Directeur 7). Chaque monde propose **13 missions** de plus en plus dures, débloquées
-une à une ; un monde se débloque quand les 13 missions du précédent sont réussies.
+une à une ; un monde se débloque quand les 13 missions du précédent sont réussies. L'écran
+d'aventure affiche la planète du monde en fond (dessinée procéduralement, `js/planet.js`) et les
+missions en grandes cases défilantes (molette ou glissement) avec un aperçu de la carte ; la fiche
+de la mission choisie s'affiche dessous, un second clic ou « Jouer la mission » lance le briefing.
 
 - **Des missions variées** : avant-poste, couloir 5x1, survie sans minerai, départ au centre avec
   deux zones d'avance, 2v2 avec un allié, bande 3x9, mode évolution, rush à vagues rapides, tournoi,
@@ -163,7 +166,7 @@ Test : `node tools/headless.js 0 5 normal 300 --passive --invasion=1`.
 
 Mode (classique, évolution ou tournoi), rounds à gagner et limite de temps d'un round (tournoi), race, nombre d'IA (1 à 7), difficulté, largeur et hauteur de la carte (3 à 11 zones, hauteur 1 pour un couloir),
 taille des zones, terrain (jungle, badlands, plateforme spatiale), couleur, intervalle des vagues,
-unités de départ, supply max, revenu par bunker, coût des dropships, temps d'atterrissage,
+unités de départ, supply max et supply gagnée par bunker (le plafond monte avec chaque bunker, QG compris), revenu par bunker, coût des dropships, temps d'atterrissage,
 durée des rounds, vitesse, limite de sélection à 12 comme SC1, son, mode admin (triche), défilement au bord.
 
 ## Sprites

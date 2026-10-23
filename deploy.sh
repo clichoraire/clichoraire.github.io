@@ -9,6 +9,9 @@ MSG="${1:-Mise à jour des jeux}"
 echo "▸ Bunker Zone (copie de ZoneControl/)"
 rsync -a --delete --exclude .git --exclude .DS_Store --exclude '_extract.html' "$PROJETS/ZoneControl/" bunker-zone/
 
+echo "▸ Hockey Boisjoli (copie de HockeyBoisjoli/)"
+rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/HockeyBoisjoli/" hockey-boisjoli/
+
 echo "▸ Sosaria Online (bundle + assets chargés à l'exécution)"
 (cd "$PROJETS/sosaria" && node build.js >/dev/null)
 cp "$PROJETS/sosaria/dist/sosaria.html" sosaria/index.html

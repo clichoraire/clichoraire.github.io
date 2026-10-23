@@ -160,7 +160,9 @@ window.ZC = window.ZC || {};
     dropshipQueueMax: 5,       // file d'attente maximale par bunker
     startMinerals: 50,
     incomePerBunker: 3,   // minerais par bunker à chaque vague
-    unitCap: 100,         // supply max par joueur
+    unitCap: 100,         // supply max absolue par joueur
+    supplyBase: 30,       // supply de départ ; chaque bunker (QG compris) en ajoute supplyPerBunker, jusqu'à unitCap
+    supplyPerBunker: 20,
     startUnits: 8,        // marines de départ
     startWorkers: 2,      // travailleurs de départ (récoltent le gisement du QG)
     mineralZones: 0.4,    // part des zones (hors zones de départ, qui en ont toujours un) qui reçoivent un gisement de minerai

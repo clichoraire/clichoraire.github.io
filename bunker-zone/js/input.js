@@ -37,7 +37,8 @@
       window.addEventListener('blur', () => { this.keys.clear(); this.mouse.inWindow = false; this.mouse.down = false; this.mouse.dragging = false; }, sig);
       const mm = this.app.ui.minimap;
       mm.addEventListener('mousedown', e => this.onMiniDown(e), sig);
-      mm.addEventListener('mousemove', e => { if (e.buttons & 1 && this.mode === 'normal') this.miniCamera(e); }, sig);
+      mm.addEventListener('mousemove', e => { if (e.buttons & 1 && this.mode === 'normal' && !this.miniCmdDrag) this.miniCamera(e); }, sig);
+      window.addEventListener('mouseup', () => { this.miniCmdDrag = false; }, sig);
       mm.addEventListener('contextmenu', e => e.preventDefault(), sig);
     }
     detach() { this.ac.abort(); this.canvas.style.cursor = 'default'; }
@@ -224,7 +225,7 @@
       ZC.Audio.play('order');
     }
 
-    marker(x, y, color) { this.game.addEffect({ type: 'marker', x, y, life: 0.5, color }); }
+    marker(x, y, color) { this.game.addEffect({ type: 'marker', x, y, life: 0.5, color }); this.lastMarker = { x, y, color }; this.markerSeq = (this.markerSeq || 0) + 1; }
 
     // Commandes de la carte de commandes / raccourcis
     command(cmd) {
@@ -361,14 +362,15 @@
     onMiniDown(e) {
       e.preventDefault();
       if (this.app.paused) return;
-      const w = this.miniWorld(e);
+      const w = this.miniWorld(e), seq = this.markerSeq || 0;
       if (e.button === 2) {
         if (this.mode !== 'normal') { this.setMode('normal'); return; }
         this.smartOrder(w, null);
       } else if (e.button === 0) {
-        if (this.mode !== 'normal') { this.executeTargeted(w, null); if (!e.shiftKey) this.setMode('normal'); }
+        if (this.mode !== 'normal') { this.miniCmdDrag = true; this.executeTargeted(w, null); if (!e.shiftKey) this.setMode('normal'); } // la caméra ne bouge pas : l'ordre se voit par un ping sur la minimap
         else this.miniCamera(e);
       }
+      if ((this.markerSeq || 0) !== seq) this.renderer.miniPing(this.lastMarker.x, this.lastMarker.y, this.lastMarker.color);
     }
 
     update(dt) {
