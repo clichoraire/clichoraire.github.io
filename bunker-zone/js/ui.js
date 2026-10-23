@@ -42,6 +42,7 @@
     back: svg('<path d="M10 5L4 11l6 6M4 11h12a4 4 0 0 1 0 8h-2"/>', '#c8d4e8'),
     gather: svg('<path d="M12 2l5 7-5 13-5-13z"/><path d="M7 9h10"/>', '#39ff14'),
     repair: svg('<path d="M14 4a5 5 0 0 0-5 7L3 17l4 4 6-6a5 5 0 0 0 7-5l-3 3-3-1-1-3 3-3z"/>', '#ffd040'),
+    tower: svg('<path d="M5 21h14M7 21V9h10v12M7 9l-2-3h14l-2 3M9 21v-5h6v5"/><path d="M12 3v3"/>', '#ff8a8a'),
     extract: svg('<path d="M5 9h14v4H5z"/><path d="M8 13v3l4 5 4-5v-3"/><path d="M9 5h6v4H9z"/>', '#39ff14'),
   };
   ZC.CMD_ICONS = ICONS;
@@ -54,7 +55,7 @@
       <div><b>G</b> (bunker sélectionné) envoyer toutes ses troupes vers le point cliqué &nbsp; <b>N</b> bunker suivant</div>
       <div><b>Clic droit sur un bunker allié</b> : les unités sélectionnées entrent en garnison (4 max ; un bunker vide ne tire pas) &nbsp; <b>U</b> décharger &nbsp; <b>V</b> évolution (armes, armure et portée au niveau 3) : les soldats du bunker passent au niveau 2</div>
       <div><b>D</b> dropship (centre de commandement) &nbsp; <b>F</b> carte « Unités » du QG : <b>W</b> travailleur, <b>H</b> ressusciter le héros (aventure), <b>X</b> retour &nbsp; <b>T</b> stimuler les marines sélectionnés</div>
-      <div><b>Travailleurs</b> : clic droit sur un gisement vert = récolter (<b>G</b>), clic droit sur un bunker allié abîmé = réparer (<b>R</b>, ${ZC.REPAIR.hpPerSec} PV/s contre ${ZC.REPAIR.costPerSec} minerais/s), <b>B</b> construire un extracteur sur un gisement (${ZC.EXTRACTOR.cost} minerais, mine tout seul)</div>
+      <div><b>Travailleurs</b> : clic droit sur un gisement vert = récolter (<b>G</b>), clic droit sur un bunker allié abîmé = réparer (<b>R</b>, ${ZC.REPAIR.hpPerSec} PV/s contre ${ZC.REPAIR.costPerSec} minerais/s), <b>B</b> construire un extracteur sur un gisement (${ZC.EXTRACTOR.cost} minerais, mine tout seul), <b>T</b> construire une tour dans une de vos zones (${ZC.TOWER.cost} minerais ; chez les humains, des soldats doivent y monter pour qu'elle tire)</div>
       <div><b>A</b> attaque-déplacement &nbsp; <b>M</b> déplacer &nbsp; <b>S</b> stop &nbsp; <b>H</b> tenir &nbsp; <b>P</b> patrouille</div>
       <div><b>Double-clic / Ctrl+clic</b> même type à l'écran &nbsp; <b>Maj+clic</b> ajouter</div>
       <div><b>Ctrl+1..9</b> créer un groupe (unités ou bunker sélectionné) &nbsp; <b>1..9</b> sélectionner (2x : centrer) &nbsp; <b>Z</b> toute l'armée</div>
@@ -201,7 +202,11 @@
         html = this.cardButton('move', '➜', 'M', 'Déplacer') + this.cardButton('stop', '■', 'S', 'Stop') + this.cardButton('hold', '⛨', 'H', 'Tenir la position') +
           this.cardButton('gather', '◆', 'G', 'Récolter : cliquez sur un gisement de minerai (' + ZC.MINERALS.carry + ' minerais par voyage)') +
           this.cardButton('repair', '🔧', 'R', 'Réparer : cliquez sur un bunker allié (' + ZC.REPAIR.hpPerSec + ' PV/s, coûte ' + ZC.REPAIR.costPerSec + ' minerais/s)') +
-          this.cardButton('extract', '⛏', 'B', ZC.RACES[me.race].extractor + ' : construire sur un gisement (' + ZC.EXTRACTOR.buildTime + ' s). Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s directement dans votre banque, sans transport. Un seul par gisement', g.extractorCost(me.id), me.minerals < g.extractorCost(me.id)) + e + e + e;
+          this.cardButton('extract', '⛏', 'B', ZC.RACES[me.race].extractor + ' : construire sur un gisement (' + ZC.EXTRACTOR.buildTime + ' s). Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s directement dans votre banque, sans transport. Un seul par gisement', g.extractorCost(me.id), me.minerals < g.extractorCost(me.id)) +
+          this.cardButton('tower', '⌂', 'T', ZC.UNITS[ZC.RACES[me.race].tower].name + ' : construire dans une de vos zones (' + ZC.TOWER.buildTime + ' s, ' + ZC.TOWER.perZone + ' par zone max). ' + (ZC.UNITS[ZC.RACES[me.race].tower].manned ? 'Pas de robots chez les humains : la tour ne tire que si des soldats y montent (clic droit, ' + ZC.UNITS[ZC.RACES[me.race].tower].capacity + ' places, portée +' + ZC.UNITS[ZC.RACES[me.race].tower].rangeBonus + ' cases)' : 'Tourelle autonome'), g.towerCost(me.id), me.minerals < g.towerCost(me.id)) + e + e;
+      } else if (kind === 'tower') {
+        const tw = g.selectedTower;
+        html = (tw.garrison.length ? this.cardButton('unload', '⇩', 'U', 'Faire descendre la garnison (' + tw.garrison.length + ' unités)') : e) + e + e + e + e + e + e + e + e;
       } else if (kind === 'hqUnits') { // carte « Unités » du centre de commandement
         const wk = ZC.UNITS[ZC.RACES[me.race].worker], wc = g.workerCost(me.id), wn = g.workers(me.id).length + g.workersQueued(me.id), cap = wn >= ZC.WORKER.max;
         const worker = this.cardButton('worker', '⚒', 'W', wk.name + ' (' + wn + '/' + ZC.WORKER.max + ') : récolte le minerai des gisements et répare les bunkers — ' + Math.round(g.workerTime(me.id)) + ' s de production', wc, cap || me.minerals < wc);
@@ -329,6 +334,7 @@
     selectionKind() {
       const g = this.app.game;
       if (g.selectedBunker) return this.sub === 'units' && g.selectedBunker.def.hq ? 'hqUnits' : 'bunker';
+      if (g.selectedTower) return 'tower';
       const own = g.ownSelection;
       if (!own.length) return 'none';
       if (own.every(u => u.type === 'dropship')) return 'dropship';
@@ -342,7 +348,8 @@
       if (sel.length === 1) {
         const u = sel[0], p = g.players[u.owner];
         let extra = '';
-        if (u.def.extractor) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s du gisement, directement dans votre banque</div>';
+        if (u.def.tower) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">' + (u.def.manned ? 'Tour habitée : clic droit avec des soldats pour y monter (' + u.def.capacity + ' places, portée +' + u.def.rangeBonus + ' cases) · U faire descendre' : 'Tourelle autonome · portée ' + (u.def.range / ZC.TILE) + ' cases · dégâts ' + u.def.dmg) + '</div>';
+        else if (u.def.extractor) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s du gisement, directement dans votre banque</div>';
         else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : '') + 'W/R/E/T améliorations · V évolution · G envoyer les troupes · U décharger la garnison</div>';
         else if (u.def.worker) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Clic droit sur un gisement vert : récolter (G) · clic droit sur un bunker allié abîmé : réparer (R, ' + ZC.REPAIR.costPerSec + ' minerais/s)</div>';
         else if (u.type === 'dropship') extra = '<div class="line sub">Clic droit sur une zone libre : construire un bunker (' + g.settings.landingTime + ' s)</div>';
@@ -390,7 +397,8 @@
         const f = u.hp / u.maxHp;
         hp.innerHTML = '<span class="k">Vie</span> <span style="color:' + (f > 0.66 ? '#10fc18' : f > 0.33 ? '#fcfc38' : '#fc3838') + '">' + Math.ceil(u.hp) + ' / ' + u.maxHp + '</span>';
         info.querySelector('#u-shield').innerHTML = u.def.shield ? '<span class="k">Bouclier</span> <span style="color:#4aa8ff">' + Math.ceil(u.shield) + ' / ' + u.def.shield + '</span>' : '';
-        const k = info.querySelector('#u-kills'); if (k && u.def.extractor) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.EXTRACTOR.buildTime * 100)) + ' %' : u.patch && u.patch.amount > 0 ? 'En activité · gisement : ' + Math.round(u.patch.amount) : 'Gisement épuisé';
+        const k = info.querySelector('#u-kills'); if (k && u.def.tower) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.TOWER.buildTime * 100)) + ' %' : (u.def.manned ? 'Garnison ' + u.garrison.length + '/' + u.def.capacity + (u.garrison.length ? '' : ' (ne tire pas)') : 'En veille') + ' · Kills : ' + u.kills;
+        else if (k && u.def.extractor) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.EXTRACTOR.buildTime * 100)) + ' %' : u.patch && u.patch.amount > 0 ? 'En activité · gisement : ' + Math.round(u.patch.amount) : 'Gisement épuisé';
         else if (k && u.def.worker) k.textContent = (u.order.type === 'gather' ? (u.slot ? 'Récolte en cours' : u.carry >= ZC.MINERALS.carry ? 'Rapporte ' + u.carry + ' minerais' : 'En route vers le gisement') : u.order.type === 'repair' ? 'Réparation' + (u.repairing ? ' en cours (' + ZC.REPAIR.costPerSec + ' minerais/s)' : '') : 'Inactif') + (u.carry > 0 && u.order.type !== 'gather' ? ' · transporte ' + u.carry + ' minerais' : '');
         else if (k) k.textContent = (u.def.hero ? 'Héros · Niveau ' + u.heroLevel + ' · ' + Math.floor(u.xp) + ' XP' + (u.heroLevel < ZC.HERO_MAX_LEVEL ? ' / ' + ZC.heroXpFor(u.heroLevel + 1) : '') + ' · ' : '') + 'Kills : ' + u.kills + (u.stimT > 0 ? ' · Stimulé (' + Math.ceil(u.stimT) + ' s)' : '');
         const ex = info.querySelector('#u-extra');

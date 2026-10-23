@@ -245,10 +245,10 @@
           ctx.fillStyle = '#ffd040'; ctx.font = 'bold 10px Verdana, sans-serif'; ctx.textAlign = 'center';
           ctx.fillText(keys, bx + bw / 2, by + 10.5);
         }
-        if (u.def.extractor && u.building) { // chantier : barre de construction
-          const w = 40, x = Math.round(u.rx - w / 2), y = Math.round(u.ry + u.radius + 10);
+        if (u.building) { // chantier : barre de construction
+          const w = 40, x = Math.round(u.rx - w / 2), y = Math.round(u.ry + u.radius + 10), total = u.def.tower ? ZC.TOWER.buildTime : ZC.EXTRACTOR.buildTime;
           ctx.fillStyle = '#000'; ctx.fillRect(x - 1, y - 1, w + 2, 7); ctx.fillStyle = '#2a2a14'; ctx.fillRect(x, y, w, 5);
-          ctx.fillStyle = '#ffd040'; ctx.fillRect(x, y, Math.round(w * Math.min(1, u.buildT / ZC.EXTRACTOR.buildTime)), 5);
+          ctx.fillStyle = '#ffd040'; ctx.fillRect(x, y, Math.round(w * Math.min(1, u.buildT / total)), 5);
           continue;
         }
         if (!u.queue.length && !u.research.length) continue;
@@ -290,6 +290,15 @@
       for (let i = 0; i < sel.length; i++) this.drawHpBar(ctx, sel[i]);
       if (input && input.hover && !sel.includes(input.hover)) this.drawHpBar(ctx, input.hover);
 
+      if (input && input.mode === 'tower' && input.mouse.overCanvas) { // aperçu de la tour sous le curseur
+        const wx = input.mouse.x + vx, wy = input.mouse.y + vy, ok = g.canPlaceTower(g.humanId, wx, wy), td = ZC.UNITS[ZC.RACES[g.human.race].tower];
+        ctx.save(); ctx.globalAlpha = 0.6; ctx.translate(wx, wy); ZC.drawUnitSprite(ctx, td.key, g.human.hex, 0, false, 0, t, null, 0); ctx.restore();
+        ctx.strokeStyle = ok.ok ? 'rgba(90,255,80,0.9)' : 'rgba(255,70,50,0.9)'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.arc(wx, wy, td.radius + 6, 0, TAU); ctx.stroke();
+        if (td.dmg > 0 || td.manned) { ctx.strokeStyle = ok.ok ? 'rgba(90,255,80,0.35)' : 'rgba(255,70,50,0.3)'; ctx.beginPath(); ctx.arc(wx, wy, (td.dmg > 0 ? td.range : (ZC.UNITS[ZC.RACES[g.human.race].l1].range + td.rangeBonus * ZC.TILE)) + td.radius, 0, TAU); ctx.stroke(); }
+        ctx.setLineDash([]);
+        if (!ok.ok) { ctx.font = 'bold 10px Verdana, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff6a5a'; ctx.fillText({ zone: 'Seulement dans vos zones', centre: 'Trop près du centre', structure: 'Trop près d\'une structure', gisement: 'Trop près du gisement', max: ZC.TOWER.perZone + ' tours max par zone' }[ok.reason] || 'Impossible ici', wx, wy - td.radius - 12); }
+      }
       if (input && input.mouse.dragging) {
         const mx = input.mouse.x + vx, my = input.mouse.y + vy, x0 = input.mouse.sx + vx, y0 = input.mouse.sy + vy;
         ctx.strokeStyle = '#18e818'; ctx.lineWidth = 1;
@@ -307,7 +316,7 @@
       ctx.translate(u.rx, u.ry + bob);
       ctx.rotate(u.rf);
       ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, u.anim, u.moving, u.attackAnim > 0 ? u.attackAnim / 0.15 : 0, t + u.id * 0.37, u.up, u.rf);
-      if (u.def.extractor && u.building) { ctx.globalAlpha = 0.55; ctx.fillStyle = 'rgba(255,220,80,0.25)'; ctx.beginPath(); ctx.arc(0, 0, u.radius + 4, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+      if (u.building) { ctx.globalAlpha = 0.55; ctx.fillStyle = 'rgba(255,220,80,0.25)'; ctx.beginPath(); ctx.arc(0, 0, u.radius + 4, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
       if (u.def.worker) {
         if (u.carry > 0) { // cristal transporté
           ctx.fillStyle = ZC.MINERALS.color; ctx.beginPath(); ctx.moveTo(7, -4); ctx.lineTo(12, -1); ctx.lineTo(10, 4); ctx.lineTo(6, 2); ctx.closePath(); ctx.fill();
@@ -318,7 +327,9 @@
           for (let i = 0; i < 3; i++) ctx.fillRect(9 + Math.random() * 6, (Math.random() - 0.5) * 8, 1.5, 1.5);
         }
       }
-      if (u.def.structure && u.garrison.length) { // meurtrières occupées
+      if (u.def.tower && u.garrison.length) { // tour de guet occupée : soldats sur la plateforme
+        for (let i = 0; i < u.garrison.length; i++) { const gx = (i - (u.garrison.length - 1) / 2) * 9; ctx.fillStyle = '#2b2f36'; ctx.beginPath(); ctx.arc(gx, -2, 3.5, 0, TAU); ctx.fill(); ctx.fillStyle = g.players[u.owner].hex; ctx.beginPath(); ctx.arc(gx, -2, 2, 0, TAU); ctx.fill(); if (u.attackAnim > 0) { ctx.fillStyle = '#fff8d0'; ctx.fillRect(gx + 3, -3, 4, 2); } }
+      } else if (u.def.structure && u.garrison.length) { // meurtrières occupées
         const ports = u.def.hq ? [[-26, -16, 6, 4], [20, -16, 6, 4], [-26, -3, 6, 4], [20, -3, 6, 4], [-26, 10, 6, 4], [20, 10, 6, 4]] : [[-11, -14, 7, 3], [4, -14, 7, 3], [-11, 11, 7, 3], [4, 11, 7, 3]];
         const hot = u.attackAnim > 0;
         for (let i = 0; i < u.garrison.length && i < ports.length; i++) {

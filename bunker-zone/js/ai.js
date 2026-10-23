@@ -65,12 +65,14 @@
 
       // ------------------------------------------------ garnison : des unités oisives entrent dans leur bunker
       for (const z of myZones) {
-        const b = z.bunker;
-        if (!b || b.dead) continue;
-        const free = ZC.capacity(b) - b.garrison.length;
-        if (free <= 0) continue;
-        const cands = idle[z.id].filter(u => u.canGarrison && u.inside === null).slice(0, free);
-        if (cands.length) { g.issueOrder(cands, { type: 'enter', bunker: b }); for (const u of cands) { const i = idle[z.id].indexOf(u); if (i >= 0) idle[z.id].splice(i, 1); } }
+        const posts = [z.bunker].concat(g.units.filter(u => !u.dead && u.owner === me && u.def.tower && u.def.manned && !u.building && u.zoneId === z.id));
+        for (const b of posts) {
+          if (!b || b.dead) continue;
+          const free = ZC.capacity(b) - b.garrison.length;
+          if (free <= 0) continue;
+          const cands = idle[z.id].filter(u => u.canGarrison && u.inside === null).slice(0, free);
+          if (cands.length) { g.issueOrder(cands, { type: 'enter', bunker: b }); for (const u of cands) { const i = idle[z.id].indexOf(u); if (i >= 0) idle[z.id].splice(i, 1); } }
+        }
       }
 
       // ------------------------------------------------ dropships, travailleurs et achats
@@ -263,7 +265,7 @@
       }
       // Réparation : un bunker sous 60 % qui n'est plus sous le feu, si la trésorerie le permet
       if (workers.length && p.minerals > 120) {
-        const hurt = g.units.filter(u => !u.dead && u.owner === me && u.def.structure && !u.def.extractor && u.hp < u.maxHp * 0.6 && g.time - u.attackedT > 6 && enemyStr(u.zone) === 0);
+        const hurt = g.units.filter(u => !u.dead && u.owner === me && u.def.structure && !u.def.extractor && !u.building && u.hp < u.maxHp * 0.6 && g.time - u.attackedT > 6 && enemyStr(u.zone || g.map.zoneAt(u.x, u.y)) === 0);
         for (const b of hurt) {
           if (g.units.some(u => !u.dead && u.owner === me && u.def.worker && u.order.type === 'repair' && u.order.target === b)) continue;
           let best = null, bd = Infinity;
@@ -275,6 +277,16 @@
       if (workers.length && p.minerals >= g.extractorCost(me) + 150) {
         const pt = patches.find(x => x.zone.owner === me && !x.extractor && x.amount > 400 && !workers.some(w => w.order.type === 'extract' && w.order.patch === x));
         if (pt) { let best = null, bd = Infinity; for (const w of workers) { if (w.order.type === 'extract' || w.order.type === 'repair') continue; const d = ZC.dist(w.x, w.y, pt.x, pt.y); if (d < bd) { bd = d; best = w; } } if (best) best.setOrder({ type: 'extract', patch: pt }); }
+      }
+      // Une tour par zone de front, quand la trésorerie le permet
+      if (workers.length && p.minerals >= g.towerCost(me) + 200 && !workers.some(w => w.order.type === 'tower')) {
+        const front = g.map.zones.filter(z => z.owner === me && z.bunker && g.map.neighbors(z, true).some(n => n.owner >= 0 && !g.allied(me, n.owner)));
+        const z = front.find(z => !g.units.some(u => !u.dead && u.owner === me && u.def.tower && u.zoneId === z.id));
+        if (z) {
+          const en = g.map.neighbors(z, true).find(n => n.owner >= 0 && !g.allied(me, n.owner));
+          const a = Math.atan2(en.cy - z.cy, en.cx - z.cx), tx = z.cx + Math.cos(a) * 110, ty = z.cy + Math.sin(a) * 110;
+          if (g.canPlaceTower(me, tx, ty).ok) { let best = null, bd = Infinity; for (const w of workers) { if (w.order.type === 'extract' || w.order.type === 'repair') continue; const d = ZC.dist(w.x, w.y, tx, ty); if (d < bd) { bd = d; best = w; } } if (best) g.issueOrder([best], { type: 'tower', x: tx, y: ty }); }
+        }
       }
       // Production : environ quatre travailleurs par gisement accessible
       if (!hq || !patches.length) return;
@@ -294,7 +306,7 @@
       const g = this.game, map = g.map, me = this.p.id;
       let best = null, bs = -Infinity;
       for (const u of g.units) {
-        if (u.dead || u.owner !== me || !u.def.structure || u.def.extractor || !u.zone) continue;
+        if (u.dead || u.owner !== me || !u.def.structure || u.def.extractor || u.def.tower || !u.zone) continue;
         const front = map.neighbors(u.zone, true).some(n => !(n.owner >= 0 && g.allied(me, n.owner))) ? 1 : 0;
         const lvl = u.up.weapons + u.up.armor + u.up.range + u.up.stim + u.up.evolve * 3 + u.research.length * 2;
         if (u.research.length >= ZC.RESEARCH_QUEUE_MAX) continue;

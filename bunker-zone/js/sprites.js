@@ -146,6 +146,42 @@
     ctx.fillStyle = '#1e2227'; ctx.fillRect(-13, 6, 26, 3); ctx.fillStyle = '#39ff14'; ctx.globalAlpha = 0.6; ctx.fillRect(-12, 7, 24 * bl, 1); ctx.globalAlpha = 1;
   };
 
+  // Tours défensives (structures, jamais tournées par le rendu : on oriente nous-mêmes le canon)
+  S.towerHuman = function (ctx, c, a, m, atk, t) { // tour de guet : pieds, plateforme, parapet ; occupée = silhouettes
+    ctx.strokeStyle = '#2b2f36'; ctx.lineWidth = 3; ctx.beginPath(); for (const [x, y] of [[-10, 10], [10, 10], [-10, -8], [10, -8]]) { ctx.moveTo(x, y); ctx.lineTo(x * 0.6, y * 0.6); } ctx.stroke();
+    roundRect(ctx, -13, -13, 26, 26, 4); ctx.fillStyle = '#4a515c'; ctx.fill(); ctx.strokeStyle = '#14171c'; ctx.lineWidth = 1.5; ctx.stroke();
+    roundRect(ctx, -10, -10, 20, 20, 3); ctx.fillStyle = '#6b737e'; ctx.fill();
+    ctx.fillStyle = '#2b2f36'; for (let i = -1; i <= 1; i++) { ctx.fillRect(i * 7 - 2, -13, 4, 3); ctx.fillRect(i * 7 - 2, 10, 4, 3); ctx.fillRect(-13, i * 7 - 2, 3, 4); ctx.fillRect(10, i * 7 - 2, 3, 4); }
+    ctx.fillStyle = c; ctx.fillRect(-4, -4, 8, 8);
+    const bl = (Math.sin(t * 5) + 1) / 2; circ(ctx, 0, 0, 1.8, 'rgba(255,220,80,' + (0.3 + 0.7 * bl) + ')');
+  };
+  S.towerInsect = function (ctx, c, a, m, atk, t) { // colonie d'épines : bulbe organique et épines dressées
+    ell(ctx, 0, 4, 15, 10, '#5a2a3a', '#2a1018', 1.5);
+    ell(ctx, 0, 0, 11, 11, '#8c4a5e', '#2a1018', 1);
+    ctx.strokeStyle = '#d8c8b0'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i < 6; i++) { const b = i / 6 * TAU + Math.sin(t * 2 + i) * 0.1, l = 10 + (atk > 0 ? 6 : 0); ctx.moveTo(Math.cos(b) * 6, Math.sin(b) * 6); ctx.lineTo(Math.cos(b) * (6 + l), Math.sin(b) * (6 + l)); }
+    ctx.stroke();
+    circ(ctx, 0, 0, 4, c); circ(ctx, 0, 0, 2, '#ffe080');
+  };
+  S.towerEnergy = function (ctx, c, a, m, atk, t) { // canon à photons : socle et cristal flottant
+    ell(ctx, 0, 5, 14, 9, '#3a3c5a', '#14141f', 1.5);
+    ctx.fillStyle = c; ctx.fillRect(-9, 2, 18, 3);
+    const bl = 0.6 + 0.4 * Math.sin(t * 6), h = 2 * Math.sin(t * 3);
+    ctx.fillStyle = 'rgba(120,200,255,' + (0.15 + 0.2 * bl) + ')'; ctx.beginPath(); ctx.arc(0, -4 + h, 13, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#6cd4ff'; ctx.beginPath(); ctx.moveTo(0, -16 + h); ctx.lineTo(7, -4 + h); ctx.lineTo(0, 6 + h); ctx.lineTo(-7, -4 + h); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,' + bl + ')'; ctx.beginPath(); ctx.moveTo(0, -12 + h); ctx.lineTo(3, -5 + h); ctx.lineTo(0, -1 + h); ctx.lineTo(-3, -5 + h); ctx.closePath(); ctx.fill();
+  };
+  S.towerMecha = function (ctx, c, a, m, atk, t, facing) { // tourelle : base, dôme et canon orienté vers la cible
+    ell(ctx, 0, 4, 15, 10, '#2b2f36', '#0e1114', 1.5);
+    circ(ctx, 0, 0, 10, '#555d68', '#14171c', 1);
+    ctx.fillStyle = c; ctx.fillRect(-8, -2, 4, 4); ctx.fillRect(4, -2, 4, 4);
+    ctx.save(); ctx.rotate(facing || 0);
+    ctx.fillStyle = '#3a414a'; ctx.fillRect(2, -3, 14 - atk * 3, 6); ctx.fillStyle = '#8a95a3'; ctx.fillRect(2, -2, 13 - atk * 3, 2);
+    if (atk > 0) { ctx.fillStyle = 'rgba(255,220,120,' + atk + ')'; circ(ctx, 17, 0, 4 * atk, 'rgba(255,220,120,' + atk + ')'); }
+    ctx.restore();
+    circ(ctx, 0, 0, 5, '#7d858f', '#14171c', 1); circ(ctx, 0, 0, 1.5, '#6cd4ff');
+  };
+
   // Ruines d'un bunker détruit
   S.ruins = function (ctx, seed) {
     const rnd = ZC.seededRandom(seed || 7);
@@ -229,7 +265,7 @@
       ctx.strokeStyle = 'rgba(255,240,160,0.35)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
     }
-    if (S[base]) { S[base](ctx, color, anim, moving, atk, t || 0); return; }
+    if (S[base]) { S[base](ctx, color, anim, moving, atk, t || 0, facing); return; }
     const spec = SPEC[base];
     if (spec && sheet.ready) { sheetUnit(ctx, spec, color, anim, moving, atk, facing, w, ar, death); return; }
     if (facing !== undefined && death !== undefined) ctx.rotate(-facing);

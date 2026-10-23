@@ -205,6 +205,10 @@
         const patch = g.patchAt(w.x, w.y);
         if (patch && patch.amount > 0) { g.issueOrder(sel, { type: 'gather', patch }); this.marker(patch.x, patch.y, ZC.MINERALS.color); }
         else { ZC.Audio.play('error', 0); this.app.ui.message('Cliquez sur un gisement de minerai vert.', '#ff5050'); return; }
+      } else if (this.mode === 'tower') {
+        const ok = g.canPlaceTower(g.humanId, w.x, w.y);
+        if (ok.ok) { g.issueOrder(sel, { type: 'tower', x: w.x, y: w.y }); this.marker(w.x, w.y, '#ffd040'); }
+        else { ZC.Audio.play('error', 0); this.app.ui.message({ zone: 'Une tour se construit seulement dans une de vos zones.', centre: 'Trop près du centre de la zone.', structure: 'Trop près d\'une autre structure.', gisement: 'Trop près du gisement.', max: 'Maximum de ' + ZC.TOWER.perZone + ' tours par zone.' }[ok.reason] || 'Impossible de construire ici.', '#ff5050'); return; }
       } else if (this.mode === 'extract') {
         const patch = g.patchAt(w.x, w.y);
         if (patch && patch.amount > 0 && !(patch.extractor && !patch.extractor.dead && !patch.extractor.building)) { g.issueOrder(sel, { type: 'extract', patch }); this.marker(patch.x, patch.y, '#ffd040'); }
@@ -231,7 +235,7 @@
         case 'attack': case 'move': case 'patrol':
           if (sel.length) this.setMode(cmd);
           break;
-        case 'gather': case 'repair': case 'extract':
+        case 'gather': case 'repair': case 'extract': case 'tower':
           if (sel.some(u => u.def.worker)) this.setMode(cmd);
           break;
         case 'units': this.app.ui.openSub('units'); break;
@@ -263,7 +267,7 @@
           if (g.selectedBunker) buy('evolve', g.selectedBunker);
           break;
         case 'unload':
-          if (g.selectedBunker && g.unloadBunker(g.selectedBunker)) ZC.Audio.play('order', 0);
+          { const b = g.selectedBunker || g.selectedTower; if (b && g.unloadBunker(b)) ZC.Audio.play('order', 0); }
           break;
         case 'weapons': case 'armor': case 'range': case 'stimResearch':
           if (g.selectedBunker) buy(cmd === 'stimResearch' ? 'stim' : cmd, g.selectedBunker);
@@ -323,16 +327,16 @@
         case 'KeyF': if (bunkerSel && g.selectedBunker.def.hq) this.command('units'); break;
         case 'KeyD': this.command('dropship'); break;
         case 'KeyV': if (bunkerSel) this.command('evolve'); break;
-        case 'KeyU': if (bunkerSel) this.command('unload'); break;
+        case 'KeyU': if (bunkerSel || g.selectedTower) this.command('unload'); break;
         case 'KeyW': if (bunkerSel) this.command('weapons'); break;
         case 'KeyR': if (bunkerSel) this.command('armor'); else if (workerSel) this.command('repair'); break;
         case 'KeyE': if (bunkerSel) this.command('range'); break;
-        case 'KeyT': this.command(bunkerSel ? 'stimResearch' : 'stim'); break;
+        case 'KeyT': this.command(bunkerSel ? 'stimResearch' : workerSel ? 'tower' : 'stim'); break;
         case 'KeyZ': { const all = g.units.filter(u => u.owner === g.humanId && !u.def.structure && !u.def.air && !u.def.worker); if (all.length) { g.select(all, false); ZC.Audio.play('select'); } break; }
         case 'KeyC': { const sel = g.selection.filter(u => u.owner === g.humanId); if (sel.length) this.centerOnUnits(sel); break; }
         case 'KeyL': app.ui.toggleLeaderboard(); break;
         case 'KeyN': { // bunker suivant
-          const bs = g.units.filter(u => u.owner === g.humanId && u.def.structure);
+          const bs = g.units.filter(u => u.owner === g.humanId && u.def.structure && !u.def.extractor && !u.def.tower);
           if (bs.length) { const i = (bs.indexOf(g.selection[0]) + 1) % bs.length; g.select([bs[i]], false); this.centerOnUnits([bs[i]]); ZC.Audio.play('select'); }
           break;
         }

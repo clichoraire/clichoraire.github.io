@@ -96,7 +96,7 @@
 
     canTarget(t) {
       if (t.dead || this.game.allied(this.owner, t.owner)) return false;
-      if (this.def.noAttack || this.def.structure) return false;
+      if (this.def.noAttack || (this.def.structure && !(this.def.tower && this.def.dmg > 0 && !this.building))) return false;
       if (t.def.air && !this.def.antiAir) return false;
       return true;
     }
@@ -123,6 +123,7 @@
         case 'gather':     if (this.isWorker && o.patch) { this.order = { type: 'gather', patch: o.patch, x: o.patch.x, y: o.patch.y, spot: null }; this.target = null; } break;
         case 'repair':     if (this.isWorker && o.target && o.target.def.structure) { this.order = { type: 'repair', target: o.target, x: o.target.x, y: o.target.y, patch: o.patch || null }; this.target = null; } break;
         case 'extract':    if (this.isWorker && o.patch) { this.order = { type: 'extract', patch: o.patch, x: o.patch.x, y: o.patch.y, site: null }; this.target = null; } break;
+        case 'tower':      if (this.isWorker) { this.order = { type: 'tower', x: o.x, y: o.y, site: o.site || null, patch: o.patch || null }; this.target = null; } break;
       }
     }
 
@@ -193,6 +194,38 @@
       if (site.buildT >= E.buildTime) { site.building = false; site.hp = site.maxHp; g.emit('extractorDone', { player: this.owner, unit: site, patch }); stop(true); }
     }
 
+    // Travailleur : construit (ou finit) une tour à l'endroit demandé, puis retourne récolter s'il le faisait
+    buildTower(o, dt) {
+      const g = this.game, p = this.player, T = ZC.TOWER;
+      const stop = () => { this.repairing = false; if (o.patch && o.patch.amount > 0) this.setOrder({ type: 'gather', patch: o.patch }); else this.order = { type: 'idle' }; };
+      let site = o.site && !o.site.dead ? o.site : null;
+      if (site && !site.building) { stop(); return; }
+      const tx = site ? site.x : o.x, ty = site ? site.y : o.y, reach = ZC.UNITS[ZC.RACES[p.race].tower].radius + this.radius + 10;
+      if (ZC.dist(this.x, this.y, tx, ty) > reach) { this.repairing = false; this.moveTo(tx, ty, dt); return; }
+      if (!site) {
+        const ok = g.canPlaceTower(this.owner, o.x, o.y);
+        if (!ok.ok) { g.emit('towerRefused', { player: this.owner, reason: ok.reason }); stop(); return; }
+        const cost = g.towerCost(this.owner);
+        if (p.minerals < cost) { g.emit('notEnough', { player: this.owner }); stop(); return; }
+        p.minerals -= cost;
+        site = g.placeTower(this.owner, o.x, o.y); o.site = site;
+      }
+      site.buildT += dt; this.repairing = true;
+      site.hp = Math.min(site.maxHp, Math.max(site.hp, site.maxHp * (0.1 + 0.9 * site.buildT / T.buildTime)));
+      this.facing = ZC.angleLerp(this.facing, Math.atan2(site.y - this.y, site.x - this.x), 0.3); this.anim += dt * 8;
+      if (Math.random() < dt * 6) g.addEffect({ type: 'repair', x: site.x + (this.x - site.x) * 0.5, y: site.y + (this.y - site.y) * 0.5, life: 0.3 });
+      if (site.buildT >= T.buildTime) { site.building = false; site.hp = site.maxHp; g.emit('towerDone', { player: this.owner, unit: site }); stop(); }
+    }
+
+    // Tourelle autonome : vise et tire d'elle-même
+    towerFire(dt) {
+      let t = this.target;
+      if (t && (!this.canTarget(t) || !this.inRange(t))) t = null;
+      if (!t) t = this.acquire(this.range + this.radius);
+      this.target = t;
+      if (t) { this.facing = Math.atan2(t.y - this.y, t.x - this.x); this.fire(t); }
+    }
+
     // Travailleur : répare une structure alliée (PV par seconde contre du minerai par seconde)
     repair(o, dt) {
       const g = this.game, b = o.target, R = ZC.REPAIR, p = this.player;
@@ -260,7 +293,9 @@
           q.t += dt;
           if (q.t >= q.total) { this.queue.shift(); this.game.productionDone(this, q); }
         }
-        if (this.garrison.length) this.bunkerFire(dt);
+        if (this.def.tower && this.building) return;
+        if (this.def.tower && this.def.dmg > 0) this.towerFire(dt);
+        else if (this.garrison.length) this.bunkerFire(dt);
         else this.target = null;
         if (this.research.length) {
           const r = this.research[0];
@@ -309,6 +344,7 @@
         case 'gather': this.gather(o, dt); break;
         case 'repair': this.repair(o, dt); break;
         case 'extract': this.extract(o, dt); break;
+        case 'tower': this.buildTower(o, dt); break;
 
         case 'enter': { // rejoindre un bunker allié et y entrer s'il reste de la place
           const b = o.bunker;
@@ -358,7 +394,8 @@
       const g = this.game, gar = this.garrison;
       let range = 0;
       for (const u of gar) if (u.range > range) range = u.range;
-      range += ZC.BUNKER_RANGE_BONUS * ZC.TILE;
+      const bonus = this.def.rangeBonus !== undefined ? this.def.rangeBonus : ZC.BUNKER_RANGE_BONUS;
+      range += bonus * ZC.TILE;
       const reach = (t) => range + this.radius + t.radius;
       let t = this.target;
       if (t && (t.dead || !gar[0].canTarget(t) || ZC.dist(this.x, this.y, t.x, t.y) > reach(t))) t = null;
@@ -370,7 +407,7 @@
       for (const u of gar) {
         if (u.cooldown > 0) u.cooldown -= dt;
         if (!t || u.cooldown > 0 || !u.canTarget(t)) continue;
-        if (u.range + ZC.BUNKER_RANGE_BONUS * ZC.TILE + this.radius + t.radius < ZC.dist(this.x, this.y, t.x, t.y)) continue;
+        if (u.range + bonus * ZC.TILE + this.radius + t.radius < ZC.dist(this.x, this.y, t.x, t.y)) continue;
         // le tir part d'une meurtrière du bunker, du côté de la cible
         const a = Math.atan2(t.y - this.y, t.x - this.x);
         u.x = this.x + Math.cos(a) * (this.radius - 4); u.y = this.y + Math.sin(a) * (this.radius - 4);

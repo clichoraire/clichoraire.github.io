@@ -140,6 +140,11 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
   extracteur, Drille autonome) : un travailleur le bâtit sur un gisement (B puis clic, 100 minerais, 20 s). Il mine
   ensuite tout seul 1,2 minerai par seconde, directement dans votre banque, sans transport, en plus des travailleurs
   qui récoltent à côté. Un seul par gisement ; 600 PV, destructible. D'autres constructions suivront.
+- **Tours** : un travailleur construit une tour dans une de vos zones (T puis clic, 75 minerais, 15 s, 3 par zone,
+  à l'écart du centre, des structures et du gisement ; un aperçu vert ou rouge montre si l'emplacement est valide).
+  Les humains n'ont pas de robots : leur **tour de guet** ne tire que si des soldats y montent (clic droit, 2 places,
+  portée +2 cases, U pour les faire descendre). Les autres races ont des tourelles autonomes : colonie d'épines,
+  canon à photons, tourelle automatique. Les IA en bâtissent sur leurs zones de front et y postent des soldats.
 - **Héros (aventure)** : il ne revient plus tout seul. Mort, il se ressuscite au centre de commandement (F puis H,
   100 minerais + 25 par niveau, 20 s). Si le QG est détruit, il faut en rebâtir un.
 - Les IA produisent des travailleurs, construisent des extracteurs et réparent leurs bunkers.

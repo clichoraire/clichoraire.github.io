@@ -157,7 +157,7 @@
     nearestDepot(u) {
       let best = null, bd = Infinity;
       for (const b of this.units) {
-        if (b.dead || !b.def.structure || b.def.extractor || !this.allied(u.owner, b.owner)) continue;
+        if (b.dead || !b.def.structure || b.def.extractor || b.def.tower || !this.allied(u.owner, b.owner)) continue;
         const d = ZC.dist(u.x, u.y, b.x, b.y);
         if (d < bd) { bd = d; best = b; }
       }
@@ -177,6 +177,33 @@
       patch.extractor = u;
       this.addEffect({ type: 'spawn', x: u.x, y: u.y, life: 0.6, color: this.players[owner].hex });
       this.emit('extractorStart', { player: owner, unit: u, patch });
+      return u;
+    }
+    // Tours : placement dans une zone à soi, à l'écart du centre et des autres structures, trois par zone au plus
+    towerCost(player) { const p = this.players[player]; return this.isAdmin(player) ? 0 : Math.round(ZC.TOWER.cost * (p.bonus ? p.bonus.costMult : 1)); }
+    towers(player) { return this.units.filter(u => !u.dead && u.owner === player && u.def.tower); }
+    canPlaceTower(player, x, y) {
+      const z = this.map.zoneAt(x, y);
+      if (!z) return { ok: false, reason: 'hors carte' };
+      if (z.owner !== player) return { ok: false, reason: 'zone' };
+      if (ZC.dist(x, y, z.cx, z.cy) < 58) return { ok: false, reason: 'centre' };
+      const r = ZC.UNITS[ZC.RACES[this.players[player].race].tower].radius;
+      if (x < r + 4 || y < r + 4 || x > this.map.w - r - 4 || y > this.map.h - r - 4) return { ok: false, reason: 'hors carte' };
+      let inZone = 0;
+      for (const u of this.units) {
+        if (u.dead) continue;
+        if (u.def.structure && ZC.dist(x, y, u.x, u.y) < r + u.radius + 10) return { ok: false, reason: 'structure' };
+        if (u.def.tower && u.owner === player && this.map.zoneAt(u.x, u.y) === z) inZone++;
+      }
+      for (const pt of this.patches) if (ZC.dist(x, y, pt.x, pt.y) < 60) return { ok: false, reason: 'gisement' };
+      if (inZone >= ZC.TOWER.perZone) return { ok: false, reason: 'max' };
+      return { ok: true };
+    }
+    placeTower(player, x, y) {
+      const p = this.players[player], u = this.spawnUnit(player, ZC.RACES[p.race].tower, x, y);
+      u.building = true; u.buildT = 0; u.hp = u.maxHp * 0.1; u.facing = -Math.PI / 2;
+      this.addEffect({ type: 'spawn', x: u.x, y: u.y, life: 0.6, color: p.hex });
+      this.emit('towerStart', { player, unit: u });
       return u;
     }
     extractors(player) { return this.units.filter(u => !u.dead && u.owner === player && u.def.extractor); }
@@ -365,7 +392,7 @@
         if (u.dead) continue;
         const p = this.players[u.owner];
         if (u.def.structure) {
-          if (u.def.extractor) continue;
+          if (u.def.extractor || u.def.tower) { for (const gu of u.garrison) { p.unitCount++; p.supply += gu.def.supply; } continue; }
           p.bunkers++; if (u.def.hq) p.hq = u;
           for (const gu of u.garrison) { p.unitCount++; p.supply += gu.def.supply; }
         }
@@ -901,6 +928,10 @@
         for (const u of units) u.setOrder(u.isWorker ? o : { type: 'move', x: o.patch.x, y: o.patch.y });
       } else if (o.type === 'extract') {
         for (const u of units) u.setOrder(u.isWorker ? o : { type: 'move', x: o.patch.x, y: o.patch.y + 30 });
+      } else if (o.type === 'tower') { // un seul travailleur construit, les autres continuent leur travail
+        const w = units.filter(u => u.isWorker); if (!w.length) return;
+        let best = w[0], bd = Infinity; for (const u of w) { const d = ZC.dist(u.x, u.y, o.x, o.y); if (d < bd) { bd = d; best = u; } }
+        best.setOrder({ type: 'tower', x: o.x, y: o.y, patch: best.order.type === 'gather' ? best.order.patch : null });
       } else if (o.type === 'repair') {
         for (const u of units) u.setOrder(u.isWorker ? { type: 'repair', target: o.target, patch: u.order.type === 'gather' ? u.order.patch : null } : { type: 'move', x: o.target.x, y: o.target.y + o.target.radius + 20 });
       } else {
@@ -943,7 +974,8 @@
       this.selectionVersion++;
     }
     get ownSelection() { return this.selection.filter(u => u.owner === this.humanId && !u.dead && !u.def.structure); }
-    get selectedBunker() { const u = this.selection[0]; return this.selection.length === 1 && u.owner === this.humanId && u.def.structure && !u.def.extractor ? u : null; }
+    get selectedBunker() { const u = this.selection[0]; return this.selection.length === 1 && u.owner === this.humanId && u.def.structure && !u.def.extractor && !u.def.tower ? u : null; }
+    get selectedTower() { const u = this.selection[0]; return this.selection.length === 1 && u.owner === this.humanId && u.def.tower ? u : null; }
 
     // ---------------------------------------------------------- fin
     checkEnd() {

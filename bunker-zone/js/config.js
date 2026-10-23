@@ -38,10 +38,10 @@ window.ZC = window.ZC || {};
   // Quatre races, deux niveaux chacune : l'unité de niveau 1 est produite par les bunkers, l'Évolution
   // (armes, armure et portée au niveau 3) transforme les soldats d'un bunker en unité de niveau 2.
   ZC.RACES = {
-    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine',  worker: 'workerHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Soldats à distance polyvalents, robustes une fois en exo-armure.' },
-    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast',      worker: 'workerInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'Nuées rapides de coureurs au corps à corps, puis bêtes chitineuses massives.' },
-    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', worker: 'workerEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Lames d\'énergie protégées par un bouclier, puis archontes mécaniques à frappes de zone.' },
-    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech',  worker: 'workerMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Robots éclaireurs véloces, puis mechs de siège à obus explosifs à longue portée.' },
+    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine',  worker: 'workerHuman',  tower: 'towerHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Soldats à distance polyvalents, robustes une fois en exo-armure.' },
+    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast',      worker: 'workerInsect', tower: 'towerInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'Nuées rapides de coureurs au corps à corps, puis bêtes chitineuses massives.' },
+    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', worker: 'workerEnergy', tower: 'towerEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Lames d\'énergie protégées par un bouclier, puis archontes mécaniques à frappes de zone.' },
+    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech',  worker: 'workerMecha',  tower: 'towerMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Robots éclaireurs véloces, puis mechs de siège à obus explosifs à longue portée.' },
   };
   ZC.UNITS = {
     // --- Humains
@@ -67,6 +67,12 @@ window.ZC = window.ZC || {};
     workerMecha:  { name: 'Foreur',         supply: 1, race: 'mecha',  hp: 70, shield: 0,  armor: 1, dmg: 0, hits: 0, dtype: 'normal', size: 'small', range: 0, cooldown: 1, speed: 100, radius: 7, sight: 160, spawn: 0, bounty: 5, antiAir: false, worker: true, noAttack: true, deathFx: 'explosion' },
     // --- Extracteur : construit par un travailleur sur un gisement (style Factorio), mine tout seul sans transport
     extractor:    { name: 'Extracteur',     supply: 0, race: 'any', hp: 600, shield: 0, armor: 2, dmg: 0, hits: 0, dtype: 'normal', size: 'large', range: 0, cooldown: 1, speed: 0, radius: 16, sight: 0, spawn: 0, bounty: 40, antiAir: false, structure: true, extractor: true, deathFx: 'explosion' },
+    // --- Tours défensives, construites par un travailleur dans une zone à soi. Les humains n'ont pas de robots :
+    //     leur tour de guet ne tire que si des soldats y montent (2 places, portée +2 cases). Les autres races ont des tourelles autonomes.
+    towerHuman:   { name: 'Tour de guet',          supply: 0, race: 'human',  hp: 500, shield: 0,   armor: 1, dmg: 0,  hits: 0, dtype: 'normal', size: 'large', range: 0,   cooldown: 1,   speed: 0, radius: 14, sight: 0,   spawn: 0, bounty: 40, antiAir: false, structure: true, tower: true, manned: true, capacity: 2, rangeBonus: 2, deathFx: 'explosion' },
+    towerInsect:  { name: 'Colonie d\'épines',     supply: 0, race: 'insect', hp: 450, shield: 0,   armor: 1, dmg: 11, hits: 1, dtype: 'normal', size: 'large', range: 192, cooldown: 1.1, speed: 0, radius: 14, sight: 224, spawn: 0, bounty: 40, antiAir: true,  structure: true, tower: true, fx: 'spine',   deathFx: 'blood2' },
+    towerEnergy:  { name: 'Canon à photons',       supply: 0, race: 'energy', hp: 300, shield: 150, armor: 1, dmg: 18, hits: 1, dtype: 'normal', size: 'large', range: 224, cooldown: 1.4, speed: 0, radius: 14, sight: 256, spawn: 0, bounty: 40, antiAir: true,  structure: true, tower: true, fx: 'bolt',    deathFx: 'psi2' },
+    towerMecha:   { name: 'Tourelle automatique',  supply: 0, race: 'mecha',  hp: 450, shield: 0,   armor: 2, dmg: 12, hits: 1, dtype: 'normal', size: 'large', range: 224, cooldown: 0.8, speed: 0, radius: 14, sight: 256, spawn: 0, bounty: 40, antiAir: true,  structure: true, tower: true, fx: 'tracer2', deathFx: 'explosion' },
     // --- Héros (mode aventure) : uniques, reviennent au QG après leur mort, montent de niveau
     heroKael:  { name: 'Sergent Kael',     supply: 0, race: 'human',  hp: 220, shield: 0,   armor: 2, dmg: 16, hits: 1, dtype: 'normal',    size: 'medium', range: 176, cooldown: 0.55, speed: 110, radius: 11, sight: 288, spawn: 0, bounty: 60, antiAir: true,  bio: true, hero: true, base: 'exomarine',  fx: 'tracer2',   deathFx: 'explosion' },
     heroVoss:  { name: 'Lieutenante Voss', supply: 0, race: 'energy', hp: 200, shield: 120, armor: 2, dmg: 26, hits: 1, dtype: 'normal',    size: 'large',  range: 72,  cooldown: 0.8,  speed: 105, radius: 13, sight: 256, spawn: 0, bounty: 60, antiAir: true,  hero: true, base: 'archonmech', splash: 36, fx: 'lightning', deathFx: 'psi2' },
@@ -96,7 +102,8 @@ window.ZC = window.ZC || {};
   ZC.RESEARCH_QUEUE_MAX = 3;  // recherches en attente par bunker
   ZC.BUNKER_CAPACITY = 4;     // unités en garnison par bunker ; un bunker vide ne tire pas
   ZC.HQ_CAPACITY = 6;         // le centre de commandement en accueille six
-  ZC.capacity = (b) => b && b.def && b.def.hq ? ZC.HQ_CAPACITY : ZC.BUNKER_CAPACITY;
+  ZC.capacity = (b) => !b || !b.def ? ZC.BUNKER_CAPACITY : b.def.hq ? ZC.HQ_CAPACITY : b.def.capacity !== undefined ? b.def.capacity : b.def.extractor ? 0 : ZC.BUNKER_CAPACITY;
+  ZC.TOWER = { cost: 75, buildTime: 15, perZone: 3 };     // tours : coût, secondes de construction par un travailleur, maximum par zone
   ZC.SPEEDS = [1, 2, 3, 5];   // vitesses de lecture disponibles en partie (bouton du HUD, touches + / -)
   // Économie : gisements de minerai vert (style StarCraft) récoltés par les travailleurs
   ZC.MINERALS = {
