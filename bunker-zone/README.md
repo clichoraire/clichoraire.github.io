@@ -126,7 +126,9 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 - **Le minerai vert fluo est la monnaie.** En plus du revenu des bunkers à chaque vague, des **gisements** (cinq
   cristaux verts) sont posés sur la carte : un dans chaque zone de départ, puis sur une part des autres zones
   (option « Gisements de minerai » : aucun, rares, normaux, abondants ; la zone centrale a un gisement double).
-  Un gisement s'épuise ; les cristaux rapetissent avec le minerai restant. Survolez un gisement pour lire son contenu.
+  Sur les cartes étroites (couloir 5x1, bandes 3x9 ou 7x3) chaque zone a son gisement ; ailleurs, aucune zone n'est à plus
+  d'une zone d'un gisement. Un gisement s'épuise ; les cristaux rapetissent avec le minerai restant. Survolez un gisement
+  pour lire son contenu.
 - **Travailleurs** (un par race : Ouvrier, Drone, Sonde, Foreur) : produits au centre de commandement (carte
   « Unités », F puis W, 50 minerais, 15 s, 16 maximum). Ils récoltent 5 minerais par voyage (environ 45 par minute
   chacun), cinq travailleurs au plus par gisement en même temps, et rapportent le minerai au bunker ou au QG le plus

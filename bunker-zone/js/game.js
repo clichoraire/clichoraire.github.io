@@ -108,10 +108,19 @@
       const frac = s.mineralZones === undefined ? ZC.DEFAULTS.mineralZones : s.mineralZones;
       const others = ZC.shuffle(map.zones.filter(z => !starts.has(z.id)));
       const n = Math.round(others.length * frac);
-      const chosen = startZones.concat(others.slice(0, n));
-      if (frac <= 0 && !s.startWorkers) return;
+      let chosen = startZones.concat(others.slice(0, n));
+      if (frac <= 0) return;
+      // Cartes étroites (couloir, bande) : un gisement dans chaque zone, sinon la partie traîne.
+      // Ailleurs : aucune zone ne doit être à plus d'une zone d'un gisement.
+      if (map.zx <= 3 || map.zy <= 3) chosen = map.zones.slice();
+      else {
+        const has = new Set(chosen.map(z => z.id));
+        for (const z of map.zones) {
+          if (has.has(z.id) || map.neighbors(z, true).some(nb => has.has(nb.id))) continue;
+          has.add(z.id); chosen.push(z);
+        }
+      }
       for (const z of chosen) {
-        if (frac <= 0) continue;
         const off = Math.min(125, ZC.ZONE_PX / 2 - 56);
         const a = (Math.floor(Math.random() * 8) + 0.5) * Math.PI / 4;
         const x = z.cx + Math.cos(a) * off, y = z.cy + Math.sin(a) * off;
