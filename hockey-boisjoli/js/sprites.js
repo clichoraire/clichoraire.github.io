@@ -76,9 +76,12 @@
     ctx.fillText(String(num), 0, by + bodyH * 0.36);
     ctx.restore();
 
-    // --- bras avant (tient le bâton) ---
+    // --- bras avant (tient le bâton, ou salue de la main) ---
     ctx.fillStyle = color;
-    ctx.save(); ctx.translate(bodyW / 2 - 2 * s, by + 3 * s); ctx.rotate(-0.75 + stickUp * -1.2 - Math.sin(f) * 0.2 * mv); rr(ctx, -3 * s, 0, 6 * s, armL * 0.9, 3 * s); ctx.fill();
+    ctx.save(); ctx.translate(bodyW / 2 - 2 * s, by + 3 * s);
+    if (o.wave) ctx.rotate(Math.PI + 0.55 + Math.sin((typeof performance !== 'undefined' ? performance.now() : 0) / 140) * 0.35);
+    else ctx.rotate(-0.75 + stickUp * -1.2 - Math.sin(f) * 0.2 * mv);
+    rr(ctx, -3 * s, 0, 6 * s, armL * 0.9, 3 * s); ctx.fill();
     ctx.fillStyle = o.goalie ? '#f1e2b8' : look.skin; if (o.goalie) { rr(ctx, -6 * s, armL * 0.9 - 5 * s, 12 * s, 12 * s, 3 * s); ctx.fill(); } else { circle(ctx, 0, armL * 0.9, 3.2 * s); ctx.fill(); }
     ctx.restore();
 
@@ -178,6 +181,7 @@
     const my = hy + R * 0.5;
     if (look.pacifier) { ctx.fillStyle = '#5ec8ff'; circle(ctx, R * 0.12 + ex, my, R * 0.3); ctx.fill(); ctx.fillStyle = '#fff'; circle(ctx, R * 0.12 + ex, my, R * 0.12); ctx.fill(); }
     else if (o.stunKind === 'eat' || o.scream) { ctx.fillStyle = o.scream ? '#5a1a1a' : '#6b2a2a'; ctx.beginPath(); ctx.ellipse(R * 0.12 + ex, my, R * (o.scream ? 0.3 : 0.2), R * (o.scream ? 0.4 : 0.25), 0, 0, Math.PI * 2); ctx.fill(); if (o.stunKind === 'eat') { ctx.fillStyle = '#c98b4a'; circle(ctx, R * 0.5 + ex, my + R * 0.1, R * 0.28); ctx.fill(); ctx.fillStyle = '#5a3a1a'; circle(ctx, R * 0.45 + ex, my + R * 0.05, R * 0.06); ctx.fill(); circle(ctx, R * 0.6 + ex, my + R * 0.18, R * 0.06); ctx.fill(); } }
+    else if (o.smile) { ctx.fillStyle = '#5a1a1a'; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.42, 0.15, Math.PI - 0.15); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(R * 0.1 + ex - R * 0.3, my - R * 0.15, R * 0.6, R * 0.12); if (look.lipstick) { ctx.strokeStyle = '#d6264a'; ctx.lineWidth = R * 0.1; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.42, 0.15, Math.PI - 0.15); ctx.stroke(); } }
     else if (look.lipstick) { ctx.strokeStyle = '#d6264a'; ctx.lineWidth = R * 0.14; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.1, R * 0.3, 0.2, Math.PI - 0.2); ctx.stroke(); }
     else { ctx.strokeStyle = shade(look.skin, 0.6); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(R * 0.1 + ex, my - R * 0.15, R * 0.3, 0.3, Math.PI - 0.3); ctx.stroke(); }
     if (look.mustache) { ctx.fillStyle = look.mustache; ctx.beginPath(); ctx.ellipse(R * 0.1 + ex, hy + R * 0.33, R * 0.45, R * 0.13, 0, 0, Math.PI * 2); ctx.fill(); }
@@ -213,6 +217,14 @@
     ctx.restore();
   };
 
+  // Buste en gros plan qui salue (fiche au survol). Dessine dans un canevas existant.
+  S.drawBust = function (ctx, d, team, w, h, goalie) {
+    ctx.clearRect(0, 0, w, h);
+    const sc = 3.2 / Math.max(0.75, d.size);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
+    S.drawPerson(ctx, w / 2 - 6, h + 24 * d.size * sc, d, team, { scale: sc, dir: 1, frame: 0, wave: true, smile: true, goalie });
+    ctx.restore();
+  };
   // Portrait (canevas) d'un joueur pour les menus.
   S.portrait = function (d, team, w, h, scale, opts) {
     const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d');

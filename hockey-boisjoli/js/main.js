@@ -12,6 +12,30 @@
     $('#screen-' + id).classList.remove('hidden'); app.screen = id; HK.input.capture = id === 'match';
   }
   const roleOf = d => HK.ROLES[d.role] || d.role;
+  const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const birthText = d => { if (!d.birth) return ''; const b = new Date(d.birth + 'T00:00:00'); return `Né${d.look && d.look.lipstick || /a$|ie$|ée$/.test(d.name) ? 'e' : ''} le ${b.getDate() === 1 ? '1er' : b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`; };
+  // Fiche au survol : buste qui salue, naissance, âge, pouvoir, stats.
+  let hoverRaf = 0;
+  function showCard(d, team, x, y, goalie) {
+    const card = $('#hover-card'), P = HK.POWERS[d.power] || null;
+    if (card.dataset.id !== d.name) {
+      card.dataset.id = d.name; card.style.setProperty('--c', team.accent || team.color);
+      card.innerHTML = `<canvas width="150" height="170"></canvas><div class="hc-info"><h3>${d.name}${d.birth && HK.isBirthday(d.birth) ? ' 🎂' : ''}</h3>
+        <div class="hc-role">${roleOf(d)} · ${team.name}${goalie ? ' (gardien)' : ''}</div>
+        <div class="hc-birth">${d.birth ? birthText(d) + ' · ' : ''}${d.age} an${d.age > 1 ? 's' : ''}${d.birth && HK.isBirthday(d.birth) ? ' · Bonne fête !' : ''}</div>
+        ${P ? `<div class="hc-power"><b>${P.icon} ${P.name}</b><span>${P.desc}</span></div>` : '<div class="hc-power"><b>🥅 Gardien</b><span>Il garde le filet, c\'est déjà beaucoup.</span></div>'}
+        ${d.stats && d.stats.speed ? `<div class="stats">${statBar(d.stats.speed, 'Vitesse')}${statBar(d.stats.shot, 'Tir')}${statBar(d.stats.force, 'Force')}${statBar(d.stats.control, 'Contrôle')}</div>` : ''}</div>`;
+    }
+    card.classList.remove('hidden');
+    const cw = card.offsetWidth || 420, ch = card.offsetHeight || 200;
+    card.style.left = Math.max(8, Math.min(innerWidth - cw - 8, x + 18)) + 'px';
+    card.style.top = Math.max(8, Math.min(innerHeight - ch - 8, y + 18)) + 'px';
+    const c = card.querySelector('canvas'), ctx = c.getContext('2d');
+    cancelAnimationFrame(hoverRaf);
+    (function anim() { if (card.classList.contains('hidden')) return; S.drawBust(ctx, d, team, c.width, c.height, goalie); hoverRaf = requestAnimationFrame(anim); })();
+  }
+  function hideCard() { $('#hover-card').classList.add('hidden'); cancelAnimationFrame(hoverRaf); }
+  app.showCard = showCard;
   const statBar = (v, label) => `<span class="stat" title="${label}"><i>${label}</i>${'<b></b>'.repeat(v)}${'<u></u>'.repeat(5 - v)}</span>`;
 
   // ----- Menu -----
@@ -35,16 +59,23 @@
     // petite animation : les joueurs patinent sous le titre
     const c = $('#menu-anim'), ctx = c.getContext('2d'); const all = Object.keys(HK.PLAYERS);
     const skaters = all.map((id, i) => ({ d: HK.PLAYERS[id], team: HK.TEAMS.find(t => t.players.includes(id) || t.goalie === id), goalie: HK.TEAMS.some(t => t.goalie === id), x: Math.random() * c.width, y: 50 + (i % 3) * 30, v: 40 + Math.random() * 50, dir: Math.random() < 0.5 ? 1 : -1, f: Math.random() * 6 })).filter(s => s.team);
-    let last = performance.now();
+    let last = performance.now(), hovered = null, mouse = null;
+    c.addEventListener('mousemove', e => { const r = c.getBoundingClientRect(); mouse = { x: (e.clientX - r.left) * c.width / r.width, y: (e.clientY - r.top) * c.height / r.height, cx: e.clientX, cy: e.clientY }; });
+    c.addEventListener('mouseleave', () => { mouse = null; hovered = null; hideCard(); });
     (function loop(now) {
       if (app.screen !== 'menu') { requestAnimationFrame(loop); return; }
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       ctx.clearRect(0, 0, c.width, c.height);
       skaters.sort((a, b) => a.y - b.y);
+      let hit = null;
+      if (mouse) for (const s of skaters) { const H = 60 * s.d.size * 1.1 + 10; if (Math.abs(mouse.x - s.x) < 22 && mouse.y < s.y + 44 && mouse.y > s.y + 40 - H) hit = s; }
+      if (hit !== hovered) { hovered = hit; if (hit) showCard(hit.d, hit.team, mouse.cx, mouse.cy, hit.goalie); else hideCard(); }
+      c.style.cursor = hovered ? 'pointer' : 'default';
       for (const s of skaters) {
-        s.x += s.v * s.dir * dt; s.f += dt * 7;
+        const wave = s === hovered;
+        if (!wave) { s.x += s.v * s.dir * dt; s.f += dt * 7; }
         if (s.x > c.width + 40) s.dir = -1; if (s.x < -40) s.dir = 1;
-        S.drawPerson(ctx, s.x, s.y + 40, s.d, s.team, { dir: s.dir, frame: s.f, moving: true, scale: 1.1, goalie: s.goalie });
+        S.drawPerson(ctx, s.x, s.y + 40, s.d, s.team, { dir: s.dir, frame: s.f, moving: !wave, scale: 1.1, goalie: s.goalie, wave, smile: wave });
       }
       requestAnimationFrame(loop);
     })(last);
@@ -79,8 +110,12 @@
         row.insertAdjacentHTML('beforeend', `<div class="pl-info"><b>${d.name}${d.birth && HK.isBirthday(d.birth) ? ' 🎂' : ''}</b> <em>${roleOf(d)} · ${d.age} an${d.age > 1 ? 's' : ''}${d.birth && HK.isBirthday(d.birth) ? ' · Bonne fête !' : ''}</em>
           <div class="stats">${statBar(d.stats.speed, 'Vitesse')}${statBar(d.stats.shot, 'Tir')}${statBar(d.stats.force, 'Force')}${statBar(d.stats.control, 'Contrôle')}</div>
           <div class="power" title="${P.desc}">${P.icon} ${P.name}</div></div>`);
+        row.addEventListener('mouseenter', e => showCard(d, t, e.clientX, e.clientY));
+        row.addEventListener('mousemove', e => { const card = $('#hover-card'); if (!card.classList.contains('hidden')) { const cw = card.offsetWidth, ch = card.offsetHeight; card.style.left = Math.max(8, Math.min(innerWidth - cw - 8, e.clientX + 18)) + 'px'; card.style.top = Math.max(8, Math.min(innerHeight - ch - 8, e.clientY + 18)) + 'px'; } });
+        row.addEventListener('mouseleave', hideCard);
         list.appendChild(row);
       });
+      if (t.goalie) { const d = HK.PLAYERS[t.goalie]; const row = document.createElement('div'); row.className = 'pl bench'; row.appendChild(S.portrait(d, t, 64, 78, 1.15, { goalie: true })); row.insertAdjacentHTML('beforeend', `<div class="pl-info"><b>${d.name}</b> <em>${roleOf(d)} · ${d.age} ans</em><div class="power">🥅 Dans les buts</div></div>`); row.addEventListener('mouseenter', e => showCard(d, t, e.clientX, e.clientY, true)); row.addEventListener('mouseleave', hideCard); list.appendChild(row); }
       card.appendChild(list);
       card.onclick = () => choose(t.id);
       box.appendChild(card);

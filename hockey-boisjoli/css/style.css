@@ -79,6 +79,16 @@ h1 span { color: #ffd166; }
 .cols tr.tot td { color: #9aa4bf; }
 
 #skip-btn { position: absolute; right: 2%; bottom: 7%; z-index: 5; font-size: 16px; }
+/* fiche au survol */
+#hover-card { position: fixed; z-index: 50; display: flex; gap: 12px; width: 440px; max-width: calc(100vw - 16px); background: rgba(15,19,32,.97); border: 2px solid var(--c, #3a4466); border-radius: 14px; padding: 10px 12px; pointer-events: none; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
+#hover-card canvas { width: 150px; height: 170px; flex: none; background: radial-gradient(circle at 50% 70%, rgba(255,255,255,.12), transparent 70%); border-radius: 10px; }
+.hc-info { flex: 1; min-width: 0; }
+.hc-info h3 { margin: 0; font-size: 22px; color: var(--c, #fff); }
+.hc-role { color: #9aa4bf; font-size: 13px; }
+.hc-birth { color: #e8ecf5; font-size: 13px; margin: 4px 0 6px; }
+.hc-power b { display: block; color: #ffd166; font-size: 14px; }
+.hc-power span { color: #c9d2ea; font-size: 12px; display: block; margin-bottom: 6px; }
+#hover-card .stat i { width: 52px; }
 /* pratique */
 #prac-ui { position: absolute; inset: 0; pointer-events: none; }
 #prac-bar { position: absolute; top: 15.6%; right: 1%; display: flex; gap: 6px; align-items: center; pointer-events: auto; }
