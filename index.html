@@ -91,6 +91,21 @@
 
     footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 13px; }
     footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+    /* ------------------------------------------------ l'œil qui surveille (easter egg) */
+    #oeil { position: fixed; z-index: 50; width: 170px; height: 170px; border-radius: 50%; overflow: hidden; border: 4px solid #fff; box-shadow: 0 0 0 4px #000, 0 0 40px rgba(57,255,20,0.6), 0 20px 60px rgba(0,0,0,0.8); cursor: pointer; transition: transform .25s; display: none; }
+    #oeil.on { display: block; animation: surgir .7s cubic-bezier(.2,1.6,.4,1) both, flotter 3s ease-in-out .7s infinite; }
+    #oeil img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.15); transition: transform .15s; }
+    #oeil.fuite { animation: fuite .6s ease-in both !important; }
+    #bulle { position: fixed; z-index: 51; background: #fff; color: #0b0e14; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 14px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,0.5); display: none; }
+    #bulle::after { content: ""; position: absolute; left: 18px; bottom: -8px; border: 8px solid transparent; border-top-color: #fff; border-bottom: 0; }
+    @keyframes surgir { from { transform: scale(0) rotate(-540deg); } to { transform: scale(1) rotate(0); } }
+    @keyframes flotter { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
+    @keyframes fuite { to { transform: scale(0) rotate(720deg); opacity: 0; } }
+    @keyframes cligner { 0%, 100% { height: 170px; } 50% { height: 6px; } }
+    #oeil.cligne { animation: cligner .25s ease-in-out; }
+    @media (prefers-reduced-motion: reduce) { #oeil, #oeil.on { animation: none; } }
+
     @media (max-width: 600px) {
       nav { white-space: nowrap; } nav a { margin-left: 14px; }
       .brand { font-size: 16px; }
@@ -140,6 +155,8 @@
     </div>
   </section>
 
+  <div id="oeil" title="…"><img src="covers/oeil.jpg" alt=""></div>
+  <div id="bulle"></div>
   <footer>
     <div class="wrap"><span>© <span id="year"></span> Matthieu Boisjoli · Les jeux de Matthieu</span><span>Hébergé sur GitHub Pages</span></div>
   </footer>
@@ -181,6 +198,49 @@
       </article>`).join('') + `
       <article class="game soon"><div class="body"><div class="big">+</div><h3>Prochain jeu</h3><p>D'autres jeux arriveront ici.</p></div></article>`;
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    // ------------------------------------------------ l'œil : apparaît après 6,5 s, suit la souris, se sauve au clic
+    (function () {
+      const oeil = document.getElementById('oeil'), img = oeil.querySelector('img'), bulle = document.getElementById('bulle');
+      const PHRASES = ['Je te regarde jouer…', 'Tu vas cliquer sur Jouer, hein ?', 'Je vois TOUT.', 'Psst… Bunker Zone est vraiment bon.', 'Cligne pas, je gagne.', 'Mon frère ? C\'est toi mon frère ?', 'Les âmes parlent. Moi, je regarde.', 'J\'ai pas dormi. Je codais.'];
+      let x = 0, y = 0, mx = innerWidth / 2, my = innerHeight / 2, vivant = false, phrase = 0, timers = [];
+      const place = () => { // un bord au hasard, à moitié dehors
+        const bord = Math.floor(Math.random() * 4), W = innerWidth, Hh = innerHeight, s = 170;
+        if (bord === 0) { x = Math.random() * (W - s); y = -s * 0.45; }
+        else if (bord === 1) { x = Math.random() * (W - s); y = Hh - s * 0.55; }
+        else if (bord === 2) { x = -s * 0.45; y = 80 + Math.random() * (Hh - s - 120); }
+        else { x = W - s * 0.55; y = 80 + Math.random() * (Hh - s - 120); }
+        oeil.style.left = x + 'px'; oeil.style.top = y + 'px';
+      };
+      const regarder = () => { // le regard suit la souris
+        if (!vivant) return;
+        const dx = mx - (x + 85), dy = my - (y + 85), d = Math.hypot(dx, dy) || 1, k = Math.min(14, d / 20);
+        img.style.transform = 'scale(1.15) translate(' + (dx / d * k) + 'px,' + (dy / d * k) + 'px)';
+      };
+      const parler = () => {
+        bulle.textContent = PHRASES[phrase++ % PHRASES.length];
+        bulle.style.display = 'block';
+        const bx = Math.max(8, Math.min(innerWidth - bulle.offsetWidth - 8, x + 20)), by = y < innerHeight / 2 ? y + 185 : y - 48;
+        bulle.style.left = bx + 'px'; bulle.style.top = by + 'px';
+        timers.push(setTimeout(() => { bulle.style.display = 'none'; }, 2600));
+      };
+      const apparaitre = () => {
+        place(); vivant = true; oeil.className = 'on'; regarder();
+        timers.push(setTimeout(parler, 900));
+        timers.push(setTimeout(() => { oeil.classList.add('cligne'); setTimeout(() => oeil.classList.remove('cligne'), 300); }, 2200));
+        timers.push(setTimeout(partir, 6000));
+      };
+      const partir = (vite) => {
+        if (!vivant) return; vivant = false; bulle.style.display = 'none';
+        oeil.classList.add('fuite');
+        timers.push(setTimeout(() => { oeil.className = ''; }, 650));
+        timers.push(setTimeout(apparaitre, vite ? 9000 : 18000 + Math.random() * 15000));
+      };
+      addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; regarder(); });
+      oeil.addEventListener('click', () => { bulle.textContent = 'AÏE ! Mon œil !'; bulle.style.display = 'block'; bulle.style.left = (x + 20) + 'px'; bulle.style.top = (y - 48) + 'px'; setTimeout(() => partir(true), 500); });
+      timers.push(setTimeout(apparaitre, 6500));
+    })();
+
   </script>
 </body>
 </html>
