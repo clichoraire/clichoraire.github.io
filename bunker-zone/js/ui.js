@@ -271,7 +271,7 @@
         this.txt(this.el.workers, wn + (wq ? '+' + wq : '') + '/' + wc);
         this.el.workers.parentNode.classList.toggle('maxed', wn + wq >= wc);
         this.el.workers.parentNode.title = 'Travailleurs : ' + wn + ' sur ' + wc + (wq ? ' (' + wq + ' en production)' : '') + ' — ' + ZC.WORKER.perBunker + ' par bunker, ' + ZC.WORKER.max + ' au plus';
-        this.el.supply.parentNode.title = 'Supply : ' + Math.round(me.supply) + ' sur ' + cap + ' (' + s.supplyBase + ' + ' + s.supplyPerBunker + ' par bunker, max ' + s.unitCap + ')';
+        this.el.supply.parentNode.title = 'Supply : ' + Math.round(me.supply) + ' sur ' + cap + ' (' + s.supplyBase + ' + ' + s.supplyPerBunker + ' par bunker' + (s.unitCap > 0 ? ', max ' + s.unitCap : ', sans limite') + ')';
         this.txt(this.el.kills, String(me.kills));
         this.txt(this.el.minerals, String(Math.floor(me.minerals)));
         this.txt(this.el.bunkers, String(me.bunkers) + (me.hq ? '' : ' (sans QG)'));
@@ -632,7 +632,7 @@
         <label>Votre couleur<span class="swatches">${colorSw}</span></label>
         <label>Intervalle des vagues<select name="spawnInterval">${opt([5, 8, 10, 15, 20], ['5 s', '8 s', '10 s', '15 s', '20 s'], s.spawnInterval)}</select></label>
         <label>Unités de départ<select name="startUnits">${opt([4, 8, 12, 20], null, s.startUnits)}</select></label>
-        <label>Supply max<select name="unitCap">${opt([60, 100, 150, 200], null, s.unitCap)}</select></label>
+        <label>Supply max<select name="unitCap">${opt([0, 60, 100, 150, 200, 300], ['Illimitée (selon les bunkers)', '60', '100', '150', '200', '300'], s.unitCap || 0)}</select></label>
         <label>Supply par bunker<select name="supplyPerBunker">${opt([10, 15, 20, 30, 50], ['+10', '+15', '+20', '+30', '+50'], s.supplyPerBunker)}</select></label>
         <label>Revenu par bunker / vague<select name="incomePerBunker">${opt([0, 2, 3, 5], ['Aucun (kills seulement)', '2 minerais', '3 minerais', '5 minerais'], s.incomePerBunker)}</select></label>
         <label>Coût d'un dropship<select name="dropshipCost">${opt([100, 150, 250], null, s.dropshipCost)}</select></label>

@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -162,8 +162,8 @@ window.ZC.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
     dropshipQueueMax: 5,       // file d'attente maximale par bunker
     startMinerals: 50,
     incomePerBunker: 3,   // minerais par bunker à chaque vague
-    unitCap: 100,         // supply max absolue par joueur
-    supplyBase: 30,       // supply de départ ; chaque bunker (QG compris) en ajoute supplyPerBunker, jusqu'à unitCap
+    unitCap: 0,           // supply max absolue par joueur ; 0 = aucune limite : le plafond monte avec chaque bunker
+    supplyBase: 30,       // supply de départ ; chaque bunker (QG compris) en ajoute supplyPerBunker (borné par unitCap s'il est > 0)
     supplyPerBunker: 20,
     startUnits: 8,        // marines de départ
     startWorkers: 2,      // travailleurs de départ (récoltent le gisement du QG)

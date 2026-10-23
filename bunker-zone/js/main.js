@@ -55,7 +55,14 @@
     // ses envahisseurs et son absence d'IA aux missions et parties suivantes)
     static get MISSION_KEYS() { return ['mode', 'mapZones', 'mapZonesY', 'aiCount', 'teams', 'humanStart', 'extraZones', 'startUnits', 'startMinerals', 'spawnInterval', 'unitCap', 'roundsToWin', 'roundTimeLimit', 'roundDuration', 'invasion', 'mineralZones', 'startWorkers', 'aiRace', 'playerRace', 'difficulty', 'incomePerBunker', 'dropshipCost', 'landingTime', 'tileset', 'admin']; }
     static get TRANSIENT_KEYS() { return ['campaign', 'invasion', 'teams', 'extraZones', 'humanStart', 'aiRace', 'startMinerals']; }
-    loadSettings() { try { const s = JSON.parse(localStorage.getItem('zc-settings') || '{}'); for (const k of App.TRANSIENT_KEYS) delete s[k]; return s; } catch (e) { return {}; } }
+    loadSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem('zc-settings') || '{}');
+        for (const k of App.TRANSIENT_KEYS) delete s[k];
+        if (s.unitCap === 100) delete s.unitCap;  // ancien défaut (plafond absolu à 100) : on repasse au nouveau défaut, illimité
+        return s;
+      } catch (e) { return {}; }
+    }
     saveSettings() { try { const s = Object.assign({}, this.settings); for (const k of App.TRANSIENT_KEYS) delete s[k]; localStorage.setItem('zc-settings', JSON.stringify(s)); } catch (e) { /* ignore */ } }
     // Réglages généraux (sans mission) pour une partie simple
     get plainSettings() { const s = Object.assign({}, this.settings); s.campaign = null; return s; }
@@ -262,7 +269,7 @@
           if (d.player === me) { A.play('error', 0); ui.message('Construction annulée : ' + ({ zone: 'la zone n\'est plus à vous', centre: 'trop près du centre', structure: 'trop près d\'une structure', gisement: 'trop près du gisement', max: 'maximum de tours atteint' }[d.reason] || 'emplacement impossible') + '.', '#ff5050'); }
           break;
         case 'supplyBlocked':
-          if (d.player === me) ui.message('Supply max atteinte (' + d.cap + ') : ' + (d.cap < g.settings.unitCap ? 'chaque nouveau bunker ajoute +' + g.settings.supplyPerBunker + '.' : 'limite absolue de la partie.'), '#ffd040');
+          if (d.player === me) ui.message('Supply max atteinte (' + d.cap + ') : ' + (!g.settings.unitCap || d.cap < g.settings.unitCap ? 'chaque nouveau bunker ajoute +' + g.settings.supplyPerBunker + '.' : 'limite absolue de la partie.'), '#ffd040');
           break;
         case 'workerCap':
           if (d.player === me) { A.play('error', 0); ui.message('Maximum de ' + d.cap + ' travailleurs atteint (' + ZC.WORKER.perBunker + ' par bunker' + (d.cap >= ZC.WORKER.max ? ', ' + ZC.WORKER.max + ' au plus' : ', construisez un bunker') + ').', '#ff5050'); }

@@ -37,4 +37,4 @@ while (simT < maxT && g.state !== 'over') {
   }
 }
 console.log(`\nFin : état=${g.state} à ${simT.toFixed(0)}s, max unités=${maxUnits}, calcul ${Date.now() - t0} ms` + (passive ? `, humain passif vaincu à ${defeat < 0 ? 'jamais' : defeat.toFixed(0) + 's'}` : ''));
-console.log(g.players.map(p => `${p.name}: ${p.alive ? 'en vie' : 'éliminé'} zones=${p.zones} unités=${p.unitCount} kills=${p.kills} travailleurs=${g.workers(p.id).length} extracteurs=${g.extractors(p.id).length} minerai récolté=${p.mined | 0}` + (mode === 'rounds' ? ` rounds=${p.roundsWon}` : '')).join('\n'));
+console.log(g.players.map(p => `${p.name}: ${p.alive ? 'en vie' : 'éliminé'} zones=${p.zones} unités=${p.unitCount} supply=${Math.round(p.supply)}/${g.supplyCap(p.id)} kills=${p.kills} travailleurs=${g.workers(p.id).length} extracteurs=${g.extractors(p.id).length} minerai récolté=${p.mined | 0}` + (mode === 'rounds' ? ` rounds=${p.roundsWon}` : '')).join('\n'));

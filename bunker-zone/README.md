@@ -173,7 +173,7 @@ Test : `node tools/headless.js 0 5 normal 300 --passive --invasion=1`.
 
 Mode (classique, évolution ou tournoi), rounds à gagner et limite de temps d'un round (tournoi), race, nombre d'IA (1 à 7), difficulté, largeur et hauteur de la carte (3 à 11 zones, hauteur 1 pour un couloir),
 taille des zones, terrain (jungle, badlands, plateforme spatiale), couleur, intervalle des vagues,
-unités de départ, supply max et supply gagnée par bunker (le plafond monte avec chaque bunker, QG compris), revenu par bunker, coût des dropships, temps d'atterrissage,
+unités de départ, supply gagnée par bunker (le plafond monte avec chaque bunker, QG compris : 30 + 20 par bunker) et supply max absolue (illimitée par défaut), revenu par bunker, coût des dropships, temps d'atterrissage,
 durée des rounds, vitesse, limite de sélection à 12 comme SC1, son, mode admin (triche), défilement au bord.
 
 ## Sprites

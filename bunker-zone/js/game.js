@@ -389,10 +389,11 @@
     // Plafond de travailleurs : 4 par bunker possédé (QG compris), borné par le maximum absolu.
     workerCap(player) { return Math.min(ZC.WORKER.max, ZC.WORKER.perBunker * this.players[player].bunkers); }
 
-    // Plafond de supply : la base + un bonus par bunker (QG compris), borné par unitCap.
+    // Plafond de supply : la base + un bonus par bunker (QG compris) ; unitCap (s'il est > 0) le borne.
     supplyCap(player) {
       const s = this.settings, p = this.players[player];
-      return Math.min(s.unitCap, (s.supplyBase || 0) + (s.supplyPerBunker || 0) * p.bunkers);
+      const cap = (s.supplyBase || 0) + (s.supplyPerBunker || 0) * p.bunkers;
+      return s.unitCap > 0 ? Math.min(s.unitCap, cap) : cap;
     }
 
     recount() {
