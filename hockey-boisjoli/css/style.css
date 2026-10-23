@@ -39,7 +39,7 @@ h1 span { color: #ffd166; }
 .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .card-head h2 { margin: 0; color: var(--c); font-family: "Arial Black", Arial; font-size: 26px; }
 .card-head small { color: #9aa4bf; }
-.roster { display: flex; flex-direction: column; gap: 6px; }
+.roster { display: flex; flex-direction: column; gap: 6px; max-height: 440px; overflow: auto; }
 .pl { display: flex; align-items: center; gap: 8px; background: #0f1320; border-radius: 10px; padding: 4px 8px; }
 .pl.bench { opacity: .8; border: 1px dashed #3a4466; }
 .pl.bench::after { content: "banc"; color: #9aa4bf; font-size: 11px; }
@@ -57,7 +57,8 @@ h1 span { color: #ffd166; }
 /* match */
 #screen-match { padding: 0; background: #000; }
 .canvas-wrap { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
-#game { width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)); image-rendering: auto; }
+.stage { position: relative; width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)); }
+#game { width: 100%; height: 100%; display: block; image-rendering: auto; }
 #pause { position: absolute; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
 .pause-box { background: #131827; padding: 24px 32px; border-radius: 14px; text-align: center; max-width: 560px; }
 .pause-box h2 { margin: 0 0 8px; font-size: 40px; }
@@ -76,3 +77,31 @@ h1 span { color: #ffd166; }
 .cols th, .cols td { padding: 3px 6px; text-align: center; border-bottom: 1px solid #263050; }
 .cols td:first-child, .cols th:first-child { text-align: left; }
 .cols tr.tot td { color: #9aa4bf; }
+
+#skip-btn { position: absolute; right: 2%; bottom: 7%; z-index: 5; font-size: 16px; }
+/* pratique */
+#prac-ui { position: absolute; inset: 0; pointer-events: none; }
+#prac-bar { position: absolute; top: 15.6%; right: 1%; display: flex; gap: 6px; align-items: center; pointer-events: auto; }
+#prac-bar button { padding: 8px 12px; font-size: 14px; margin: 0; }
+#prac-bar label { color: #c9d2ea; font-size: 13px; }
+#prac-bar select { max-width: 230px; padding: 7px 8px; }
+#prac-panel { position: absolute; top: 22%; right: 1%; width: min(440px, 95vw); max-height: calc(100% - 70px); overflow: auto; background: rgba(15,19,32,.97); border: 2px solid #3a4466; border-radius: 14px; padding: 12px; pointer-events: auto; }
+.prac-head { display: flex; align-items: center; gap: 10px; }
+.prac-head h2 { margin: 0; flex: 1; font-size: 22px; }
+.prac-head span { color: #ffd166; font-weight: 700; }
+.prac-head button { padding: 4px 10px; margin: 0; }
+#prac-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+#prac-tabs button { padding: 6px 10px; font-size: 13px; margin: 0; }
+#prac-tabs button.active { background: #d9342b; border-color: #ff6b5e; }
+.drill { background: #0f1320; border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+.drill-head { display: flex; justify-content: space-between; align-items: center; }
+.drill-head b { font-size: 16px; }
+.drill-stars { color: #ffd166; letter-spacing: 2px; }
+.drill p { margin: 4px 0 6px; color: #9aa4bf; font-size: 13px; }
+.drill-levels { display: flex; gap: 4px; }
+.drill-levels button { flex: 1; padding: 6px 4px; margin: 0; font-size: 13px; display: flex; flex-direction: column; align-items: center; }
+.drill-levels button small { font-weight: 400; color: #9aa4bf; font-size: 11px; }
+.drill-levels button.done { border-color: #5ad66b; }
+#prac-result { position: absolute; left: 50%; top: 58%; transform: translate(-50%, 0); background: rgba(15,19,32,.97); border: 2px solid #3a4466; border-radius: 14px; padding: 14px 22px; text-align: center; pointer-events: auto; }
+#prac-result h3 { margin: 0 0 4px; font-size: 26px; }
+#prac-result p { margin: 0 0 8px; color: #c9d2ea; }

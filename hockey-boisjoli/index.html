@@ -11,13 +11,14 @@
   <section id="screen-menu" class="screen">
     <div class="menu-box">
       <h1>HOCKEY <span>BOISJOLI</span></h1>
-      <p class="tagline">La coupe de famille, avec pouvoirs spéciaux · 3 contre 3</p>
+      <p class="tagline">La coupe de famille, avec pouvoirs spéciaux · 3 contre 3 · avec Les Boys</p>
       <canvas id="menu-anim" width="900" height="150"></canvas>
       <div id="logos"></div>
       <div class="buttons">
         <button id="btn-solo" class="primary">1 joueur contre l'ordi</button>
         <button id="btn-duo">2 joueurs (même clavier ou manettes)</button>
         <button id="btn-cup">Coupe Boisjoli</button>
+        <button id="btn-practice">Pratique <small id="stars-total"></small></button>
         <button id="btn-help">Contrôles</button>
       </div>
       <div class="options">
@@ -29,13 +30,15 @@
         <table>
           <tr><th></th><th>Joueur 1</th><th>Joueur 2</th><th>Manette</th></tr>
           <tr><td>Patiner</td><td>Flèches</td><td>W A S D</td><td>Stick / croix</td></tr>
-          <tr><td>Passe · changer de joueur</td><td>X</td><td>G</td><td>A</td></tr>
+          <tr><td>Passe</td><td>X</td><td>G</td><td>A</td></tr>
+          <tr><td>Choisir son joueur</td><td>1 · 2 · 3</td><td>8 · 9 · 0</td><td>LB / RB</td></tr>
           <tr><td>Lancer (tenir pour charger) · mise en échec</td><td>C</td><td>H</td><td>B</td></tr>
           <tr><td>Pouvoir spécial</td><td>V</td><td>J</td><td>X</td></tr>
           <tr><td>Pause · son</td><td colspan="3">Échap ou P · M</td></tr>
         </table>
         <p>Sans la rondelle, le bouton de lancer fait une mise en échec : fonce sur l'adversaire pour le faire tomber (les petits tombent facilement, grand-papa presque jamais).
-        Le joueur contrôlé change tout seul vers le plus proche de la rondelle. Les équipes de 4 font des changements aux mises au jeu quand quelqu'un est fatigué (barres d'énergie en bas).</p>
+        Le joueur contrôlé ne change jamais tout seul : appuie sur 1, 2 ou 3 (le numéro est devant le nom de chacun). Les équipes de 4 et plus font des changements aux mises au jeu quand quelqu'un est fatigué (barres d'énergie en bas).
+        En Pratique : seul contre le gardien, et des exercices à réussir en trois difficultés (bouton « Pratiques » en haut à droite, Retour arrière pour abandonner).</p>
       </div>
     </div>
   </section>
@@ -47,7 +50,22 @@
   </section>
 
   <section id="screen-match" class="screen hidden">
-    <div class="canvas-wrap"><canvas id="game" width="1280" height="720"></canvas>
+    <div class="canvas-wrap"><div class="stage"><canvas id="game" width="1280" height="720"></canvas>
+      <button id="skip-btn" class="hidden">Passer ▶</button>
+      <div id="prac-ui" class="hidden">
+        <div id="prac-bar">
+          <button id="prac-open" class="primary">📋 Pratiques</button>
+          <label><select id="prac-skater"></select></label>
+          <button id="prac-stop" class="hidden">Abandonner (⌫)</button>
+          <button id="prac-quit">Quitter</button>
+        </div>
+        <div id="prac-panel" class="hidden">
+          <div class="prac-head"><h2>Pratiques</h2><span id="prac-stars"></span><button id="prac-close">✕</button></div>
+          <div id="prac-tabs"></div>
+          <div id="prac-list"></div>
+        </div>
+        <div id="prac-result" class="hidden"></div>
+      </div>
       <div id="pause" class="hidden">
         <div class="pause-box">
           <h2>PAUSE</h2>
@@ -56,7 +74,7 @@
           <button id="btn-quit">Quitter le match</button>
         </div>
       </div>
-    </div>
+    </div></div>
   </section>
 
   <section id="screen-result" class="screen hidden">
@@ -73,7 +91,9 @@
 <script src="js/ai.js"></script>
 <script src="js/render.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/music.js"></script>
 <script src="js/input.js"></script>
+<script src="js/practice.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

@@ -290,7 +290,7 @@
       }
       // Production : environ quatre travailleurs par gisement accessible
       if (!hq || !patches.length) return;
-      const want = Math.min(ZC.WORKER.max, patches.length * 4);
+      const want = Math.min(g.workerCap(me), patches.length * 4);
       const have = workers.length + g.workersQueued(me);
       if (have < want && hq.queue.length < 2 && p.minerals >= g.workerCost(me) + (have < 2 ? 0 : 40)) g.buy(me, 'worker');
     }
@@ -324,6 +324,18 @@
       const canBuild = (p.hq && !p.hq.dead) || p.bunkers === 0;
       if (canBuild && options.length && freeDrops === 0 && p.minerals >= g.dropshipCost(p.id)) {
         if (p.bunkers === 0 || Math.random() < 0.9) { g.buy(p.id, 'dropship'); return; }
+      }
+      // Centre de commandement : environ un bunker sur trois est promu (le plus amélioré du front), une fois à l'aise en minerai
+      const centers = g.units.filter(u => !u.dead && u.owner === p.id && u.def.structure && (u.def.hq || u.research.some(r => r.what === 'fortify'))).length;
+      if (p.bunkers >= 3 && centers < Math.ceil(p.bunkers / 3)) {
+        const cands = g.units.filter(u => !u.dead && u.owner === p.id && u.def.structure && !u.def.hq && !u.def.extractor && !u.def.tower && u.zone && u.research.length < ZC.RESEARCH_QUEUE_MAX && g.upgradeCost(u, 'fortify') >= 0);
+        if (cands.length) {
+          const score = (u) => (g.map.neighbors(u.zone, true).some(n => !(n.owner >= 0 && g.allied(p.id, n.owner))) ? 10 : 0) + u.up.weapons + u.up.armor + u.up.range;
+          cands.sort((a, b) => score(b) - score(a));
+          const cost = g.upgradeCost(cands[0], 'fortify'), reserve = canBuild && options.length ? g.dropshipCost(p.id) : 0;
+          if (p.minerals - cost >= reserve) { if (Math.random() < cfg.spend) g.buy(p.id, 'fortify', cands[0]); return; }
+          if (Math.random() < 0.7) return; // on économise pour le centre, en laissant passer quelques améliorations
+        }
       }
       // Améliorations sur un bunker, en gardant de quoi racheter un dropship si une zone est libre
       let guard = 0;

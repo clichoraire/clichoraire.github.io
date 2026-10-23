@@ -130,7 +130,7 @@
       this.paused = false; this.running = true; this.lastT = performance.now(); this.acc = 0;
       this.setSpeed(1);
       const h = this.game.human;
-      if (this.gs.campaign) { const m = this.campaign.mission(this.gs.campaign.mission); this.ui.announce(m.name.toUpperCase(), m.objective.type === 'survive' ? 'Tenez ' + ZC.formatTime(m.objective.time) : m.objective.type === 'rounds' ? 'Premier à ' + m.objective.wins + ' rounds' : 'Éliminez tous les chefs de guerre'); }
+      if (this.gs.campaign) { const m = this.campaign.mission(this.gs.campaign.mission); const ot = ZC.objectiveText(m.objective); this.ui.announce(m.name.toUpperCase(), ot.charAt(0).toUpperCase() + ot.slice(1)); }
       else if (this.gs.mode === 'rounds') this.ui.announce('ROUND 1 — ' + ZC.UNITS[ZC.ROUNDS[0]].name.toUpperCase(), 'Tournoi : le premier à remporter ' + this.gs.roundsToWin + ' round' + (this.gs.roundsToWin > 1 ? 's' : '') + ' gagne la partie');
       else if (this.gs.mode === 'evolution') this.ui.announce('ROUND 1 — ' + ZC.UNITS[ZC.ROUNDS[0]].name.toUpperCase(), 'Les bunkers produisent des unités à chaque vague');
       else this.ui.announce('BUNKER ZONE', 'Prenez des zones avec votre dropship, garnissez vos bunkers, détruisez les bunkers ennemis');
@@ -221,7 +221,7 @@
           break;
         }
         case 'bunkerDestroyed': {
-          if (d.player === me) { A.play('lost', 0); ui.message(d.hq ? 'Votre centre de commandement est détruit ! Plus de dropships possibles.' : 'Votre bunker a été détruit ! La zone est perdue.', '#ff5050'); this.lastEvent = { x: d.zone.cx, y: d.zone.cy }; }
+          if (d.player === me) { A.play('lost', 0); ui.message(d.hq ? 'Votre centre de commandement est détruit !' + (d.lastHQ ? ' Plus de dropships possibles.' : ' Vos autres centres prennent le relais.') : 'Votre bunker a été détruit ! La zone est perdue.', '#ff5050'); this.lastEvent = { x: d.zone.cx, y: d.zone.cy }; }
           else if (d.killer === me) { ui.message((d.hq ? 'Centre de commandement ennemi détruit ! +' : 'Bunker ennemi détruit ! +') + d.bounty + ' minerais. Envoyez un dropship pour prendre la zone.', '#ffd040'); }
           break;
         }
@@ -265,7 +265,7 @@
           if (d.player === me) ui.message('Supply max atteinte (' + d.cap + ') : ' + (d.cap < g.settings.unitCap ? 'chaque nouveau bunker ajoute +' + g.settings.supplyPerBunker + '.' : 'limite absolue de la partie.'), '#ffd040');
           break;
         case 'workerCap':
-          if (d.player === me) { A.play('error', 0); ui.message('Maximum de ' + ZC.WORKER.max + ' travailleurs atteint.', '#ff5050'); }
+          if (d.player === me) { A.play('error', 0); ui.message('Maximum de ' + d.cap + ' travailleurs atteint (' + ZC.WORKER.perBunker + ' par bunker' + (d.cap >= ZC.WORKER.max ? ', ' + ZC.WORKER.max + ' au plus' : ', construisez un bunker') + ').', '#ff5050'); }
           break;
         case 'repairNoMinerals':
           if (d.player === me) { A.play('error', 0); ui.message('Réparation interrompue : plus de minerai (' + ZC.REPAIR.costPerSec + ' minerais/s).', '#ff5050'); }
@@ -277,6 +277,7 @@
           if (d.player === me) { A.play('error', 0); ui.message('Évolution : armes, armure et portée doivent être au niveau ' + ZC.UPGRADES.evolve.requires + ' sur ce bunker.', '#ff5050'); }
           break;
         case 'upgradeDone':
+          if (d.player === me && d.what === 'fortify') { A.play('build', 0); ui.announce('CENTRE DE COMMANDEMENT', 'Le bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' est promu : 6 places, dropships, travailleurs'); ui.message('Nouveau centre de commandement en zone ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' : dropships (D) et unités (F) disponibles.', '#ffd040'); if (g.selectedBunker === d.bunker) ui.buildCommandCard('bunker'); break; }
           if (d.player === me && d.what === 'evolve') { A.play('upgrade', 0); ui.announce('ÉVOLUTION', 'Les soldats du bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' passent au niveau 2'); ui.message('Évolution terminée : ce bunker produit et transforme ses soldats en ' + ZC.UNITS[g.bunkerSpawnType(d.bunker)].name + '.', '#ffd040'); break; }
           if (d.player === me) { A.play('upgrade', 0); ui.message(ZC.UPGRADES[d.what].name + ' niveau ' + d.level + ' terminé sur le bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + '.', '#ffd040'); }
           break;

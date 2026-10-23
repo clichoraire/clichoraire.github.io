@@ -37,25 +37,89 @@
       this.periodLen = o.periodLen || 120;
       this.difficulty = o.difficulty == null ? 1 : o.difficulty;
       this.ctrl = o.ctrl || ['p1', 'cpu'];           // 'p1' | 'p2' | 'cpu' pour chaque équipe
+      this.practice = !!o.practice;                  // mode pratique : pas d'horloge, remise en jeu rapide
+      this.goalieHuman = o.goalieHuman == null ? -1 : o.goalieHuman;   // équipe dont le gardien est contrôlé par l'humain
+      this.cones = []; this.targets = []; this.smoke = null; this.lastShot = null;
       this.teams = [this.makeTeam(o.teams[0], 0), this.makeTeam(o.teams[1], 1)];
       this.puck = { x: CX, y: CY, vx: 0, vy: 0, owner: null, lastOwner: null, prevOwner: null, noPick: null, noPickT: 0, protect: 0, hard: false, inNet: false, trail: [] };
-      this.period = 1; this.clock = this.periodLen; this.ot = false; this.t = 0;
+      this.period = 1; this.clock = this.practice ? 0 : this.periodLen; this.ot = false; this.t = 0;
       this.phase = 'faceoff'; this.phaseT = 0;
       this.events = []; this.fx = []; this.scorers = [];
       this.controlled = [null, null]; this.switchLock = [0, 0]; this.human = [null, null]; this.hPrev = [{}, {}];
       this.lastGoal = null; this.winner = -1;
-      this.setupFaceoff(true);
+      if (o.intro) this.startIntro(); else this.setupFaceoff(true);
+    }
+    // ----- Cérémonie d'avant-match : entrée des joueurs un à un, tours dans leur moitié, puis hymne en ligne.
+    startIntro() {
+      this.phase = 'intro'; this.intro = { part: 'entrance', t: 0, lineT: 0 };
+      for (const T of this.teams) {
+        const half = -T.side;   // côté de la patinoire de l'équipe (sa moitié = côté de son filet, donc T.side)
+        const cx = CX + T.side * R.w / 4;
+        T.skaters.forEach((s, k) => { s.introDelay = 0.6 + k * 1.6; s.x = CX + T.side * 90; s.y = R.y - 30; s.vx = s.vy = 0; s.dir = -T.side; s.introAng = -Math.PI / 2; s.introOn = false; this.clearStatus(s); });
+        const g = T.goalie; g.introDelay = 0.6 + T.skaters.length * 1.6; g.x = CX + T.side * 90; g.y = R.y - 30; g.introOn = false; g.dir = -T.side;
+        T.introCx = cx; void half;
+      }
+      this.ev({ type: 'introEntrance' });
+    }
+    skipIntro() {
+      if (this.phase !== 'intro') return;
+      if (this.intro.part === 'entrance') this.startAnthem(); else this.endIntro();
+    }
+    startAnthem() {
+      this.intro.part = 'anthem'; this.intro.t = 0; this.intro.lineT = 0;
+      for (const T of this.teams) {
+        const bx = CX + T.side * (R.w * 0.19 + 44);
+        const list = T.skaters.concat([T.goalie]);
+        list.forEach((s, k) => { s.introFrom = { x: s.x, y: s.y }; s.introTo = { x: bx, y: CY - 100 + k * 66 }; s.introOn = true; });
+      }
+      this.ev({ type: 'introAnthem' });
+    }
+    endIntro() { this.intro = null; this.setupFaceoff(true); this.ev({ type: 'introDone' }); }
+    updateIntro(dt) {
+      const I = this.intro; I.t += dt;
+      if (I.part === 'entrance') {
+        const rx = R.w / 4 - 95, ry = R.h / 2 - 75, w = 1.25;
+        for (const T of this.teams) {
+          const cx = T.introCx, list = T.skaters.concat([T.goalie]);
+          for (const s of list) {
+            const tt = I.t - s.introDelay; if (tt < 0) continue;
+            const px = s.x, py = s.y; let x, y;
+            if (tt < 1.2) { const k = tt / 1.2; const top = { x: cx, y: CY - ry }; x = (CX + T.side * 90) + (top.x - (CX + T.side * 90)) * k; y = (R.y - 30) + (top.y - (R.y - 30)) * k; }
+            else {
+              const ang = -Math.PI / 2 + (tt - 1.2) * w * (T.side < 0 ? -1 : 1);
+              x = cx + Math.cos(ang) * rx; y = CY + Math.sin(ang) * ry;
+              if (s === T.goalie && tt > 1.2 + Math.PI * 2 / w) { const gx = HK.goalX(T.side) - T.side * 12; x = gx; y = CY; }
+            }
+            s.introOn = true; s.vx = (x - px) / dt; s.vy = (y - py) / dt; s.x = x; s.y = y; s.anim = (s.anim || 0) + dt * 8;
+            if (Math.abs(s.vx) > 10) s.dir = s.vx > 0 ? 1 : -1; s.face = Math.atan2(s.vy, s.vx);
+          }
+        }
+        if (I.t > (this.o.entranceLen || 28)) this.startAnthem();
+      } else {
+        I.lineT = Math.min(1, I.lineT + dt / 1.6);
+        const k = I.lineT * I.lineT * (3 - 2 * I.lineT);
+        for (const T of this.teams) for (const s of T.skaters.concat([T.goalie])) {
+          const px = s.x; s.x = s.introFrom.x + (s.introTo.x - s.introFrom.x) * k; s.y = s.introFrom.y + (s.introTo.y - s.introFrom.y) * k;
+          s.vx = (s.x - px) / dt; s.vy = 0; s.anim = (s.anim || 0) + dt * (I.lineT < 1 ? 8 : 0.5);
+          if (I.lineT >= 1) { s.dir = -T.side; s.vx = 0; }
+        }
+        if (I.t > (this.o.anthemLen || 72)) this.endIntro();
+      }
     }
     ev(e) { this.events.push(e); }
     takeEvents() { const e = this.events; this.events = []; return e; }
 
     makeTeam(def, i) {
-      const T = { i, def, side: i === 0 ? -1 : 1, score: 0, shots: 0, hits: 0, skaters: [], bench: [], goalie: null, all: [] };
-      def.players.forEach((pid, k) => {
+      const T = { i, def, side: i === 0 ? -1 : 1, score: 0, shots: 0, hits: 0, skaters: [], bench: [], box: [], goalie: null, all: [] };
+      const lineup = this.o.lineup && this.o.lineup[i];
+      const list = lineup ? lineup : def.players;
+      list.forEach((pid, k) => {
         const s = this.makeSkater(pid, i); T.all.push(s);
         if (k < HK.ON_ICE) { s.onIce = true; T.skaters.push(s); } else T.bench.push(s);
       });
-      T.goalie = { team: i, x: 0, y: 0, vy: 0, w: 26, h: 40, down: 0, slowT: 0, slowM: 1, err: 0, errT: 0, reactT: 0, coverT: 0, saves: 0, anim: 0, skill: 0.75, dir: 1 };
+      if (lineup) for (const pid of def.players) if (!lineup.includes(pid)) T.bench.push(this.makeSkater(pid, i));
+      T.goalieDef = HK.PLAYERS[def.goalie] || HK.GOALIE_DEF;
+      T.goalie = { team: i, x: 0, y: 0, vy: 0, w: 26, h: 40, down: 0, slowT: 0, slowM: 1, err: 0, errT: 0, reactT: 0, coverT: 0, saves: 0, anim: 0, skill: 0.75, dir: 1, def: T.goalieDef };
       return T;
     }
     makeSkater(pid, team) {
@@ -63,6 +127,7 @@
       return Object.assign({
         id: pid, def: d, team, x: 0, y: 0, vx: 0, vy: 0, face: 0, dir: 1, r: 7 + 7 * d.size, onIce: false,
         down: 0, stun: 0, stunKind: '', shield: 0, ghost: 0, boostT: 0, boostM: 1, slowT: 0, slowM: 1, slowKind: '', buff: 0, slap: 0, magnet: 0, slide: 0,
+        rage: 0, wall: 0, perfect: 0, penalty: 0, role: null, bot: false,
         immune: 0, cd: 0, charge: -1, lunge: 0, lungeCd: 0, stamina: 1, anim: 0, input: {}, prev: {},
         ai: { t: 0, tx: 0, ty: 0, shootT: 0, act: null, want: 0 },
         stats: { goals: 0, assists: 0, shots: 0, hits: 0, powers: 0, passes: 0 },
@@ -70,13 +135,13 @@
     }
     skatersOnIce() { return this.teams[0].skaters.concat(this.teams[1].skaters); }
     clearStatus(s) {
-      s.down = 0; s.stun = 0; s.shield = 0; s.ghost = 0; s.boostT = 0; s.slowT = 0; s.buff = 0; s.magnet = 0; s.slide = 0;
+      s.down = 0; s.stun = 0; s.shield = 0; s.ghost = 0; s.boostT = 0; s.slowT = 0; s.buff = 0; s.magnet = 0; s.slide = 0; s.rage = 0; s.wall = 0;
       s.lunge = 0; s.charge = -1; s.immune = 0; s.input = {}; s.prev = {}; s.ai.shootT = 0; s.ai.act = null; s.ai.t = 0;
     }
 
     // ----- Mise au jeu, périodes -----
     setupFaceoff(first) {
-      this.lineChanges();
+      if (!this.practice && !this.o.noLineChange) this.lineChanges();
       const p = this.puck;
       p.x = CX; p.y = CY; p.vx = p.vy = 0; p.owner = null; p.noPick = null; p.noPickT = 0; p.protect = 0; p.hard = false; p.inNet = false; p.lastOwner = p.prevOwner = null; p.trail = [];
       const spots = [[-26, 0], [-120, -120], [-250, 70]];
@@ -93,12 +158,55 @@
       this.controlled = [null, null]; this.switchLock = [0, 0];
       this.ev({ type: 'faceoff' });
     }
-    lineChanges() {
+    // Pratique : remise en jeu rapide, la rondelle au joueur humain (ou là où l'exercice le demande).
+    practiceReset() {
+      const p = this.puck; p.owner = null; p.noPick = null; p.noPickT = 0; p.protect = 0; p.hard = false; p.sure = false; p.inNet = false; p.trail = []; p.vx = p.vy = 0;
+      p.x = CX; p.y = CY;
       for (const T of this.teams) {
-        if (!T.bench.length) continue;
+        for (const s of T.skaters) { if (s.bot) continue; s.x = CX - 60 + (T.i ? 120 : 0); s.y = CY; s.vx = s.vy = 0; s.down = 0; s.stun = 0; s.slide = 0; s.lunge = 0; s.charge = -1; s.dir = -T.side; s.face = T.side < 0 ? 0 : Math.PI; }
+        const g = T.goalie; g.x = HK.goalX(T.side) - T.side * 12; g.y = CY; g.vy = 0; g.down = 0; g.coverT = 0;
+      }
+      this.phase = 'play';
+      this.ev({ type: 'reset' });
+    }
+    // Donne la rondelle à un patineur (pratique).
+    givePuck(s, x, y) {
+      const p = this.puck; if (x != null) { s.x = x; s.y = y; s.vx = s.vy = 0; }
+      p.owner = s; p.lastOwner = s; p.prevOwner = null; p.noPick = null; p.protect = 0.3; p.inNet = false; p.hard = false; p.sure = false; p.trail = []; s.charge = -1;
+      p.x = s.x + s.dir * (s.r + 10); p.y = s.y + 3;
+    }
+    // Ajoute un robot d'exercice à l'équipe `ti` (pratique). role : chaser | carrier | shooter | breakaway | passer | crasher
+    addBot(ti, pid, role, x, y) {
+      const T = this.teams[ti], s = this.makeSkater(pid, ti);
+      s.bot = true; s.role = role; s.onIce = true; s.x = x; s.y = y; s.dir = -T.side; s.face = T.side < 0 ? 0 : Math.PI; s.home = { x, y };
+      T.skaters.push(s); T.all.push(s); return s;
+    }
+    removeBots() {
+      for (const T of this.teams) { for (const s of T.skaters) if (s.bot && this.puck.owner === s) this.puck.owner = null; T.skaters = T.skaters.filter(s => !s.bot); T.all = T.all.filter(s => !s.bot); T.box = T.box.filter(s => !s.bot); }
+      if (this.controlled[0] && this.controlled[0].bot) this.controlled[0] = null;
+    }
+    // Banc des punitions : le patineur sort de la glace pour `t` secondes.
+    penalize(s, t) {
+      const T = this.teams[s.team]; if (!s.onIce || s.penalty > 0) return false;
+      if (this.puck.owner === s) this.dropPuck(s, 100);
+      s.penalty = t; s.onIce = false; T.skaters.splice(T.skaters.indexOf(s), 1); T.box.push(s);
+      s.x = CX + (s.team ? 70 : -70); s.y = R.y - 2; s.vx = s.vy = 0; this.clearStatus(s);
+      for (let i = 0; i < 2; i++) if (this.controlled[i] === s) this.controlled[i] = null;
+      this.ev({ type: 'penalty', s, t }); return true;
+    }
+    tickPenalties(dt) {
+      for (const T of this.teams) for (let i = T.box.length - 1; i >= 0; i--) {
+        const s = T.box[i]; s.penalty -= dt;
+        if (s.penalty <= 0) { T.box.splice(i, 1); s.onIce = true; s.x = CX + (s.team ? 60 : -60); s.y = R.y + s.r + 6; s.immune = 0.5; T.skaters.push(s); this.ev({ type: 'penaltyOver', s }); }
+      }
+    }
+    lineChanges() {
+      for (const T of this.teams) for (let n = 0; n < 2; n++) {
+        if (!T.bench.length) break;
         const tired = T.skaters.reduce((a, s) => s.stamina < a.stamina ? s : a);
         const fresh = T.bench.reduce((a, s) => s.stamina > a.stamina ? s : a);
-        if (fresh.stamina > tired.stamina + 0.3) {
+        if (fresh.stamina <= tired.stamina + 0.3) break;
+        {
           T.skaters[T.skaters.indexOf(tired)] = fresh; T.bench[T.bench.indexOf(fresh)] = tired;
           fresh.onIce = true; tired.onIce = false; this.clearStatus(tired);
           if (this.puck.owner === tired) this.puck.owner = null;
@@ -124,21 +232,25 @@
       this.ev({ type: 'over', winner: this.winner });
     }
     clockText() {
-      const t = Math.max(0, this.ot ? this.clock : Math.ceil(this.clock));
+      const t = Math.max(0, this.ot || this.practice ? this.clock : Math.ceil(this.clock));
       const m = Math.floor(t / 60), s = Math.floor(t % 60);
       return m + ':' + (s < 10 ? '0' : '') + s;
     }
     periodText() {
+      if (this.practice) return 'PRATIQUE';
       if (this.ot) return 'PROLONGATION';
       return ['', '1re', '2e', '3e'][this.period] + ' PÉRIODE';
     }
 
     // ----- Boucle -----
     update(dt) {
-      this.t += dt;
+      this.t += dt; this.dt0 = dt;
       for (const T of this.teams) { for (const s of T.all) this.tickStatus(s, dt); const g = T.goalie; g.down -= dt; g.slowT -= dt; g.anim += dt; }
       for (let i = this.fx.length - 1; i >= 0; i--) { this.fx[i].t -= dt; if (this.fx[i].t <= 0) this.fx.splice(i, 1); }
+      if (this.smoke) { this.smoke.t -= dt; if (this.smoke.t <= 0) this.smoke = null; }
+      this.tickPenalties(dt);
       this.switchLock[0] -= dt; this.switchLock[1] -= dt;
+      if (this.phase === 'intro') { this.updateIntro(dt); return; }
       if (this.phase === 'faceoff') {
         this.phaseT -= dt;
         if (this.phaseT <= 0) { this.phase = 'play'; this.puck.vx = (this.rand() - 0.5) * 90; this.puck.vy = (this.rand() - 0.5) * 90; this.ev({ type: 'whistle' }); }
@@ -148,7 +260,7 @@
       if (this.phase === 'goal' || this.phase === 'periodEnd') {
         this.phaseT -= dt; this.glide(dt);
         if (this.phaseT <= 0) {
-          if (this.phase === 'goal') { if (this.ot) this.gameOver(); else this.setupFaceoff(); }
+          if (this.phase === 'goal') { if (this.practice) this.practiceReset(); else if (this.ot) this.gameOver(); else this.setupFaceoff(); }
           else this.nextPeriod();
         }
       }
@@ -157,43 +269,35 @@
       if (s.down > 0) { s.down -= dt; if (s.down <= 0) s.immune = 0.5; }
       if (s.stun > 0) { s.stun -= dt; if (s.stun <= 0) s.immune = 0.3; }
       s.shield -= dt; s.ghost -= dt; s.boostT -= dt; s.slowT -= dt; s.buff -= dt; s.slap -= dt; s.magnet -= dt; s.slide -= dt;
+      s.rage -= dt; s.wall -= dt; s.perfect -= dt;
       s.immune -= dt; s.cd -= dt; s.lunge -= dt; s.lungeCd -= dt;
-      if (this.phase === 'play') {
+      if (this.phase === 'play' && !this.practice) {
         if (s.onIce) s.stamina = Math.max(0.15, s.stamina - dt / 100);
         else s.stamina = Math.min(1, s.stamina + dt / 25);
       }
     }
     speedMult(s) {
-      return (s.boostT > 0 ? s.boostM : 1) * (s.slowT > 0 ? s.slowM : 1) * (s.buff > 0 ? 1.25 : 1) * (0.85 + 0.15 * s.stamina) * (this.puck.owner === s ? 0.94 : 1);
+      return (s.boostT > 0 ? s.boostM : 1) * (s.slowT > 0 ? s.slowM : 1) * (s.buff > 0 ? 1.25 : 1) * (s.rage > 0 ? 1.3 : 1) * (s.wall > 0 ? 0.5 : 1) * (0.85 + 0.15 * s.stamina) * (this.puck.owner === s ? 0.94 : 1);
     }
 
     // Entrée d'un joueur humain pour l'équipe i : {dx, dy, a, b, p}.
     setHuman(i, inp) { this.human[i] = inp; }
 
     updateControlled(i, h) {
-      const T = this.teams[i], p = this.puck; let c = this.controlled[i];
+      const T = this.teams[i]; let c = this.controlled[i];
       if (c && !c.onIce) c = null;
-      if (p.owner && p.owner.team === i) c = p.owner;
-      else {
-        const aEdge = h.a && !this.hPrev[i].a;
-        if (aEdge && c) {
-          const list = T.skaters.filter(s => s.down <= 0); const k = list.indexOf(c); c = list[(k + 1) % list.length] || c; this.switchLock[i] = 1.2;
-          this.ev({ type: 'switch', team: i, s: c });
-        } else if (this.switchLock[i] <= 0 || !c || c.down > 0) {
-          const px = p.x + p.vx * 0.25, py = p.y + p.vy * 0.25;
-          let best = c && c.down <= 0 ? c : null, bd = best ? Math.hypot(best.x - px, best.y - py) - 50 : 1e9;
-          for (const s of T.skaters) { if (s.down > 0 || s.stun > 0) continue; const d = Math.hypot(s.x - px, s.y - py); if (d < bd) { bd = d; best = s; } }
-          c = best || c;
-        }
-      }
+      if (h.sel != null && T.skaters[h.sel] && h.sel !== this.hPrev[i].sel) { c = T.skaters[h.sel]; this.ev({ type: 'switch', team: i, s: c }); }
+      else if (h.cycle && !this.hPrev[i].cycle && T.skaters.length) { const k = T.skaters.indexOf(c); c = T.skaters[(k + 1) % T.skaters.length]; this.ev({ type: 'switch', team: i, s: c }); }
+      if (!c) c = T.skaters.find(s => !s.bot) || T.skaters[0] || null;
       if (c !== this.controlled[i]) { if (c) c.prev = Object.assign({}, h); this.controlled[i] = c; }
       this.hPrev[i] = Object.assign({}, h);
       return c;
     }
 
     playStep(dt) {
-      if (!this.ot) { this.clock -= dt; if (this.clock <= 0) { this.clock = 0; this.endPeriod(); return; } }
-      else this.clock += dt;
+      if (this.practice || this.ot) this.clock += dt;
+      else { this.clock -= dt; if (this.clock <= 0) { this.clock = 0; this.endPeriod(); return; } }
+      if (this.smoke) for (const T of this.teams) if (T.i !== this.smoke.team) for (const o of T.skaters) if (Math.hypot(o.x - this.smoke.x, o.y - this.smoke.y) < this.smoke.r) { o.slowT = Math.max(o.slowT, 0.15); o.slowM = 0.5; o.slowKind = 'smoke'; }
       for (let i = 0; i < 2; i++) {
         const T = this.teams[i], h = this.human[i];
         const c = h ? this.updateControlled(i, h) : null;
@@ -207,6 +311,7 @@
       this.collide();
       for (const T of this.teams) this.updateGoalie(T, dt);
       this.updatePuck(dt);
+      this.checkTargets();
       for (const s of this.skatersOnIce()) s.prev = s.input;
     }
     glide(dt) {
@@ -279,6 +384,14 @@
         const g = T.goalie, d = Math.hypot(s.x - g.x, s.y - g.y), min = s.r + 14;
         if (d < min && d > 0) { s.x += (s.x - g.x) / d * (min - d); s.y += (s.y - g.y) / d * (min - d); }
       }
+      for (const c of this.cones) {
+        const d = Math.hypot(s.x - c.x, s.y - c.y), min = s.r + c.r;
+        if (d < min && d > 0) { s.x += (s.x - c.x) / d * (min - d); s.y += (s.y - c.y) / d * (min - d); const vn = (s.vx * (s.x - c.x) + s.vy * (s.y - c.y)) / d; if (vn < 0) { s.vx -= 1.2 * vn * (s.x - c.x) / d; s.vy -= 1.2 * vn * (s.y - c.y) / d; if (vn < -150) this.ev({ type: 'cone', x: c.x, y: c.y }); } }
+      }
+    }
+    checkTargets() {
+      const p = this.puck; if (p.owner) return;
+      for (const t of this.targets) { if (!t.active) continue; if (Math.hypot(p.x - t.x, p.y - t.y) < t.r + PR) { t.active = false; this.ev({ type: 'target', target: t, x: t.x, y: t.y }); p.vx *= -0.3; p.vy *= -0.3; } }
     }
 
     collide() {
@@ -289,7 +402,7 @@
         const d = dist(a, b), min = a.r + b.r;
         if (d >= min || d === 0) continue;
         const nx = (b.x - a.x) / d, ny = (b.y - a.y) / d, pen = min - d;
-        const wa = a.force * 0.5 + a.def.size * 1.5, wb = b.force * 0.5 + b.def.size * 1.5;
+        const wa = a.wall > 0 ? 60 : a.force * 0.5 + a.def.size * 1.5, wb = b.wall > 0 ? 60 : b.force * 0.5 + b.def.size * 1.5;
         a.x -= nx * pen * wb / (wa + wb); a.y -= ny * pen * wb / (wa + wb);
         b.x += nx * pen * wa / (wa + wb); b.y += ny * pen * wa / (wa + wb);
         const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
@@ -297,13 +410,18 @@
           const jj = -rv * 0.9 * (wa * wb / (wa + wb));
           a.vx -= jj / wa * nx; a.vy -= jj / wa * ny; b.vx += jj / wb * nx; b.vy += jj / wb * ny;
         }
-        if (a.team !== b.team) { this.checkHit(a, b, nx, ny); this.checkHit(b, a, -nx, -ny); }
-        else if (a.slide > 0 || b.slide > 0) { /* on pousse seulement ses coéquipiers */ }
+        if (a.team !== b.team) {
+          this.checkHit(a, b, nx, ny); this.checkHit(b, a, -nx, -ny);
+          if (a.rage > 0 && b.down <= 0 && b.immune <= 0 && b.wall <= 0 && b.shield <= 0 && rv < -60) this.knock(b, 0.8, nx * 220, ny * 220, a);
+          if (b.rage > 0 && a.down <= 0 && a.immune <= 0 && a.wall <= 0 && a.shield <= 0 && rv < -60) this.knock(a, 0.8, -nx * 220, -ny * 220, b);
+          if (a.wall > 0 && b.down <= 0 && b.immune <= 0 && rv < -120) this.knock(b, 0.7, nx * 200, ny * 200, a);
+          if (b.wall > 0 && a.down <= 0 && a.immune <= 0 && rv < -120) this.knock(a, 0.7, -nx * 200, -ny * 200, b);
+        }
       }
     }
     checkHit(att, vic, nx, ny) {
       if (att.lunge <= 0 && att.slide <= 0) return;
-      if (vic.down > 0 || vic.immune > 0 || vic.shield > 0 || vic.ghost > 0) return;
+      if (vic.down > 0 || vic.immune > 0 || vic.shield > 0 || vic.ghost > 0 || vic.rage > 0 || vic.wall > 0) return;
       const toward = att.vx * nx + att.vy * ny;
       if (toward < 60 && att.slide <= 0) return;
       const kidA = att.def.size < 0.75, kidV = vic.def.size < 0.75;
@@ -339,17 +457,17 @@
     }
     takePuck(s, stolen) {
       const p = this.puck, prevOwner = p.owner;
-      p.prevOwner = p.lastOwner; p.lastOwner = s; p.owner = s; p.protect = 0.5; p.hard = false; p.inNet = false;
+      p.prevOwner = p.lastOwner; p.lastOwner = s; p.owner = s; p.protect = 0.5; p.hard = false; p.sure = false; p.inNet = false;
       p.noPick = prevOwner || null; p.noPickT = prevOwner ? 0.4 : 0;
       s.charge = -1;
       this.ev({ type: stolen ? 'steal' : 'pickup', s, x: p.x, y: p.y });
     }
 
     // ----- Passes et tirs -----
-    pass(s) {
+    pass(s, to) {
       const p = this.puck, T = this.teams[s.team];
-      let best = null, bs = 0.1;
-      for (const m of T.skaters) {
+      let best = to || null, bs = 0.1;
+      if (!to) for (const m of T.skaters) {
         if (m === s || m.down > 0) continue;
         const dx = m.x - s.x, dy = m.y - s.y, d = Math.hypot(dx, dy) || 1;
         const sc = (dx * Math.cos(s.face) + dy * Math.sin(s.face)) / d - d / 2500;
@@ -380,6 +498,8 @@
       if (Math.abs(da) > 1.1) ang = s.face + (this.rand() - 0.5) * 0.3;   // tir dans le mauvais sens : part là où il regarde
       else ang = toNet + da * 0.15;
       let speed = s.shotSpeed * (0.62 + 0.38 * charge) * (s.buff > 0 ? 1.2 : 1);
+      this.lastShot = { s, charge, x: s.x, y: s.y, t: this.t, behind: s.behindT > 0 };
+      if (s.perfect > 0 && Math.abs(da) <= 1.1) { s.perfect = 0; ang = Math.atan2(aimY - s.y, gx - s.x); this.release(s, ang, Math.max(speed, 900)); p.sure = true; s.stats.shots++; gl.reactT = 0.3; this.ev({ type: 'shot', s, charge }); this.ev({ type: 'perfect', s }); return; }
       if (s.slap > 0) { speed *= 1.45; s.slap = 0; this.release(s, ang, speed); p.hard = true; this.ev({ type: 'slapshot', s }); }
       else this.release(s, ang, speed);
       s.stats.shots++;
@@ -395,9 +515,19 @@
     // ----- Gardiens -----
     updateGoalie(T, dt) {
       const g = T.goalie, p = this.puck, side = T.side, gx = HK.goalX(side), home = gx - side * 12, hm = G.mouth / 2;
-      g.skill = this.ctrl[T.i] === 'cpu' ? [0.5, 0.72, 0.92][this.difficulty] : 0.72;
-      g.x = home; g.dir = -side; g.reactT -= dt;
+      g.skill = T.i === 1 && this.o.goalieSkill != null ? this.o.goalieSkill : T.i === 0 && this.myGoalieSkill ? this.myGoalieSkill : this.ctrl[T.i] === 'cpu' ? [0.5, 0.72, 0.92][this.difficulty] : 0.72;
+      g.dir = -side; g.reactT -= dt;
       if (g.down > 0) return;
+      const h = this.goalieHuman === T.i ? this.human[T.i] : null;
+      if (h) {   // gardien contrôlé par l'humain : libre dans son enclave
+        const sp = 300 * (g.slowT > 0 ? g.slowM : 1); let dx = h.dx || 0, dy = h.dy || 0; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+        g.x = clamp(g.x + dx * sp * dt, Math.min(home, home - side * 46), Math.max(home, home - side * 46)); g.y = clamp(g.y + dy * sp * dt, CY - hm - 30, CY + hm + 30); g.vy = dy * sp;
+        if (h.b && !g.hPrev) { g.lungeT = 0.3; } g.hPrev = !!h.b;
+        if (g.lungeT > 0) { g.lungeT -= dt; g.y = clamp(g.y + dy * 400 * dt, CY - hm - 30, CY + hm + 30); }
+        if (!p.owner) this.goalieSaveCheck(T, g, p, side, hm);
+        return;
+      }
+      g.x = home;
       let ty;
       const toward = side < 0 ? p.vx < -40 : p.vx > 40;
       const dxl = home - p.x;
@@ -413,29 +543,30 @@
       ty = clamp(ty, CY - hm - 4, CY + hm + 4);
       const sp = (170 + 150 * g.skill) * (g.slowT > 0 ? g.slowM : 1);
       const step = clamp(ty - g.y, -sp * dt, sp * dt); g.y += step; g.vy = step / dt;
-      if (!p.owner) {
-        const hw = g.w / 2 + PR, hh = g.h / 2 + PR;
-        if (Math.abs(p.x - g.x) < hw && Math.abs(p.y - g.y) < hh) {
-          const towardNet = side < 0 ? p.vx < 0 : p.vx > 0;
-          if (towardNet && p.vx * p.vx + p.vy * p.vy > 100 * 100) {
-            this.teams[1 - T.i].shots++;
-            if (p.hard && this.rand() < 0.5) { p.hard = false; p.through = 0.2; this.ev({ type: 'through', x: p.x, y: p.y }); }
-            else {
-              g.saves++;
-              const sp2 = Math.hypot(p.vx, p.vy), ang = (side < 0 ? 0 : Math.PI) + (this.rand() - 0.5) * 1.6;
-              const s2 = Math.min(280, sp2 * 0.35 + 50);
-              p.vx = Math.cos(ang) * s2; p.vy = Math.sin(ang) * s2; p.x = g.x - side * (hw + 1); p.hard = false;
-              this.ev({ type: 'save', x: p.x, y: p.y, team: T.i });
-            }
-          } else if (!(p.through > 0)) {
-            const sx = Math.sign(p.x - g.x) || -side; p.x = g.x + sx * hw;
-            if (Math.sign(p.vx) !== sx) p.vx *= -0.4;
+      if (!p.owner) this.goalieSaveCheck(T, g, p, side, hm);
+    }
+    goalieSaveCheck(T, g, p, side, hm) {
+      const hw = g.w / 2 + PR, hh = g.h / 2 + PR;
+      if (Math.abs(p.x - g.x) < hw && Math.abs(p.y - g.y) < hh) {
+        const towardNet = side < 0 ? p.vx < 0 : p.vx > 0;
+        if (towardNet && p.vx * p.vx + p.vy * p.vy > 100 * 100) {
+          this.teams[1 - T.i].shots++;
+          if (p.sure || (p.hard && this.rand() < 0.5)) { p.hard = false; p.sure = false; p.through = 0.2; this.ev({ type: 'through', x: p.x, y: p.y }); }
+          else {
+            g.saves++;
+            const sp2 = Math.hypot(p.vx, p.vy), ang = (side < 0 ? 0 : Math.PI) + (this.rand() - 0.5) * 1.6;
+            const s2 = Math.min(280, sp2 * 0.35 + 50);
+            p.vx = Math.cos(ang) * s2; p.vy = Math.sin(ang) * s2; p.x = g.x - side * (hw + 1); p.hard = false;
+            this.ev({ type: 'save', x: p.x, y: p.y, team: T.i });
           }
+        } else if (!(p.through > 0)) {
+          const sx = Math.sign(p.x - g.x) || -side; p.x = g.x + sx * hw;
+          if (Math.sign(p.vx) !== sx) p.vx *= -0.4;
         }
-        if (Math.hypot(p.x - g.x, p.y - g.y) < 44 && Math.hypot(p.vx, p.vy) < 60 && !p.inNet) {
-          g.coverT += dt; if (g.coverT > 0.6) { g.coverT = 0; this.goalieClear(T); }
-        } else g.coverT = 0;
       }
+      if (Math.hypot(p.x - g.x, p.y - g.y) < 44 && Math.hypot(p.vx, p.vy) < 60 && !p.inNet) {
+        g.coverT += this.dt0; if (g.coverT > 0.6) { g.coverT = 0; if (this.practice) { this.ev({ type: 'cover', team: T.i }); this.practiceReset(); } else this.goalieClear(T); }
+      } else g.coverT = 0;
     }
     goalieClear(T) {
       const g = T.goalie, p = this.puck, O = this.teams[1 - T.i];
@@ -501,6 +632,7 @@
         const o = p.owner;
         if (!o.onIce || o.down > 0 || o.stun > 0) { this.dropPuck(o, 60); return; }
         p.x = o.x + o.dir * (o.r + 10); p.y = o.y + 3; p.vx = o.vx; p.vy = o.vy;
+        { const gx = HK.goalX(-this.teams[o.team].side); if ((o.x - gx) * -this.teams[o.team].side > 0) o.behindT = 1.5; else o.behindT = (o.behindT || 0) - dt; }
         if (o.shield <= 0 && p.protect <= 0) {
           for (const s of this.skatersOnIce()) {
             if (s.team === o.team || s.down > 0 || s.stun > 0 || (s === p.noPick)) continue;
@@ -527,6 +659,7 @@
       if (v < 6) { p.vx = p.vy = 0; }
       if (v > 350) { p.trail.push({ x: p.x, y: p.y }); if (p.trail.length > 8) p.trail.shift(); } else p.trail.length = 0;
       this.puckWalls(p);
+      for (const c of this.cones) { const dx = p.x - c.x, dy = p.y - c.y, d = Math.hypot(dx, dy), min = c.r + PR; if (d < min && d > 0) { p.x = c.x + dx / d * min; p.y = c.y + dy / d * min; const vn = (p.vx * dx + p.vy * dy) / d; if (vn < 0) { p.vx -= 1.6 * vn * dx / d; p.vy -= 1.6 * vn * dy / d; } } }
       for (const side of [-1, 1]) { const r = this.netCollide(p, side, prev); if (r === 'goal') { this.goal(side); return; } }
       // ramassage
       let best = null, bd = 1e9;
@@ -538,7 +671,8 @@
       if (best) {
         const v2 = Math.hypot(p.vx, p.vy);
         const sameTeam = p.lastOwner && p.lastOwner.team === best.team;
-        if (v2 < 320 + best.def.stats.control * 110 || sameTeam || best.magnet > 0) this.takePuck(best, p.lastOwner && p.lastOwner.team !== best.team);
+        if (best.wall > 0 && v2 > 150) { const dx = p.x - best.x, dy = p.y - best.y, d = Math.hypot(dx, dy) || 1; p.vx = dx / d * v2 * 0.7; p.vy = dy / d * v2 * 0.7; p.noPick = best; p.noPickT = 0.3; this.ev({ type: 'deflect', x: p.x, y: p.y, s: best }); }
+        else if (v2 < 320 + best.def.stats.control * 110 || sameTeam || best.magnet > 0) this.takePuck(best, p.lastOwner && p.lastOwner.team !== best.team);
         else {
           p.vx *= -0.3; p.vy = p.vy * 0.3 + (this.rand() - 0.5) * 150; p.noPick = best; p.noPickT = 0.3;
           this.ev({ type: 'deflect', x: p.x, y: p.y, s: best });
@@ -553,11 +687,11 @@
         scorer.stats.goals++;
         if (p.prevOwner && p.prevOwner.team === T.i && p.prevOwner !== scorer) { assist = p.prevOwner; assist.stats.assists++; }
       } else own = true;
-      this.lastGoal = { team: T.i, scorer, assist, own, period: this.period, time: this.clockText(), ot: this.ot };
+      this.lastGoal = { team: T.i, scorer, assist, own, period: this.period, time: this.clockText(), ot: this.ot, shot: this.lastShot };
       this.scorers.push(this.lastGoal);
       p.inNet = true; p.vx *= 0.2; p.vy *= 0.2; p.hard = false;
-      this.phase = 'goal'; this.phaseT = 3.4;
-      this.ev({ type: 'goal', team: T.i, scorer, assist, own, x: p.x, y: p.y });
+      this.phase = 'goal'; this.phaseT = this.practice ? 1.4 : 3.4;
+      this.ev({ type: 'goal', team: T.i, scorer, assist, own, x: p.x, y: p.y, shot: this.lastShot });
     }
 
     // ----- Pouvoirs -----
@@ -618,6 +752,38 @@
           O.goalie.slowT = 4; O.goalie.slowM = 0.5; fx('blizzard', { t: 4, t0: 4, side: O.side }); break;
         case 'fantome': s.ghost = 4; fx('fantome', { t: 0.5, t0: 0.5 }); break;
         case 'slap': s.slap = 6; fx('slap', { t: 0.8, t0: 0.8 }); break;
+        // --- Les Boys
+        case 'tempsmort': for (const o of O.skaters) this.stunSkater(o, 2, 'dizzy'); fx('tempsmort', { t: 1.5, t0: 1.5 }); break;
+        case 'charme': {
+          for (const o of O.skaters) if (near(o, 115)) this.stunSkater(o, 1.6, 'charmed');
+          if (p.owner && p.owner.team !== s.team && near(p.owner, 115) && p.owner.shield <= 0) this.takePuck(s, true);
+          fx('charme', { t: 1.6, t0: 1.6, r: 115 }); break;
+        }
+        case 'deal': {
+          const o = p.owner && p.owner.team !== s.team && near(p.owner, 320) ? p.owner : null;
+          const from = { x: s.x, y: s.y };
+          if (o) { const ox = o.x, oy = o.y; o.x = s.x; o.y = s.y; s.x = ox; s.y = oy; o.immune = 0.3; s.immune = 0.4; if (o.shield <= 0) this.takePuck(s, true); this.stunSkater(o, 0.8, 'dizzy'); fx('teleport', { t: 0.6, t0: 0.6, x: o.x, y: o.y }); }
+          else if (!p.owner) { s.x = p.x - s.dir * 8; s.y = p.y - 3; s.vx = s.vy = 0; s.immune = 0.4; }
+          fx('teleport', { t: 0.6, t0: 0.6, x: from.x, y: from.y }); fx('deal', { t: 1, t0: 1 }); break;
+        }
+        case 'objection': {
+          let o = p.owner && p.owner.team !== s.team ? p.owner : null;
+          if (!o) { let bd = 220; for (const q of O.skaters) { const d = dist(s, q); if (d < bd) { bd = d; o = q; } } }
+          if (o && o.shield <= 0) this.penalize(o, 6);
+          fx('objection', { t: 1.5, t0: 1.5 }); break;
+        }
+        case 'docteur': for (const m of T.skaters) { m.down = 0; m.stun = 0; m.stamina = 1; m.immune = 3; } for (const m of T.bench) m.stamina = 1; fx('docteur', { t: 1.5, t0: 1.5 }); break;
+        case 'rage': s.rage = 3.5; s.immune = 0; fx('rage', { t: 3.5, t0: 3.5 }); break;
+        case 'mur': s.wall = 5; s.vx = s.vy = 0; fx('mur', { t: 5, t0: 5 }); break;
+        case 'lemieux': s.perfect = 6; fx('lemieux', { t: 1, t0: 1 }); break;
+        case 'nerfs': s.boostT = 3; s.boostM = 1.5; s.immune = 3; fx('nerfs', { t: 3, t0: 3 }); break;
+        case 'boucane': this.smoke = { x: s.x, y: s.y, r: 130, t: 4, t0: 4, team: s.team }; fx('boucane', { t: 4, t0: 4 }); break;
+        case 'chaise': {
+          const list = O.skaters.slice(); const pos = list.map(o => ({ x: o.x, y: o.y }));
+          for (let i = pos.length - 1; i > 0; i--) { const j = Math.floor(this.rand() * (i + 1)); [pos[i], pos[j]] = [pos[j], pos[i]]; }
+          list.forEach((o, i) => { fx('teleport', { t: 0.6, t0: 0.6, x: o.x, y: o.y }); o.x = pos[i].x; o.y = pos[i].y; o.vx = o.vy = 0; this.stunSkater(o, 0.8, 'dizzy'); });
+          fx('chaise', { t: 1.2, t0: 1.2 }); break;
+        }
       }
       this.ev({ type: 'power', s, power: P, x: s.x, y: s.y });
     }

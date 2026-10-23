@@ -127,13 +127,14 @@
     onDblClick(e) {
       if (this.app.paused) return;
       const w = this.worldPos(e), u = this.unitAt(w.x, w.y);
-      if (u && u.owner === this.game.humanId && !u.def.structure) { this.selectSameType(u, e.shiftKey); ZC.Audio.play('select'); }
+      if (u && u.owner === this.game.humanId) { this.selectSameType(u, e.shiftKey); ZC.Audio.play('select'); }
     }
 
+    // Toutes les unités du même type visibles à l'écran ; pour un bunker ou un centre de commandement : tous les bunkers et centres visibles
     selectSameType(u, add) {
-      if (u.def.structure) { this.game.select([u], false); return; }
-      const r = this.renderer;
-      const same = this.game.units.filter(v => v.owner === u.owner && v.type === u.type &&
+      const r = this.renderer, isBunker = (v) => v.def.structure && !v.def.extractor && !v.def.tower;
+      if (u.def.structure && !isBunker(u)) { this.game.select([u], false); return; }
+      const same = this.game.units.filter(v => !v.dead && v.owner === u.owner && (isBunker(u) ? isBunker(v) : v.type === u.type) &&
         v.x >= r.viewX && v.x <= r.viewX + r.vw && v.y >= r.viewY && v.y <= r.viewY + r.vh);
       this.game.select(same.length ? same : [u], add);
     }
@@ -141,9 +142,9 @@
     // Clic droit : ralliement (bunker), construction (dropship), attaque ou déplacement
     smartOrder(w, target) {
       const g = this.game;
-      const b = g.selectedBunker;
-      if (b) {
-        b.rally = { x: w.x, y: w.y };
+      const bs = g.selectedBunkers;
+      if (bs.length) {
+        for (const b of bs) b.rally = { x: w.x, y: w.y };
         this.marker(w.x, w.y, g.human.hex);
         ZC.Audio.play('order');
         return;
@@ -184,13 +185,13 @@
     executeTargeted(w, target) {
       const g = this.game;
       if (this.mode === 'send') {
-        const b = g.selectedBunker;
-        if (!b) return;
-        const troops = g.bunkerTroops(b);
-        if (!troops.length) { ZC.Audio.play('error', 0); this.app.ui.message('Ce bunker n\'a aucune troupe en vie.', '#ff5050'); return; }
+        const bs = g.selectedBunkers;
+        if (!bs.length) return;
+        const troops = [].concat(...bs.map(b => g.bunkerTroops(b)));
+        if (!troops.length) { ZC.Audio.play('error', 0); this.app.ui.message((bs.length > 1 ? 'Ces bunkers n\'ont' : 'Ce bunker n\'a') + ' aucune troupe en vie.', '#ff5050'); return; }
         g.issueOrder(troops, { type: 'attackmove', x: w.x, y: w.y });
         this.marker(w.x, w.y, '#f02020');
-        this.app.ui.message(troops.length + ' unités du bunker envoyées.', g.human.hex);
+        this.app.ui.message(troops.length + ' unités ' + (bs.length > 1 ? 'de ' + bs.length + ' bunkers' : 'du bunker') + ' envoyées.', g.human.hex);
         ZC.Audio.play('order');
         return;
       }
@@ -241,8 +242,8 @@
           break;
         case 'units': this.app.ui.openSub('units'); break;
         case 'back': this.app.ui.openSub(null); break;
-        case 'worker': buy('worker'); break;
-        case 'hero': buy('hero'); break;
+        case 'worker': buy('worker', g.selectedBunker); break;
+        case 'hero': buy('hero', g.selectedBunker); break;
         case 'build':
           if (this.hasDropship()) this.setMode('build');
           break;
@@ -262,17 +263,22 @@
           break;
         }
         case 'dropship':
-          buy('dropship');
+          buy('dropship', g.selectedBunker);
           break;
-        case 'evolve':
-          if (g.selectedBunker) buy('evolve', g.selectedBunker);
+        case 'fortify': case 'evolve': case 'weapons': case 'armor': case 'range': case 'stimResearch': { // sur tous les bunkers sélectionnés
+          const what = cmd === 'stimResearch' ? 'stim' : cmd, bs = g.selectedBunkers;
+          let ok = false;
+          for (const b of bs) if (g.buy(me, what, b)) ok = true;
+          ui.pressButton(cmd, ok);
           break;
-        case 'unload':
-          { const b = g.selectedBunker || g.selectedTower; if (b && g.unloadBunker(b)) ZC.Audio.play('order', 0); }
+        }
+        case 'unload': {
+          const bs = g.selectedBunkers.length ? g.selectedBunkers : g.selectedTower ? [g.selectedTower] : [];
+          let ok = false;
+          for (const b of bs) if (g.unloadBunker(b)) ok = true;
+          if (ok) ZC.Audio.play('order', 0);
           break;
-        case 'weapons': case 'armor': case 'range': case 'stimResearch':
-          if (g.selectedBunker) buy(cmd === 'stimResearch' ? 'stim' : cmd, g.selectedBunker);
-          break;
+        }
       }
     }
 
@@ -290,7 +296,7 @@
         const k = e.code.slice(5);
         if (e.ctrlKey || e.metaKey) {
           // Unités mobiles, ou le bunker sélectionné : au joueur de choisir ce qu'il met sur chaque touche
-          const sel = g.selectedBunker ? [g.selectedBunker] : g.ownSelection.slice();
+          const sel = g.selectedBunkers.length ? g.selectedBunkers.slice() : g.ownSelection.slice();
           g.groups[k] = sel;
           if (sel.length) app.ui.message('Groupe ' + k + ' assigné (' + (g.selectedBunker ? (sel[0].def.hq ? 'centre de commandement' : 'bunker') : sel.length + ' unités') + ')', '#9ad0ff');
         }
@@ -328,6 +334,7 @@
         case 'KeyF': if (bunkerSel && g.selectedBunker.def.hq) this.command('units'); break;
         case 'KeyD': this.command('dropship'); break;
         case 'KeyV': if (bunkerSel) this.command('evolve'); break;
+        case 'KeyQ': if (bunkerSel && !g.selectedBunker.def.hq) this.command('fortify'); break;
         case 'KeyU': if (bunkerSel || g.selectedTower) this.command('unload'); break;
         case 'KeyW': if (bunkerSel) this.command('weapons'); break;
         case 'KeyR': if (bunkerSel) this.command('armor'); else if (workerSel) this.command('repair'); break;

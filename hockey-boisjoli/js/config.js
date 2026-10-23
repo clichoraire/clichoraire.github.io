@@ -16,6 +16,7 @@ window.HK = window.HK || {};
   HK.ROLES = {
     grandpapa: 'Grand-papa', grandmaman: 'Grand-maman', papa: 'Papa', maman: 'Maman',
     mononcle: 'Mononcle', enfant: 'Enfant', toutpetit: 'Tout-petit', ado: 'Ado',
+    coach: 'Coach', ailier: 'Ailier', centre: 'Centre', defenseur: 'Défenseur', gardien: 'Gardien', banc: 'Toujours au banc',
   };
 
   // Pouvoirs spéciaux (un par personnage). cd = recharge en secondes.
@@ -34,6 +35,18 @@ window.HK = window.HK || {};
     blizzard:  { name: 'Blizzard',         icon: '❄️', cd: 20, desc: 'Une tempête ralentit tous les adversaires (et leur gardien) pendant 4 s.' },
     fantome:   { name: 'Fantôme',          icon: '👻', cd: 18, desc: 'Passe à travers tout le monde pendant 4 s, impossible à plaquer.' },
     slap:      { name: 'Lancer frappé d\'ado', icon: '🔥', cd: 16, desc: 'Son prochain tir est une fusée : une chance sur deux de passer à travers le gardien.' },
+    // Les Boys
+    tempsmort: { name: 'Temps d\'arrêt',     icon: '📋', cd: 28, desc: 'Stan siffle : tous les adversaires s\'arrêtent 2 s pour écouter le coach.' },
+    charme:    { name: 'Charme de Bob',     icon: '😎', cd: 18, desc: 'Son sourire fait fondre les adversaires autour : ils restent figés et lui laissent la rondelle.' },
+    deal:      { name: 'Deal du siècle',    icon: '🤝', cd: 20, desc: 'Ti-Guy échange sa place avec le porteur adverse… et garde la rondelle. Belle vente !' },
+    objection: { name: 'Objection !',       icon: '⚖️', cd: 26, desc: 'Maître Taillefer plaide : le porteur adverse écope de 6 s au banc des punitions.' },
+    docteur:   { name: 'Trousse du docteur', icon: '🩺', cd: 24, desc: 'Le chirurgien remet toute son équipe sur pied : énergie à fond et invulnérables 3 s.' },
+    rage:      { name: 'Pétage de coche',   icon: '🤬', cd: 26, desc: 'Julien perd la carte : 3,5 s plus vite, incassable, et tout adversaire qu\'il frappe tombe.' },
+    mur:       { name: 'Mur de Popol',      icon: '🧱', cd: 20, desc: 'Popol devient un mur de 5 s : impossible à bouger, les rondelles rebondissent dessus.' },
+    lemieux:   { name: 'Le 66',             icon: '🏒', cd: 30, desc: 'Comme Mario Lemieux : son prochain tir est imparable.' },
+    nerfs:     { name: 'Crise de nerfs',    icon: '😰', cd: 15, desc: 'Marcel panique : 3 s de vitesse nerveuse, impossible à plaquer.' },
+    boucane:   { name: 'Boucane de Méo',    icon: '🚬', cd: 20, desc: 'Un nuage de fumée de 4 s : les adversaires dedans sont ralentis et ne voient plus rien.' },
+    chaise:    { name: 'Chaise musicale',   icon: '🪑', cd: 24, desc: 'Roger se lève enfin du banc : les adversaires échangent leurs places, tout étourdis.' },
   };
 
   // Personnages : stats de 1 à 5, taille (1 = adulte), apparence.
@@ -84,14 +97,54 @@ window.HK = window.HK || {};
     zachary: { name: 'Zachary', age: 19, role: 'ado', size: 1.05, power: 'slap',
       stats: { speed: 5, shot: 4, force: 2, control: 3 },
       look: { skin: '#f0c8a0', hair: '#1b1b1b', hairStyle: 'fringe', tall: true, earbuds: true } },
+
+    // Les Boys (films de Louis Saia, 1997-2005). Numéros de chandail des films.
+    stan: { name: 'Stan', age: 58, role: 'coach', number: 0, size: 1.0, power: 'tempsmort',
+      stats: { speed: 2, shot: 3, force: 3, control: 3 },
+      look: { skin: '#eec49b', hair: '#8a8a8a', hairStyle: 'cap', hat: '#2a2a2a', mustache: '#6a6a6a', glasses: 'round', belly: true, wrinkles: true } },
+    bob: { name: 'Bob', age: 46, role: 'ailier', number: 9, size: 1.0, power: 'charme',
+      stats: { speed: 3, shot: 3, force: 3, control: 4 },
+      look: { skin: '#f0c8a0', hair: '#4a2f1b', hairStyle: 'wavy', mustache: '#4a2f1b', chain: true, chest: true } },
+    tiguy: { name: 'Ti-Guy', age: 31, role: 'centre', number: 10, size: 0.98, power: 'deal',
+      stats: { speed: 5, shot: 3, force: 2, control: 4 },
+      look: { skin: '#f0c8a0', hair: '#1b1b1b', hairStyle: 'slick', stubble: true, earrings: 'one' } },
+    jeancharles: { name: 'Jean-Charles', age: 52, role: 'defenseur', number: 11, size: 1.04, power: 'objection',
+      stats: { speed: 2, shot: 3, force: 4, control: 3 },
+      look: { skin: '#f3d2b4', hair: '#9a9a9a', hairStyle: 'short', eyebrows: 'bushy', tie: true, tall: true } },
+    francois: { name: 'François', age: 49, role: 'centre', number: 15, size: 0.96, power: 'docteur',
+      stats: { speed: 2, shot: 2, force: 2, control: 4 },
+      look: { skin: '#f3d2b4', hair: '#5a3a22', hairStyle: 'toupee', mustache: '#6b4a2b', lipstick: false } },
+    julien: { name: 'Julien', age: 41, role: 'defenseur', number: 18, size: 1.0, power: 'rage',
+      stats: { speed: 4, shot: 3, force: 4, control: 2 },
+      look: { skin: '#eec49b', hair: '#1b1b1b', hairStyle: 'wild', bandana: '#c0392b', stubble: true, crazyEyes: true } },
+    popol: { name: 'Popol', age: 36, role: 'defenseur', number: 30, size: 1.12, power: 'mur',
+      stats: { speed: 1, shot: 2, force: 5, control: 2 },
+      look: { skin: '#f6d6bd', hair: '#4a2f1b', hairStyle: 'buzz', belly: true, cheeks: true } },
+    mario: { name: 'Mario', age: 39, role: 'centre', number: 66, size: 1.0, power: 'lemieux',
+      stats: { speed: 3, shot: 5, force: 2, control: 3 },
+      look: { skin: '#f0c8a0', hair: '#2b1d12', hairStyle: 'mullet', stubble: true } },
+    marcel: { name: 'Marcel', age: 47, role: 'defenseur', number: 88, size: 0.94, power: 'nerfs',
+      stats: { speed: 3, shot: 2, force: 1, control: 4 },
+      look: { skin: '#f3d2b4', hair: '#6b4a2b', hairStyle: 'bald', glasses: 'round', sweat: true } },
+    meo: { name: 'Méo', age: 56, role: 'ailier', number: 99, size: 1.08, power: 'boucane',
+      stats: { speed: 2, shot: 4, force: 4, control: 2 },
+      look: { skin: '#e8b98f', hair: '#333333', hairStyle: 'slick', sunglasses: true, cigarette: true, belly: true, stubble: true } },
+    roger: { name: 'Roger', age: 50, role: 'banc', number: 7, size: 1.0, power: 'chaise',
+      stats: { speed: 1, shot: 2, force: 2, control: 2 },
+      look: { skin: '#f0c8a0', hair: '#4a2f1b', hairStyle: 'bald', mustache: '#4a2f1b', scarf: '#f2c230' } },
+    fern: { name: 'Fern', age: 51, role: 'gardien', number: 1, size: 1.0, power: 'none',
+      stats: { speed: 2, shot: 1, force: 3, control: 3 },
+      look: { skin: '#f0c8a0', hair: '#6b4a2b', hairStyle: 'curly', glasses: 'round', mustache: '#6b4a2b' } },
   };
 
   // Équipes : les 3 premiers joueurs commencent sur la glace, les autres au banc (changements aux mises au jeu).
   HK.TEAMS = [
-    { id: 'matt', name: 'Les Matt', short: 'MATT', color: '#d9342b', color2: '#ffd166', dark: '#7f1c15', players: ['matthieu', 'josee', 'richard'] },
-    { id: 'bibi', name: 'Les Bibi', short: 'BIBI', color: '#2f6fe0', color2: '#ffffff', dark: '#163a85', players: ['mickael', 'marie', 'mike', 'adam'] },
-    { id: 'jay',  name: 'Les Jay',  short: 'JAY',  color: '#2aa84a', color2: '#f5f5f5', dark: '#145c28', players: ['jeremie', 'jessica', 'diddy'] },
-    { id: 'jo',   name: 'Les Jo',   short: 'JO',   color: '#f2a900', color2: '#1b1b1b', dark: '#8a5f00', players: ['josue', 'zachary', 'emily', 'elliot'] },
+    { id: 'matt', name: 'Les Matt', short: 'MATT', color: '#1e5bd8', color2: '#ffffff', dark: '#0f2f73', players: ['matthieu', 'josee', 'richard'] },
+    { id: 'bibi', name: 'Les Bibi', short: 'BIBI', color: '#af1e2d', color2: '#ffffff', stripe: '#192168', dark: '#192168', players: ['mickael', 'marie', 'mike', 'adam'] },
+    { id: 'jay',  name: 'Les Jay',  short: 'JAY',  color: '#d9342b', color2: '#ffffff', stripe: '#1b1b1b', dark: '#1b1b1b', players: ['jeremie', 'jessica', 'diddy'] },
+    { id: 'jo',   name: 'Les Jo',   short: 'JO',   color: '#1f9d4a', color2: '#ffffff', dark: '#0f5a2a', players: ['josue', 'zachary', 'emily', 'elliot'] },
+    { id: 'boys', name: 'Les Boys', short: 'BOYS', initial: 'LB', color: '#161616', color2: '#f2c230', accent: '#f2c230', dark: '#2e2e2e', goalie: 'fern',
+      players: ['bob', 'tiguy', 'julien', 'meo', 'mario', 'jeancharles', 'popol', 'francois', 'marcel', 'stan', 'roger'] },
   ];
   HK.teamById = id => HK.TEAMS.find(t => t.id === id);
 

@@ -128,6 +128,50 @@
     return (cache[key] = cv);
   }
 
+  ZC.planetSprite = planetSprite;
+  const thumbs = {};
+  // Vignette (data URL) d'une planète pour les onglets des mondes
+  ZC.planetThumb = function (race, d) {
+    const key = race + ':' + d;
+    if (!thumbs[key]) thumbs[key] = planetSprite(race, d).toDataURL();
+    return thumbs[key];
+  };
+
+  // Paysage d'une mission : un coin de terrain du monde (vrai générateur de carte), l'avant-poste ennemi et nos troupes
+  const terrains = {};
+  ZC.drawMissionScene = function (canvas, m, w, W, H) {
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d'), st = m.settings, tileset = st.tileset || w.tileset;
+    if (!terrains[tileset]) terrains[tileset] = ZC.buildTerrain(new ZC.GameMap(2, 2), tileset, 4242);
+    const ter = terrains[tileset], Z = ZC.ZONE_PX, sc = 0.9, sw = W / sc, sh = H / sc;
+    const rnd = ZC.seededRandom(97 + m.index * 31 + w.id.charCodeAt(1) * 7);
+    // fenêtre autour du centre de la zone en haut à gauche, décalée au hasard
+    const sx = Z / 2 - sw * 0.45 + rnd() * 16, sy = Z / 2 - sh * 0.5 + rnd() * 12;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(ter, sx, sy, sw, sh, 0, 0, W, H);
+    ctx.imageSmoothingEnabled = true;
+    ctx.save(); ctx.scale(sc, sc); ctx.translate(-sx, -sy);
+    const race = ZC.RACES[w.race], enemy = '#f04040', me = '#5a9ad8';
+    const unit = (type, color, x, y, facing) => { ctx.save(); ctx.translate(x, y); ctx.rotate(facing); ZC.drawUnitSprite(ctx, type, color, 0, false, 0, 0, null, facing); ctx.restore(); };
+    const o = m.objective;
+    if (st.invasion) { // survie : pas de base ennemie, une nuée qui arrive par la droite
+      unit('bunker', me, Z / 2 - 60, Z / 2 - 5, 0);
+      for (let k = 0; k < 6; k++) unit(k % 3 === 2 ? race.l2 : race.l1, enemy, Z / 2 + 40 + rnd() * 70, Z / 2 - 55 + rnd() * 105, Math.PI);
+      for (let k = 0; k < 3; k++) unit('marine', me, Z / 2 - 20 + rnd() * 16, Z / 2 - 40 + k * 32, 0);
+    } else {
+      unit(o.type === 'rounds' ? 'bunker' : m.index >= 6 ? 'hq' : 'bunker', enemy, Z / 2 + 35, Z / 2 - 15, 0);
+      const n = 2 + Math.min(4, Math.floor(m.index / 3));
+      for (let k = 0; k < n; k++) unit(k % 2 && m.index > 4 ? race.l2 : race.l1, enemy, Z / 2 + 5 + rnd() * 95, Z / 2 + 15 + rnd() * 35, Math.PI);
+      for (let k = 0; k < 3; k++) unit(k === 1 && m.index > 2 ? 'exomarine' : 'marine', me, Z / 2 - 92 + rnd() * 14, Z / 2 - 42 + k * 30, 0);
+      if (st.teams) unit('marine', '#ffd040', Z / 2 - 85, Z / 2 + 52, 0);
+    }
+    ctx.restore();
+    // vignettage
+    const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.75);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  };
+
   // Fond complet : étoiles, nébuleuse colorée et planète en bas à droite
   ZC.drawPlanetBackground = function (canvas, world, W, H) {
     canvas.width = W; canvas.height = H;

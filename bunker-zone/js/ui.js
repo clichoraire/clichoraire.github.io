@@ -13,6 +13,7 @@
   // Minerai vert fluo (la monnaie)
   const ICON_MINERAL = '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M3 13 L6 4 L9 8 L11 3 L14 13 Z" fill="#39ff14" stroke="#0f5a0a" stroke-width="1"/><path d="M6 4 L7.5 9 L9 8 Z" fill="#d8ffd0"/></svg>';
   ZC.ICON_MINERAL = ICON_MINERAL;
+  const ICON_WORKER = '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 14 L8 8" stroke="#c8a060" stroke-width="2" stroke-linecap="round"/><path d="M5 3 C8 1.5 12 2.5 14 6" fill="none" stroke="#ffd040" stroke-width="2.2" stroke-linecap="round"/><path d="M7 5 L12 10" stroke="#2a3a50" stroke-width="1.2"/></svg>';
   const ICON_SUPPLY = '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 14 L2 8 L8 3 L14 8 L14 14 Z" fill="#8fa7c7" stroke="#2a3a50" stroke-width="1"/><rect x="6.5" y="9" width="3" height="5" fill="#2a3a50"/></svg>';
 
 
@@ -35,6 +36,7 @@
     stimResearch: svg('<path d="M18 3l3 3M16 5l3 3M13 8L5 16l-1 4 4-1 8-8M9 12l3 3M17 4l-4 4 3 3 4-4"/>', '#ffb347'),
     send: svg('<path d="M3 7h12M11 3l4 4-4 4M3 12h7M3 17h12M11 13l4 4-4 4"/>', '#ff8a8a'),
     evolve: svg('<path d="M6 13l6-6 6 6M6 20l6-6 6 6"/>', '#ffd040'),
+    fortify: svg('<path d="M3 21V10l4-3v3l5-4 5 4v-3l4 3v11H3z"/><path d="M10 21v-5h4v5"/><path d="M12 2v4"/>', '#ffd040'),
     unload: svg('<path d="M12 3v10M8 9l4 4 4-4"/><path d="M4 21h16M4 16v5M20 16v5"/>', '#c8d4e8'),
     units: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', '#eef3ff'),
     worker: svg('<path d="M3 21l9-9"/><path d="M8 5c4-2 9 0 11 4"/><path d="M10 7l7 7"/>', '#ffd040'),
@@ -101,6 +103,7 @@
           <div id="resources">
             <span class="res mineral">${ICON_MINERAL}<span id="st-minerals">0</span></span>
             <span class="res">${ICON_SUPPLY}<span id="st-supply">0/0</span></span>
+            <span class="res" id="res-workers">${ICON_WORKER}<span id="st-workers">0/0</span></span>
           </div>
         </div>
         <div id="leaderboard"><div class="lb-title" id="lb-title">Zones contrôlées</div><div id="lb-rows"></div></div>
@@ -113,7 +116,7 @@
         </div>`;
       const q = (s) => this.hud.querySelector(s);
       this.el = {
-        zones: q('#st-zones'), units: q('#st-units'), supply: q('#st-supply'), kills: q('#st-kills'), time: q('#st-time'),
+        zones: q('#st-zones'), units: q('#st-units'), supply: q('#st-supply'), workers: q('#st-workers'), kills: q('#st-kills'), time: q('#st-time'),
         minerals: q('#st-minerals'), bunkers: q('#st-bunkers'),
         roundName: q('#round-name'), roundTimer: q('#round-timer'), lb: q('#leaderboard'), lbRows: q('#lb-rows'), lbTitle: q('#lb-title'),
         messages: q('#messages'), announce: q('#announce'), announceMain: q('#announce-main'), announceSub: q('#announce-sub'),
@@ -208,8 +211,8 @@
         const tw = g.selectedTower;
         html = (tw.garrison.length ? this.cardButton('unload', '⇩', 'U', 'Faire descendre la garnison (' + tw.garrison.length + ' unités)') : e) + e + e + e + e + e + e + e + e;
       } else if (kind === 'hqUnits') { // carte « Unités » du centre de commandement
-        const wk = ZC.UNITS[ZC.RACES[me.race].worker], wc = g.workerCost(me.id), wn = g.workers(me.id).length + g.workersQueued(me.id), cap = wn >= ZC.WORKER.max;
-        const worker = this.cardButton('worker', '⚒', 'W', wk.name + ' (' + wn + '/' + ZC.WORKER.max + ') : récolte le minerai des gisements et répare les bunkers — ' + Math.round(g.workerTime(me.id)) + ' s de production', wc, cap || me.minerals < wc);
+        const wk = ZC.UNITS[ZC.RACES[me.race].worker], wc = g.workerCost(me.id), wn = g.workers(me.id).length + g.workersQueued(me.id), wmax = g.workerCap(me.id), cap = wn >= wmax;
+        const worker = this.cardButton('worker', '⚒', 'W', wk.name + ' (' + wn + '/' + wmax + ', ' + ZC.WORKER.perBunker + ' par bunker) : récolte le minerai des gisements et répare les bunkers — ' + Math.round(g.workerTime(me.id)) + ' s de production', wc, cap || me.minerals < wc);
         let hero = e;
         if (g.campaign && g.hero) {
           const h = g.hero, can = g.canReviveHero(me.id), hc = g.heroReviveCost(me.id);
@@ -219,16 +222,18 @@
       } else if (kind === 'dropship') {
         html = this.cardButton('move', '➜', 'M', 'Déplacer') + this.cardButton('stop', '■', 'S', 'Stop') + this.cardButton('build', '⌂', 'B', 'Construire un bunker sur une zone libre') + e + e + e + e + e + e;
       } else if (kind === 'bunker') {
-        const b = g.selectedBunker;
+        const b = g.selectedBunker, nb = g.selectedBunkers.length, multi = nb > 1 ? ' — ' + nb + ' bunkers sélectionnés' : '';
         const up = (k, ico) => {
           const d = ZC.UPGRADES[k], lvl = g.pendingLevel(b, k), cost = g.upgradeCost(b, k);
           const maxed = cost < 0;
-          return this.cardButton(k === 'stim' ? 'stimResearch' : k, ico, d.hotkey, d.name + (maxed ? ' (max)' : ' niveau ' + (lvl + 1) + ' — recherche ' + Math.round(d.time(lvl)) + ' s') + ' — ' + d.desc + ' (unités de ce bunker uniquement)', maxed ? 0 : cost, maxed || me.minerals < cost, { done: b.up[k], queued: lvl - b.up[k], max: d.max });
+          return this.cardButton(k === 'stim' ? 'stimResearch' : k, ico, d.hotkey, d.name + (maxed ? ' (max)' : ' niveau ' + (lvl + 1) + ' — recherche ' + Math.round(d.time(lvl)) + ' s') + ' — ' + d.desc + ' (unités de ce bunker uniquement)' + multi, maxed ? 0 : cost, maxed || me.minerals < cost, { done: b.up[k], queued: lvl - b.up[k], max: d.max });
         };
-        const drop = b.def.hq ? this.cardButton('dropship', '✈', 'D', 'Dropship : construit un bunker sur une zone libre (' + Math.round(g.dropshipBuildTime(me.id)) + ' s de production)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id)) : e;
+        const ft = ZC.UPGRADES.fortify, ftCost = g.upgradeCost(b, 'fortify');
+        const drop = b.def.hq ? this.cardButton('dropship', '✈', 'D', 'Dropship : construit un bunker sur une zone libre (' + Math.round(g.dropshipBuildTime(me.id)) + ' s de production)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id))
+          : this.cardButton('fortify', '⌂', ft.hotkey, ft.name + ' (' + ft.time() + ' s) : ' + ft.desc, ftCost < 0 ? 0 : ftCost, ftCost < 0 || me.minerals < ftCost, { done: b.up.fortify, queued: g.pendingLevel(b, 'fortify') - b.up.fortify, max: 1 });
         const ev = ZC.UPGRADES.evolve, evCost = g.upgradeCost(b, 'evolve'), can = g.canEvolve(b);
         const l2 = ZC.UNITS[ZC.UNITS[g.spawnTypeFor(me)].evolvesTo || g.spawnTypeFor(me)];
-        const evolve = this.cardButton('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires), evCost < 0 ? 0 : evCost, evCost < 0 || !can || me.minerals < evCost, { done: b.up.evolve, queued: g.pendingLevel(b, 'evolve') - b.up.evolve, max: 1 });
+        const evolve = this.cardButton('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires + ' (terminées ou en file)'), evCost < 0 ? 0 : evCost, evCost < 0 || !can || me.minerals < evCost, { done: b.up.evolve, queued: g.pendingLevel(b, 'evolve') - b.up.evolve, max: 1 });
         const unload = b.garrison.length ? this.cardButton('unload', '⇩', 'U', 'Décharger la garnison (' + b.garrison.length + ' unités)') : e;
         const units = b.def.hq ? this.cardButton('units', '⚒', 'F', 'Unités spéciales : travailleurs' + (g.campaign ? ' et résurrection du héros' : '')) : e;
         html = drop + up('weapons', '✦') + up('armor', '⛨') + up('range', '⟶') + up('stim', '⚡') +
@@ -262,6 +267,10 @@
         const cap = g.supplyCap(me.id);
         this.txt(this.el.supply, Math.round(me.supply) + '/' + cap);
         this.el.supply.parentNode.classList.toggle('maxed', me.supply >= cap);
+        const wn = g.workers(me.id).length, wq = g.workersQueued(me.id), wc = g.workerCap(me.id);
+        this.txt(this.el.workers, wn + (wq ? '+' + wq : '') + '/' + wc);
+        this.el.workers.parentNode.classList.toggle('maxed', wn + wq >= wc);
+        this.el.workers.parentNode.title = 'Travailleurs : ' + wn + ' sur ' + wc + (wq ? ' (' + wq + ' en production)' : '') + ' — ' + ZC.WORKER.perBunker + ' par bunker, ' + ZC.WORKER.max + ' au plus';
         this.el.supply.parentNode.title = 'Supply : ' + Math.round(me.supply) + ' sur ' + cap + ' (' + s.supplyBase + ' + ' + s.supplyPerBunker + ' par bunker, max ' + s.unitCap + ')';
         this.txt(this.el.kills, String(me.kills));
         this.txt(this.el.minerals, String(Math.floor(me.minerals)));
@@ -284,8 +293,8 @@
       } else if (g.campaign) {
         const m = this.app.campaign.mission(g.campaign.mission), o = g.campaign.objective;
         this.txt(this.el.roundName, adm + m.name.toUpperCase() + diff);
-        const alive = g.players.filter(p => p.alive && !p.isHuman).length;
-        this.txt(this.el.roundTimer, (o.type === 'survive' ? 'Tenir encore ' + ZC.formatTime(Math.max(0, o.time - g.time)) : 'Chefs de guerre restants : ' + alive) + (s.invasion ? '  ·  Assaut par le ' + (g.nextInvasion ? g.nextInvasion.sideName : '?') + ' dans ' + Math.ceil(g.invasionT) + ' s (vague ' + (g.invasionCount + 1) + ')' : '') + '  ·  Vague dans ' + Math.ceil(g.spawnTimer) + ' s');
+        const alive = g.players.filter(p => p.alive && !p.isHuman && !p.invader && !g.allied(p.id, g.humanId)).length; // les alliés ne comptent pas
+        this.txt(this.el.roundTimer, this.objectiveStatus(g, o, alive) + (s.invasion ? '  ·  Assaut par le ' + (g.nextInvasion ? g.nextInvasion.sideName : '?') + ' dans ' + Math.ceil(g.invasionT) + ' s (vague ' + (g.invasionCount + 1) + ')' : '') + '  ·  Vague dans ' + Math.ceil(g.spawnTimer) + ' s');
       } else {
         this.txt(this.el.roundName, adm + 'BUNKER ZONE' + diff);
         this.txt(this.el.roundTimer, 'Prochaine vague (' + ru.name + ') dans ' + Math.ceil(g.spawnTimer) + ' s');
@@ -298,7 +307,11 @@
         const tour = g.isTournament;
         const rows = tour ? g.standings() : g.players.slice().sort((a, b) => b.zones - a.zones || b.unitCount - a.unitCount);
         this.txt(this.el.lbTitle, tour ? 'Rounds gagnés · zones' : 'Zones contrôlées');
-        this.el.lbRows.innerHTML = rows.map(p => '<div class="lb-row' + (p.alive ? '' : ' dead') + '" style="color:' + p.hex + '"><span class="sw" style="background:' + p.hex + '"></span><span class="nm">' + esc(p.name) + '</span>' + (tour ? '<span class="rw">' + '★'.repeat(p.roundsWon) + '</span>' : '') + '<span class="zn">' + p.zones + '</span><span class="un">' + p.unitCount + '</span></div>').join('');
+        const row = (p) => '<div class="lb-row' + (p.alive ? '' : ' dead') + '" style="color:' + p.hex + '"><span class="sw" style="background:' + p.hex + '"></span><span class="nm">' + esc(p.name) + '</span>' + (tour ? '<span class="rw">' + '★'.repeat(p.roundsWon) + '</span>' : '') + '<span class="zn">' + p.zones + '</span><span class="un">' + p.unitCount + '</span></div>';
+        const teams = !tour && g.players.some(p => p.id !== g.humanId && !p.invader && g.allied(p.id, g.humanId));
+        this.el.lbRows.innerHTML = teams
+          ? '<div class="lb-grp ally">Alliés</div>' + rows.filter(p => g.allied(p.id, g.humanId)).map(row).join('') + '<div class="lb-grp enemy">Ennemis</div>' + rows.filter(p => !g.allied(p.id, g.humanId)).map(row).join('')
+          : rows.map(row).join('');
       }
 
       if (this.msgs.length) {
@@ -334,6 +347,18 @@
       if (g.selection.length === 1) this.drawPortrait(g.selection[0]);
     }
 
+    // Ligne d'état de l'objectif de mission dans la barre du haut
+    objectiveStatus(g, o, alive) {
+      const me = g.human;
+      if (o.type === 'survive') return 'Tenir encore ' + ZC.formatTime(Math.max(0, o.time - g.time));
+      if (o.type === 'zones') {
+        const best = g.players.filter(p => p.alive && !p.isHuman && !p.invader && !g.allied(p.id, g.humanId)).sort((a, b) => b.zones - a.zones)[0];
+        return 'Vos zones : ' + me.zones + ' / ' + o.count + (best ? '  ·  Meilleur ennemi (' + best.name + ') : ' + best.zones + ' / ' + o.count : '');
+      }
+      if (o.type === 'conquer') return 'Chefs de guerre restants : ' + alive + '  ·  Zones occupées : ' + me.zones + ' / ' + g.map.zones.length;
+      return 'Chefs de guerre restants : ' + alive;
+    }
+
     selectionKind() {
       const g = this.app.game;
       if (g.selectedBunker) return this.sub === 'units' && g.selectedBunker.def.hq ? 'hqUnits' : 'bunker';
@@ -353,7 +378,7 @@
         let extra = '';
         if (u.def.tower) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">' + (u.def.manned ? 'Tour habitée : clic droit avec des soldats pour y monter (' + u.def.capacity + ' places, portée +' + u.def.rangeBonus + ' cases) · U faire descendre' : 'Tourelle autonome · portée ' + (u.def.range / ZC.TILE) + ' cases · dégâts ' + u.def.dmg) + '</div>';
         else if (u.def.extractor) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s du gisement, directement dans votre banque</div>';
-        else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : '') + 'W/R/E/T améliorations · V évolution · G envoyer les troupes · U décharger la garnison</div>';
+        else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : 'Q centre de commandement · ') + 'W/R/E/T améliorations · V évolution · G envoyer les troupes · U décharger la garnison</div>';
         else if (u.def.worker) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Clic droit sur un gisement vert : récolter (G) · clic droit sur un bunker allié abîmé : réparer (R, ' + ZC.REPAIR.costPerSec + ' minerais/s)</div>';
         else if (u.type === 'dropship') extra = '<div class="line sub">Clic droit sur une zone libre : construire un bunker (' + g.settings.landingTime + ' s)</div>';
         else extra = '<div class="line sub">' + (u.def.level ? 'Niveau ' + u.def.level + ' · ' : '') + 'Dégâts ' + u.damage + (u.def.hits > 1 ? ' x' + u.def.hits : '') + ' (' + u.def.dtype + ') · Armure ' + u.armor + ' · Portée ' + (u.def.range ? (u.range / ZC.TILE) : 'mêlée') + (u.home && u.home.zone ? ' · Bunker ' + (u.home.zone.ix + 1) + '-' + (u.home.zone.iy + 1) : '') + '</div><div class="line sub" id="u-kills"></div>' + (u.canGarrison ? '<div class="line sub">Clic droit sur un bunker allié : entrer en garnison</div>' : '');
@@ -379,7 +404,7 @@
         html += '<div class="icon" data-i="' + i + '" title="' + esc(u.def.name) + '"><canvas width="34" height="34"></canvas><div class="ibar"><div class="ifill"></div></div></div>';
       });
       if (sel.length > max) html += '<div class="more">+' + (sel.length - max) + '</div>';
-      html += '</div><div class="multi-count">' + sel.length + ' unités</div>';
+      html += '</div><div class="multi-count">' + sel.length + (g.selectedBunkers.length ? ' bunkers — les commandes s\'appliquent à tous' : ' unités') + '</div>';
       info.innerHTML = html;
       const icons = info.querySelectorAll('.icon');
       icons.forEach((ic, i) => {
@@ -405,7 +430,7 @@
         else if (k && u.def.worker) k.textContent = (u.order.type === 'gather' ? (u.slot ? 'Récolte en cours' : u.carry >= ZC.MINERALS.carry ? 'Rapporte ' + u.carry + ' minerais' : 'En route vers le gisement') : u.order.type === 'repair' ? 'Réparation' + (u.repairing ? ' en cours (' + ZC.REPAIR.costPerSec + ' minerais/s)' : '') : 'Inactif') + (u.carry > 0 && u.order.type !== 'gather' ? ' · transporte ' + u.carry + ' minerais' : '');
         else if (k) k.textContent = (u.def.hero ? 'Héros · Niveau ' + u.heroLevel + ' · ' + Math.floor(u.xp) + ' XP' + (u.heroLevel < ZC.HERO_MAX_LEVEL ? ' / ' + ZC.heroXpFor(u.heroLevel + 1) : '') + ' · ' : '') + 'Kills : ' + u.kills + (u.stimT > 0 ? ' · Stimulé (' + Math.ceil(u.stimT) + ' s)' : '');
         const ex = info.querySelector('#u-extra');
-        if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + ZC.WORKER.max + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
+        if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + g.workerCap(u.owner) + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
         const upl = info.querySelector('#u-up');
         if (upl) upl.textContent = (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.stim ? ' · Stimpack' : '');
         // Files d'attente en icônes : le premier élément porte sa barre de progression, les suivants attendent
@@ -483,7 +508,7 @@
           <canvas id="adv-planet"></canvas>
           <div class="adv-top">
             <div class="adv-title" id="adv-title">AVENTURE</div>
-            <div class="adv-points">★ <b id="adv-points">0</b> points</div>
+            <div class="adv-points">★ <b id="adv-points">0</b> points <span class="adv-stats" id="adv-stats"></span></div>
             <div class="adv-btns"><button id="btn-shop">Boutique</button><button id="btn-heroes">Héros</button><button id="btn-adv-back">Retour</button></div>
           </div>
           <div class="adv-worlds" id="adv-worlds"></div>
@@ -491,7 +516,6 @@
           <div id="adv-strip"><div id="adv-cards"></div></div>
           <div id="adv-info"></div>
           <div class="adv-races" id="adv-races"></div>
-          <div class="adv-foot" id="adv-foot">Cliquez sur une mission. Chaque difficulté réussie rapporte ses propres points : refaire une mission en plus difficile est conseillé.</div>
         </div>
         <div id="menu-mission" class="menu hidden">
           <h1 id="mis-title"></h1>
@@ -612,7 +636,7 @@
         <label>Supply par bunker<select name="supplyPerBunker">${opt([10, 15, 20, 30, 50], ['+10', '+15', '+20', '+30', '+50'], s.supplyPerBunker)}</select></label>
         <label>Revenu par bunker / vague<select name="incomePerBunker">${opt([0, 2, 3, 5], ['Aucun (kills seulement)', '2 minerais', '3 minerais', '5 minerais'], s.incomePerBunker)}</select></label>
         <label>Coût d'un dropship<select name="dropshipCost">${opt([100, 150, 250], null, s.dropshipCost)}</select></label>
-        <label>Temps d'atterrissage<select name="landingTime">${opt([2, 3, 5], ['2 s', '3 s', '5 s'], s.landingTime)}</select></label>
+        <label>Temps d'atterrissage<select name="landingTime">${opt([3, 6, 10], ['3 s (rapide)', '6 s', '10 s (lent)'], s.landingTime)}</select></label>
         <label>Durée d'un round (évolution)<select name="roundDuration">${opt([60, 100, 150, 240], ['1:00', '1:40', '2:30', '4:00'], s.roundDuration)}</select></label>
         <label>Gisements de minerai<select name="mineralZones">${opt([0, 0.2, 0.4, 0.7], ['Aucun (zones de départ non plus)', 'Rares', 'Normaux', 'Abondants'], s.mineralZones)}</select></label>
         <label>Travailleurs au départ<select name="startWorkers">${opt([0, 2, 4], ['0', '2', '4'], s.startWorkers)}</select></label>
@@ -656,9 +680,9 @@
       // onglets des mondes
       q('#adv-worlds').innerHTML = ZC.WORLDS.map((ww, i) => {
         const unl = c.worldUnlocked(ww.id), p = c.worldPoints(ww.id);
-        return '<button class="world' + (ww.id === w.id ? ' sel' : '') + (unl ? '' : ' locked') + '" data-id="' + ww.id + '" style="--wc:' + ww.color + '"><b>' + (unl ? 'Monde ' + (i + 1) : '🔒 Monde ' + (i + 1)) + '</b><span>' + esc(ww.name) + '</span><small>' + esc(ZC.RACES[ww.race].name) + ' · ' + p.earned + ' / ' + p.total + ' ★</small></button>';
+        return '<button class="world' + (ww.id === w.id ? ' sel' : '') + (unl ? '' : ' locked') + '" data-id="' + ww.id + '" style="--wc:' + ww.color + ';background-image:url(' + ZC.planetThumb(ww.race, 120) + ')"' + (unl ? '' : ' title="Monde verrouillé : terminez les ' + ZC.SCENARIOS.length + ' missions du monde précédent (dans n\'importe quelle difficulté)."') + '><b>' + (unl ? 'Monde ' + (i + 1) : '🔒 Monde ' + (i + 1)) + '</b><span>' + esc(ww.name) + '</span><small>' + esc(ZC.RACES[ww.race].name) + ' · ' + p.earned + ' / ' + p.total + ' ★</small></button>';
       }).join('');
-      q('#adv-worlds').querySelectorAll('.world').forEach(b => b.addEventListener('click', () => { if (c.worldUnlocked(b.dataset.id)) this.showCampaign(b.dataset.id); else { ZC.Audio.play('error', 0); q('#adv-foot').textContent = 'Monde verrouillé : terminez les 13 missions du monde précédent (dans n\'importe quelle difficulté).'; } }));
+      q('#adv-worlds').querySelectorAll('.world').forEach(b => b.addEventListener('click', () => { if (c.worldUnlocked(b.dataset.id)) this.showCampaign(b.dataset.id); else ZC.Audio.play('error', 0); }));
       q('#adv-desc').textContent = w.desc + ' Ennemis : ' + ZC.RACES[w.race].name.toLowerCase() + '.';
       // planète du monde en fond (redessinée si la taille de l'écran change)
       this.drawAdvPlanet(w);
@@ -668,14 +692,21 @@
       cards.innerHTML = ms.map((m, i) => {
         const unlocked = c.unlocked(m.id), done = c.completed(m.id), st = m.settings, o = m.objective;
         const pips = ['easy', 'medium', 'hard'].map(d => '<span class="pip ' + d + (c.done(m.id, d) ? ' on' : '') + '" title="' + ZC.DIFFICULTIES[d].label + ' : ' + m.points[d] + ' points"></span>').join('');
-        const kind = o.type === 'survive' ? 'Survie · ' + ZC.formatTime(o.time) : o.type === 'rounds' ? 'Tournoi · ' + o.wins + ' rounds' : st.teams ? 'Équipes' : st.mode === 'evolution' ? 'Évolution' : 'Élimination';
+        const kind = ZC.objectiveKind(o, st);
         const earned = ['easy', 'medium', 'hard'].reduce((t, d) => t + (c.done(m.id, d) ? m.points[d] : 0), 0), total = m.points.easy + m.points.medium + m.points.hard;
         return '<div class="mcard' + (unlocked ? '' : ' locked') + (done ? ' done' : '') + '" data-id="' + m.id + '" style="--wc:' + w.color + '">' +
           '<div class="mc-top"><span class="mc-num">' + (unlocked ? i + 1 : '🔒') + '</span><span class="mc-kind">' + kind + '</span></div>' +
-          this.missionPreview(m, w) +
+          '<div class="mc-scene"><canvas class="mc-land" width="208" height="120"></canvas>' + this.missionPreview(m, w) + '</div>' +
           '<div class="mc-name">' + esc(m.name) + '</div>' +
           '<div class="mc-foot"><span class="pips">' + pips + '</span><span class="mc-pts">' + earned + ' / ' + total + ' ★</span></div></div>';
       }).join('');
+      const drawScenes = () => cards.querySelectorAll('.mcard').forEach(n => ZC.drawMissionScene(n.querySelector('.mc-land'), c.mission(n.dataset.id), w, 208, 120));
+      drawScenes();
+      if (!ZC.spriteIsImage('marine')) { // planche de sprites pas encore chargée : on redessine quand elle arrive
+        clearTimeout(this._sceneT);
+        const retry = (n) => { this._sceneT = setTimeout(() => { if (this.m.campaign.classList.contains('hidden')) return; if (ZC.spriteIsImage('marine')) drawScenes(); else if (n > 0) retry(n - 1); }, 400); };
+        retry(25);
+      }
       const strip = q('#adv-strip');
       if (!strip.dataset.wheel) { strip.dataset.wheel = '1'; strip.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { strip.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); }
       const select = (m, scroll) => {
@@ -696,8 +727,8 @@
       const prev = this.advSel && ms.find(m => m.id === this.advSel);
       select(prev || ms.find(m => c.unlocked(m.id) && !c.completed(m.id)) || ms.filter(m => c.unlocked(m.id)).pop() || ms[0], true);
       // races : seule la race humaine est jouable dans l'aventure
-      q('#adv-races').innerHTML = '<span class="rl">Votre race :</span>' + Object.keys(ZC.RACES).map(k => '<span class="race' + (k === ZC.ADVENTURE_RACE ? ' sel' : ' locked') + '" title="' + esc(ZC.RACES[k].desc) + '">' + (k === ZC.ADVENTURE_RACE ? '✓ ' : '🔒 ') + esc(ZC.RACES[k].name) + '</span>').join('') + '<small>Les autres races se débloqueront dans une prochaine version de l\'aventure ; elles sont jouables en partie simple.</small>';
-      q('#adv-foot').textContent = 'Monde ' + (wi + 1) + ' : ' + wp.earned + ' / ' + wp.total + ' ★ · Total : ' + c.data.earned + ' / ' + c.totalPoints() + ' ★. Chaque difficulté réussie rapporte ses propres points : refaire une mission en plus difficile est conseillé.';
+      q('#adv-races').innerHTML = '<span class="rl">Votre race :</span>' + Object.keys(ZC.RACES).map(k => '<span class="race' + (k === ZC.ADVENTURE_RACE ? ' sel' : ' locked') + '" title="' + esc(ZC.RACES[k].desc) + '">' + (k === ZC.ADVENTURE_RACE ? '✓ ' : '🔒 ') + esc(ZC.RACES[k].name) + '</span>').join('');
+      q('#adv-stats').textContent = '· Monde ' + (wi + 1) + ' : ' + wp.earned + ' / ' + wp.total + ' ★ · Total : ' + c.data.earned + ' / ' + c.totalPoints() + ' ★';
       this.m.campaign.classList.remove('hidden');
     }
 
@@ -721,6 +752,12 @@
       const cx = Math.floor(zx / 2), cy = Math.floor(zy / 2);
       if (zx * zy > 1 && zx % 2 && zy % 2) s += rect(cx, cy, 'rgba(255,208,64,0.55)');  // zone centrale (x2)
       const me = st.humanStart === 'center' ? [cx, cy] : [0, zy - 1];
+      if (st.extraZones) { // zones d'avance : bloc compact autour du départ (même ordre que le jeu)
+        const ring = [];
+        for (let y = 0; y < zy; y++) for (let x = 0; x < zx; x++) if (x !== me[0] || y !== me[1]) ring.push([x, y]);
+        ring.sort((a, b) => Math.max(Math.abs(a[0] - me[0]), Math.abs(a[1] - me[1])) - Math.max(Math.abs(b[0] - me[0]), Math.abs(b[1] - me[1])) || (Math.abs(a[0] - me[0]) + Math.abs(a[1] - me[1])) - (Math.abs(b[0] - me[0]) + Math.abs(b[1] - me[1])));
+        for (const [x, y] of ring.slice(0, st.extraZones)) s += rect(x, y, 'rgba(90,154,216,0.55)');
+      }
       s += rect(me[0], me[1], '#5a9ad8');  // le joueur en bleu
       const allies = st.teams ? st.teams.filter(t => t === 0).length - 1 : 0, enemies = st.aiCount - allies;
       const corners = [[zx - 1, 0], [zx - 1, zy - 1], [0, 0], [cx, 0], [cx, zy - 1], [0, cy], [zx - 1, cy]].filter(p => !(p[0] === me[0] && p[1] === me[1]));
@@ -734,7 +771,7 @@
     renderAdvInfo(m, w) {
       const c = this.app.campaign, q = (s) => this.menus.querySelector(s), unlocked = c.unlocked(m.id);
       const o = m.objective, st = m.settings, allies = st.teams ? st.teams.filter(t => t === 0).length - 1 : 0, enemies = st.aiCount - allies;
-      const obj = o.type === 'survive' ? 'tenir ' + ZC.formatTime(o.time) : o.type === 'rounds' ? 'remporter ' + o.wins + ' rounds' : 'éliminer tous les chefs de guerre';
+      const obj = ZC.objectiveText(o);
       const diffs = ['easy', 'medium', 'hard'].map(d => '<span class="ai-diff' + (c.done(m.id, d) ? ' on' : '') + '"><span class="pip ' + d + (c.done(m.id, d) ? ' on' : '') + '"></span>' + ZC.DIFFICULTIES[d].label + ' · ' + m.points[d] + ' ★' + (c.done(m.id, d) ? ' ✓' : '') + '</span>').join('');
       q('#adv-info').innerHTML = '<div class="ai-head"><span class="ai-title" style="color:' + w.color + '">Mission ' + (m.index + 1) + ' — ' + esc(m.name) + '</span>' +
         (unlocked ? '<button id="adv-play">Jouer la mission ▸</button>' : '<span class="ai-lock">🔒 Terminez la mission précédente</span>') + '</div>' +
@@ -753,7 +790,7 @@
       q('#mis-brief').textContent = m.brief;
       const o = m.objective;
       const st = m.settings, allies = st.teams ? st.teams.filter(t => t === 0).length - 1 : 0;
-      q('#mis-obj').textContent = 'Objectif : ' + (o.type === 'survive' ? 'tenir ' + ZC.formatTime(o.time) : o.type === 'rounds' ? 'remporter ' + o.wins + ' rounds' : 'éliminer tous les chefs de guerre') + ' · Carte ' + st.mapZones + 'x' + (st.mapZonesY || st.mapZones) + ' · ' + (st.aiCount - allies) + ' IA ennemie' + (st.aiCount - allies > 1 ? 's' : '') + (allies ? ' + ' + allies + ' allié' + (allies > 1 ? 's' : '') : '') + ' (une ennemie de plus en difficile)' + (st.mode === 'evolution' ? ' · mode évolution' : st.mode === 'rounds' ? ' · tournoi' : '') + (st.humanStart === 'center' ? ' · départ au centre' : '') + (st.extraZones ? ' · ' + st.extraZones + ' zones d\'avance' : '');
+      q('#mis-obj').textContent = 'Objectif : ' + ZC.objectiveText(o) + ' · Carte ' + st.mapZones + 'x' + (st.mapZonesY || st.mapZones) + ' · ' + (st.aiCount - allies) + ' IA ennemie' + (st.aiCount - allies > 1 ? 's' : '') + (allies ? ' + ' + allies + ' allié' + (allies > 1 ? 's' : '') : '') + ' (une ennemie de plus en difficile)' + (st.mode === 'evolution' ? ' · mode évolution' : st.mode === 'rounds' ? ' · tournoi' : '') + (st.humanStart === 'center' ? ' · départ au centre' : '') + (st.extraZones ? ' · ' + st.extraZones + ' zones d\'avance' : '');
       q('#mis-sheet').classList.add('hidden'); q('#mis-dialog').classList.remove('hidden');
       this.m.mission.classList.remove('hidden');
       this.dialogShow();

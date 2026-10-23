@@ -98,6 +98,7 @@ window.ZC = window.ZC || {};
     range:   { name: 'Portée',    hotkey: 'E', max: 3, cost: (lvl) => 125 + lvl * 75,  time: (lvl) => 35 + lvl * 15, desc: '+1 case de portée (unités à distance), +0,5 au corps à corps' },
     stim:    { name: 'Stimpack',  hotkey: 'T', max: 1, cost: () => 200,                time: () => 45,              desc: 'Recherche : les unités biologiques peuvent se stimuler (T)' },
     evolve:  { name: 'Évolution', hotkey: 'V', max: 1, cost: () => 350,                time: () => 60,              desc: 'Transforme les soldats de ce bunker (présents et futurs) en unité de niveau 2. Requiert armes, armure et portée au niveau 3', requires: 3 },
+    fortify: { name: 'Centre de commandement', hotkey: 'Q', max: 1, cost: () => 400,   time: () => 75,              desc: 'Transforme ce bunker en centre de commandement : 6 places en garnison, 6000 PV, armure 8, et il produit dropships, travailleurs et héros comme votre QG' },
   };
   ZC.RESEARCH_QUEUE_MAX = 3;  // recherches en attente par bunker
   ZC.BUNKER_CAPACITY = 4;     // unités en garnison par bunker ; un bunker vide ne tire pas
@@ -113,7 +114,7 @@ window.ZC = window.ZC || {};
     mineTime: 5,        // secondes de récolte par voyage (environ 45 minerais par minute et par travailleur)
     color: '#39ff14',   // vert fluo
   };
-  ZC.WORKER = { cost: 50, time: 15, max: 16 };          // travailleurs : coût, temps de production au QG, maximum par joueur
+  ZC.WORKER = { cost: 50, time: 15, perBunker: 4, max: 16 }; // travailleurs : coût, temps de production au QG, maximum par bunker possédé (QG compris) et maximum absolu par joueur
   ZC.REPAIR = { hpPerSec: 40, costPerSec: 3 };
   ZC.EXTRACTOR = { cost: 100, buildTime: 20, rate: 1.2 };  // extracteur : coût, secondes de construction par un travailleur, minerai extrait par seconde (≈ 1,6 travailleur)          // réparation d'un bunker par un travailleur : PV par seconde, minerai par seconde
   ZC.BUNKER_RANGE_BONUS = 1;  // cases de portée en plus pour les unités en garnison
@@ -152,7 +153,7 @@ window.ZC = window.ZC || {};
     zoneTiles: 12,        // taille d'une zone en cases
     spawnInterval: 8,     // secondes entre deux vagues
     roundDuration: 100,   // secondes par round (mode évolution)
-    landingTime: 3.0,     // secondes pour qu'un dropship construise un bunker
+    landingTime: 6.0,     // secondes pour qu'un dropship construise un bunker (prise d'une zone)
     dropshipCost: 150,    // coût de base d'un dropship
     dropshipCostPerBunker: 30, // surcoût par bunker possédé
     dropshipBuildTime: 12,     // secondes de construction du premier dropship

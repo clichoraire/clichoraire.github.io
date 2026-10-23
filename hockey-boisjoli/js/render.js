@@ -99,6 +99,10 @@
     }
     if (s.slowT > 0 && s.slowKind === 'blizzard') { ctx.fillStyle = 'rgba(240,250,255,0.9)'; for (let i = 0; i < 5; i++) { const ph = (now / 900 + i * 0.2) % 1; S.circle(ctx, s.x - 16 + i * 8 + Math.sin(now / 200 + i) * 3, top + ph * (s.y - top), 2); ctx.fill(); } }
     if (s.slowT > 0 && s.slowKind === 'cheat') { ctx.fillStyle = 'rgba(60,255,120,0.8)'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; for (let i = 0; i < 4; i++) { const ph = (now / 700 + i * 0.25) % 1; ctx.fillText(((now / 100 + i) | 0) % 2 ? '1' : '0', s.x - 14 + i * 9, top + ph * (s.y - top)); } }
+    if (s.rage > 0) { ctx.fillStyle = `rgba(255,40,40,${0.25 + 0.15 * Math.sin(now / 60)})`; ctx.beginPath(); ctx.ellipse(s.x, s.y - 22, s.r * 2, s.r * 3, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('#@%!', s.x + 18, top - 10 + Math.sin(now / 80) * 3); }
+    if (s.wall > 0) { ctx.strokeStyle = '#b55a2b'; ctx.lineWidth = 3; ctx.setLineDash([8, 4]); ctx.strokeRect(s.x - s.r * 1.6, top - 4, s.r * 3.2, s.y - top + 6); ctx.setLineDash([]); }
+    if (s.perfect > 0) { ctx.fillStyle = `rgba(255,215,0,${0.6 + 0.3 * Math.sin(now / 70)})`; star(ctx, s.x + s.dir * (s.r + 14), s.y - 4, 9); }
+    if (s.stun > 0 && s.stunKind === 'charmed') { ctx.fillStyle = '#ff5a8a'; for (let i = 0; i < 3; i++) { const ph = (now / 500 + i * 0.33) % 1; heart(ctx, s.x - 10 + i * 10, top - 4 - ph * 24, 5 * (1 - ph * 0.5)); } }
     if (s.slap > 0) { ctx.fillStyle = `rgba(255,${120 + 80 * Math.sin(now / 80)},40,0.9)`; flame(ctx, s.x + s.dir * (s.r + 14), s.y - 2, 7 + 2 * Math.sin(now / 70)); }
     if (s.slide > 0) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = 0; i < 6; i++) { S.circle(ctx, s.x - s.vx / (v || 1) * (10 + i * 7) + (Math.sin(now / 30 + i) * 6), s.y + 2 + Math.cos(now / 40 + i) * 5, 2.5); ctx.fill(); } }
   }
@@ -110,7 +114,7 @@
   function drawGoalie(ctx, g, T, now) {
     const gl = T.goalie;
     shadow(ctx, gl.x, gl.y + gl.h / 2 + 2, 18, 7);
-    S.drawPerson(ctx, gl.x, gl.y + gl.h / 2, HK.GOALIE_DEF, T.def, { goalie: true, dir: gl.dir, frame: gl.anim * 4, moving: Math.abs(gl.vy) > 30, down: gl.down > 0 });
+    S.drawPerson(ctx, gl.x, gl.y + gl.h / 2, gl.def || HK.GOALIE_DEF, T.def, { goalie: true, dir: gl.dir, frame: gl.anim * 4, moving: Math.abs(gl.vy) > 30, down: gl.down > 0 });
     if (gl.slowT > 0) { ctx.fillStyle = 'rgba(240,250,255,0.9)'; for (let i = 0; i < 4; i++) { const ph = (now / 900 + i * 0.25) % 1; S.circle(ctx, gl.x - 14 + i * 9, gl.y - 30 + ph * 50, 2); ctx.fill(); } }
   }
 
@@ -132,6 +136,8 @@
         if (f.kind === 'aimant' && f.s) { ctx.strokeStyle = `rgba(220,40,60,0.5)`; ctx.lineWidth = 2; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.arc(f.s.x, f.s.y, 120 + 10 * Math.sin(now / 100), 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
         if (f.kind === 'laser') { ctx.strokeStyle = `rgba(255,30,30,${1 - k})`; ctx.lineWidth = 14 * (1 - k) + 2; ctx.beginPath(); ctx.moveTo(f.x + Math.cos(f.ang) * 10, f.y - 24); ctx.lineTo(f.x + Math.cos(f.ang) * f.len, f.y - 24 + Math.sin(f.ang) * f.len); ctx.stroke(); ctx.strokeStyle = `rgba(255,220,220,${1 - k})`; ctx.lineWidth = 3; ctx.stroke(); }
         if (f.kind === 'blizzard') { ctx.fillStyle = 'rgba(200,235,255,0.18)'; const x0 = f.side < 0 ? R.x : CX(); ctx.fillRect(x0, R.y, R.w / 2, R.h); ctx.fillStyle = 'rgba(255,255,255,0.85)'; const rnd = HK.makeRand(3); for (let i = 0; i < 60; i++) { const px = x0 + rnd() * R.w / 2, ph = (now / 1500 + rnd()) % 1; S.circle(ctx, px + Math.sin(now / 300 + i) * 8, R.y + ph * R.h, 2 + rnd() * 2); ctx.fill(); } }
+        if (f.kind === 'docteur') { ctx.strokeStyle = `rgba(80,255,120,${1 - k})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(f.x, f.y, 30 + 180 * k, 0, TAU); ctx.stroke(); }
+        if (f.kind === 'tempsmort') { ctx.fillStyle = `rgba(255,255,255,${0.15 * (1 - k)})`; ctx.fillRect(R.x, R.y, R.w, R.h); }
         if (f.kind === 'cheat') { ctx.fillStyle = 'rgba(40,200,90,0.08)'; ctx.fillRect(R.x, R.y, R.w, R.h); ctx.fillStyle = 'rgba(60,255,120,0.5)'; ctx.font = 'bold 12px monospace'; const rnd = HK.makeRand(5); for (let i = 0; i < 40; i++) { const px = R.x + rnd() * R.w, ph = (now / 2000 + rnd()) % 1; ctx.fillText(((now / 90 + i) | 0) % 2 ? '1' : '0', px, R.y + ph * R.h); } }
       } else {
         if (f.kind === 'biscuits') { for (let i = 0; i < 8; i++) { const a = i * TAU / 8, rr = f.r * Math.min(1, k * 3), bounce = Math.abs(Math.sin(Math.min(1, k * 3) * Math.PI)) * 30; cookie(ctx, f.x + Math.cos(a) * rr, f.y - 10 + Math.sin(a) * rr * 0.6 - bounce, 6); } }
@@ -141,6 +147,12 @@
         if (f.kind === 'slap') { ctx.fillStyle = `rgba(255,140,30,${1 - k})`; for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + k * 2; flame(ctx, f.x + Math.cos(a) * 30 * k, f.y - 15 + Math.sin(a) * 30 * k, 8 * (1 - k)); } }
         if (f.kind === 'crise') { ctx.fillStyle = `rgba(255,255,255,${1 - k})`; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.font = 'bold 26px Arial Black, Arial'; ctx.textAlign = 'center'; const y = f.y - 60 - k * 20; ctx.strokeText('WAAAAH !', f.x, y); ctx.fillText('WAAAAH !', f.x, y); }
         if (f.kind === 'capitaine') { ctx.fillStyle = `rgba(255,220,80,${1 - k})`; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.font = 'bold 24px Arial Black, Arial'; ctx.textAlign = 'center'; const y = f.y - 60 - k * 20; ctx.strokeText('ALLEZ !', f.x, y); ctx.fillText('ALLEZ !', f.x, y); }
+        if (['tempsmort', 'deal', 'objection', 'lemieux', 'chaise', 'docteur', 'nerfs', 'boucane'].includes(f.kind)) {
+          const txt = { tempsmort: 'TEMPS D\'ARRÊT !', deal: 'DEAL !', objection: 'OBJECTION !', lemieux: '66 !', chaise: 'CHAISE MUSICALE !', docteur: 'TOUT LE MONDE DEBOUT !', nerfs: 'AAAH !', boucane: 'KOF KOF…' }[f.kind];
+          const col = { tempsmort: '#fff', deal: '#7fe3ff', objection: '#ffd166', lemieux: '#ffd700', chaise: '#ffb3f0', docteur: '#7dffa0', nerfs: '#9fd3ff', boucane: '#bbb' }[f.kind];
+          ctx.fillStyle = col; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.font = 'bold 24px Arial Black, Arial'; ctx.textAlign = 'center'; const y = f.y - 60 - k * 25; ctx.strokeText(txt, f.x, y); ctx.fillText(txt, f.x, y); ctx.globalAlpha = 1;
+        }
+        if (f.kind === 'charme') { ctx.fillStyle = `rgba(255,90,140,${1 - k})`; for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + k; heart(ctx, f.x + Math.cos(a) * f.r * k, f.y - 20 + Math.sin(a) * f.r * k * 0.6, 6); } }
         if (f.kind === 'zoom' && f.s) { ctx.fillStyle = `rgba(255,230,80,0.9)`; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; if (k < 0.3) ctx.fillText('ZOOM ZOOM !', f.s.x, f.s.y - 60 - k * 60); }
         if (f.kind === 'glissade' && f.s) { ctx.fillStyle = `rgba(255,255,255,0.9)`; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; if (k < 0.5) ctx.fillText('WOUHOU !', f.s.x, f.s.y - 40 - k * 40); }
       }
@@ -176,12 +188,14 @@
         ctx.fillStyle = ready ? (Math.sin(now / 150) > 0 ? '#ffd166' : '#ffb000') : '#5a6a9a'; S.rr(ctx, bx, 92, bw * frac, 10, 5); ctx.fill();
         ctx.fillStyle = ready ? '#ffd166' : '#8a94b0'; ctx.font = '11px Arial'; ctx.textAlign = right ? 'left' : 'right';
         ctx.fillText(ready ? 'PRÊT' : Math.ceil(c.cd) + ' s', right ? bx - 6 : bx + bw + 6, 97);
+      } else if (who && g.goalieHuman === i) {
+        ctx.fillStyle = '#e8ecf5'; ctx.font = 'bold 14px Arial'; ctx.fillText('Gardien · flèches pour bouger, C pour plonger', ox + sx * 118, 78);
       } else {
         const sc = T.skaters.map(s => s.def.name).join(' · ');
         ctx.fillStyle = '#7f8aa8'; ctx.font = '12px Arial'; ctx.fillText(sc, ox + sx * 118, 78);
       }
       // score
-      ctx.fillStyle = d.color; ctx.font = 'bold 64px Arial Black, Arial'; ctx.textAlign = 'center';
+      ctx.fillStyle = d.accent || d.color; ctx.font = 'bold 64px Arial Black, Arial'; ctx.textAlign = 'center';
       ctx.fillText(String(T.score), right ? 810 : 470, 52);
       ctx.fillStyle = '#7f8aa8'; ctx.font = '11px Arial'; ctx.fillText('tirs ' + T.shots + ' · mises en échec ' + T.hits, right ? 810 : 470, 96);
     }
@@ -195,7 +209,8 @@
     for (let i = 0; i < 2; i++) {
       const T = g.teams[i], right = i === 1; let x = right ? W - 20 : 20;
       ctx.textBaseline = 'middle'; ctx.font = 'bold 12px Arial';
-      const items = T.skaters.map(s => ({ s, on: true })).concat(T.bench.map(s => ({ s, on: false })));
+      const items = T.skaters.filter(s => !s.bot).map(s => ({ s, on: true })).concat(T.bench.slice(0, 3).map(s => ({ s, on: false })));
+      if (T.bench.length > 3) items.push({ s: { def: { name: '+' + (T.bench.length - 3) }, stamina: 1 }, on: false, more: true });
       if (right) items.reverse();
       for (const it of items) {
         const s = it.s, name = s.def.name, w = ctx.measureText(name).width + 16;
@@ -203,7 +218,7 @@
         ctx.fillStyle = it.on ? T.def.color : '#2a2f40'; S.rr(ctx, x, H - 27, w, 20, 5); ctx.fill();
         ctx.fillStyle = it.on ? T.def.color2 : '#8a94b0'; ctx.textAlign = 'left'; ctx.fillText(name, x + 8, H - 17);
         ctx.fillStyle = '#000'; ctx.fillRect(x + 4, H - 6, w - 8, 3); ctx.fillStyle = s.stamina > 0.4 ? '#5ad66b' : '#e0a030'; ctx.fillRect(x + 4, H - 6, (w - 8) * s.stamina, 3);
-        if (!it.on) { ctx.fillStyle = '#8a94b0'; ctx.font = '9px Arial'; ctx.fillText('banc', x + w - 26, H - 23); ctx.font = 'bold 12px Arial'; }
+        if (!it.on && !it.more) { ctx.fillStyle = '#8a94b0'; ctx.font = '9px Arial'; ctx.fillText('banc', x + w - 26, H - 23); ctx.font = 'bold 12px Arial'; }
         if (right) x -= 6; else x += w + 6;
       }
     }
@@ -217,6 +232,15 @@
 
   function drawOverlay(ctx, g, ui, now) {
     const cx = CX(), cy = CY();
+    if (g.phase === 'intro' && g.intro) {
+      const ent = g.intro.part === 'entrance';
+      bigText(ctx, ent ? 'ENTRÉE DES JOUEURS' : '🎵 HYMNE NATIONAL', cx, R.y + 40, 30, '#fff');
+      if (!ent) { // petit drapeau au centre
+        ctx.fillStyle = '#fff'; ctx.fillRect(cx - 36, R.y + 64, 72, 40); ctx.fillStyle = '#d7332a'; ctx.fillRect(cx - 36, R.y + 64, 16, 40); ctx.fillRect(cx + 20, R.y + 64, 16, 40);
+        ctx.font = '22px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🍁', cx, R.y + 84);
+      }
+      if (Math.sin(now / 350) > -0.3) bigText(ctx, 'Entrée ou Espace pour passer', cx, R.y + R.h - 30, 16, '#ffd166');
+    }
     if (g.phase === 'faceoff') {
       const a = Math.min(1, g.phaseT);
       ctx.globalAlpha = a;
@@ -245,7 +269,7 @@
       if (Math.sin(now / 300) > 0) bigText(ctx, 'Entrée pour continuer', cx, cy + 100, 18, '#ffd166');
     }
     // messages
-    let ty = R.y + 18;
+    let ty = R.y + (ui.drill ? 76 : 18);
     for (const t of ui.toasts) { ctx.globalAlpha = Math.min(1, t.t); label(ctx, cx, ty, t.text, t.color || 'rgba(0,0,0,0.75)', '#fff'); ty += 20; }
     ctx.globalAlpha = 1;
   }
@@ -259,6 +283,10 @@
     const lampSide = g.phase === 'goal' && g.lastGoal ? -g.teams[g.lastGoal.team].side : 0;
     drawNet(ctx, -1, lampSide === -1); drawNet(ctx, 1, lampSide === 1);
     drawFx(ctx, g, 'under', now);
+    for (const c of g.cones) { ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 3, c.r + 2, (c.r + 2) * 0.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.moveTo(c.x - c.r, c.y + 2); ctx.lineTo(c.x, c.y - c.r * 2.2); ctx.lineTo(c.x + c.r, c.y + 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(c.x - c.r * 0.55, c.y - c.r * 0.9, c.r * 1.1, 3); }
+    for (const t of g.targets) { if (!t.active) continue; for (let i = 3; i >= 1; i--) { ctx.fillStyle = i % 2 ? '#e8352b' : '#fff'; S.circle(ctx, t.x, t.y, t.r * i / 3); ctx.fill(); } }
+    if (ui.drill && ui.drill.gates) ui.drill.gates.forEach((gt, i) => { const cur = i === ui.drill.gateIdx, done = i < ui.drill.gateIdx; ctx.strokeStyle = done ? 'rgba(90,214,107,0.5)' : cur ? '#ffd166' : 'rgba(120,130,160,0.5)'; ctx.lineWidth = cur ? 4 : 2; ctx.setLineDash(cur ? [] : [6, 6]); ctx.beginPath(); ctx.arc(gt.x, gt.y, gt.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = ctx.strokeStyle; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(i + 1), gt.x, gt.y); });
+    if (g.smoke) { const sm = g.smoke, a = Math.min(1, sm.t / 0.8) * 0.75; const rnd = HK.makeRand(11); for (let i = 0; i < 26; i++) { const ang = rnd() * TAU, rr = rnd() * sm.r * 0.85, wob = Math.sin(now / 400 + i) * 8; ctx.fillStyle = `rgba(${150 + rnd() * 60 | 0},${150 + rnd() * 60 | 0},${160 + rnd() * 60 | 0},${a * (0.5 + rnd() * 0.4)})`; S.circle(ctx, sm.x + Math.cos(ang) * rr + wob, sm.y + Math.sin(ang) * rr * 0.8 - 10, 22 + rnd() * 26); ctx.fill(); } }
     // entités triées par y
     const items = [];
     for (const T of g.teams) { for (const s of T.skaters) items.push({ y: s.y, f: () => drawSkater(ctx, g, s, now) }); items.push({ y: T.goalie.y + T.goalie.h / 2, f: () => drawGoalie(ctx, g, T, now) }); }
@@ -269,12 +297,28 @@
     for (const T of g.teams) for (const s of T.skaters) {
       const size = s.def.size, top = s.y - (13 + 21 + 20 * (1 + Math.max(0, 1 - size) * 0.9)) * size - 12;
       const who = ui.humans.find(h => g.controlled[h.team] === s);
-      label(ctx, s.x, top, s.def.name, who ? who.color : 'rgba(0,0,0,0.6)', who ? '#000' : '#fff');
+      const hum = ui.humans.find(h => h.team === s.team), idx = hum && !s.bot ? g.teams[s.team].skaters.indexOf(s) : -1;
+      const keys = hum ? (hum.n === 1 ? ['1', '2', '3'] : ['8', '9', '0']) : [];
+      label(ctx, s.x, top, (idx >= 0 && idx < 3 ? keys[idx] + ' · ' : '') + s.def.name, who ? who.color : 'rgba(0,0,0,0.6)', who ? '#000' : '#fff');
       if (who) { ctx.fillStyle = who.color; const by = top - 14 + Math.sin(now / 120) * 2; ctx.beginPath(); ctx.moveTo(s.x - 7, by - 8); ctx.lineTo(s.x + 7, by - 8); ctx.lineTo(s.x, by); ctx.closePath(); ctx.fill(); }
     }
+    for (const T of g.teams) for (const s of T.box) { S.drawPerson(ctx, s.x, s.y, s.def, T.def, { dir: s.dir, frame: 0, scale: 0.8 }); label(ctx, s.x, s.y + 12, s.def.name + ' · punition ' + Math.ceil(s.penalty) + ' s', '#d9342b', '#fff', true); }
+    for (const h of ui.humans) if (g.goalieHuman === h.team) { const gl = g.teams[h.team].goalie; ctx.fillStyle = h.color; const by = gl.y - 46 + Math.sin(now / 120) * 2; ctx.beginPath(); ctx.moveTo(gl.x - 7, by - 8); ctx.lineTo(gl.x + 7, by - 8); ctx.lineTo(gl.x, by); ctx.closePath(); ctx.fill(); label(ctx, gl.x, by - 16, 'Toi (gardien)', h.color, '#000'); }
     ctx.restore();
     drawHud(ctx, g, ui, now);
+    if (ui.drill) drawDrill(ctx, ui.drill, now);
     drawOverlay(ctx, g, ui, now);
   };
+  function drawDrill(ctx, d, now) {
+    const x = CX() - 300, y = R.y + 6, w = 600, h = 56;
+    ctx.fillStyle = 'rgba(10,12,24,0.85)'; S.rr(ctx, x, y, w, h, 10); ctx.fill();
+    ctx.strokeStyle = d.state === 'won' ? '#5ad66b' : d.state === 'lost' ? '#e8352b' : '#3a4466'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Arial';
+    ctx.fillText(d.name + '  ·  ' + d.level, x + 14, y + 16);
+    ctx.fillStyle = '#c9d2ea'; ctx.font = '13px Arial'; ctx.fillText(d.text, x + 14, y + 40);
+    ctx.textAlign = 'right'; ctx.fillStyle = d.time < 10 ? '#ff6b5e' : '#ffd166'; ctx.font = 'bold 26px Arial Black, Arial'; ctx.fillText(Math.ceil(d.time) + ' s', x + w - 14, y + 20);
+    ctx.fillStyle = '#242b40'; S.rr(ctx, x + w - 200, y + 36, 186, 10, 5); ctx.fill(); ctx.fillStyle = '#5ad66b'; S.rr(ctx, x + w - 200, y + 36, 186 * d.frac, 10, 5); ctx.fill();
+    if (d.state === 'won' || d.state === 'lost') { ctx.save(); ctx.translate(CX(), CY() - 40); ctx.scale(1 + 0.04 * Math.sin(now / 90), 1 + 0.04 * Math.sin(now / 90)); bigText(ctx, d.state === 'won' ? 'RÉUSSI !' : 'RATÉ…', 0, 0, 64, d.state === 'won' ? '#5ad66b' : '#ff6b5e'); ctx.restore(); }
+  }
   HK.renderReset = () => { rink = null; };
 })(window.HK);

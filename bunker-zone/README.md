@@ -32,15 +32,18 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
   bête chitineuse), Guerriers d'énergie (guerrier à lames → archonte mécanique), Mécas cybernétiques
   (robot éclaireur → mech de siège). Le joueur choisit sa race dans les options ; les IA tirent la
   leur au hasard.
+- **Centre de commandement** (Q, 400 minerais, 75 s) : promeut un bunker au niveau du QG : 6 places en
+  garnison, 6000 PV, armure 8, et il produit lui aussi dropships (D), travailleurs et héros (F). Si le QG
+  d'origine tombe, les autres centres prennent le relais.
 - **Améliorations** : armes, armure et portée vont jusqu'au niveau 3. Quand les trois sont au niveau 3
-  sur un bunker, l'**Évolution** (V, 350 minerais, 60 s) transforme ses soldats présents et futurs
+  sur un bunker (terminées ou encore en file de recherche), l'**Évolution** (V, 350 minerais, 60 s) transforme ses soldats présents et futurs
   en unité de niveau 2.
 - **Garnison** : un bunker (ou le QG) accueille jusqu'à 4 unités au sol à distance : clic droit sur son propre bunker avec des unités sélectionnées. Les
   occupants tirent depuis le bunker avec leur propre arme, à +1 case de portée, et sont protégés.
   **Un bunker vide ne tire pas.** Touche U pour décharger ; si le bunker est détruit, les occupants
   en sortent vivants. Les IA garnissent aussi leurs bunkers.
 - **Prendre une zone libre** : envoyer un dropship au centre de la zone (clic droit) ; il atterrit
-  en 3 s et construit un bunker. Le dropship est lent (nettement moins rapide qu'un marine) : il
+  en 6 s et construit un bunker. Le dropship est lent (nettement moins rapide qu'un marine) : il
   faut l'escorter.
 - **Prendre une zone ennemie** : détruire son bunker (3000 PV, armure 5 : un marine de base ne fait
   que 1 dégât par tir, d'où l'intérêt des améliorations d'armes) libère la zone, mais ne la donne pas :
@@ -72,15 +75,17 @@ Depuis Jouer, choisissez **Partie simple** (vos réglages actuels) ou **Aventure
 joue avec la race humaine (les autres races sont verrouillées pour l'aventure, mais jouables en
 partie simple) et traverse **quatre mondes**, un par race ennemie : Terra Prime (renégats humains de
 Varek), Nidus (essaim de la matriarche Szeth), Lumen (Conclave du hiérarque Aelon) et Forge-Oméga
-(mécas du Noyau-Directeur 7). Chaque monde propose **13 missions** de plus en plus dures, débloquées
-une à une ; un monde se débloque quand les 13 missions du précédent sont réussies. L'écran
+(mécas du Noyau-Directeur 7). Chaque monde propose **15 missions** de plus en plus dures, débloquées
+une à une ; un monde se débloque quand les 15 missions du précédent sont réussies. L'écran
 d'aventure affiche la planète du monde en fond (dessinée procéduralement, `js/planet.js`) et les
-missions en grandes cases défilantes (molette ou glissement) avec un aperçu de la carte ; la fiche
-de la mission choisie s'affiche dessous, un second clic ou « Jouer la mission » lance le briefing.
+missions en grandes cases défilantes (molette ou glissement) montrant le terrain du monde avec
+l'avant-poste ennemi et un plan de la grille en médaillon ; la fiche de la mission choisie s'affiche
+juste dessous, un second clic ou « Jouer la mission » lance le briefing.
 
 - **Des missions variées** : avant-poste, couloir 5x1, survie sans minerai, départ au centre avec
-  deux zones d'avance, 2v2 avec un allié, bande 3x9, mode évolution, rush à vagues rapides, tournoi,
-  siège de 8 minutes, prise en tenaille sur 7x3, 3v3, forteresse finale 9x9.
+  deux zones d'avance, 2v2 avec un allié, bande 3x9, course aux secteurs (le premier à 12 zones gagne, vous
+  ou un ennemi), mode évolution, rush à vagues rapides, tournoi, siège de 8 minutes, prise en tenaille sur 7x3,
+  3v3, conquête totale (éliminer les ennemis et occuper les 25 zones), forteresse finale 9x9.
 - **Trois difficultés par mission** (Facile, Moyen, Difficile : IA agressives et une IA ennemie de
   plus). Chaque difficulté réussie rapporte ses propres points, une seule fois : refaire une mission
   dans une difficulté plus élevée est conseillé. Les points augmentent avec la mission et le monde.
@@ -109,7 +114,7 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 | Acheter un dropship / bunker suivant | D / N |
 | Évolution (bunker sélectionné, armes, armure et portée au niveau 3) | V |
 | Garnison | clic droit sur un bunker allié avec des unités sélectionnées (4 max, 6 dans le centre de commandement) ; U (bunker sélectionné) décharger |
-| Même type à l'écran | double-clic ou Ctrl+clic |
+| Même type à l'écran (bunkers et centres de commandement compris) | double-clic ou Ctrl+clic |
 | Ajouter à la sélection | Maj+clic |
 | Attaque-déplacement, Déplacer, Stop, Tenir, Patrouille | A, M, S, H, P |
 | Groupes de contrôle | Ctrl+1..9 créer avec les unités sélectionnées ou le bunker sélectionné (le numéro s'affiche alors sur le bunker), 1..9 sélectionner (2x : centrer), Maj+1..9 ajouter |
@@ -133,7 +138,8 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
   d'une zone d'un gisement. Un gisement s'épuise ; les cristaux rapetissent avec le minerai restant. Survolez un gisement
   pour lire son contenu.
 - **Travailleurs** (un par race : Ouvrier, Drone, Sonde, Foreur) : produits au centre de commandement (carte
-  « Unités », F puis W, 50 minerais, 15 s, 16 maximum). Ils récoltent 5 minerais par voyage (environ 45 par minute
+  « Unités », F puis W, 50 minerais, 15 s). Le maximum monte avec vos bunkers : 4 travailleurs par bunker
+  possédé, QG compris, et 16 au plus. Ils récoltent 5 minerais par voyage (environ 45 par minute
   chacun), cinq travailleurs au plus par gisement en même temps, et rapportent le minerai au bunker ou au QG le plus
   proche. Un travailleur neuf part de lui-même récolter le gisement le plus proche. On commence avec 2 travailleurs
   (option). Ils ne combattent pas, n'entrent pas en garnison et sont exclus de « toute l'armée ».
@@ -154,7 +160,8 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 
 ## Missions de survie : vagues d'envahisseurs
 
-« Tenir la ligne » et « Le siège » n'ont plus d'ennemi installé sur la carte : un joueur **envahisseur** sans base
+« La montagne du centre » (QG au milieu de la carte et les huit zones autour, un carré 3x3 à tenir 5 minutes) et
+« Le siège » n'ont plus d'ennemi installé sur la carte : un joueur **envahisseur** sans base
 envoie des vagues par les bords de la carte toutes les 15 à 35 secondes (12 à 28 en difficile), vers la structure du
 joueur la plus proche. Les vagues grossissent avec le temps, passent aux unités de niveau 2 après 2 min 30 et gagnent
 des améliorations. Le bord d'arrivée est tiré au hasard mais annoncé à l'avance : balise rouge animée sur le bord de la carte (anneaux,

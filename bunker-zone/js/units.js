@@ -41,7 +41,7 @@
       this.landT = 0;
       this.rally = null;                    // point de ralliement (bunker)
       this.queue = [];                      // dropships en construction (centre de commandement)
-      this.up = { weapons: 0, armor: 0, range: 0, stim: 0, evolve: 0 }; // améliorations du bunker (les unités partagent celles de leur bunker d'origine)
+      this.up = { weapons: 0, armor: 0, range: 0, stim: 0, evolve: 0, fortify: 0 }; // améliorations du bunker (les unités partagent celles de leur bunker d'origine)
       this.home = null;                     // bunker d'origine (unités mobiles)
       this.research = [];                   // recherches en cours { what, t, total } (bunker)
       this.zone = null;                     // zone possédée (bunker)
@@ -300,7 +300,9 @@
         if (this.research.length) {
           const r = this.research[0];
           r.t += dt;
-          if (r.t >= r.total) { this.research.shift(); this.game.researchDone(this, r.what); }
+          if (r.what === 'evolve' && !this.game.evolveReady(this)) { // prérequis annulé entre-temps : remboursement
+            this.research.shift(); this.game.players[this.owner].minerals += r.cost || 0; this.game.emit('cancel', { player: this.owner, what: 'evolve', refund: r.cost || 0, bunker: this, kind: 'research', auto: true });
+          } else if (r.t >= r.total) { this.research.shift(); this.game.researchDone(this, r.what); }
         }
         return;
       }

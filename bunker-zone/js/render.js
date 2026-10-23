@@ -187,8 +187,8 @@
       ground.sort((a, b) => a.ry - b.ry);
 
       // Point de ralliement du bunker sélectionné
-      const sb = g.selectedBunker;
-      if (sb && sb.rally) {
+      for (const sb of g.selectedBunkers) {
+        if (!sb.rally) continue;
         ctx.setLineDash([4, 6]); ctx.strokeStyle = ZC.rgba(g.players[sb.owner].hex, 0.7); ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(sb.x, sb.y); ctx.lineTo(sb.rally.x, sb.rally.y); ctx.stroke(); ctx.setLineDash([]);
         this.drawFlag(ctx, sb.rally.x, sb.rally.y, g.players[sb.owner].hex, t);
@@ -800,4 +800,5 @@
   }
   ZC.Renderer = Renderer;
   ZC.TILESET_PALETTES = TILESETS;
+  ZC.buildTerrain = buildTerrain;
 })(window.ZC);

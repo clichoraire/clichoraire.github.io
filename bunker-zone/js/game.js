@@ -350,7 +350,8 @@
       // Avance au départ : zones voisines supplémentaires, avec bunker et troupes
       if (s.extraZones > 0 && this.human) {
         const me = this.human, hz = starts[me.id];
-        const cands = map.zones.filter(z => z.owner < 0 && !z.bunker).sort((a, b) => map.manhattan(a, hz) - map.manhattan(b, hz) || Math.random() - 0.5);
+        const cheb = (a, b) => Math.max(Math.abs(a.ix - b.ix), Math.abs(a.iy - b.iy));
+        const cands = map.zones.filter(z => z.owner < 0 && !z.bunker).sort((a, b) => cheb(a, hz) - cheb(b, hz) || map.manhattan(a, hz) - map.manhattan(b, hz) || Math.random() - 0.5);
         for (const z of cands.slice(0, s.extraZones)) {
           const b = this.buildBunker(z, me.id, null, true);
           troops(me, b, z, Math.max(2, Math.floor(s.startUnits / 2)));
@@ -385,6 +386,9 @@
       return u;
     }
 
+    // Plafond de travailleurs : 4 par bunker possédé (QG compris), borné par le maximum absolu.
+    workerCap(player) { return Math.min(ZC.WORKER.max, ZC.WORKER.perBunker * this.players[player].bunkers); }
+
     // Plafond de supply : la base + un bonus par bunker (QG compris), borné par unitCap.
     supplyCap(player) {
       const s = this.settings, p = this.players[player];
@@ -399,7 +403,7 @@
         const p = this.players[u.owner];
         if (u.def.structure) {
           if (u.def.extractor || u.def.tower) { for (const gu of u.garrison) { p.unitCount++; p.supply += gu.def.supply; } continue; }
-          p.bunkers++; if (u.def.hq) p.hq = u;
+          p.bunkers++; if (u.def.hq && !p.hq) p.hq = u;  // plusieurs centres possibles (amélioration) : le premier sert de QG principal
           for (const gu of u.garrison) { p.unitCount++; p.supply += gu.def.supply; }
         }
         else { p.unitCount++; p.supply += u.def.supply; }
@@ -440,7 +444,7 @@
       if (what === 'dropship') {
         const cost = this.dropshipCost(player);
         if (p.minerals < cost) { this.emit('notEnough', { player }); return false; }
-        const b = p.hq && !p.hq.dead ? p.hq : null;
+        const b = this.productionCenter(player, bunker);
         if (b && admin) { // admin : livré immédiatement près du QG
           p.dropshipsBuilt++;
           this.dropshipReady(b);
@@ -467,9 +471,9 @@
         return true;
       }
       if (what === 'worker' || what === 'hero') { // productions du centre de commandement
-        const b = p.hq && !p.hq.dead ? p.hq : null;
+        const b = this.productionCenter(player, bunker);
         if (!b) { this.emit('noHQ', { player }); return false; }
-        if (what === 'worker' && this.workers(player).length + this.workersQueued(player) >= ZC.WORKER.max) { this.emit('workerCap', { player }); return false; }
+        if (what === 'worker' && this.workers(player).length + this.workersQueued(player) >= this.workerCap(player)) { this.emit('workerCap', { player, cap: this.workerCap(player) }); return false; }
         if (what === 'hero' && !this.canReviveHero(player)) return false;
         const cost = what === 'worker' ? this.workerCost(player) : this.heroReviveCost(player);
         if (p.minerals < cost) { this.emit('notEnough', { player }); return false; }
@@ -486,6 +490,7 @@
       const lvl = this.pendingLevel(bunker, what);
       if (lvl >= def.max) return false;
       if (what === 'evolve' && !this.canEvolve(bunker)) { this.emit('needUpgrades', { player }); return false; }
+      if (what === 'fortify' && bunker.def.hq) return false;
       if (admin) { this.researchDone(bunker, what); return true; } // admin : gratuit et instantané
       if (bunker.research.length >= ZC.RESEARCH_QUEUE_MAX) { this.emit('queueFull', { player }); return false; }
       const cost = def.cost(lvl);
@@ -515,15 +520,36 @@
       for (const r of bunker.research) if (r.what === what) n++;
       return n;
     }
+    // Centre de commandement qui produit : le bunker sélectionné s'il en est un, sinon le QG principal
+    productionCenter(player, bunker) {
+      const p = this.players[player];
+      if (bunker && !bunker.dead && bunker.def.hq && bunker.owner === player) return bunker;
+      return p.hq && !p.hq.dead ? p.hq : null;
+    }
+    // Amélioration « Centre de commandement » : le bunker prend les stats du QG (PV, armure, taille, 6 places) et ses productions
+    promoteBunker(b) {
+      const hq = ZC.UNITS.hq, gained = hq.hp - b.maxHp;
+      b.type = 'hq'; b.def = hq;
+      b.maxHp = hq.hp; b.hp = Math.min(b.maxHp, b.hp + Math.max(0, gained)); b.radius = hq.radius;
+      this.recount();
+      this.addEffect({ type: 'spawn', x: b.x, y: b.y - 10, life: 0.8, color: this.players[b.owner].hex });
+    }
     researchDone(bunker, what) {
       bunker.up[what]++;
       if (what === 'evolve') this.evolveTroops(bunker);
+      if (what === 'fortify') this.promoteBunker(bunker);
       this.emit('upgradeDone', { player: bunker.owner, what, level: bunker.up[what], bunker });
     }
     // Évolution possible : armes, armure et portée au niveau requis, et pas déjà évoluée
+    // (les niveaux en attente dans la file comptent : la file est traitée dans l'ordre, l'évolution attend son tour)
     canEvolve(b) {
       const r = ZC.UPGRADES.evolve.requires;
-      return !b.up.evolve && b.up.weapons >= r && b.up.armor >= r && b.up.range >= r;
+      return !b.up.evolve && this.pendingLevel(b, 'weapons') >= r && this.pendingLevel(b, 'armor') >= r && this.pendingLevel(b, 'range') >= r;
+    }
+    // Prérequis réellement atteints (au moment où l'évolution arrive en tête de file)
+    evolveReady(b) {
+      const r = ZC.UPGRADES.evolve.requires;
+      return b.up.weapons >= r && b.up.armor >= r && b.up.range >= r;
     }
     // Transforme les soldats du bunker (sur la carte et en garnison) en unité de niveau 2
     evolveTroops(b) {
@@ -560,6 +586,7 @@
     }
     upgradeCost(bunker, what) {
       const def = ZC.UPGRADES[what], lvl = this.pendingLevel(bunker, what);
+      if (what === 'fortify' && bunker.def.hq) return -1;  // déjà un centre de commandement
       return lvl >= def.max ? -1 : this.isAdmin(bunker.owner) ? 0 : def.cost(lvl);
     }
 
@@ -574,7 +601,7 @@
           break;
         case 'maxUpgrades': { // toutes les améliorations au maximum sur le bunker sélectionné (ou tous vos bunkers)
           const bs = this.selectedBunker ? [this.selectedBunker] : this.units.filter(u => !u.dead && u.owner === me.id && u.def.structure);
-          for (const b of bs) { b.research = []; for (const k in ZC.UPGRADES) if (k !== 'evolve') b.up[k] = ZC.UPGRADES[k].max; if (!b.up.evolve) this.researchDone(b, 'evolve'); }
+          for (const b of bs) { b.research = []; for (const k in ZC.UPGRADES) if (k !== 'evolve' && k !== 'fortify') b.up[k] = ZC.UPGRADES[k].max; if (!b.up.evolve) this.researchDone(b, 'evolve'); }
           break;
         }
         case 'wave': this.spawnWave(); break;
@@ -894,7 +921,7 @@
         u.queue = []; u.research = [];
         z.bunker = null; z.owner = -1; z.ruined = true; z.flashT = 1.2;
         this.recount();
-        this.emit('bunkerDestroyed', { zone: z, player: owner.id, killer: att ? att.owner : -1, hq: !!u.def.hq, bounty: u.def.bounty });
+        this.emit('bunkerDestroyed', { zone: z, player: owner.id, killer: att ? att.owner : -1, hq: !!u.def.hq, lastHQ: !!u.def.hq && !(owner.hq && !owner.hq.dead), bounty: u.def.bounty });
         // Un joueur qui perd son dernier bunker reçoit de quoi racheter un dropship
         if (owner.bunkers === 0 && owner.alive) {
           const cost = this.settings.dropshipCost;
@@ -984,7 +1011,12 @@
       this.selectionVersion++;
     }
     get ownSelection() { return this.selection.filter(u => u.owner === this.humanId && !u.dead && !u.def.structure); }
-    get selectedBunker() { const u = this.selection[0]; return this.selection.length === 1 && u.owner === this.humanId && u.def.structure && !u.def.extractor && !u.def.tower ? u : null; }
+    // Bunkers / centres de commandement sélectionnés (la sélection ne doit contenir que ça) ; le premier sert de référence
+    get selectedBunkers() {
+      const isB = (u) => u.owner === this.humanId && !u.dead && u.def.structure && !u.def.extractor && !u.def.tower;
+      return this.selection.length && this.selection.every(isB) ? this.selection : [];
+    }
+    get selectedBunker() { const bs = this.selectedBunkers; return bs.length ? bs[0] : null; }
     get selectedTower() { const u = this.selection[0]; return this.selection.length === 1 && u.owner === this.humanId && u.def.tower ? u : null; }
 
     // ---------------------------------------------------------- fin
@@ -1007,6 +1039,17 @@
       const obj = this.campaign && this.campaign.objective;
       if (obj && obj.type === 'survive' && this.human.alive && this.time >= obj.time) {
         this.state = 'over'; this.winner = this.humanId; this.emit('end', { winner: this.humanId, survived: true }); return;
+      }
+      // Course aux zones : le premier (vous ou un ennemi) à tenir N zones gagne
+      if (obj && obj.type === 'zones' && this.human.alive) {
+        const first = this.players.filter(p => p.alive && !p.invader && p.zones >= obj.count).sort((a, b) => b.zones - a.zones)[0];
+        if (first) { this.state = 'over'; this.winner = first.id; this.emit('end', { winner: first.id, zones: true }); return; }
+      }
+      // Conquête totale : ennemis éliminés ET toutes les zones à vous ; la partie continue tant que ce n'est pas fait
+      if (obj && obj.type === 'conquer' && this.human.alive) {
+        const enemiesLeft = this.players.some(p => p.alive && !p.invader && !this.allied(p.id, this.humanId));
+        if (!enemiesLeft && this.map.zones.every(z => z.owner === this.humanId)) { this.state = 'over'; this.winner = this.humanId; this.emit('end', { winner: this.humanId, conquered: true }); }
+        if (!enemiesLeft) return;
       }
       if (this.isTournament) {
         const limit = this.settings.roundTimeLimit;
