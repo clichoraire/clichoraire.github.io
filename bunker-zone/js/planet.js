@@ -190,4 +190,68 @@
     const sp = planetSprite(world.race, d);
     ctx.drawImage(sp, W * 0.62 - sp.width / 2, H * 0.72 - sp.height / 2);
   };
+  // Illustrations des cartes « Jouer » (dessinées avec les sprites du jeu, à l'échelle 2 pour rester nettes)
+  //  simple    : bataille sur le terrain, engrenages de réglages à gauche
+  //  adventure : espace, planètes des mondes, dropship et héros exo-marine
+  ZC.drawCardArt = function (canvas, kind) {
+    const ctx = canvas.getContext('2d'), W = canvas.width / 2, H = canvas.height / 2;
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const unit = (type, color, x, y, facing, sc, up) => { ctx.save(); ctx.translate(x, y); ctx.rotate(facing); ctx.scale(sc || 1, sc || 1); ZC.drawUnitSprite(ctx, type, color, 0, false, 0, 0, up || null, facing); ctx.restore(); };
+    const rnd = ZC.seededRandom(kind === 'simple' ? 4242 : 7373);
+    if (kind === 'simple') {
+      if (!terrains.jungle) terrains.jungle = ZC.buildTerrain(new ZC.GameMap(2, 2), 'jungle', 4242);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(terrains.jungle, 60, 80, W * 0.8, H * 0.8, 0, 0, W, H);
+      ctx.imageSmoothingEnabled = true;
+      // bataille : marines bleus à gauche, essaim rouge à droite, explosions et traçantes
+      const me = '#4a8ad8', enemy = '#e04030';
+      for (let k = 0; k < 4; k++) unit(k === 1 ? 'exomarine' : 'marine', me, 150 + rnd() * 20, 30 + k * 26, 0, 1.25, { weapons: 2, armor: 1 });
+      for (let k = 0; k < 6; k++) unit(k % 3 === 1 ? 'beast' : 'runner', enemy, 250 + rnd() * 90, 20 + rnd() * 95, Math.PI, 1.25);
+      for (let k = 0; k < 5; k++) { // explosions orange
+        const x = 225 + rnd() * 110, y = 25 + rnd() * 90, r = 8 + rnd() * 12;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, 'rgba(255,245,200,0.95)'); g.addColorStop(0.35, 'rgba(255,160,40,0.85)'); g.addColorStop(1, 'rgba(255,80,20,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(255,230,120,0.85)'; ctx.lineWidth = 1.2;
+      for (let k = 0; k < 6; k++) { const y = 30 + rnd() * 90, x = 170 + rnd() * 20; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 40 + rnd() * 40, y + (rnd() - 0.5) * 12); ctx.stroke(); }
+      // volet sombre à gauche avec engrenages (réglages) et une petite carte
+      const sh = ctx.createLinearGradient(0, 0, W * 0.5, 0);
+      sh.addColorStop(0, 'rgba(6,10,18,0.96)'); sh.addColorStop(0.7, 'rgba(6,10,18,0.75)'); sh.addColorStop(1, 'rgba(6,10,18,0)');
+      ctx.fillStyle = sh; ctx.fillRect(0, 0, W * 0.5, H);
+      const gear = (x, y, r, n, col) => {
+        ctx.save(); ctx.translate(x, y); ctx.beginPath();
+        for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * Math.PI * 2, rr = i % 2 ? r : r * 0.78; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+        ctx.closePath(); ctx.fillStyle = col; ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.3, 0, Math.PI * 2); ctx.fillStyle = '#0a0c10'; ctx.fill();
+        ctx.restore();
+      };
+      gear(44, 50, 28, 9, '#c8d2de'); gear(92, 26, 16, 7, '#9aa6b6');
+      ctx.save(); ctx.translate(104, 72); ctx.rotate(-0.12);
+      ctx.fillStyle = '#d8c89a'; ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 2; ctx.fillRect(-26, -16, 52, 34); ctx.strokeRect(-26, -16, 52, 34);
+      ctx.fillStyle = '#7fb15a'; ctx.fillRect(-22, -12, 44, 26); ctx.strokeStyle = 'rgba(40,60,30,0.6)'; ctx.lineWidth = 1;
+      for (let i = -22; i <= 22; i += 11) { ctx.beginPath(); ctx.moveTo(i, -12); ctx.lineTo(i, 14); ctx.stroke(); }
+      for (let j = -12; j <= 14; j += 13) { ctx.beginPath(); ctx.moveTo(-22, j); ctx.lineTo(22, j); ctx.stroke(); }
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#04060c'; ctx.fillRect(0, 0, W, H);
+      const neb = ctx.createRadialGradient(W * 0.35, H * 0.4, 0, W * 0.35, H * 0.4, W * 0.6);
+      neb.addColorStop(0, 'rgba(120,80,200,0.28)'); neb.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 160; i++) { ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + rnd() * 0.7) + ')'; ctx.fillRect(rnd() * W, rnd() * H, rnd() < 0.1 ? 2 : 1, 1); }
+      const planet = (race, d, x, y) => { const sp = planetSprite(race, d); ctx.drawImage(sp, x - sp.width / 2, y - sp.height / 2); };
+      planet('human', 86, 62, 62); planet('insect', 34, 148, 30); planet('energy', 40, 170, 98); planet('mecha', 22, 118, 108);
+      unit('dropship', '#8fb0d8', 236, 48, 0, 2.6);
+      unit('exomarine', '#5a9ad8', 316, 74, Math.PI, 2.3, { weapons: 3, armor: 3 });
+      // halo bleu derrière le héros
+      const halo = ctx.createRadialGradient(318, 70, 10, 318, 70, 70);
+      halo.addColorStop(0, 'rgba(90,170,255,0.25)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = halo; ctx.fillRect(240, 0, W - 240, H); ctx.globalCompositeOperation = 'source-over';
+    }
+    // assombrissement du bas pour le bandeau du titre
+    const bot = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    bot.addColorStop(0, 'rgba(0,0,0,0)'); bot.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = bot; ctx.fillRect(0, 0, W, H);
+  };
 })(window.ZC);

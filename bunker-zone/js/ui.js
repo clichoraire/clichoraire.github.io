@@ -519,8 +519,8 @@
         <div id="menu-play" class="menu hidden">
           <h1>JOUER</h1>
           <div class="cards">
-            <div class="card"><h3>Partie simple</h3><p>Une partie avec vos réglages actuels : mode, carte, nombre d'IA, difficulté...</p><button id="btn-simple" class="big">Lancer une partie</button></div>
-            <div class="card"><h3>Aventure</h3><p>Quatre mondes à conquérir, un par race, ${ZC.SCENARIOS.length} missions chacun et trois difficultés par mission. Des points à dépenser dans la boutique et trois héros qui montent de niveau. L'aventure se joue avec les humains.</p><button id="btn-adventure" class="big">Entrer dans l'aventure</button></div>
+            <div class="card simple"><div class="card-art"><canvas data-art="simple" width="760" height="272"></canvas><h3>Partie simple</h3></div><p>Une partie avec vos réglages actuels : mode, carte, nombre d'IA, difficulté...</p><button id="btn-simple" class="big">Lancer une partie</button></div>
+            <div class="card adventure"><div class="card-art"><canvas data-art="adventure" width="760" height="272"></canvas><h3>Aventure</h3></div><p>Quatre mondes à conquérir, un par race, ${ZC.SCENARIOS.length} missions chacun et trois difficultés par mission. Des points à dépenser dans la boutique et trois héros qui montent de niveau. L'aventure se joue avec les humains.</p><button id="btn-adventure" class="big">Entrer dans l'aventure</button></div>
           </div>
           <div class="btns"><button id="btn-play-back">Retour</button></div>
         </div>
@@ -686,7 +686,10 @@
     showPause() { this.hideMenus(); this.updateSoundButton(); this.m.pause.classList.remove('hidden'); }
 
     // ------------------------------------------------------------ Mode aventure
-    showPlay() { this.hideMenus(); this.m.play.classList.remove('hidden'); }
+    showPlay() {
+      this.hideMenus(); this.m.play.classList.remove('hidden');
+      this.m.play.querySelectorAll('canvas[data-art]').forEach(cv => ZC.drawCardArt(cv, cv.dataset.art)); // illustrations des cartes (sprites du jeu)
+    }
 
     showCampaign(worldId) {
       this.hideMenus();
