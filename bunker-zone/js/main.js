@@ -60,6 +60,8 @@
         const s = JSON.parse(localStorage.getItem('zc-settings') || '{}');
         for (const k of App.TRANSIENT_KEYS) delete s[k];
         if (s.unitCap === 100) delete s.unitCap;  // ancien défaut (plafond absolu à 100) : on repasse au nouveau défaut, illimité
+        if (s.startUnits === 8) delete s.startUnits;      // anciens défauts (8 soldats, 2 travailleurs) : nouveau départ à 0 soldat et 5 travailleurs
+        if (s.startWorkers === 2) delete s.startWorkers;
         return s;
       } catch (e) { return {}; }
     }
@@ -108,6 +110,7 @@
         // Mission : on part des valeurs par défaut pour tout ce qu'une mission peut régler, puis la mission s'applique
         const base = Object.assign({}, this.settings);
         for (const k of App.MISSION_KEYS) base[k] = ZC.DEFAULTS[k];
+        Object.assign(base, ZC.MISSION_DEFAULTS);
         this.gs = Object.assign(base, settings);
       } else {
         this.settings = Object.assign({}, this.settings, settings);
@@ -224,7 +227,12 @@
           break;
         case 'capture': {
           const p = g.players[d.player];
-          if (d.player === me) { A.play('build', 0); ui.message((d.hq ? 'Nouveau centre de commandement établi' : 'Bunker construit') + ' ! (' + p.zones + ' zones)', p.hex); }
+          if (d.player === me) { A.play('build', 0); ui.message(d.byDropship ? (d.hq ? 'Centre de commandement' : 'Bunker') + ' en construction (' + Math.round(g.settings.landingTime) + ' s) : protégez le chantier ! (' + p.zones + ' zones)' : (d.hq ? 'Nouveau centre de commandement établi' : 'Bunker construit') + ' ! (' + p.zones + ' zones)', p.hex); }
+          break;
+        }
+        case 'bunkerDone': {
+          const z = d.bunker.zone, zn = z ? ' en zone ' + (z.ix + 1) + '-' + (z.iy + 1) : '';
+          if (d.player === me) { A.play('build', 0); ui.message((d.hq ? 'Centre de commandement' : 'Bunker') + ' terminé' + zn + ' : il produit à partir de la prochaine vague.', g.players[me].hex); }
           break;
         }
         case 'bunkerDestroyed': {

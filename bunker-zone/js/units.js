@@ -287,6 +287,11 @@
         return;
       }
       if (this.def.structure) {
+        if (this.building && this.buildTotal) { // chantier de bunker : les PV montent avec l'avancement ; il ne produit, ne tire et ne cherche rien
+          this.buildT += dt; this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.9 * dt / this.buildTotal);
+          if (this.buildT >= this.buildTotal) { this.building = false; this.game.emit('bunkerDone', { player: this.owner, bunker: this, hq: !!this.def.hq }); }
+          return;
+        }
         if (this.hp < this.maxHp && this.hitFlash <= 0) this.hp = Math.min(this.maxHp, this.hp + ZC.BUNKER_REGEN * (this.bonus ? this.bonus.regen : 1) * dt);
         if (this.queue.length) {
           const q = this.queue[0];
@@ -327,14 +332,8 @@
           const claimable = z && z.owner < 0 && !z.bunker;
           if (!claimable) { this.order = { type: 'idle' }; break; }
           const d = ZC.dist(this.x, this.y, o.x, o.y);
-          if (d > 6) { this.moveTo(o.x, o.y, dt); this.landT = 0; }
-          else {
-            this.landT += dt;
-            if (this.landT >= this.game.settings.landingTime) {
-              this.game.buildBunker(z, this.owner, this);
-              return;
-            }
-          }
+          if (d > 6) this.moveTo(o.x, o.y, dt);
+          else { this.game.buildBunker(z, this.owner, this); return; } // arrivé : le chantier démarre tout de suite (le bunker se construit sur place)
           break;
         }
 
@@ -350,7 +349,7 @@
 
         case 'enter': { // rejoindre un bunker allié et y entrer s'il reste de la place
           const b = o.bunker;
-          if (!b || b.dead || b.owner !== this.owner || b.garrison.length >= ZC.capacity(b)) { this.order = { type: 'idle' }; break; }
+          if (!b || b.dead || b.building || b.owner !== this.owner || b.garrison.length >= ZC.capacity(b)) { this.order = { type: 'idle' }; break; }
           if (ZC.dist(this.x, this.y, b.x, b.y) > b.radius + this.radius + 6) this.moveTo(b.x, b.y, dt);
           else { this.game.enterBunker(this, b); return; }
           break;

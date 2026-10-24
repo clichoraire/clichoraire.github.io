@@ -249,7 +249,7 @@
           ctx.fillText(keys, bx + bw / 2, by + 10.5);
         }
         if (u.building) { // chantier : barre de construction
-          const w = 40, x = Math.round(u.rx - w / 2), y = Math.round(u.ry + u.radius + 10), total = u.def.tower ? ZC.TOWER.buildTime : ZC.EXTRACTOR.buildTime;
+          const w = 40, x = Math.round(u.rx - w / 2), y = Math.round(u.ry + u.radius + 10), total = u.buildTotal || (u.def.tower ? ZC.TOWER.buildTime : ZC.EXTRACTOR.buildTime);
           ctx.fillStyle = '#000'; ctx.fillRect(x - 1, y - 1, w + 2, 7); ctx.fillStyle = '#2a2a14'; ctx.fillRect(x, y, w, 5);
           ctx.fillStyle = '#ffd040'; ctx.fillRect(x, y, Math.round(w * Math.min(1, u.buildT / total)), 5);
           continue;
@@ -303,7 +303,7 @@
         if (!ok.ok) { ctx.font = 'bold 10px Verdana, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff6a5a'; ctx.fillText({ zone: 'Seulement dans vos zones', centre: 'Trop près du centre', structure: 'Trop près d\'une structure', gisement: 'Trop près du gisement', max: ZC.TOWER.perZone + ' tours max par zone' }[ok.reason] || 'Impossible ici', wx, wy - td.radius - 12); }
       }
       if (input && input.mouse.dragging) {
-        const mx = input.mouse.x + vx, my = input.mouse.y + vy, x0 = input.mouse.sx + vx, y0 = input.mouse.sy + vy;
+        const mx = input.mouse.x + vx, my = input.mouse.y + vy, x0 = input.mouse.swx, y0 = input.mouse.swy;
         ctx.strokeStyle = '#18e818'; ctx.lineWidth = 1;
         ctx.strokeRect(Math.min(x0, mx) + 0.5, Math.min(y0, my) + 0.5, Math.abs(mx - x0), Math.abs(my - y0));
       }

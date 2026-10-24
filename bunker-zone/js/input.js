@@ -12,7 +12,7 @@
       this.canvas = app.canvas;
       // inWindow reste faux tant que la souris n'a pas bougé : sinon, la souris étant « en (0,0) », le défilement par le bord
       // emmenait la caméra au coin haut-gauche (souvent chez l'ennemi) dès le début de la partie
-      this.mouse = { x: 0, y: 0, sx: 0, sy: 0, down: false, dragging: false, inWindow: false, overCanvas: false };
+      this.mouse = { x: 0, y: 0, sx: 0, sy: 0, swx: 0, swy: 0, down: false, dragging: false, inWindow: false, overCanvas: false }; // sx/sy : départ du cadre à l'écran, swx/swy : dans le monde (le cadre suit si la caméra bouge)
       this.mode = 'normal';   // normal | attack | move | patrol | build | send
       this.hover = null;
       this.hoverPatch = null;   // gisement sous la souris
@@ -80,7 +80,7 @@
           if (!e.shiftKey) this.setMode('normal');
           return;
         }
-        this.mouse.down = true; this.mouse.dragging = false; this.mouse.sx = p.x; this.mouse.sy = p.y;
+        this.mouse.down = true; this.mouse.dragging = false; this.mouse.sx = p.x; this.mouse.sy = p.y; this.mouse.swx = w.x; this.mouse.swy = w.y; this.mouse.inWindow = true;
       } else if (e.button === 2) {
         if (this.mode !== 'normal') { this.setMode('normal'); return; }
         this.smartOrder(w, this.unitAt(w.x, w.y));
@@ -90,6 +90,8 @@
     onMouseMove(e) {
       const p = this.canvasPos(e);
       this.mouse.x = p.x; this.mouse.y = p.y; this.mouse.inWindow = true;
+      // relâchement jamais reçu (hors fenêtre, menu système...) : on ne reste pas bloqué « bouton enfoncé »
+      if (this.mouse.down && e.buttons !== undefined && !(e.buttons & 1)) { this.mouse.down = false; this.mouse.dragging = false; }
       this.mouse.overCanvas = p.x >= 0 && p.y >= 0 && p.x < this.renderer.vw && p.y < this.renderer.vh;
       if (this.mouse.down && !this.mouse.dragging && ZC.dist(p.x, p.y, this.mouse.sx, this.mouse.sy) > 4) this.mouse.dragging = true;
       const w = { x: p.x + this.renderer.viewX, y: p.y + this.renderer.viewY };
@@ -107,8 +109,8 @@
       const g = this.game, r = this.renderer;
       if (this.mouse.dragging) {
         this.mouse.dragging = false;
-        const x0 = Math.min(this.mouse.sx, this.mouse.x) + r.viewX, x1 = Math.max(this.mouse.sx, this.mouse.x) + r.viewX;
-        const y0 = Math.min(this.mouse.sy, this.mouse.y) + r.viewY, y1 = Math.max(this.mouse.sy, this.mouse.y) + r.viewY;
+        const mx = this.mouse.x + r.viewX, my = this.mouse.y + r.viewY;
+        const x0 = Math.min(this.mouse.swx, mx), x1 = Math.max(this.mouse.swx, mx), y0 = Math.min(this.mouse.swy, my), y1 = Math.max(this.mouse.swy, my);
         const inBox = g.units.filter(u => u.x + u.radius >= x0 && u.x - u.radius <= x1 && u.y + u.radius >= y0 && u.y - u.radius <= y1);
         g.select(inBox, e.shiftKey);
         if (g.selection.length) ZC.Audio.play('select');
@@ -389,7 +391,7 @@
       if (this.keys.has('ArrowRight')) dx += sp;
       if (this.keys.has('ArrowUp')) dy -= sp;
       if (this.keys.has('ArrowDown')) dy += sp;
-      if (this.mouse.inWindow && this.app.settings.edgeScroll !== false && !this.mouse.dragging) {
+      if (this.mouse.inWindow && this.app.settings.edgeScroll !== false) {
         const m = this.mouse, E = 6, W = window.innerWidth, H = window.innerHeight;
         if (m.x <= E) dx -= sp; else if (m.x >= W - E - 1) dx += sp;
         if (m.y <= E) dy -= sp; else if (m.y >= H - E - 1) dy += sp;

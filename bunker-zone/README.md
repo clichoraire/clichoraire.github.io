@@ -14,7 +14,7 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
 
 - La carte est une grille de zones. Chaque zone a un emplacement de **bunker** en son centre :
   **qui possède le bunker possède la zone**.
-- Chaque joueur commence avec un **centre de commandement** (6000 PV, armure 8), 8 marines, un dropship
+- Chaque joueur commence avec un **centre de commandement** (6000 PV, armure 8), aucun soldat (réglable ; les vagues font l'armée), 5 travailleurs, un dropship
   et 50 minerais. Seul le centre de commandement produit des dropships ; s'il est détruit, plus
   d'expansion possible (sauf si le joueur perd tout : son prochain bunker devient le nouveau QG).
 - **Chaque bunker a ses propres améliorations** (armes, armure, portée, démolition, stimpack), recherchées en le
@@ -42,9 +42,10 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
   occupants tirent depuis le bunker avec leur propre arme, à +1 case de portée, et sont protégés.
   **Un bunker vide ne tire pas.** Touche U pour décharger ; si le bunker est détruit, les occupants
   en sortent vivants. Les IA garnissent aussi leurs bunkers.
-- **Prendre une zone libre** : envoyer un dropship au centre de la zone (clic droit) ; il atterrit
-  en 6 s et construit un bunker. Le dropship est lent (nettement moins rapide qu'un marine) : il
-  faut l'escorter.
+- **Prendre une zone libre** : envoyer un dropship au centre de la zone (clic droit). Dès qu'il arrive,
+  la zone est prise et le bunker apparaît en **chantier** : 10 % de ses points de vie, le reste vient en 6 s
+  (temps d'atterrissage). Un chantier ne produit pas, ne tire pas et n'accueille personne ; l'ennemi doit le
+  détruire pour vous arrêter. Le dropship est lent (nettement moins rapide qu'un marine) : escortez-le.
 - **Prendre une zone ennemie** : détruire son bunker (3000 PV, armure 5 : un marine de base ne fait
   que 1 dégât par tir, d'où l'intérêt des améliorations d'armes) libère la zone, mais ne la donne pas :
   il faut ensuite y poser un dropship comme pour une zone libre.
@@ -138,10 +139,10 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
   d'une zone d'un gisement. Un gisement s'épuise ; les cristaux rapetissent avec le minerai restant. Survolez un gisement
   pour lire son contenu.
 - **Travailleurs** (un par race : Ouvrier, Drone, Sonde, Foreur) : produits au centre de commandement (carte
-  « Unités », F puis W, 50 minerais, 15 s). Le maximum monte avec vos bunkers : 4 travailleurs par bunker
-  possédé, QG compris, et 16 au plus. Ils récoltent 5 minerais par voyage (environ 45 par minute
+  « Unités », F puis W, 50 minerais, 15 s). Le maximum monte avec vos bunkers : 5 travailleurs par bunker
+  possédé, QG compris, et 20 au plus. Ils récoltent 5 minerais par voyage (environ 45 par minute
   chacun), cinq travailleurs au plus par gisement en même temps, et rapportent le minerai au bunker ou au QG le plus
-  proche. Un travailleur neuf part de lui-même récolter le gisement le plus proche. On commence avec 2 travailleurs
+  proche. Un travailleur neuf part de lui-même récolter le gisement le plus proche. On commence avec 5 travailleurs
   (option). Ils ne combattent pas, n'entrent pas en garnison et sont exclus de « toute l'armée ».
 - **Réparation** : un travailleur répare un bunker ou un QG allié (clic droit dessus, ou R) à 40 PV par seconde,
   contre 3 minerais par seconde, puis retourne récolter.

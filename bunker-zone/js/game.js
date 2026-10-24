@@ -242,7 +242,7 @@
     get isTournament() { return this.settings.mode === 'rounds'; }
     // ---------------------------------------------------------- garnison des bunkers
     enterBunker(u, b) {
-      if (b.def.extractor) return false;
+      if (b.def.extractor || b.building) return false;
       if (u.dead || b.dead || u.inside || b.garrison.length >= ZC.capacity(b) || !u.canGarrison) return false;
       u.inside = b; u.order = { type: 'idle' }; u.target = null; u.moving = false; u.stimT = 0;
       u.x = b.x; u.y = b.y; u.prevX = b.x; u.prevY = b.y;
@@ -419,6 +419,7 @@
       const isHQ = silent === 'hq' || (!p.hq && p.bunkers === 0);
       const b = this.spawnUnit(owner, isHQ ? 'hq' : 'bunker', zone.cx, zone.cy);
       b.zone = zone;
+      if (dropship) { b.building = true; b.buildT = 0; b.buildTotal = this.settings.landingTime; b.hp = b.maxHp * 0.1; } // chantier : 10 % des PV, le reste vient avec l'avancement
       zone.bunker = b;
       const prev = zone.owner;
       zone.owner = owner;
@@ -441,6 +442,7 @@
     buy(player, what, bunker) {
       const p = this.players[player];
       if (!p.alive) return false;
+      if (bunker && bunker.building) return false; // chantier : rien à acheter avant la fin de la construction
       const admin = this.isAdmin(player);
       if (what === 'dropship') {
         const cost = this.dropshipCost(player);
@@ -765,7 +767,7 @@
       this.recount();
       let spawned = 0;
       for (const z of this.map.zones) {
-        if (z.owner < 0 || !z.bunker || z.bunker.dead) continue;
+        if (z.owner < 0 || !z.bunker || z.bunker.dead || z.bunker.building) continue; // un chantier ne produit pas encore
         const p = this.players[z.owner];
         if (!p.alive) continue;
         const b = z.bunker;

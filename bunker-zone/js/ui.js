@@ -129,9 +129,12 @@
       this.updateSpeed(1);
       this.minimap = q('#minimap');
       this.mctx = this.minimap.getContext('2d');
-      this.el.info.addEventListener('mousedown', e => { if (e.target.closest('.qi')) { e.preventDefault(); e.stopPropagation(); } });
-      this.el.info.addEventListener('click', e => {
-        const q = e.target.closest('.qi[data-q]'), g = this.app.game; if (!q || !g) return;
+      // Annulation d'un élément de file au mousedown (pas au click : le panneau est redessiné 5 fois par seconde, le clic
+      // se perdait quand l'icône était remplacée entre l'appui et le relâchement). Marche aussi pour l'élément en cours.
+      this.el.info.addEventListener('mousedown', e => {
+        const q = e.target.closest('.qi[data-q]'), g = this.app.game; if (!q) return;
+        e.preventDefault(); e.stopPropagation();
+        if (e.button !== 0 || !g) return;
         const b = g.selectedBunker; if (b && g.cancelQueued(g.humanId, b, q.dataset.q, +q.dataset.i)) { ZC.Audio.play('order', 0); this.refreshSelection(); }
       });
       this.el.cmd.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); });
@@ -176,6 +179,7 @@
     // disabled : true = pas assez de minerai (réactivé dès qu'on en a) ; 'lock' = indisponible quoi qu'il arrive (max atteint,
     // conditions non remplies...) : le bouton reste inactif jusqu'à ce que la carte soit redessinée
     cardButton(cmd, ico, key, label, cost, disabled, lvl) {
+      if (this.lockAll) disabled = 'lock'; // bunker en chantier : tout est verrouillé
       let pips = '';
       if (lvl) {
         if (lvl.done >= lvl.max) pips = '<span class="lv max">MAX</span>';
@@ -195,7 +199,7 @@
     cardSignature() {
       const g = this.app.game, b = g.selectedBunker;
       if (!b) return 'n' + g.ownSelection.length;
-      return b.id + ':' + Object.values(b.up).join('') + ':' + b.research.map(r => r.what[0]).join('') + ':' + b.queue.length + ':' + b.garrison.length + ':' + (g.hero ? (g.hero.dead ? 'd' : 'v') : '') + ':' + (g.workers(g.humanId).length + g.workersQueued(g.humanId));
+      return b.id + ':' + (b.building ? 'B' : '') + Object.values(b.up).join('') + ':' + b.research.map(r => r.what[0]).join('') + ':' + b.queue.length + ':' + b.garrison.length + ':' + (g.hero ? (g.hero.dead ? 'd' : 'v') : '') + ':' + (g.workers(g.humanId).length + g.workersQueued(g.humanId));
     }
     // Un groupe de la carte : un titre et une grille 3 x 3 (les cases vides complètent la grille)
     cardGroup(title, buttons) {
@@ -237,6 +241,7 @@
         groups = [['Ordres', [move(), stop()]], ['Constructions', [cb('build', '⌂', 'B', 'Construire un bunker sur une zone libre')]]];
       } else if (kind === 'bunker') {
         const b = g.selectedBunker, nb = g.selectedBunkers.length, multi = nb > 1 ? ' — ' + nb + ' bunkers sélectionnés' : '';
+        this.lockAll = !!b.building;
         const up = (k, ico) => {
           const d = ZC.UPGRADES[k], lvl = g.pendingLevel(b, k), cost = g.upgradeCost(b, k);
           const maxed = cost < 0;
@@ -258,6 +263,7 @@
         units.push(cb('send', '⇶', 'G', 'Envoyer les troupes : toutes les unités produites par ce bunker partent en attaque-déplacement vers le point cliqué'));
         if (b.garrison.length) units.push(cb('unload', '⇩', 'U', 'Décharger la garnison (' + b.garrison.length + ' unités)'));
         groups = [['Unités', units], ['Améliorations', upgrades]];
+        this.lockAll = false;
       } else {
         groups = [['Production', me.hq ? [cb('dropship', '✈', 'D', 'Dropship (produit au centre de commandement)', g.dropshipCost(me.id), me.minerals < g.dropshipCost(me.id))] : []], ['', []]];
       }
@@ -445,16 +451,17 @@
         const f = u.hp / u.maxHp;
         hp.innerHTML = '<span class="k">Vie</span> <span style="color:' + (f > 0.66 ? '#10fc18' : f > 0.33 ? '#fcfc38' : '#fc3838') + '">' + Math.ceil(u.hp) + ' / ' + u.maxHp + '</span>';
         info.querySelector('#u-shield').innerHTML = u.def.shield ? '<span class="k">Bouclier</span> <span style="color:#4aa8ff">' + Math.ceil(u.shield) + ' / ' + u.def.shield + '</span>' : '';
-        const k = info.querySelector('#u-kills'); if (k && u.def.tower) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.TOWER.buildTime * 100)) + ' %' : (u.def.manned ? 'Garnison ' + u.garrison.length + '/' + u.def.capacity + (u.garrison.length ? '' : ' (ne tire pas)') : 'En veille') + ' · Kills : ' + u.kills;
+        const k = info.querySelector('#u-kills'); if (k && u.building && u.buildTotal) k.textContent = 'En construction : ' + Math.round(Math.min(100, u.buildT / u.buildTotal * 100)) + ' % · ' + Math.ceil(u.buildTotal - u.buildT) + ' s · ne produit pas et ne tire pas encore';
+        else if (k && u.def.tower) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.TOWER.buildTime * 100)) + ' %' : (u.def.manned ? 'Garnison ' + u.garrison.length + '/' + u.def.capacity + (u.garrison.length ? '' : ' (ne tire pas)') : 'En veille') + ' · Kills : ' + u.kills;
         else if (k && u.def.extractor) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.EXTRACTOR.buildTime * 100)) + ' %' : u.patch && u.patch.amount > 0 ? 'En activité · gisement : ' + Math.round(u.patch.amount) : 'Gisement épuisé';
         else if (k && u.def.worker) k.textContent = (u.order.type === 'gather' ? (u.slot ? 'Récolte en cours' : u.carry >= ZC.MINERALS.carry ? 'Rapporte ' + u.carry + ' minerais' : 'En route vers le gisement') : u.order.type === 'repair' ? 'Réparation' + (u.repairing ? ' en cours (' + ZC.REPAIR.costPerSec + ' minerais/s)' : '') : 'Inactif') + (u.carry > 0 && u.order.type !== 'gather' ? ' · transporte ' + u.carry + ' minerais' : '');
         else if (k) k.textContent = (u.def.hero ? 'Héros · Niveau ' + u.heroLevel + ' · ' + Math.floor(u.xp) + ' XP' + (u.heroLevel < ZC.HERO_MAX_LEVEL ? ' / ' + ZC.heroXpFor(u.heroLevel + 1) : '') + ' · ' : '') + 'Kills : ' + u.kills + (u.stimT > 0 ? ' · Stimulé (' + Math.ceil(u.stimT) + ' s)' : '');
         const ex = info.querySelector('#u-extra');
         if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + g.workerCap(u.owner) + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
         const upl = info.querySelector('#u-up');
-        if (upl) upl.textContent = (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.siege ? ' · Démolition +' + u.up.siege : '') + (u.up.stim ? ' · Stimpack' : '');
+        if (upl) upl.textContent = (u.building && u.buildTotal ? 'EN CONSTRUCTION : ' + Math.round(Math.min(100, u.buildT / u.buildTotal * 100)) + ' % · ' + Math.ceil(u.buildTotal - u.buildT) + ' s · ' : '') + (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.siege ? ' · Démolition +' + u.up.siege : '') + (u.up.stim ? ' · Stimpack' : '');
         // Files d'attente en icônes : le premier élément porte sa barre de progression, les suivants attendent
-        const qIcon = (cmd, key, pct, title, gold, kind, i) => '<span class="qi' + (pct !== undefined ? ' cur' : '') + '" data-q="' + kind + '" data-i="' + i + '" title="' + esc(title) + ' — clic : annuler et rembourser">' + (ICONS[cmd] || '') + '<i>' + key + '</i>' + (pct !== undefined ? '<b class="' + (gold ? 'gold' : '') + '" style="width:' + pct.toFixed(0) + '%"></b>' : '') + '</span>';
+        const qIcon = (cmd, key, pct, title, gold, kind, i) => '<span class="qi' + (pct !== undefined ? ' cur' : '') + '" data-q="' + kind + '" data-i="' + i + '" title="' + esc(title) + ' — clic : annuler (même en cours) et rembourser">' + (ICONS[cmd] || '') + '<i>' + key + '</i>' + (pct !== undefined ? '<b class="' + (gold ? 'gold' : '') + '" style="width:' + pct.toFixed(0) + '%"></b>' : '') + '</span>';
         const rd = info.querySelector('#u-research');
         if (rd && u.def.structure) {
           if (u.research.length) {
@@ -651,7 +658,7 @@
         <label>Terrain<select name="tileset">${opt(['jungle', 'badlands', 'space'], ['Jungle', 'Badlands', 'Plateforme spatiale'], s.tileset)}</select></label>
         <label>Votre couleur<span class="swatches">${colorSw}</span></label>
         <label>Intervalle des vagues<select name="spawnInterval">${opt([5, 8, 10, 15, 20], ['5 s', '8 s', '10 s', '15 s', '20 s'], s.spawnInterval)}</select></label>
-        <label>Unités de départ<select name="startUnits">${opt([4, 8, 12, 20], null, s.startUnits)}</select></label>
+        <label>Soldats de départ<select name="startUnits">${opt([0, 4, 8, 12, 20], ['Aucun', '4', '8', '12', '20'], s.startUnits)}</select></label>
         <label>Supply max<select name="unitCap">${opt([0, 60, 100, 150, 200, 300], ['Illimitée (selon les bunkers)', '60', '100', '150', '200', '300'], s.unitCap || 0)}</select></label>
         <label>Supply par bunker<select name="supplyPerBunker">${opt([10, 15, 20, 30, 50], ['+10', '+15', '+20', '+30', '+50'], s.supplyPerBunker)}</select></label>
         <label>Revenu par bunker / vague<select name="incomePerBunker">${opt([0, 2, 3, 5], ['Aucun (kills seulement)', '2 minerais', '3 minerais', '5 minerais'], s.incomePerBunker)}</select></label>
@@ -659,7 +666,7 @@
         <label>Temps d'atterrissage<select name="landingTime">${opt([3, 6, 10], ['3 s (rapide)', '6 s', '10 s (lent)'], s.landingTime)}</select></label>
         <label>Durée d'un round (évolution)<select name="roundDuration">${opt([60, 100, 150, 240], ['1:00', '1:40', '2:30', '4:00'], s.roundDuration)}</select></label>
         <label>Gisements de minerai<select name="mineralZones">${opt([0, 0.2, 0.4, 0.7], ['Aucun (zones de départ non plus)', 'Rares', 'Normaux', 'Abondants'], s.mineralZones)}</select></label>
-        <label>Travailleurs au départ<select name="startWorkers">${opt([0, 2, 4], ['0', '2', '4'], s.startWorkers)}</select></label>
+        <label>Travailleurs au départ<select name="startWorkers">${opt([0, 2, 4, 5, 8], ['0', '2', '4', '5', '8'], s.startWorkers)}</select></label>
         <label>Vitesse du jeu<select name="gameSpeed">${opt([0.7, 1, 1.4], ['Lente', 'Normale', 'Rapide'], s.gameSpeed)}</select></label>
         <label>Sélection max<select name="selectionLimit">${opt([0, 12], ['Illimitée', '12 (comme SC1)'], s.selectionLimit)}</select></label>
         <label>Son<select name="sound">${opt([1, 0], ['Activé', 'Coupé'], s.sound ? 1 : 0)}</select></label>
