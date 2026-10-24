@@ -27,17 +27,22 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
   et pointes chez les zergs ; liseré, plaques, cristaux, anneau chez les protoss).
 - À chaque **vague** (8 s par défaut), chaque bunker produit un marine (le bunker central en produit 2)
   et rapporte quelques minerais. Les marines apparaissent devant le bunker et rejoignent son point de ralliement.
-- **Quatre races**, chacune avec une unité de niveau 1 produite par les bunkers et une unité de
-  niveau 2 : Humains (soldat de reconnaissance → exo-marine lourd), Essaim insectoïde (coureur →
-  bête chitineuse), Guerriers d'énergie (guerrier à lames → archonte mécanique), Mécas cybernétiques
-  (robot éclaireur → mech de siège). Le joueur choisit sa race dans les options ; les IA tirent la
-  leur au hasard.
+- **Quatre races**, chacune avec une unité de niveau 1 produite par les bunkers et deux évolutions :
+  Humains (soldat de reconnaissance → exo-marine lourd → colosse d'assaut, double gatling), Essaim insectoïde
+  (coureur → bête chitineuse → ravageur alpha, griffes de zone), Guerriers d'énergie (guerrier à lames →
+  archonte mécanique → avatar d'énergie, bouclier 320 et foudre de zone), Mécas cybernétiques (robot éclaireur →
+  mech de siège → forteresse mobile, obus explosifs à très longue portée). Les unités de niveau 3 sont nettement
+  plus grandes, avec une parure propre à chaque race (épaulières et visière rouge, cornes et yeux luisants, halo
+  d'énergie, antenne clignotante) et un anneau doré au sol. Le joueur choisit sa race dans les options ; les IA
+  tirent la leur au hasard.
 - **Centre de commandement** (Q, 400 minerais, 75 s) : promeut un bunker au niveau du QG : 6 places en
   garnison, 6000 PV, armure 8, et il produit lui aussi dropships (D), travailleurs et héros (F). Si le QG
   d'origine tombe, les autres centres prennent le relais.
-- **Améliorations** : armes, armure, portée et démolition (+25 % de dégâts contre les bâtiments par niveau, touche X) vont jusqu'au niveau 3. Quand armes, armure et portée sont au niveau 3
-  sur un bunker (terminées ou encore en file de recherche), l'**Évolution** (V, 350 minerais, 60 s) transforme ses soldats présents et futurs
-  en unité de niveau 2.
+- **Améliorations** : armes, armure, portée et démolition (+25 % de dégâts contre les bâtiments par niveau, touche X) vont jusqu'au niveau 3.
+  L'**Évolution** (V) se fait en deux paliers par bunker : quand armes, armure et portée sont au niveau 2 (terminées ou
+  encore en file de recherche), la première évolution (350 minerais, 60 s) transforme ses soldats présents et futurs en
+  unité de niveau 2 ; quand elles sont au niveau 3, la seconde (600 minerais, 90 s) les passe au niveau 3. Un soldat
+  de niveau 1 qui rejoint un bunker évolué est transformé lui aussi.
 - **Garnison** : un bunker (ou le QG) accueille jusqu'à 4 unités au sol à distance : clic droit sur son propre bunker avec des unités sélectionnées. Les
   occupants tirent depuis le bunker avec leur propre arme, à +1 case de portée, et sont protégés.
   **Un bunker vide ne tire pas.** Touche U pour décharger ; si le bunker est détruit, les occupants
@@ -58,7 +63,7 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
 - Les stats des unités (vie, armure, dégâts, portée, supply, dégâts normaux / concussifs / explosifs
   selon la taille) suivent StarCraft 1.
 - **Mode évolution** (option) : le type d'unité produit change toutes les 1 min 40 :
-  les quatre unités de niveau 1 puis les quatre de niveau 2.
+  les quatre unités de niveau 1, puis les quatre de niveau 2, puis les quatre de niveau 3.
 - **Mode tournoi** (option) : la partie se joue en rounds, un type d'unité par round (même ordre que
   l'évolution, en boucle).
 - **Équipes** (missions 2v2 et 3v3 de l'aventure, ou réglage `teams`) : les alliés ne se tirent pas
@@ -122,7 +127,7 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 | Pouvoirs du héros sélectionné (puis clic sur la cible au besoin) | T, Y |
 | Développer un pouvoir (annexe sélectionnée) | T, Y |
 | Acheter un dropship / bunker suivant | D / N |
-| Évolution (bunker sélectionné, armes, armure et portée au niveau 3) | V |
+| Évolution (bunker sélectionné ; armes, armure et portée au niveau 2 pour la première, 3 pour la seconde) | V |
 | Garnison | clic droit sur un bunker allié avec des unités sélectionnées (4 max, 6 dans le centre de commandement) ; U (bunker sélectionné) décharger |
 | Même type à l'écran (bunkers et centres de commandement compris) | double-clic ou Ctrl+clic |
 | Ajouter à la sélection | Maj+clic |
@@ -174,7 +179,7 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 « La montagne du centre » (QG au milieu de la carte et les huit zones autour, un carré 3x3 à tenir 5 minutes) et
 « Le siège » n'ont plus d'ennemi installé sur la carte : un joueur **envahisseur** sans base
 envoie des vagues par les bords de la carte toutes les 15 à 35 secondes (12 à 28 en difficile), vers la structure du
-joueur la plus proche. Les vagues grossissent avec le temps, passent aux unités de niveau 2 après 2 min 30 et gagnent
+joueur la plus proche. Les vagues grossissent avec le temps, passent aux unités de niveau 2 après 2 min 30 (niveau 3 après 7 min) et gagnent
 des améliorations. Le bord d'arrivée est tiré au hasard mais annoncé à l'avance : balise rouge animée sur le bord de la carte (anneaux,
 chevrons, compte à rebours, qui s'emballe dans les 5 dernières secondes), flèche au bord de l'écran si la balise est hors
 champ, losange clignotant sur la minimap, direction dans la barre du haut. Espace centre la caméra sur la dernière alerte. Facile / moyen / difficile règlent la taille des vagues (x0,7 / x1 / x1,5).

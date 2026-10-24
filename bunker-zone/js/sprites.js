@@ -42,36 +42,92 @@
     archonmech: { idle: 'archon_idle', walk: ['archon_walk1', 'archon_walk2'], fire: 'archon_fire', h: 46, feet: 12 },
     scoutbot:   { idle: 'scout_idle',  walk: ['scout_walk1', 'scout_walk2', 'scout_walk3'], fire: 'scout_fire', h: 28, feet: 7 },
     siegemech:  { idle: 'siege_idle',  walk: ['siege_walk1', 'siege_walk2'],   fire: 'siege_fire',  h: 48, feet: 13 },
+    // Niveau 3 : mêmes cadres que le niveau 2, plus grands, avec une parure de rang 3 dessinée par-dessus (tier3)
+    colossus:   { idle: 'exo_idle',    walk: ['exo_walk1', 'exo_walk2'],       fire: 'exo_fire',    h: 50, feet: 13, tier3: 'human',  tint: 'rgba(20,30,60,0.5)' },    // acier sombre
+    ravager:    { idle: 'beast_idle',  walk: ['beast_walk1', 'beast_walk2'],   fire: 'beast_fire',  h: 58, feet: 15, tier3: 'insect', tint: 'rgba(50,0,25,0.45)' },    // chitine noire et pourpre
+    avatar:     { idle: 'archon_idle', walk: ['archon_walk1', 'archon_walk2'], fire: 'archon_fire', h: 58, feet: 15, tier3: 'energy', tint: 'rgba(255,235,170,0.35)' }, // or et lumière
+    fortress:   { idle: 'siege_idle',  walk: ['siege_walk1', 'siege_walk2'],   fire: 'siege_fire',  h: 60, feet: 16, tier3: 'mecha',  tint: 'rgba(30,15,15,0.45)' },   // bronze de guerre sombre
   };
+  // Parure de rang 3 : repères visuels forts pour reconnaître d'un coup d'œil l'unité la plus puissante de chaque race
+  function tier3Deco(ctx, kind, spec, c, t, flip) {
+    const top = spec.feet - spec.h, cy = top + spec.h * 0.45, sx = flip ? -1 : 1;
+    ctx.save();
+    switch (kind) {
+      case 'human': { // acier sombre (teinte), pointes d'épaule dorées et voyants rouges du réacteur dorsal
+        const sy = top + spec.h * 0.34;
+        ctx.fillStyle = '#ffd040'; ctx.strokeStyle = '#7a5a10'; ctx.lineWidth = 0.8;
+        for (const side of [-1, 1]) { const px = side * spec.h * 0.19; ctx.beginPath(); ctx.moveTo(px, sy + 1); ctx.lineTo(px + side * 6, sy - 7); ctx.lineTo(px + side * 4, sy + 2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        const glow = 0.5 + 0.5 * Math.sin(t * 7);
+        for (const side of [-1, 1]) circ(ctx, side * spec.h * 0.08, sy + 6, 1.6, 'rgba(255,' + Math.round(60 + 90 * glow) + ',40,0.95)');
+        break;
+      }
+      case 'insect': { // cornes dorsales et yeux rouges luisants
+        ctx.fillStyle = '#5a1a14'; ctx.strokeStyle = '#ffb090'; ctx.lineWidth = 1;
+        for (let i = -1; i <= 1; i++) { const bx = i * spec.h * 0.16, by = top + spec.h * 0.3; ctx.beginPath(); ctx.moveTo(bx - 4, by + 4); ctx.lineTo(bx + i * 3, by - spec.h * 0.22 - (i === 0 ? 4 : 0)); ctx.lineTo(bx + 4, by + 4); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        const eye = 'rgba(255,40,40,' + (0.7 + 0.3 * Math.sin(t * 8)) + ')';
+        circ(ctx, sx * spec.h * 0.2, top + spec.h * 0.28, 1.8, eye); circ(ctx, sx * spec.h * 0.28, top + spec.h * 0.3, 1.5, eye);
+        break;
+      }
+      case 'energy': { // halo d'énergie tournant et étincelles
+        ctx.lineWidth = 2;
+        for (let k = 0; k < 3; k++) { const a0 = t * 2.5 + k * TAU / 3; ctx.strokeStyle = 'rgba(140,220,255,0.85)'; ctx.beginPath(); ctx.arc(0, cy, spec.h * 0.42, a0, a0 + 1.1); ctx.stroke(); }
+        for (let k = 0; k < 4; k++) { const a = t * 4 + k * TAU / 4; circ(ctx, Math.cos(a) * spec.h * 0.45, cy + Math.sin(a) * spec.h * 0.3, 1.4, 'rgba(220,245,255,0.9)'); }
+        break;
+      }
+      case 'mecha': { // antenne à feu clignotant et blindage additionnel
+        ctx.strokeStyle = '#8c96a8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-sx * spec.h * 0.18, top + spec.h * 0.25); ctx.lineTo(-sx * spec.h * 0.22, top - 4); ctx.stroke();
+        circ(ctx, -sx * spec.h * 0.22, top - 5, 2, Math.sin(t * 5) > 0 ? '#ff4040' : '#601010');
+        for (const side of [-1, 1]) { roundRect(ctx, side * spec.h * 0.26 - 4, cy - 3, 8, 12, 2); ctx.fillStyle = '#3a4250'; ctx.fill(); ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.stroke(); }
+        break;
+      }
+    }
+    ctx.restore();
+  }
   ZC.spriteIsImage = (type) => { const d = ZC.UNITS[type]; return sheet.ready && !!SPEC[d && d.hero ? d.base : type]; };
 
   // Dessine un cadre : le sprite est mis à l'échelle sur sa hauteur de référence (rh) et son sommet
   // est placé en (feet - h) pour que tous les cadres d'une unité s'alignent.
-  function frame(ctx, name, h, feet, flip, alpha) {
+  // Cadres teintés (unités de niveau 3) : le cadre est recopié dans un canvas hors écran puis voilé de la teinte, une seule fois
+  const tinted = new Map();
+  function tintedFrame(f, tint) {
+    const key = f.x + ',' + f.y + tint;
+    let cv = tinted.get(key);
+    if (!cv) {
+      cv = document.createElement('canvas'); cv.width = f.w; cv.height = f.h;
+      const c2 = cv.getContext('2d');
+      c2.drawImage(sheet.img, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
+      c2.globalCompositeOperation = 'source-atop'; c2.fillStyle = tint; c2.fillRect(0, 0, f.w, f.h);
+      tinted.set(key, cv);
+    }
+    return cv;
+  }
+  function frame(ctx, name, h, feet, flip, alpha, tint) {
     const f = sheet.frames[name]; if (!f) return;
     const k = h / (f.rh || f.bh || f.h);
     ctx.save();
     if (alpha !== undefined) ctx.globalAlpha *= alpha;
     if (flip) ctx.scale(-1, 1);
-    ctx.drawImage(sheet.img, f.x, f.y, f.w, f.h, -(f.bx + f.bw / 2) * k, (feet - h) - f.by * k, f.w * k, f.h * k);
+    if (tint && typeof document !== 'undefined') ctx.drawImage(tintedFrame(f, tint), 0, 0, f.w, f.h, -(f.bx + f.bw / 2) * k, (feet - h) - f.by * k, f.w * k, f.h * k);
+    else ctx.drawImage(sheet.img, f.x, f.y, f.w, f.h, -(f.bx + f.bw / 2) * k, (feet - h) - f.by * k, f.w * k, f.h * k);
     ctx.restore();
   }
   // Direction (0 = est, 2 = sud, 4 = ouest, 6 = nord) à partir de l'angle de l'unité
   function dir8(facing) { return ((Math.round(facing / (Math.PI / 4)) % 8) + 8) % 8; }
 
   // Unité de la feuille : disque aux couleurs du joueur, pastilles d'amélioration, cadre selon l'état
-  function sheetUnit(ctx, spec, c, a, m, atk, facing, w, ar, death) {
+  function sheetUnit(ctx, spec, c, a, m, atk, facing, w, ar, death, t) {
     if (facing !== undefined) ctx.rotate(-facing);
     const d = facing === undefined ? 0 : dir8(facing);
     const flip = d >= 3 && d <= 5;
     if (death !== undefined) { // cadavre : s'affaisse et s'assombrit
       ctx.save(); ctx.translate(0, spec.feet); ctx.scale(1, Math.max(0.25, 1 - death * 0.75)); ctx.translate(0, -spec.feet);
-      frame(ctx, spec.idle, spec.h, spec.feet, flip, 1 - death * 0.5);
+      frame(ctx, spec.idle, spec.h, spec.feet, flip, 1 - death * 0.5, spec.tint);
       ctx.restore();
       return;
     }
     const r = Math.max(7, spec.h * 0.32);
     ell(ctx, 0, spec.feet, r, r * 0.45, ZC.rgba(c, 0.4), c, 1);
+    if (spec.tier3) ell(ctx, 0, spec.feet, r + 3, (r + 3) * 0.45, null, 'rgba(255,208,64,' + (0.55 + 0.3 * Math.sin((t || 0) * 4)) + ')', 2); // anneau doré de rang 3
     // pastilles : armes (jaune) à droite, armure (bleu) à gauche
     for (let i = 0; i < w; i++) circ(ctx, r + 2 + i * 3, spec.feet, 1.1, '#ffd040');
     for (let i = 0; i < ar; i++) circ(ctx, -r - 2 - i * 3, spec.feet, 1.1, '#5cc8ff');
@@ -80,7 +136,8 @@
     else if (m) name = spec.walk[Math.floor(a / 1.5) % spec.walk.length];
     else name = spec.idle;
     const bob = m && (d === 2 || d === 6) ? Math.sin(a) : 0;
-    frame(ctx, name, spec.h, spec.feet + bob, flip);
+    frame(ctx, name, spec.h, spec.feet + bob, flip, undefined, spec.tint);
+    if (spec.tier3) tier3Deco(ctx, spec.tier3, spec, c, t || 0, flip);
   }
   // Secours quand la feuille n'est pas chargée : silhouette simple
   function fallback(ctx, c, def, atk) {
@@ -435,7 +492,7 @@
     const fn = (race && S[base + '_' + race]) || S[base];
     if (fn) { fn(ctx, color, anim, moving, atk, t || 0, facing); return; }
     const spec = SPEC[base];
-    if (spec && sheet.ready) { sheetUnit(ctx, spec, color, anim, moving, atk, facing, w, ar, death); return; }
+    if (spec && sheet.ready) { sheetUnit(ctx, spec, color, anim, moving, atk, facing, w, ar, death, t); return; }
     if (facing !== undefined && death !== undefined) ctx.rotate(-facing);
     fallback(ctx, color, def, atk);
   };

@@ -14,7 +14,7 @@
       this.p = player;
       this.cfg = ZC.DIFFICULTY[diffKey] || ZC.DIFFICULTY.normal;
       this.timer = 1 + Math.random() * this.cfg.think;
-      this.upgradeOrder = ['weapons', 'weapons', 'armor', 'range', 'weapons', 'siege', 'armor', 'range', 'siege', 'armor', 'range', 'siege', 'evolve'];
+      this.upgradeOrder = ['weapons', 'weapons', 'armor', 'range', 'armor', 'range', 'evolve', 'weapons', 'armor', 'range', 'evolve', 'siege', 'siege', 'siege'];
     }
 
     update(dt) {
@@ -310,7 +310,8 @@
         const front = map.neighbors(u.zone, true).some(n => !(n.owner >= 0 && g.allied(me, n.owner))) ? 1 : 0;
         const lvl = u.up.weapons + u.up.armor + u.up.range + u.up.siege + u.up.evolve * 3 + u.research.length * 2;
         if (u.research.length >= ZC.RESEARCH_QUEUE_MAX) continue;
-        const s = front * 10 - lvl + (u.def.hq ? 2 : 0) + Math.random();
+        // On concentre les améliorations sur les bunkers de front déjà avancés (sinon elles s'éparpillent et aucun bunker n'évolue)
+        const s = front * 10 + Math.min(lvl, 12) * 0.6 + (u.def.hq ? 2 : 0) + Math.random();
         if (s > bs) { bs = s; best = u; }
       }
       return best;
@@ -344,7 +345,10 @@
         const b = this.upgradeTarget();
         if (!b) return;
         let bought = false;
-        for (const what of this.upgradeOrder) {
+        const counts = {};
+        for (const what of this.upgradeOrder) { // l'ordre est une séquence : n-ième occurrence = n-ième niveau de cette amélioration
+          const want = (counts[what] = (counts[what] || 0) + 1);
+          if (g.pendingLevel(b, what) >= want) continue;
           const cost = g.upgradeCost(b, what);
           if (cost < 0) continue;
           if (what === 'evolve' && !g.canEvolve(b)) continue;

@@ -630,7 +630,7 @@
       if (!def || !bunker || bunker.dead || bunker.owner !== player || !bunker.def.structure || bunker.def.addon) return false;
       const lvl = this.pendingLevel(bunker, what);
       if (lvl >= def.max) return false;
-      if (what === 'evolve' && !this.canEvolve(bunker)) { this.emit('needUpgrades', { player }); return false; }
+      if (what === 'evolve' && !this.canEvolve(bunker)) { this.emit('needUpgrades', { player, requires: this.evolveRequires(bunker), level: 2 + this.pendingLevel(bunker, 'evolve') }); return false; }
       if (what === 'fortify' && bunker.def.hq) return false;
       if (admin) { this.researchDone(bunker, what); return true; } // admin : gratuit et instantané
       if (bunker.research.length >= ZC.RESEARCH_QUEUE_MAX) { this.emit('queueFull', { player }); return false; }
@@ -684,22 +684,27 @@
     }
     // Évolution possible : armes, armure et portée au niveau requis, et pas déjà évoluée
     // (les niveaux en attente dans la file comptent : la file est traitée dans l'ordre, l'évolution attend son tour)
+    // Niveau d'améliorations requis pour la prochaine évolution du bunker (unités niveau 2 : améliorations niveau 2 ; niveau 3 : niveau 3)
+    evolveRequires(b) { const lvl = this.pendingLevel(b, 'evolve'); return lvl >= ZC.UPGRADES.evolve.max ? Infinity : ZC.UPGRADES.evolve.requires[lvl]; }
     canEvolve(b) {
-      const r = ZC.UPGRADES.evolve.requires;
-      return !b.up.evolve && this.pendingLevel(b, 'weapons') >= r && this.pendingLevel(b, 'armor') >= r && this.pendingLevel(b, 'range') >= r;
+      const r = this.evolveRequires(b);
+      return r < Infinity && this.pendingLevel(b, 'weapons') >= r && this.pendingLevel(b, 'armor') >= r && this.pendingLevel(b, 'range') >= r;
     }
     // Prérequis réellement atteints (au moment où l'évolution arrive en tête de file)
     evolveReady(b) {
-      const r = ZC.UPGRADES.evolve.requires;
+      const r = ZC.UPGRADES.evolve.requires[Math.min(b.up.evolve, ZC.UPGRADES.evolve.max - 1)];
       return b.up.weapons >= r && b.up.armor >= r && b.up.range >= r;
     }
-    // Transforme les soldats du bunker (sur la carte et en garnison) en unité de niveau 2
+    // Transforme les soldats du bunker (sur la carte et en garnison) jusqu'au niveau atteint par le bunker (2 puis 3)
     evolveTroops(b) {
-      const all = this.units.filter(u => !u.dead && u.home === b && !u.def.structure && !u.def.air).concat(b.garrison);
+      const all = this.units.filter(u => !u.dead && u.home === b && !u.def.structure && !u.def.air && !u.def.hero).concat(b.garrison);
+      const target = 1 + b.up.evolve;
       let n = 0;
       for (const u of all) {
-        const to = u.def.evolvesTo; if (!to) continue;
-        u.transformTo(to); n++;
+        let changed = false;
+        while ((u.def.level || 1) < target && u.def.evolvesTo) { u.transformTo(u.def.evolvesTo); changed = true; }
+        if (!changed) continue;
+        n++;
         if (!u.inside) this.addEffect({ type: 'spawn', x: u.x, y: u.y, life: 0.7, color: '#ffd040' });
       }
       this.recount();
@@ -743,7 +748,7 @@
           break;
         case 'maxUpgrades': { // toutes les améliorations au maximum sur le bunker sélectionné (ou tous vos bunkers)
           const bs = this.selectedBunker ? [this.selectedBunker] : this.units.filter(u => !u.dead && u.owner === me.id && u.def.structure);
-          for (const b of bs) { if (b.def.addon) continue; b.research = []; for (const k in ZC.UPGRADES) if (k !== 'evolve' && k !== 'fortify') b.up[k] = ZC.UPGRADES[k].max; if (!b.up.evolve) this.researchDone(b, 'evolve'); }
+          for (const b of bs) { if (b.def.addon) continue; b.research = []; for (const k in ZC.UPGRADES) if (k !== 'evolve' && k !== 'fortify') b.up[k] = ZC.UPGRADES[k].max; while (b.up.evolve < ZC.UPGRADES.evolve.max) this.researchDone(b, 'evolve'); }
           for (const k in ZC.POWERS) if (ZC.POWERS[k].hero === me.heroId) me.powers[k] = true;
           break;
         }
@@ -900,8 +905,9 @@
     // ---------------------------------------------------------- vagues
     // Unité produite par un bunker donné (niveau 2 après l'Évolution)
     bunkerSpawnType(b) {
-      const t = this.spawnTypeFor(this.players[b.owner]), d = ZC.UNITS[t];
-      return b.up.evolve && d.evolvesTo ? d.evolvesTo : t;
+      let t = this.spawnTypeFor(this.players[b.owner]);
+      for (let i = 0; i < b.up.evolve && ZC.UNITS[t].evolvesTo; i++) t = ZC.UNITS[t].evolvesTo; // niveau 2 puis 3 selon les évolutions du bunker
+      return t;
     }
     spawnWave() {
       const s = this.settings;
@@ -957,11 +963,11 @@
       let target = null, bd = Infinity;
       for (const u of targets) { const d = ZC.dist(x, y, u.x, u.y); if (d < bd) { bd = d; target = u; } }
       const n = Math.min(30, Math.max(2, Math.round((3 + t / 40) * scale)));
-      const race = ZC.RACES[inv.race], l2Share = t < 150 ? 0 : t < 300 ? 0.34 : 0.5;
+      const race = ZC.RACES[inv.race], l2Share = t < 150 ? 0 : t < 300 ? 0.34 : 0.5, l3Share = t < 420 ? 0 : t < 600 ? 0.15 : 0.3; // niveau 2 après 2 min 30, niveau 3 après 7 min
       const up = { weapons: Math.min(3, Math.floor(t / 120)), armor: Math.min(3, Math.floor(t / 150)), range: 0, stim: 0, evolve: 0 };
       const group = [];
       for (let k = 0; k < n; k++) {
-        const type = Math.random() < l2Share ? race.l2 : race.l1;
+        const roll = Math.random(), type = roll < l3Share ? race.l3 : roll < l3Share + l2Share ? race.l2 : race.l1;
         const u = this.spawnUnit(inv.id, type, x + ZC.rand(-40, 40), y + ZC.rand(-40, 40));
         u.up = up; group.push(u);
       }

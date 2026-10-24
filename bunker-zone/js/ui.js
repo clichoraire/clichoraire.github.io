@@ -290,9 +290,10 @@
           const maxed = cost < 0;
           return cb(k === 'stim' ? 'stimResearch' : k, ico, d.hotkey, d.name + (maxed ? ' (max)' : ' niveau ' + (lvl + 1) + ' — recherche ' + Math.round(d.time(lvl)) + ' s') + ' — ' + d.desc + ' (unités de ce bunker uniquement)' + multi, maxed ? 0 : cost, maxed ? 'lock' : me.minerals < cost, { done: b.up[k], queued: lvl - b.up[k], max: d.max });
         };
-        const ev = ZC.UPGRADES.evolve, evCost = g.upgradeCost(b, 'evolve'), can = g.canEvolve(b);
-        const l2 = ZC.UNITS[ZC.UNITS[g.spawnTypeFor(me)].evolvesTo || g.spawnTypeFor(me)];
-        const evolve = cb('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires + ' (terminées ou en file)'), evCost < 0 ? 0 : evCost, evCost < 0 || !can ? 'lock' : me.minerals < evCost, { done: b.up.evolve, queued: g.pendingLevel(b, 'evolve') - b.up.evolve, max: 1 });
+        const ev = ZC.UPGRADES.evolve, evCost = g.upgradeCost(b, 'evolve'), can = g.canEvolve(b), evLvl = g.pendingLevel(b, 'evolve');
+        let nextT = g.spawnTypeFor(me); for (let i = 0; i <= evLvl && ZC.UNITS[nextT].evolvesTo; i++) nextT = ZC.UNITS[nextT].evolvesTo;
+        const nxt = ZC.UNITS[nextT];
+        const evolve = cb('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + ZC.UNITS[g.bunkerSpawnType(b)].name + ' (niveau 3)' : 'Évolution niveau ' + (evLvl + 2) + ' (' + ev.time(evLvl) + ' s) : transforme les soldats de ce bunker (présents et futurs) en ' + nxt.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + g.evolveRequires(b) + ' (terminées ou en file)'), evCost < 0 ? 0 : evCost, evCost < 0 || !can ? 'lock' : me.minerals < evCost, { done: b.up.evolve, queued: evLvl - b.up.evolve, max: ev.max });
         const upgrades = [up('weapons', '✦'), up('armor', '⛨'), up('range', '⟶'), up('siege', '💣'), evolve];
         if (b.def.hq) { // annexe : une par centre, où se développent les pouvoirs du héros
           const a = b.addon && !b.addon.dead ? b.addon : null, an = ZC.UNITS[ZC.RACES[me.race].addon].name, H = ZC.HEROES[me.heroId];
@@ -529,7 +530,7 @@
           if (u.queue.length) {
             const q0 = u.queue[0], nom = w => w === 'worker' ? ZC.UNITS[ZC.RACES[g.players[u.owner].race].worker].name : w === 'hero' ? 'Héros' : 'Dropship';
             bd.innerHTML = '<span class="k">Production</span> ' + u.queue.map((q, i) => qIcon(q.what, q.what === 'worker' ? 'W' : q.what === 'hero' ? 'H' : 'D', i === 0 ? Math.min(100, q.t / q.total * 100) : undefined, nom(q.what) + (i === 0 ? ' · ' + Math.ceil(q.total - q.t) + ' s' : ' · en attente'), false, 'queue', i)).join('') + ' <span class="bt">' + nom(q0.what) + ' · ' + Math.ceil(q0.total - q0.t) + ' s' + (u.queue.length > 1 ? ' · ' + (u.queue.length - 1) + ' en attente' : '') + '</span>';
-          } else bd.innerHTML = '<span class="k">Production</span> <span class="bt">' + (u.def.hq ? 'aucune · dropship : ' + Math.round(g.dropshipBuildTime(u.owner)) + ' s · ' : '') + 'vague : ' + ZC.UNITS[g.bunkerSpawnType(u)].name + (u.up.evolve ? ' (évolué)' : '') + '</span>';
+          } else bd.innerHTML = '<span class="k">Production</span> <span class="bt">' + (u.def.hq ? 'aucune · dropship : ' + Math.round(g.dropshipBuildTime(u.owner)) + ' s · ' : '') + 'vague : ' + ZC.UNITS[g.bunkerSpawnType(u)].name + (u.up.evolve ? ' (niveau ' + (1 + u.up.evolve) + ')' : '') + '</span>';
         }
         const pb = info.querySelector('#portrait-hp');
         pb.style.background = 'linear-gradient(90deg,' + (f > 0.66 ? '#10fc18' : f > 0.33 ? '#fcfc38' : '#fc3838') + ' ' + (f * 100).toFixed(0) + '%, #222 ' + (f * 100).toFixed(0) + '%)';

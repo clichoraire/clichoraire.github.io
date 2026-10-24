@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '2.4';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '2.5';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -39,24 +39,28 @@ window.ZC.VERSION = '2.4';   // à augmenter à chaque mise en ligne (affichée 
   // Quatre races, deux niveaux chacune : l'unité de niveau 1 est produite par les bunkers, l'Évolution
   // (armes, armure et portée au niveau 3) transforme les soldats d'un bunker en unité de niveau 2.
   ZC.RACES = {
-    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine',  worker: 'workerHuman',  tower: 'towerHuman', addon: 'addonHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Soldats à distance polyvalents, robustes une fois en exo-armure.' },
-    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast',      worker: 'workerInsect', tower: 'towerInsect', addon: 'addonInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'Nuées rapides de coureurs au corps à corps, puis bêtes chitineuses massives.' },
-    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', worker: 'workerEnergy', tower: 'towerEnergy', addon: 'addonEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Lames d\'énergie protégées par un bouclier, puis archontes mécaniques à frappes de zone.' },
-    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech',  worker: 'workerMecha',  tower: 'towerMecha', addon: 'addonMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Robots éclaireurs véloces, puis mechs de siège à obus explosifs à longue portée.' },
+    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine', l3: 'colossus',  worker: 'workerHuman',  tower: 'towerHuman', addon: 'addonHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Soldats à distance polyvalents, robustes une fois en exo-armure.' },
+    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast', l3: 'ravager',      worker: 'workerInsect', tower: 'towerInsect', addon: 'addonInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'Nuées rapides de coureurs au corps à corps, puis bêtes chitineuses massives.' },
+    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', l3: 'avatar', worker: 'workerEnergy', tower: 'towerEnergy', addon: 'addonEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Lames d\'énergie protégées par un bouclier, puis archontes mécaniques à frappes de zone.' },
+    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech', l3: 'fortress',  worker: 'workerMecha',  tower: 'towerMecha', addon: 'addonMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Robots éclaireurs véloces, puis mechs de siège à obus explosifs à longue portée.' },
   };
   ZC.UNITS = {
     // --- Humains
     marine:     { name: 'Soldat de reconnaissance', supply: 1,   race: 'human',  level: 1, evolvesTo: 'exomarine',  hp: 40,  shield: 0,   armor: 0, dmg: 6,  hits: 1, dtype: 'normal',    size: 'small',  range: 128, cooldown: 0.63, speed: 100, radius: 8,  sight: 224, spawn: 1, bounty: 10, antiAir: true,  bio: true, fx: 'tracer',    deathFx: 'explosion' },
-    exomarine:  { name: 'Exo-marine lourd',         supply: 2,   race: 'human',  level: 2, hp: 130, shield: 0,   armor: 2, dmg: 14, hits: 1, dtype: 'normal',    size: 'medium', range: 160, cooldown: 0.7,  speed: 95,  radius: 11, sight: 256, spawn: 1, bounty: 30, antiAir: true,  bio: true, fx: 'tracer2',   deathFx: 'explosion' },
+    exomarine:  { name: 'Exo-marine lourd',         supply: 2,   race: 'human',  level: 2, evolvesTo: 'colossus', hp: 130, shield: 0,   armor: 2, dmg: 14, hits: 1, dtype: 'normal',    size: 'medium', range: 160, cooldown: 0.7,  speed: 95,  radius: 11, sight: 256, spawn: 1, bounty: 30, antiAir: true,  bio: true, fx: 'tracer2',   deathFx: 'explosion' },
+    colossus:   { name: 'Colosse d\'assaut',          supply: 3,   race: 'human',  level: 3, hp: 300, shield: 0,   armor: 4, dmg: 22, hits: 2, dtype: 'normal',    size: 'large',  range: 176, cooldown: 0.7,  speed: 90,  radius: 13, sight: 288, spawn: 1, bounty: 75,  antiAir: true,  bio: true, fx: 'tracer2',   deathFx: 'explosion' },
     // --- Essaim insectoïde
     runner:     { name: 'Coureur',                  supply: 0.5, race: 'insect', level: 1, evolvesTo: 'beast',      hp: 35,  shield: 0,   armor: 0, dmg: 5,  hits: 1, dtype: 'normal',    size: 'small',  range: 0,   cooldown: 0.5,  speed: 165, radius: 7,  sight: 224, spawn: 2, bounty: 5,  antiAir: false, fx: 'slash',     deathFx: 'blood' },
-    beast:      { name: 'Bête chitineuse',          supply: 3,   race: 'insect', level: 2, hp: 320, shield: 0,   armor: 2, dmg: 24, hits: 1, dtype: 'normal',    size: 'large',  range: 0,   cooldown: 0.75, speed: 115, radius: 15, sight: 224, spawn: 1, bounty: 45, antiAir: false, fx: 'slash2',    deathFx: 'blood2' },
+    beast:      { name: 'Bête chitineuse',          supply: 3,   race: 'insect', level: 2, evolvesTo: 'ravager', hp: 320, shield: 0,   armor: 2, dmg: 24, hits: 1, dtype: 'normal',    size: 'large',  range: 0,   cooldown: 0.75, speed: 115, radius: 15, sight: 224, spawn: 1, bounty: 45, antiAir: false, fx: 'slash2',    deathFx: 'blood2' },
+    ravager:    { name: 'Ravageur alpha',            supply: 4.5, race: 'insect', level: 3, hp: 700, shield: 0,   armor: 4, dmg: 45, hits: 1, dtype: 'normal',    size: 'large',  range: 0,   cooldown: 0.8,  speed: 120, radius: 18, sight: 240, spawn: 1, bounty: 95,  antiAir: false, splash: 24, fx: 'slash2',    deathFx: 'blood2' },
     // --- Guerriers d'énergie
     blade:      { name: 'Guerrier à lames',         supply: 1.5, race: 'energy', level: 1, evolvesTo: 'archonmech', hp: 80,  shield: 40,  armor: 1, dmg: 8,  hits: 2, dtype: 'normal',    size: 'small',  range: 0,   cooldown: 0.92, speed: 110, radius: 9,  sight: 224, spawn: 1, bounty: 18, antiAir: false, fx: 'psislash',  deathFx: 'psi' },
-    archonmech: { name: 'Archonte mécanique',       supply: 3,   race: 'energy', level: 2, hp: 160, shield: 160, armor: 2, dmg: 30, hits: 1, dtype: 'normal',    size: 'large',  range: 64,  cooldown: 0.9,  speed: 100, radius: 14, sight: 256, spawn: 1, bounty: 55, antiAir: true,  splash: 32, fx: 'lightning', deathFx: 'psi2' },
+    archonmech: { name: 'Archonte mécanique',       supply: 3,   race: 'energy', level: 2, evolvesTo: 'avatar', hp: 160, shield: 160, armor: 2, dmg: 30, hits: 1, dtype: 'normal',    size: 'large',  range: 64,  cooldown: 0.9,  speed: 100, radius: 14, sight: 256, spawn: 1, bounty: 55, antiAir: true,  splash: 32, fx: 'lightning', deathFx: 'psi2' },
+    avatar:     { name: 'Avatar d\'énergie',          supply: 4.5, race: 'energy', level: 3, hp: 240, shield: 320, armor: 3, dmg: 50, hits: 1, dtype: 'normal',    size: 'large',  range: 96,  cooldown: 1.0,  speed: 100, radius: 17, sight: 288, spawn: 1, bounty: 115, antiAir: true,  splash: 44, fx: 'lightning', deathFx: 'psi2' },
     // --- Mécas cybernétiques
     scoutbot:   { name: 'Robot éclaireur',          supply: 1,   race: 'mecha',  level: 1, evolvesTo: 'siegemech',  hp: 60,  shield: 0,   armor: 1, dmg: 9,  hits: 1, dtype: 'normal',    size: 'small',  range: 128, cooldown: 0.7,  speed: 130, radius: 8,  sight: 240, spawn: 1, bounty: 12, antiAir: true,  fx: 'tracer',    deathFx: 'explosion' },
-    siegemech:  { name: 'Mech de siège',            supply: 3,   race: 'mecha',  level: 2, hp: 220, shield: 0,   armor: 2, dmg: 32, hits: 1, dtype: 'explosive', size: 'large',  range: 192, cooldown: 1.4,  speed: 85,  radius: 15, sight: 288, spawn: 1, bounty: 55, antiAir: false, splash: 20, fx: 'shell',     deathFx: 'explosion' },
+    siegemech:  { name: 'Mech de siège',            supply: 3,   race: 'mecha',  level: 2, evolvesTo: 'fortress', hp: 220, shield: 0,   armor: 2, dmg: 32, hits: 1, dtype: 'explosive', size: 'large',  range: 192, cooldown: 1.4,  speed: 85,  radius: 15, sight: 288, spawn: 1, bounty: 55, antiAir: false, splash: 20, fx: 'shell',     deathFx: 'explosion' },
+    fortress:   { name: 'Forteresse mobile',         supply: 4.5, race: 'mecha',  level: 3, hp: 450, shield: 0,   armor: 4, dmg: 55, hits: 1, dtype: 'explosive', size: 'large',  range: 224, cooldown: 1.5,  speed: 75,  radius: 18, sight: 320, spawn: 1, bounty: 115, antiAir: true,  splash: 28, fx: 'shell',     deathFx: 'explosion' },
     // --- Structures et transport
     hq:        { name: 'Centre de commandement', supply: 0, race: 'any', hp: 6000, shield: 0, armor: 8, dmg: 0, hits: 0, dtype: 'normal', size: 'large', range: 0, cooldown: 1, speed: 0, radius: 34, sight: 0, spawn: 1, bounty: 250, antiAir: false, structure: true, hq: true, deathFx: 'bigExplosion' },
     bunker:    { name: 'Bunker',    supply: 0,   race: 'any',  hp: 3000, shield: 0,  armor: 5, dmg: 0,  hits: 0, dtype: 'normal',     size: 'large',  range: 0,   cooldown: 1,    speed: 0,   radius: 24, sight: 0,   spawn: 0, bounty: 100, antiAir: false, structure: true, deathFx: 'bigExplosion' },
@@ -104,7 +108,7 @@ window.ZC.VERSION = '2.4';   // à augmenter à chaque mise en ligne (affichée 
   }
 
   // Mode évolution : type d'unité produit à chaque round (le dernier round dure indéfiniment)
-  ZC.ROUNDS = ['marine', 'runner', 'blade', 'scoutbot', 'exomarine', 'beast', 'archonmech', 'siegemech'];
+  ZC.ROUNDS = ['marine', 'runner', 'blade', 'scoutbot', 'exomarine', 'beast', 'archonmech', 'siegemech', 'colossus', 'ravager', 'avatar', 'fortress'];
 
   // Améliorations achetées avec les minerais (coût croissant par niveau)
   // Les améliorations sont propres à chaque bunker et ne concernent que les unités qu'il produit
@@ -113,7 +117,7 @@ window.ZC.VERSION = '2.4';   // à augmenter à chaque mise en ligne (affichée 
     armor:   { name: 'Armure',    hotkey: 'R', max: 3, cost: (lvl) => 100 + lvl * 75,  time: (lvl) => 30 + lvl * 15, desc: '+1 armure par niveau' },
     range:   { name: 'Portée',    hotkey: 'E', max: 3, cost: (lvl) => 125 + lvl * 75,  time: (lvl) => 35 + lvl * 15, desc: '+1 case de portée (unités à distance), +0,5 au corps à corps' },
     siege:   { name: 'Démolition', hotkey: 'X', max: 3, cost: (lvl) => 125 + lvl * 75, time: (lvl) => 35 + lvl * 15, desc: '+25 % de dégâts contre les bâtiments (bunkers, centres, tours, extracteurs) par niveau' },
-    evolve:  { name: 'Évolution', hotkey: 'V', max: 1, cost: () => 350,                time: () => 60,              desc: 'Transforme les soldats de ce bunker (présents et futurs) en unité de niveau 2. Requiert armes, armure et portée au niveau 3', requires: 3 },
+    evolve:  { name: 'Évolution', hotkey: 'V', max: 2, cost: (lvl) => lvl ? 600 : 350, time: (lvl) => lvl ? 90 : 60, desc: 'Transforme les soldats de ce bunker (présents et futurs) au niveau supérieur : niveau 2 quand armes, armure et portée sont au niveau 2, puis niveau 3 quand elles sont au niveau 3', requires: [2, 3] },
     fortify: { name: 'Centre de commandement', hotkey: 'Q', max: 1, cost: (lvl, n) => 800 + 400 * (n || 0), time: () => 75, desc: 'Transforme ce bunker en centre de commandement : 6 places en garnison, 6000 PV, armure 8, et il produit dropships, travailleurs et héros comme votre QG. Le premier coûte 800 minerais, puis 400 de plus à chaque centre' },
   };
   ZC.RESEARCH_QUEUE_MAX = 3;  // recherches en attente par bunker

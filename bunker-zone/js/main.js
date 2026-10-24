@@ -305,11 +305,11 @@
           if (d.patch.zone.owner === me) ui.message('Gisement épuisé en zone ' + (d.patch.zone.ix + 1) + '-' + (d.patch.zone.iy + 1) + '. Vos travailleurs cherchent le plus proche.', '#ffd040');
           break;
         case 'needUpgrades':
-          if (d.player === me) { A.play('error', 0); ui.message('Évolution : armes, armure et portée doivent être au niveau ' + ZC.UPGRADES.evolve.requires + ' sur ce bunker.', '#ff5050'); }
+          if (d.player === me) { A.play('error', 0); ui.message(d.requires === Infinity ? 'Ce bunker est déjà au niveau 3.' : 'Évolution niveau ' + d.level + ' : armes, armure et portée doivent être au niveau ' + d.requires + ' sur ce bunker.', '#ff5050'); }
           break;
         case 'upgradeDone':
           if (d.player === me && d.what === 'fortify') { A.play('build', 0); ui.announce('CENTRE DE COMMANDEMENT', 'Le bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' est promu : 6 places, dropships, travailleurs'); ui.message('Nouveau centre de commandement en zone ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' : dropships (D) et unités (F) disponibles.', '#ffd040'); if (g.selectedBunker === d.bunker) ui.buildCommandCard('bunker'); break; }
-          if (d.player === me && d.what === 'evolve') { A.play('upgrade', 0); ui.announce('ÉVOLUTION', 'Les soldats du bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' passent au niveau 2'); ui.message('Évolution terminée : ce bunker produit et transforme ses soldats en ' + ZC.UNITS[g.bunkerSpawnType(d.bunker)].name + '.', '#ffd040'); break; }
+          if (d.player === me && d.what === 'evolve') { A.play('upgrade', 0); ui.announce('ÉVOLUTION' + (d.level > 1 ? ' ' + (d.level + 1) : ''), 'Les soldats du bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + ' passent au niveau ' + (d.level + 1)); ui.message('Évolution terminée : ce bunker produit et transforme ses soldats en ' + ZC.UNITS[g.bunkerSpawnType(d.bunker)].name + '.', '#ffd040'); break; }
           if (d.player === me) { A.play('upgrade', 0); ui.message(ZC.UPGRADES[d.what].name + ' niveau ' + d.level + ' terminé sur le bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + '.', '#ffd040'); }
           break;
         case 'cancel':
