@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '2.5';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '3.0';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -250,11 +250,11 @@ window.ZC.VERSION = '2.5';   // à augmenter à chaque mise en ligne (affichée 
   ZC.ADDON = { cost: 150, buildTime: 20 }; // annexe : coût et durée de construction (chantier)
   ZC.GAS_DURATION = 10;
   // Niveaux des héros : expérience par kill (prime de l'unité), vie et dégâts +8 % par niveau, armure +1 tous les 3 niveaux
-  ZC.HERO_MAX_LEVEL = 10;
   ZC.HERO_RESPAWN = 20;                                 // secondes pour ressusciter le héros au centre de commandement
-  ZC.heroReviveCost = (lvl) => 100 + 25 * lvl;           // coût de la résurrection selon le niveau
-  ZC.heroXpFor = (lvl) => 50 * lvl * (lvl + 1);
-  ZC.heroLevel = (xp) => { let l = 0; while (l < ZC.HERO_MAX_LEVEL && xp >= ZC.heroXpFor(l + 1)) l++; return l; };
-  ZC.heroScale = (lvl) => ({ hp: 1 + 0.08 * lvl, dmg: 1 + 0.08 * lvl, armor: Math.floor(lvl / 3) });                     // secondes pendant lesquelles un bâtiment enfumé n'accueille personne
+  ZC.heroReviveCost = (lvl) => 100 + 15 * Math.min(lvl, 40); // coût de la résurrection selon le niveau (plafonné)
+  // Niveaux, expérience, caractéristiques et équipement des héros : voir items.js (ZC.heroXpFor, ZC.heroLevel, ZC.heroScale, ZC.heroBuild)
+  // Coût en flux des pouvoirs (réserve d'énergie du héros, voir ZC.HERO_STATS.flux)
+  for (const k in ZC.POWERS) if (ZC.POWERS[k].flux === undefined) ZC.POWERS[k].flux = 20;
+  ZC.POWERS.stim.flux = 15; ZC.POWERS.gas.flux = 25;                     // secondes pendant lesquelles un bâtiment enfumé n'accueille personne
   ZC.MISSION_DEFAULTS.hero = 'random';
 })(window.ZC);

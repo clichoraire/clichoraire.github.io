@@ -152,12 +152,18 @@
 
   // ------------------------------------------------------------ Progression sauvegardée
   const KEY = 'bz-campaign';
-  const blank = () => ({ points: 0, earned: 0, upgrades: {}, missions: {}, heroes: Object.fromEntries(Object.keys(ZC.HEROES).map(k => [k, { xp: 0 }])), hero: 'kael', world: 'w1' });
+  const blankHero = () => ({ xp: 0, points: { atk: 0, def: 0, flux: 0 }, gear: { weapon: null, helmet: null, armor: null, gloves: null, boots: null, cape: null } });
+  const blank = () => ({ points: 0, earned: 0, upgrades: {}, missions: {}, heroes: Object.fromEntries(Object.keys(ZC.HEROES).map(k => [k, blankHero()])), hero: 'kael', world: 'w1',
+    credits: 0, bank: [], shop: [], shopKey: '', lootCount: 0 });
 
   class Campaign {
     constructor() { this.data = blank(); this.load(); }
     load() {
       try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (d) this.data = Object.assign(blank(), d, { heroes: Object.assign(blank().heroes, d.heroes || {}) }); } catch (e) { /* ignore */ }
+      // anciennes sauvegardes : héros sans caractéristiques ni équipement
+      for (const id in this.data.heroes) { const h = this.data.heroes[id]; const b = blankHero(); h.points = Object.assign(b.points, h.points); h.gear = Object.assign(b.gear, h.gear); if (!h.xp) h.xp = 0; }
+      if (!Array.isArray(this.data.bank)) this.data.bank = [];
+      if (!Array.isArray(this.data.shop)) this.data.shop = [];
     }
     save() { try { localStorage.setItem(KEY, JSON.stringify(this.data)); } catch (e) { /* ignore */ } }
     reset() { this.data = blank(); this.save(); }
@@ -190,7 +196,60 @@
 
     // Héros choisi : toujours un héros de la race de l'aventure (les anciens choix d'autres races retombent sur Kael)
     get heroId() { const id = this.data.hero; return ZC.HEROES[id] && ZC.HEROES[id].race === ZC.ADVENTURE_RACE ? id : 'kael'; }
-    hero(id) { id = id || this.heroId; const h = this.data.heroes[id] || (this.data.heroes[id] = { xp: 0 }); return { id, xp: h.xp, level: ZC.heroLevel(h.xp) }; }
+    heroData(id) { id = id || this.heroId; return this.data.heroes[id] || (this.data.heroes[id] = blankHero()); }
+    hero(id) { id = id || this.heroId; const h = this.heroData(id), b = ZC.heroBuild(h); return { id, xp: h.xp, level: b.level, points: h.points, gear: h.gear, build: b, unspent: b.unspent }; }
+    // Expérience gagnée en cours de partie, conservée même en cas de défaite ou d'abandon (appelé en fin de mission et à la sortie)
+    saveHeroXp(game) {
+      const c = game && game.settings.campaign; if (!c) return 0;
+      const gain = Math.round(game.heroXpGained || 0); game.heroXpGained = 0;
+      if (gain > 0) { this.heroData(c.hero.id).xp += gain; this.save(); }
+      return gain;
+    }
+    // Caractéristiques : un point dans atk / def / flux
+    spendPoint(id, stat) {
+      const h = this.heroData(id); if (!ZC.HERO_STATS[stat] || ZC.heroBuild(h).unspent <= 0) return false;
+      h.points[stat]++; this.save(); return true;
+    }
+    resetPoints(id) { const h = this.heroData(id); h.points = { atk: 0, def: 0, flux: 0 }; this.save(); }
+    // Banque et équipement
+    get credits() { return this.data.credits; }
+    bankItem(itemId) { return this.data.bank.find(i => i.id === itemId); }
+    equip(id, itemId) {
+      const h = this.heroData(id), i = this.data.bank.findIndex(it => it.id === itemId); if (i < 0) return false;
+      const it = this.data.bank.splice(i, 1)[0];
+      if (h.gear[it.slot]) this.data.bank.unshift(h.gear[it.slot]);
+      h.gear[it.slot] = it; this.save(); return true;
+    }
+    unequip(id, slot) { const h = this.heroData(id); if (!h.gear[slot]) return false; this.data.bank.unshift(h.gear[slot]); h.gear[slot] = null; this.save(); return true; }
+    sell(itemId) {
+      const i = this.data.bank.findIndex(it => it.id === itemId); if (i < 0) return 0;
+      const it = this.data.bank.splice(i, 1)[0], v = ZC.itemValue(it); this.data.credits += v; this.save(); return v;
+    }
+    // Boutique d'équipement : 6 objets autour du niveau d'objet courant, renouvelés après chaque mission
+    lootLevel(missionId, diff) {
+      const m = this.mission(missionId), wi = ZC.WORLDS.findIndex(w => w.id === m.world);
+      return 1 + Math.round(m.index * 1.4) + wi * 22 + (diff === 'hard' ? 4 : diff === 'medium' ? 2 : 0);
+    }
+    // Niveau d'objet « courant » : celui de la dernière mission débloquée
+    currentLootLevel() {
+      let best = 1;
+      for (const w of ZC.WORLDS) for (const m of w.missions) if (this.unlocked(m.id)) best = Math.max(best, this.lootLevel(m.id, this.completed(m.id) ? 'medium' : 'easy'));
+      return best;
+    }
+    shop() {
+      const key = 'L' + this.currentLootLevel() + 'n' + this.data.lootCount;
+      if (this.data.shopKey !== key || !this.data.shop.length) {
+        const L = this.currentLootLevel();
+        this.data.shop = ZC.SLOT_ORDER.map(slot => ZC.rollItem(L + Math.round(Math.random() * 3 - 1), { slot, luck: 0.15 }));
+        this.data.shopKey = key; this.save();
+      }
+      return this.data.shop;
+    }
+    buyItem(itemId) {
+      const i = this.data.shop.findIndex(it => it.id === itemId); if (i < 0) return false;
+      const it = this.data.shop[i], price = ZC.itemPrice(it); if (this.data.credits < price) return false;
+      this.data.credits -= price; this.data.shop.splice(i, 1); this.data.bank.unshift(it); this.save(); return true;
+    }
     selectHero(id) { if (ZC.HEROES[id] && ZC.HEROES[id].race === ZC.ADVENTURE_RACE) { this.data.hero = id; this.save(); } }
     selectWorld(id) { if (this.world(id)) { this.data.world = id; this.save(); } }
 
@@ -209,17 +268,32 @@
         s.invasion = Object.assign({}, s.invasion, { scale: (s.invasion.scale || 1) * k, min: diff === 'hard' ? 12 : s.invasion.min, max: diff === 'hard' ? 28 : s.invasion.max, name: (ZC.CHARACTERS[w.leader] || {}).name || 'Envahisseurs' });
       }
       else if (diff === 'hard') { s.aiCount = Math.min(7, (s.aiCount || 1) + 1); if (s.teams) s.teams = s.teams.concat([1]); }
-      s.campaign = { mission: id, difficulty: diff, objective: m.objective, bonus: this.bonus(), hero: { id: h.id, level: h.level, xp: h.xp, unit: ZC.HEROES[h.id].unit } };
+      s.campaign = { mission: id, difficulty: diff, objective: m.objective, bonus: this.bonus(), hero: { id: h.id, level: h.level, xp: h.xp, unit: ZC.HEROES[h.id].unit, build: h.build } };
       return s;
     }
 
-    // Fin de mission : points (première réussite par difficulté) et expérience du héros
+    // Fin de mission : points (première réussite par difficulté), expérience du héros (gardée même en cas de défaite),
+    // crédits (réduits en cas de défaite) et, en cas de victoire, un objet mystère pour la banque
     onMissionEnd(game, victory) {
       const c = game.settings.campaign; if (!c) return null;
+      if (game.missionSettled) return game.missionResult || null;
+      game.missionSettled = true;
       const m = this.mission(c.mission), w = this.world(m.world);
-      const res = { victory, points: 0, firstTime: false, xp: Math.round(game.heroXpGained || 0), heroId: c.hero.id, levelBefore: c.hero.level, levelAfter: c.hero.level, outro: '', worldDone: false };
+      const res = { victory, points: 0, firstTime: false, xp: 0, heroId: c.hero.id, levelBefore: c.hero.level, levelAfter: c.hero.level, outro: '', worldDone: false, credits: 0, loot: null };
+      res.xp = this.saveHeroXp(game);
       const h = this.data.heroes[c.hero.id];
-      h.xp += res.xp; res.levelAfter = ZC.heroLevel(h.xp);
+      res.levelAfter = ZC.heroLevel(h.xp);
+      const wi = ZC.WORLDS.findIndex(x => x.id === w.id), dm = c.difficulty === 'hard' ? 1.6 : c.difficulty === 'medium' ? 1.3 : 1;
+      const full = Math.round((60 + 20 * m.index + 90 * wi) * dm);
+      res.credits = victory ? full : Math.round(full * 0.25);
+      this.data.credits += res.credits;
+      if (victory) {
+        const L = this.lootLevel(c.mission, c.difficulty), luck = (c.difficulty === 'hard' ? 0.35 : c.difficulty === 'medium' ? 0.2 : 0.1) + Math.min(0.3, m.index * 0.02);
+        res.loot = ZC.rollItem(L, { luck });
+        this.data.bank.unshift(res.loot);
+        this.data.lootCount++;
+      }
+      game.missionResult = res;
       if (victory && !this.done(c.mission, c.difficulty)) {
         res.points = m.points[c.difficulty]; res.firstTime = true;
         this.data.points += res.points; this.data.earned += res.points;

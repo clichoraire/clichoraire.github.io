@@ -69,7 +69,9 @@
       const H = ZC.HEROES[p.heroId], c = p.isHuman ? this.campaign : null, prev = p.hero;
       const u = this.spawnUnit(p.id, H.unit, at.x + 40, at.y + at.radius + 30);
       u.heroLevel = prev ? prev.heroLevel : c ? c.hero.level : 0; u.xp = prev ? prev.xp : c ? c.hero.xp : 0; u.up = at.up; u.home = at;
-      u.maxHp = Math.round(u.def.hp * ZC.heroScale(u.heroLevel).hp * (p.bonus ? p.bonus.hp : 1)); u.hp = u.maxHp;
+      u.build = c && c.hero.build ? c.hero.build : ZC.DEFAULT_BUILD; // caractéristiques et équipement de la fiche du héros
+      u.maxHp = Math.round(u.def.hp * ZC.heroScale(u.heroLevel).hp * u.build.hpMult * (p.bonus ? p.bonus.hp : 1)); u.hp = u.maxHp;
+      u.fluxMax = u.build.fluxMax; u.flux = u.fluxMax;
       u.facing = Math.PI / 2;
       p.hero = u;
       if (p.isHuman) { this.hero = u; this.heroRespawnT = 0; }
@@ -78,13 +80,13 @@
     }
     heroGainXp(h, amount) {
       if (!h || h.dead) return;
-      const p = this.players[h.owner], mult = p.bonus ? p.bonus.heroXp : 1;
+      const p = this.players[h.owner], mult = (p.bonus ? p.bonus.heroXp : 1) * h.build.xpMult;
       const gain = amount * mult;
       h.xp += gain; if (p.isHuman) this.heroXpGained += gain;
       const lvl = ZC.heroLevel(h.xp);
       if (lvl > h.heroLevel) {
         h.heroLevel = lvl;
-        const max = Math.round(h.def.hp * ZC.heroScale(lvl).hp * (p.bonus ? p.bonus.hp : 1));
+        const max = Math.round(h.def.hp * ZC.heroScale(lvl).hp * h.build.hpMult * (p.bonus ? p.bonus.hp : 1));
         h.hp += max - h.maxHp; h.maxHp = max;
         this.addEffect({ type: 'spawn', x: h.x, y: h.y, life: 0.8, color: '#ffd040' });
         this.emit('heroLevel', { unit: h, level: lvl, player: p.id });
@@ -126,6 +128,7 @@
       if (!p.powers[pid]) return { ok: false, why: 'locked' };
       if ((hero.cd[pid] || 0) > 0) return { ok: false, why: 'cd' };
       if (hero.stunT > 0) return { ok: false, why: 'stun' };
+      if (hero.flux < pw.flux) return { ok: false, why: 'flux' };
       if (pw.target === 'self') { this.castPower(hero, pid); return { ok: true }; }
       if (pw.target === 'structure') {
         if (!target || target.dead || !target.def.structure || this.allied(target.owner, hero.owner)) return { ok: false, why: 'target' };
@@ -148,7 +151,8 @@
     }
     castPower(hero, pid, x, y, target) {
       const pw = ZC.POWERS[pid], p = this.players[hero.owner], me = hero.owner;
-      hero.cd[pid] = pw.cd;
+      hero.cd[pid] = pw.cd * hero.build.powerCd;
+      hero.flux = Math.max(0, hero.flux - pw.flux);
       const ally = (u) => this.allied(u.owner, me), enemy = (u) => !this.allied(u.owner, me);
       const mobileAlly = (u) => ally(u) && !u.def.structure, mobileEnemy = (u) => enemy(u) && !u.def.structure;
       const buffAll = (list, b) => { for (const u of list) u.buff = Object.assign({}, b); };
@@ -1001,12 +1005,13 @@
     resolveAttack(att, target) {
       const def = att.def;
       this.applyDamage(target, att.damage, def.hits, def.dtype, att);
-      if (def.splash > 0) {
-        const cand = this.hash.query(target.x, target.y, def.splash + 16, this._q);
+      const splash = (def.splash || 0) + (def.hero ? att.build.splash : 0); // armes de zone (et équipement incendiaire du héros)
+      if (splash > 0) {
+        const cand = this.hash.query(target.x, target.y, splash + 16, this._q);
         for (let i = 0; i < cand.length; i++) {
           const v = cand[i];
           if (v === target || v.dead || this.allied(v.owner, att.owner) || v.def.air) continue;
-          if (ZC.dist(v.x, v.y, target.x, target.y) <= def.splash + v.radius) {
+          if (ZC.dist(v.x, v.y, target.x, target.y) <= splash + v.radius) {
             this.applyDamage(v, att.damage * 0.5, def.hits, def.dtype, att);
           }
         }
@@ -1021,7 +1026,12 @@
 
     applyDamage(target, dmg, hits, dtype, att) {
       if (target.dead) return;
+      if (target.def.hero && target.build.dodge > 0 && Math.random() < target.build.dodge) { // esquive (équipement du héros)
+        this.addEffect({ type: 'text', x: target.x, y: target.y - target.radius - 6, life: 0.7, text: 'esquive', color: '#9fd3ff' });
+        return;
+      }
       if (target.def.structure && att && att.up && att.up.siege > 0) dmg *= 1 + ZC.SIEGE_BONUS * att.up.siege; // démolition
+      const hpBefore = target.hp;
       const mult = ZC.DAMAGE_MULT[dtype][target.def.size];
       const armor = target.armor;
       for (let h = 0; h < hits; h++) {
@@ -1037,6 +1047,11 @@
       }
       target.hitFlash = 0.08;
       target.attackedT = this.time;
+      if (att && att.def.hero && !att.dead && hpBefore > target.hp) { // équipement du héros : vol de vie, foudre
+        const dealt = hpBefore - Math.max(0, target.hp);
+        if (att.build.lifesteal > 0) att.hp = Math.min(att.maxHp, att.hp + dealt * att.build.lifesteal);
+        if (att.build.stunChance > 0 && !target.def.structure && Math.random() < att.build.stunChance) { target.stunT = Math.max(target.stunT, 0.5); this.addEffect({ type: 'shock', x: target.x, y: target.y, life: 0.3, r: target.radius + 4, color: '#c0e0ff' }); }
+      }
       if (target.hp <= 0) this.kill(target, att);
     }
 

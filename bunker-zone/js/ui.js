@@ -250,8 +250,9 @@
         const spec = H ? H.powers.map((pid, i) => {
           const pw = ZC.POWERS[pid], dev = !!me.powers[pid], cd = hero.cd[pid] || 0;
           const how = pw.target === 'self' ? '' : ' : cliquez sur ' + (pw.target === 'structure' ? 'un bâtiment ennemi' : 'un point') + (pw.range ? ' à ' + (pw.range / ZC.TILE) + ' cases ou moins (le héros s\'approche sinon)' : '');
-          const label = pw.name + ' — ' + pw.desc + (dev ? (cd > 0 ? ' — recharge : ' + Math.ceil(cd) + ' s' : ' — PRÊT' + how) + ' — recharge ' + pw.cd + ' s' : ' — À DÉVELOPPER dans l\'annexe d\'un centre de commandement (A sur le centre), ' + pw.cost + ' minerais');
-          return cb('power' + (i + 1), powerIcon(pid), pw.key, label, 0, !dev || cd > 0 ? 'lock' : false, dev ? (cd > 0 ? { text: Math.ceil(cd) + ' s' } : null) : { text: 'À DÉV.' });
+          const noFlux = dev && cd <= 0 && hero.flux < pw.flux;
+          const label = pw.name + ' — ' + pw.desc + (dev ? (cd > 0 ? ' — recharge : ' + Math.ceil(cd) + ' s' : noFlux ? ' — PAS ASSEZ DE FLUX (' + Math.floor(hero.flux) + '/' + hero.fluxMax + ')' : ' — PRÊT' + how) + ' — ' + pw.flux + ' flux, recharge ' + Math.round(pw.cd * hero.build.powerCd) + ' s' : ' — À DÉVELOPPER dans l\'annexe d\'un centre de commandement (A sur le centre), ' + pw.cost + ' minerais');
+          return cb('power' + (i + 1), powerIcon(pid), pw.key, label, 0, !dev || cd > 0 || noFlux ? 'lock' : false, dev ? (cd > 0 ? { text: Math.ceil(cd) + ' s' } : { text: pw.flux + ' ⚡' }) : { text: 'À DÉV.' });
         }) : [];
         groups = [['Ordres', [move(), stop(), cb('attack', '⚔', 'A', 'Attaquer'), cb('patrol', '↻', 'P', 'Patrouiller'), hold()]], ['Coups spéciaux' + (H ? ' · ' + H.name : ''), spec]];
       } else if (kind === 'workers') {
@@ -507,7 +508,7 @@
         else if (k && u.def.tower) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.TOWER.buildTime * 100)) + ' %' : (u.def.manned ? 'Garnison ' + u.garrison.length + '/' + u.def.capacity + (u.garrison.length ? '' : ' (ne tire pas)') : 'En veille') + ' · Kills : ' + u.kills;
         else if (k && u.def.extractor) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.EXTRACTOR.buildTime * 100)) + ' %' : u.patch && u.patch.amount > 0 ? 'En activité · gisement : ' + Math.round(u.patch.amount) : 'Gisement épuisé';
         else if (k && u.def.worker) k.textContent = (u.order.type === 'gather' ? (u.slot ? 'Récolte en cours' : u.carry >= ZC.MINERALS.carry ? 'Rapporte ' + u.carry + ' minerais' : 'En route vers le gisement') : u.order.type === 'repair' ? 'Réparation' + (u.repairing ? ' en cours (' + ZC.REPAIR.costPerSec + ' minerais/s)' : '') : 'Inactif') + (u.carry > 0 && u.order.type !== 'gather' ? ' · transporte ' + u.carry + ' minerais' : '');
-        else if (k) k.textContent = (u.def.hero ? 'Héros · Niveau ' + u.heroLevel + ' · ' + Math.floor(u.xp) + ' XP' + (u.heroLevel < ZC.HERO_MAX_LEVEL ? ' / ' + ZC.heroXpFor(u.heroLevel + 1) : '') + ' · ' : '') + 'Kills : ' + u.kills + (u.stimT > 0 ? ' · Stimulé (' + Math.ceil(u.stimT) + ' s)' : '');
+        else if (k) k.textContent = (u.def.hero ? 'Héros · Niveau ' + u.heroLevel + ' · ' + Math.floor(u.xp) + ' / ' + ZC.heroXpFor(u.heroLevel + 1) + ' XP · Flux ' + Math.floor(u.flux) + '/' + u.fluxMax + ' · ' : '') + 'Kills : ' + u.kills + (u.stimT > 0 ? ' · Stimulé (' + Math.ceil(u.stimT) + ' s)' : '');
         const ex = info.querySelector('#u-extra');
         if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + g.workerCap(u.owner) + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
         const upl = info.querySelector('#u-up');
@@ -624,6 +625,28 @@
           <div class="heroes big" id="hero-list"></div>
           <div class="btns"><button id="btn-heroes-back">Retour</button></div>
         </div>
+        <div id="menu-sheet" class="menu sheet-menu hidden">
+          <h1>FICHE DU HÉROS</h1>
+          <div class="sheet">
+            <div class="sh-col sh-doll">
+              <div class="sh-head"><canvas id="sh-portrait" width="64" height="64"></canvas><div class="sh-headtxt"><div class="sh-name" id="sh-name"></div><div class="sh-lvl" id="sh-lvl"></div><div class="xpbar big"><span id="sh-xpfill"></span></div><div class="sh-xp" id="sh-xp"></div></div></div>
+              <div class="doll" id="sh-doll"><canvas id="sh-figure" width="162" height="190"></canvas></div>
+              <div class="sh-hint">Cliquez sur un emplacement pour voir l'objet porté, sur un objet de la banque pour l'équiper.</div>
+            </div>
+            <div class="sh-col sh-stats">
+              <h3>Caractéristiques <span id="sh-unspent" class="gold"></span></h3>
+              <div id="sh-statrows"></div>
+              <h3>Au combat</h3>
+              <div id="sh-derived" class="derived"></div>
+            </div>
+            <div class="sh-col sh-bank">
+              <div class="sh-tabs"><button class="tab on" data-tab="bank">Banque</button><button class="tab" data-tab="shop">Boutique d'équipement</button><span class="credits" title="Crédits : gagnés à chaque mission (un quart en cas de défaite), dépensés dans la boutique d'équipement">₢ <b id="sh-credits">0</b></span></div>
+              <div id="sh-items" class="items"></div>
+              <div id="sh-detail" class="idetail"></div>
+            </div>
+          </div>
+          <div class="btns"><button id="btn-sheet-back">Retour aux héros</button></div>
+        </div>
         <div id="menu-start" class="menu hidden">
           <h1>OPTIONS</h1>
           <p class="tag">Chaque zone a un bunker en son centre : qui tient le bunker tient la zone, et chaque bunker produit des marines à chaque vague.<br>
@@ -661,7 +684,9 @@
           </div>
         </div>`;
       const q = (s) => this.menus.querySelector(s);
-      this.m = { title: q('#menu-title'), play: q('#menu-play'), campaign: q('#menu-campaign'), mission: q('#menu-mission'), shop: q('#menu-shop'), heroes: q('#menu-heroes'), start: q('#menu-start'), pause: q('#menu-pause'), end: q('#menu-end') };
+      this.m = { title: q('#menu-title'), play: q('#menu-play'), campaign: q('#menu-campaign'), mission: q('#menu-mission'), shop: q('#menu-shop'), heroes: q('#menu-heroes'), sheet: q('#menu-sheet'), start: q('#menu-start'), pause: q('#menu-pause'), end: q('#menu-end') };
+      q('#btn-sheet-back').addEventListener('click', () => this.showHeroes());
+      q('#menu-sheet .sh-tabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (!b) return; this.sheet.tab = b.dataset.tab; this.sheet.sel = null; this.renderSheet(); });
       q('#btn-start').addEventListener('click', () => { ZC.Audio.init(); this.app.start(this.readForm()); });
       q('#btn-back').addEventListener('click', () => { this.app.settings = Object.assign({}, this.app.settings, this.readForm()); this.app.saveSettings(); this.showTitle(); });
       q('#btn-play').addEventListener('click', () => { ZC.Audio.init(); this.showPlay(); });
@@ -946,8 +971,125 @@
         return '<div class="hero' + (c.heroId === h.id ? ' sel' : '') + '" data-id="' + h.id + '"><canvas class="hp-cv" data-p="' + h.id + '" width="64" height="64"></canvas><div class="hero-txt"><div class="hn">' + esc(h.name) + ' <small>' + esc(h.title) + '</small></div>' +
           '<div class="hl">Niveau ' + st.level + (next ? ' · ' + Math.floor(st.xp) + ' / ' + next + ' XP' : ' (max)') + '</div><div class="xpbar"><span style="width:' + pct + '%"></span></div>' +
           (big ? '<div class="hs">' + Math.round(def.hp * sc.hp) + ' PV · ' + Math.round(def.dmg * sc.dmg) + (def.hits > 1 ? ' x' + def.hits : '') + ' dégâts · armure ' + (def.armor + sc.armor) + ' · portée ' + (def.range / ZC.TILE) + '</div><div class="hd">' + esc(h.desc) + '</div><div class="hd"><b class="gold">Pouvoirs</b> (à développer dans l\'annexe) : ' + h.powers.map(pid => esc(ZC.POWERS[pid].name) + ' (' + ZC.POWERS[pid].key + ') — ' + esc(ZC.POWERS[pid].desc)).join(' · ') + '</div>' : '') +
-          '<div class="hsel">' + (c.heroId === h.id ? '✓ Sélectionné' : 'Choisir') + '</div></div></div>';
+          '<div class="hsel">' + (c.heroId === h.id ? '✓ Sélectionné' : 'Choisir') + (big ? '<button class="hfiche" data-id="' + h.id + '">Fiche &amp; équipement' + (st.unspent ? ' <b class="gold">+' + st.unspent + '</b>' : '') + '</button>' : '') + '</div></div></div>';
       }).join('');
+    }
+
+    // ------------------------------------------------------------ Fiche du héros (caractéristiques, équipement, banque, boutique)
+    showSheet(heroId) {
+      ZC.Audio.play('nav', 0);
+      this.hideMenus();
+      this.sheet = { id: heroId || this.app.campaign.heroId, tab: (this.sheet && this.sheet.tab) || 'bank', sel: null };
+      this.renderSheet();
+      this.m.sheet.classList.remove('hidden');
+    }
+    renderSheet() {
+      const c = this.app.campaign, S = this.sheet, q = (sel) => this.menus.querySelector(sel);
+      const H = ZC.HEROES[S.id], st = c.hero(S.id), b = st.build, def = ZC.UNITS[H.unit], sc = ZC.heroScale(st.level);
+      const ch = ZC.CHARACTERS[S.id]; if (ch) ZC.drawCharPortrait(q('#sh-portrait').getContext('2d'), ch.portrait, 64, ch.tint);
+      q('#sh-name').innerHTML = esc(H.name) + ' <small>' + esc(H.title) + '</small>';
+      q('#sh-lvl').textContent = 'Niveau ' + st.level;
+      const prev = ZC.heroXpFor(st.level), next = ZC.heroXpFor(st.level + 1), pct = Math.round((st.xp - prev) / (next - prev) * 100);
+      q('#sh-xpfill').style.width = pct + '%';
+      q('#sh-xp').innerHTML = Math.floor(st.xp) + ' / ' + next + ' XP · <b class="gold">' + (next - Math.floor(st.xp)) + ' XP</b> avant le niveau ' + (st.level + 1) + ' <small>(environ ' + Math.ceil((next - st.xp) / 10) + ' kills de base)</small>';
+      // Pantin : figure du héros avec son équipement + 6 emplacements autour
+      const doll = q('#sh-doll');
+      doll.querySelectorAll('.slot').forEach(e => e.remove());
+      const POS = { cape: [0, 0], weapon: [0, 70], boots: [0, 140], helmet: [216, 0], armor: [216, 70], gloves: [216, 140] }; // trois emplacements de chaque côté de la figure
+      for (const slot of ZC.SLOT_ORDER) {
+        const it = st.gear[slot], d = document.createElement('div');
+        d.className = 'slot' + (it ? ' r-' + it.rarity : ' empty') + (S.sel === 'slot:' + slot ? ' sel' : '');
+        d.dataset.slot = slot; d.style.left = POS[slot][0] + 'px'; d.style.top = POS[slot][1] + 'px';
+        d.title = ZC.ITEM_SLOTS[slot].name + (it ? ' : ' + it.name : ' (vide)');
+        d.innerHTML = '<span class="si">' + ZC.ITEM_SLOTS[slot].icon + '</span><span class="sl">' + esc(ZC.ITEM_SLOTS[slot].name) + '</span>' + (it ? '<span class="silvl">' + it.ilvl + '</span>' : '');
+        d.addEventListener('click', () => { S.sel = S.sel === 'slot:' + slot ? null : 'slot:' + slot; ZC.Audio.play('click', 0); this.renderSheet(); });
+        doll.appendChild(d);
+      }
+      this.drawHeroFigure(q('#sh-figure'), H.unit, b);
+      // Caractéristiques
+      q('#sh-unspent').textContent = b.unspent ? '· ' + b.unspent + ' point' + (b.unspent > 1 ? 's' : '') + ' à répartir' : '';
+      q('#sh-statrows').innerHTML = Object.keys(ZC.HERO_STATS).map(k => {
+        const d = ZC.HERO_STATS[k], gearPart = b.totals[k] - st.points[k];
+        return '<div class="strow"><span class="stn" style="color:' + d.color + '">' + esc(d.name) + '</span><span class="stv">' + b.totals[k] + (gearPart ? ' <small>(' + st.points[k] + ' + ' + gearPart + ' équip.)</small>' : '') + '</span><button class="stplus" data-stat="' + k + '"' + (b.unspent ? '' : ' disabled') + ' title="' + esc(d.desc) + '">+</button><div class="std">' + esc(d.desc) + '</div></div>';
+      }).join('') + (b.spent ? '<button class="streset" id="sh-reset" title="Remet tous les points à répartir (gratuit)">Réinitialiser les points</button>' : '');
+      q('#sh-statrows').querySelectorAll('.stplus').forEach(bt => bt.addEventListener('click', () => { if (c.spendPoint(S.id, bt.dataset.stat)) { ZC.Audio.play('upgrade', 0); this.renderSheet(); } }));
+      const rs = q('#sh-reset'); if (rs) rs.addEventListener('click', () => { c.resetPoints(S.id); ZC.Audio.play('click', 0); this.renderSheet(); });
+      // Stats dérivées (ce que le héros aura en mission, hors bonus de la boutique de points)
+      const hp = Math.round(def.hp * sc.hp * b.hpMult), dmg = Math.round(def.dmg * sc.dmg * b.dmgMult) + b.dmgFlat, arm = def.armor + sc.armor + b.armor;
+      const rows = [
+        ['Points de vie', hp], ['Dégâts', dmg + (def.hits > 1 ? ' x' + def.hits : '') + ' (' + def.dtype + ')'], ['Armure', arm],
+        ['Portée', (Math.round((def.range + b.rangeAdd) / ZC.TILE * 10) / 10) + ' cases'], ['Vitesse', Math.round(def.speed * b.speedMult)],
+        ['Cadence', (Math.round(1 / (def.cooldown * b.cdMult) * 100) / 100) + ' tir/s'],
+        ['Flux', b.fluxMax + ' max · +' + b.fluxRegen + '/s'],
+        ['Pouvoirs', H.powers.map(pid => esc(ZC.POWERS[pid].name) + ' (' + ZC.POWERS[pid].flux + ' flux, ' + Math.round(ZC.POWERS[pid].cd * b.powerCd) + ' s)').join(' · ')],
+      ];
+      if (b.dodge > 0) rows.push(['Esquive', Math.round(b.dodge * 100) + ' %']);
+      if (b.lifesteal > 0) rows.push(['Vol de vie', Math.round(b.lifesteal * 100) + ' % des dégâts']);
+      if (b.regen > 0) rows.push(['Régénération', (Math.round(b.regen * 10) / 10) + ' PV/s']);
+      if (b.splash > 0) rows.push(['Dégâts de zone', (Math.round(b.splash / ZC.TILE * 10) / 10) + ' case']);
+      if (b.stunChance > 0) rows.push(['Foudre', Math.round(b.stunChance * 100) + ' % d\'étourdissement']);
+      if (b.xpMult > 1) rows.push(['Expérience', '+' + Math.round((b.xpMult - 1) * 100) + ' %']);
+      q('#sh-derived').innerHTML = rows.map(r => '<div><span class="dk">' + r[0] + '</span><span class="dv">' + r[1] + '</span></div>').join('');
+      // Banque / boutique
+      q('#sh-credits').textContent = String(c.credits);
+      q('#menu-sheet .sh-tabs').querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === S.tab));
+      const list = S.tab === 'bank' ? c.data.bank : c.shop();
+      const items = q('#sh-items');
+      items.innerHTML = list.length ? list.map(it => this.itemCard(it, { price: S.tab === 'shop', sel: S.sel === it.id, equipped: st.gear[it.slot] })).join('') : '<div class="iempty">' + (S.tab === 'bank' ? 'Banque vide. Réussissez des missions pour recevoir des objets mystère, ou achetez-en à la boutique d\'équipement.' : 'Rien en rayon pour le moment.') + '</div>';
+      items.querySelectorAll('.icard').forEach(card => card.addEventListener('click', () => { S.sel = S.sel === card.dataset.id ? null : card.dataset.id; ZC.Audio.play('click', 0); this.renderSheet(); }));
+      // Détail de la sélection
+      let det = '';
+      if (S.sel && S.sel.startsWith('slot:')) {
+        const slot = S.sel.slice(5), it = st.gear[slot];
+        det = it ? this.itemDetail(it) + '<div class="iact"><button data-act="unequip">Retirer (vers la banque)</button></div>' : '<div class="iempty">Emplacement ' + esc(ZC.ITEM_SLOTS[slot].name.toLowerCase()) + ' vide.</div>';
+      } else if (S.sel) {
+        const it = list.find(i => i.id === S.sel);
+        if (it) {
+          const cur = st.gear[it.slot];
+          det = this.itemDetail(it) + (cur && cur.id !== it.id ? '<div class="icmp">Porté actuellement : ' + this.itemDetail(cur, true) + '</div>' : '');
+          det += '<div class="iact">' + (S.tab === 'bank' ? '<button data-act="equip">Équiper' + (cur ? ' (remplace)' : '') + '</button><button data-act="sell" class="danger">Vendre ₢ ' + ZC.itemValue(it) + '</button>' : '<button data-act="buy"' + (c.credits < ZC.itemPrice(it) ? ' disabled' : '') + '>Acheter ₢ ' + ZC.itemPrice(it) + '</button>') + '</div>';
+        }
+      }
+      q('#sh-detail').innerHTML = det || '<div class="iempty">Sélectionnez un objet ou un emplacement.</div>';
+      q('#sh-detail').querySelectorAll('button[data-act]').forEach(bt => bt.addEventListener('click', () => {
+        const act = bt.dataset.act; let ok = false;
+        if (act === 'equip') { ok = c.equip(S.id, S.sel); if (ok) ZC.Audio.play('upgrade', 0); }
+        else if (act === 'unequip') { ok = c.unequip(S.id, S.sel.slice(5)); if (ok) ZC.Audio.play('click', 0); }
+        else if (act === 'sell') { ok = c.sell(S.sel) > 0; if (ok) ZC.Audio.play('capture', 0); }
+        else if (act === 'buy') { ok = c.buyItem(S.sel); if (ok) ZC.Audio.play('capture', 0); }
+        if (!ok) ZC.Audio.play('error', 0);
+        S.sel = null; this.renderSheet();
+      }));
+    }
+    // Carte compacte d'un objet (grille)
+    itemCard(it, o) {
+      o = o || {};
+      return '<div class="icard r-' + it.rarity + (o.sel ? ' sel' : '') + '" data-id="' + it.id + '" title="' + esc(it.name) + ' — niveau d\'objet ' + it.ilvl + ', ' + esc(ZC.RARITIES[it.rarity].name) + '">' +
+        '<div class="ii">' + ZC.ITEM_SLOTS[it.slot].icon + '</div><div class="in">' + esc(it.name) + '</div><div class="il">' + esc(ZC.ITEM_SLOTS[it.slot].name) + ' · niv. ' + it.ilvl + (o.price ? ' · <b class="gold">₢ ' + ZC.itemPrice(it) + '</b>' : '') + '</div>' +
+        (o.equipped && o.equipped.id === it.id ? '<div class="ieq">porté</div>' : '') + '</div>';
+    }
+    // Fiche détaillée d'un objet (nom coloré par rareté, lignes de stats, affixes magiques en italique)
+    itemDetail(it, small) {
+      const R = ZC.RARITIES[it.rarity];
+      return '<div class="ifull' + (small ? ' small' : '') + ' r-' + it.rarity + '"><div class="ifn" style="color:' + R.color + '">' + ZC.ITEM_SLOTS[it.slot].icon + ' ' + esc(it.name) + '</div><div class="ifs">' + esc(R.name) + ' · ' + esc(ZC.ITEM_SLOTS[it.slot].name) + ' · niveau d\'objet ' + it.ilvl + '</div>' +
+        ZC.itemLines(it).map(l => '<div class="ifl' + (l.magic ? ' magic' : '') + '">' + (l.magic ? '✦ ' : '• ') + esc(l.text) + '</div>').join('') +
+        (it.affixes.length ? '<div class="ifa">' + it.affixes.map(a => { const A = ZC.AFFIXES.find(x => x.id === a); return '<i>' + esc(A.name) + '</i> : ' + esc(A.desc); }).join(' · ') + '</div>' : '') +
+        '<div class="ifv">Valeur de revente : ₢ ' + ZC.itemValue(it) + '</div></div>';
+    }
+    // Grande figure du héros avec son équipement (sprite de la feuille + superpositions de render.js)
+    drawHeroFigure(cv, unitType, build) {
+      const ctx = cv.getContext('2d'), w = cv.width, h = cv.height;
+      ctx.clearRect(0, 0, w, h);
+      const g = ctx.createRadialGradient(w / 2, h * 0.6, 10, w / 2, h * 0.6, h * 0.6); g.addColorStop(0, 'rgba(73,198,255,0.22)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      const fake = { type: unitType, def: ZC.UNITS[unitType], build, rf: Math.PI / 2, moving: false, attackAnim: 0, id: 1, up: { weapons: 0, armor: 0 } };
+      const spec = ZC.spriteSpec(unitType), k = spec ? Math.min(3.2, (h * 0.78) / spec.h) : 3;
+      ctx.save(); ctx.translate(w / 2, h * 0.5 + (spec ? (spec.h / 2 - spec.feet) * k : 0)); ctx.scale(k, k);
+      const t = performance.now() / 1000;
+      if (build.gear.cape) ZC.drawGear(ctx, fake, 'cape', t);
+      ctx.rotate(fake.rf); ZC.drawUnitSprite(ctx, unitType, '#8ad88a', 1, false, 0, t, fake.up, fake.rf, undefined, 'human'); ctx.rotate(-fake.rf);
+      for (const slot of ['boots', 'armor', 'gloves', 'helmet', 'weapon']) if (build.gear[slot]) ZC.drawGear(ctx, fake, slot, t);
+      ctx.restore();
     }
     drawHeroPortraits(root) {
       root.querySelectorAll('canvas.hp-cv').forEach(cv => { const ch = ZC.CHARACTERS[cv.dataset.p]; ZC.drawCharPortrait(cv.getContext('2d'), ch.portrait, cv.width, ch.tint); });
@@ -971,7 +1113,8 @@
       this.hideMenus();
       const c = this.app.campaign, q = (s) => this.menus.querySelector(s);
       q('#hero-list').innerHTML = this.heroCards(true);
-      q('#hero-list').querySelectorAll('.hero').forEach(h => h.addEventListener('click', () => { c.selectHero(h.dataset.id); ZC.Audio.play('select', 0); this.showHeroes(); }));
+      q('#hero-list').querySelectorAll('.hero').forEach(h => h.addEventListener('click', (e) => { if (e.target.closest('.hfiche')) return; c.selectHero(h.dataset.id); ZC.Audio.play('select', 0); this.showHeroes(); }));
+      q('#hero-list').querySelectorAll('.hfiche').forEach(b => b.addEventListener('click', () => this.showSheet(b.dataset.id)));
       this.drawHeroPortraits(q('#hero-list'));
       this.m.heroes.classList.remove('hidden');
     }
@@ -981,10 +1124,27 @@
       this.hideMenus();
       const s = this.app.settings;
       this.menus.querySelector('#t-zones').textContent = String(s.mapZones * s.mapZones);
-      this.menus.querySelector('#title-note').textContent = note || '';
+      this.menus.querySelector('#title-note').textContent = note || this.showTitleNote || ''; this.showTitleNote = '';
       this.menus.querySelector('#menu-title').classList.remove('hidden');
     }
 
+    // Révélation de l'objet mystère : silhouette qui tremble, roulette des raretés, puis la carte avec un éclat
+    revealLoot(it) {
+      const q = (sel) => this.menus.querySelector(sel), box = q('#loot-box'), mys = q('#loot-mys'), rar = q('#loot-rar'), card = q('#loot-card');
+      if (!box) return;
+      const names = Object.keys(ZC.RARITIES);
+      let n = 0;
+      const tick = () => { if (!box.isConnected || box.classList.contains('done')) return; const k = names[n % names.length]; rar.textContent = ZC.RARITIES[k].name + '…'; rar.style.color = ZC.RARITIES[k].color; mys.style.transform = 'rotate(' + (Math.sin(n) * 8) + 'deg) scale(' + (1 + 0.04 * (n % 3)) + ')'; ZC.Audio.play('tick', 0); n++; this.lootTimer = setTimeout(tick, 90 + n * 18); };
+      tick();
+      setTimeout(() => {
+        if (!box.isConnected) return;
+        clearTimeout(this.lootTimer); box.classList.add('done', 'r-' + it.rarity);
+        rar.textContent = ZC.RARITIES[it.rarity].name.toUpperCase() + ' !'; rar.style.color = ZC.RARITIES[it.rarity].color;
+        mys.textContent = ZC.ITEM_SLOTS[it.slot].icon; mys.style.transform = '';
+        card.innerHTML = this.itemDetail(it) + '<div class="loot-note">Rangé dans la banque : équipez-le dans la fiche du héros.</div>'; card.classList.remove('hidden');
+        ZC.Audio.play(it.rarity === 'legendary' || it.rarity === 'epic' ? 'victory' : 'round', 0);
+      }, 2300);
+    }
     showEnd(victory, final, res) {
       this.hideMenus();
       const g = this.app.game;
@@ -994,10 +1154,14 @@
       if (res) {
         const h = ZC.HEROES[res.heroId], D = ZC.DIFFICULTIES[g.settings.campaign.difficulty];
         let html = '<div class="cr-main">' + (res.victory ? (res.firstTime ? 'Mission accomplie en ' + D.label + ' : <b class="gold">+' + res.points + ' ★</b>' : 'Mission accomplie en ' + D.label + ' — déjà réussie à cette difficulté, aucun point supplémentaire.') : 'Mission échouée : aucun point. Réessayez, ou tentez une difficulté plus basse.') + '</div>';
-        html += '<div class="cr-hero">' + esc(h.name) + ' : +' + res.xp + ' XP' + (res.levelAfter > res.levelBefore ? ' · <b class="gold">niveau ' + res.levelBefore + ' → ' + res.levelAfter + '</b>' : ' (niveau ' + res.levelAfter + ')') + ' · Points disponibles : ★ ' + this.app.campaign.points + '</div>';
+        const gained = res.levelAfter - res.levelBefore;
+        html += '<div class="cr-hero">' + esc(h.name) + ' : <b class="gold">+' + res.xp + ' XP</b>' + (res.victory ? '' : ' (conservés malgré la défaite)') + (gained > 0 ? ' · <b class="gold">niveau ' + res.levelBefore + ' → ' + res.levelAfter + '</b> · +' + (gained * ZC.HERO_POINTS_PER_LEVEL) + ' points à répartir dans sa fiche' : ' (niveau ' + res.levelAfter + ')') + '</div>';
+        html += '<div class="cr-hero">Crédits : <b class="gold">+₢ ' + res.credits + '</b>' + (res.victory ? '' : ' (un quart de la prime)') + ' · total ₢ ' + this.app.campaign.credits + ' · Points ★ ' + this.app.campaign.points + '</div>';
+        if (res.loot) html += '<div class="loot" id="loot-box"><div class="loot-cap">RÉCOMPENSE MYSTÈRE</div><div class="loot-stage"><div class="loot-mys" id="loot-mys">?</div><div class="loot-rays"></div></div><div class="loot-rar" id="loot-rar">Qui est cet objet ?</div><div class="loot-card hidden" id="loot-card"></div></div>';
         if (res.outro) html += '<div class="cr-outro">« ' + esc(res.outro) + ' »</div>';
         if (res.worldDone) html += '<div class="cr-main gold">Monde conquis ! Le monde suivant est débloqué sur la carte de l\'aventure.</div>';
         ec.innerHTML = html;
+        if (res.loot) this.revealLoot(res.loot);
       }
       const title = this.menus.querySelector('#end-title');
       title.textContent = victory ? 'VICTOIRE' : (final ? 'PARTIE TERMINÉE' : 'DÉFAITE');

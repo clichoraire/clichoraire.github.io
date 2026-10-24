@@ -202,12 +202,16 @@
     }
     toggleSound() { this.settings.sound = !this.settings.sound; ZC.Audio.setEnabled(this.settings.sound); this.saveSettings(); }
     toggleMusic() { this.settings.music = this.settings.music === false; ZC.Music.setEnabled(this.settings.music); this.saveSettings(); }
+    // Abandon d'une mission : l'expérience du héros est conservée
+    keepHeroXp() { if (this.game && this.game.campaign && !this.game.missionSettled) { const g = this.campaign.saveHeroXp(this.game); this.game.missionSettled = true; if (g > 0) this.ui.showTitleNote = this.game.hero.def.name + ' conserve ' + g + ' XP de cette mission.'; } }
     quitToMenu() {
       if (this.input) { this.input.detach(); this.input = null; }
+      this.keepHeroXp();
       this.showTitle();
     }
     quitToCampaign() {
       if (this.input) { this.input.detach(); this.input = null; }
+      this.keepHeroXp();
       this.showTitle();
       this.ui.showCampaign();
     }
@@ -246,7 +250,7 @@
           if (d.player === me) { A.play('upgrade', 0); const pw = ZC.POWERS[d.what]; ui.announce('POUVOIR DÉVELOPPÉ', pw.name + ' — ' + g.hero.def.name); ui.message(pw.name + ' est prêt : sélectionnez ' + g.hero.def.name + ' et appuyez sur ' + pw.key + (pw.target === 'self' ? '.' : ', puis cliquez sur la cible.'), '#ffd040'); }
           break;
         case 'power':
-          if (d.player === me) { A.play(d.what === 'stim' ? 'stim' : 'upgrade', 0); ui.message(d.hero.def.name + ' : ' + ZC.POWERS[d.what].name + ' !', '#ffd040'); }
+          if (d.player === me) { A.play(d.what === 'stim' ? 'stim' : 'upgrade', 0); ui.message(d.hero.def.name + ' : ' + ZC.POWERS[d.what].name + ' ! (flux ' + Math.floor(d.hero.flux) + '/' + d.hero.fluxMax + ')', '#ffd040'); }
           else if (g.allied(d.player, me) === false && ZC.POWERS[d.what].target !== 'self') { ui.message(g.players[d.player].name + ' lance ' + ZC.POWERS[d.what].name + ' !', g.players[d.player].hex); }
           break;
         case 'bunkerDestroyed': {
@@ -376,7 +380,7 @@
         }
         case 'heroLevel':
           if (d.player !== me) break;
-          A.play('upgrade', 0); ui.message(d.unit.def.name + ' passe au niveau ' + d.level + ' !', '#ffd040'); ui.announce('NIVEAU ' + d.level, d.unit.def.name + ' gagne en puissance');
+          A.play('upgrade', 0); ui.message(d.unit.def.name + ' passe au niveau ' + d.level + ' !' + (g.campaign ? ' +' + ZC.HERO_POINTS_PER_LEVEL + ' points à répartir dans sa fiche après la mission.' : ''), '#ffd040'); ui.announce('NIVEAU ' + d.level, d.unit.def.name + ' gagne en puissance');
           break;
         case 'heroDown':
           A.play('lost', 0); ui.message(d.unit.def.name + ' est à terre. Ressuscitez-le au centre de commandement : F puis H (' + ZC.heroReviveCost(d.unit.heroLevel) + ' minerais, ' + ZC.HERO_RESPAWN + ' s).', '#ff5050');

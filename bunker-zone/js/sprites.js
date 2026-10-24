@@ -84,6 +84,7 @@
     ctx.restore();
   }
   ZC.spriteIsImage = (type) => { const d = ZC.UNITS[type]; return sheet.ready && !!SPEC[d && d.hero ? d.base : type]; };
+  ZC.spriteSpec = (type) => { const d = ZC.UNITS[type]; return SPEC[d && d.hero ? d.base : type] || null; }; // { h, feet } : hauteur à l'écran et position des pieds
 
   // Dessine un cadre : le sprite est mis à l'échelle sur sa hauteur de référence (rh) et son sommet
   // est placé en (feet - h) pour que tous les cadres d'une unité s'alignent.

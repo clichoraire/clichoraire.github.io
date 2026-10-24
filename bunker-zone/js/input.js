@@ -203,7 +203,7 @@
         const h = g.hero, H = ZC.HEROES[g.human.heroId]; if (!h || h.dead || !H) return;
         const pid = H.powers[this.mode === 'power1' ? 0 : 1], pw = ZC.POWERS[pid];
         const r = g.usePower(h, pid, w.x, w.y, target);
-        if (!r.ok) { ZC.Audio.play('error', 0); this.app.ui.message(r.why === 'target' ? (pid === 'gas' ? 'Visez un bunker ou une tour ennemie (avec des places à l\'intérieur).' : 'Visez un bâtiment ennemi.') : r.why === 'cd' ? pw.name + ' se recharge.' : r.why === 'stun' ? h.def.name + ' est étourdi.' : pw.name + ' n\'est pas développé.', '#ff5050'); return; }
+        if (!r.ok) { ZC.Audio.play('error', 0); this.app.ui.message(r.why === 'target' ? (pid === 'gas' ? 'Visez un bunker ou une tour ennemie (avec des places à l\'intérieur).' : 'Visez un bâtiment ennemi.') : r.why === 'cd' ? pw.name + ' se recharge.' : r.why === 'stun' ? h.def.name + ' est étourdi.' : r.why === 'flux' ? 'Pas assez de flux : ' + pw.name + ' coûte ' + pw.flux + ' (' + Math.floor(h.flux) + '/' + h.fluxMax + ').' : pw.name + ' n\'est pas développé.', '#ff5050'); return; }
         this.marker(w.x, w.y, '#ffd040'); ZC.Audio.play('order');
         return;
       }
@@ -282,6 +282,7 @@
           const pid = H.powers[cmd === 'power1' ? 0 : 1], pw = ZC.POWERS[pid];
           if (!g.human.powers[pid]) { ui.pressButton(cmd, false); ZC.Audio.play('error', 0); ui.message(pw.name + ' : à développer dans l\'annexe d\'un centre de commandement (A sur le centre).', '#ff5050'); break; }
           if ((h.cd[pid] || 0) > 0) { ui.pressButton(cmd, false); ZC.Audio.play('error', 0); ui.message(pw.name + ' : recharge, encore ' + Math.ceil(h.cd[pid]) + ' s.', '#ff5050'); break; }
+          if (h.flux < pw.flux) { ui.pressButton(cmd, false); ZC.Audio.play('error', 0); ui.message(pw.name + ' : pas assez de flux (' + Math.floor(h.flux) + '/' + h.fluxMax + ', coût ' + pw.flux + ').', '#ff5050'); break; }
           if (pw.target === 'self') { const r = g.usePower(h, pid); ui.pressButton(cmd, r.ok); }
           else this.setMode(cmd);
           break;

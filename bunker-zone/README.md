@@ -108,6 +108,29 @@ juste dessous, un second clic ou « Jouer la mission » lance le briefing.
 - **Boutique** : les points s'échangent hors combat contre des améliorations passives permanentes
   (armure, dégâts, vie, coût et temps des dropships, minerais de départ, revenu, réparation des
   bunkers, unités de départ, expérience des héros), chacune sur plusieurs niveaux au coût croissant.
+- **Fiche du héros** (bouton « Fiche & équipement » sur chaque carte de l'écran Héros) : une fiche façon jeu de rôle.
+  - **Niveaux sans maximum.** L'expérience vient des kills du héros (10 XP par soldat de base, plus pour les grosses unités).
+    Les premiers niveaux tombent vite : 5 kills pour le niveau 1, puis 6, 7, 9, 11, 13, 15, 18, 21, 24, 28 (niveau 10),
+    51 (niveau 15), 81 (niveau 20), 164 (niveau 30)... La fiche affiche l'XP exacte qu'il reste avant le prochain niveau.
+    **L'expérience gagnée est conservée même si la mission est perdue ou abandonnée.**
+  - **Trois caractéristiques**, 2 points à répartir par niveau (réinitialisables gratuitement) : **Attaque** (+3 % de dégâts
+    par point), **Défense** (+2 % de PV par point, +1 armure tous les 4 points) et **Flux** (+6 de flux maximum et +0,15 flux/s
+    par point). Le flux est la réserve d'énergie qui alimente les pouvoirs : chaque pouvoir coûte du flux (15 pour le stimpack,
+    25 pour la grenade, 20 pour les autres) en plus de sa recharge ; il se régénère en continu (barre violette sous la vie).
+  - **Six emplacements d'équipement** : arme, casque, armure, gants, bottes, cape. Chaque objet a un **niveau d'objet**
+    (qui suit la mission où il a été gagné) et une **rareté** : commun (gris), rare (bleu, 1 affixe magique), épique (violet,
+    2 affixes), légendaire (orange, 3 affixes). Les affixes sont de la vraie magie dans cet univers : bottes *de célérité*
+    (+12 % de vitesse), cape *d'ombre* (esquive), arme *vampirique* (vol de vie), *de régénération*, *de portée*, *de cadence*,
+    *de flux*, *d'éveil*, *de puissance*, *de résistance*, *de clairvoyance* (+XP), *de recharge* (pouvoirs plus rapides),
+    *incendiaire* (dégâts de zone) et *de foudre* (étourdissement) ; les plus puissants n'apparaissent qu'à partir d'un
+    certain niveau d'objet. En partie, l'équipement se voit sur le héros : cape qui ondule dans le dos, crête du casque,
+    plastron, gantelets, bottes et lueur à la bouche du canon, colorés selon la rareté (les légendaires scintillent).
+  - **Banque et boutique d'équipement** : les objets gagnés vont dans la banque (onglet de la fiche), où on les équipe,
+    compare à l'objet porté ou les vend contre des **crédits** (₢). La boutique d'équipement propose six objets du niveau
+    courant, renouvelés après chaque mission ; achat au triple de la valeur de revente.
+  - **Récompenses de mission** : chaque mission rapporte des crédits (60 + 20 par mission + 90 par monde, x1,3 en moyen,
+    x1,6 en difficile ; un quart en cas de défaite). Une victoire donne en plus un **objet mystère** révélé sur l'écran de
+    fin : silhouette qui tremble, roulette des raretés, puis la carte de l'objet, rangé dans la banque.
 - **Héros** : trois héros (Sergent Kael, exo-marine ; Lieutenante Voss, archonte ; Commandant Dax,
   mech de siège). Un seul vous accompagne par mission : il apparaît au QG, revient 30 s après sa mort,
   gagne de l'expérience à chaque kill et monte de niveau (+8 % PV et dégâts par niveau, +1 armure
@@ -246,7 +269,8 @@ js/audio.js       sons synthétisés (WebAudio)
 js/map.js         grille de zones
 js/units.js       unités : ordres, déplacement, ciblage
 js/ai.js          IA des adversaires
-js/campaign.js    mode aventure : missions, dialogues, boutique, héros, sauvegarde
+js/items.js       équipement des héros : objets, raretés, affixes, caractéristiques, courbe d'expérience, build
+js/campaign.js    mode aventure : missions, dialogues, boutique, héros, banque, crédits, sauvegarde
 js/game.js        état de la partie, vagues, captures, combat
 js/spritesheet.js cadres de assets/units.png (généré par tools/sprites/extract.js)
 js/sprites.js     dessin des unités : les 8 unités depuis la feuille de sprites, structures et dropship procéduraux
