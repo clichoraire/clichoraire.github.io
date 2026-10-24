@@ -14,7 +14,11 @@
     this.trickSpeed = 1 + 0.12 * (d.trick - 3) + 0.1 * b.trick;
     this.trickPay = 1 + 0.15 * (d.trick - 3) + 0.12 * b.trick;
     this.stunFactor = 1 - 0.08 * (d.weight - 3);
-    this.x = 0; this.z = 0; this.lap = 0; this.yAbs = 0; this.h = 0; this.vy = 0; this.lastVy = 0; this.speed = 0;
+    this.gear = opts.gear || {};
+    if (this.gear.casque) this.stunFactor *= 0.8;
+    if (this.gear.gants) this.trickSpeed *= 1.1;
+    if (this.gear.bottes) this.steerRate *= 1.1;
+    this.x = 0; this.z = 0; this.lap = 0; this.yAbs = 0; this.h = 0; this.vy = 0; this.lastVy = 0; this.speed = 0; this.steer = 0;
     this.state = 'ride'; this.stun = 0; this.flat = 0; this.wallT = 0;
     this.shot = null; this.item = null; this.coins = 0; this.coinsTotal = 0; this.tricksCoins = 0; this.tricksCount = 0;
     this.curTrick = null; this.tricksDone = []; this.airT = 0; this.pending = null;
@@ -24,16 +28,18 @@
     this.stats = { shots: 0, items: 0, hits: 0, falls: 0 };
   }
   Racer.prototype.progress = function () { return this.lap * this.race.L + Math.min(this.z, this.race.L); };
-  Racer.prototype.immune = function () { return this.state === 'lift' || this.state === 'done' || this.fx.invisible > 0; };
+  Racer.prototype.immune = function () { return this.state === 'lift' || this.state === 'drop' || this.state === 'done' || this.fx.invisible > 0; };
 
   SK.Race = function (opts) {
     this.course = opts.course; this.seed = opts.seed || 1; this.track = SK.buildTrack(this.course, this.seed);
-    this.L = this.track.L; this.laps = opts.laps || this.course.laps || SK.DEFAULT_LAPS; this.mode = opts.mode || 'race';
+    this.L = this.track.L; this.gateX = this.track.gateX; this.gateW = this.track.gateW; this.gateZ = this.track.gateZ; this.laps = opts.laps || this.course.laps || SK.DEFAULT_LAPS; this.mode = opts.mode || 'race';
     this.difficulty = opts.difficulty == null ? 1 : opts.difficulty; this.rng = SK.rng(this.seed * 31 + 7);
     this.time = -3.4; this.phase = 'count'; this.countShown = -4; this.events = []; this.rocks = []; this.shots = []; this.nextChair = 0; this.lastFinish = 0;
     this.racers = opts.racers.map((r, i) => new Racer(this, r, i));
     const w0 = this.track.segs[0].w, n = this.racers.length;
-    this.racers.forEach((r, i) => { r.x = n === 1 ? 0 : (-0.6 + 1.2 * i / (n - 1)) * w0; r.startX = r.x; r.z = 2 + i * 0.5; r.yAbs = this.track.groundY(r.z); });
+    this.racers.forEach((r, i) => { r.x = n === 1 ? 0 : (-0.6 + 1.2 * i / (n - 1)) * w0; r.startX = r.x; r.z = 2 + i * 0.5; r.yAbs = this.track.groundY(r.z);
+      if (r.gear.portemonnaie && this.mode !== 'time') { r.coins = 100; r.coinsTotal = 100; }
+      if (r.gear.sac && this.mode !== 'time') r.item = this.rng.pick(SK.ITEM_IDS); });
     this.humans = this.racers.filter(r => r.ctrl === 'human');
   };
   const P = SK.Race.prototype;
@@ -49,7 +55,7 @@
     if (this.phase === 'count') {
       const c = Math.min(3, Math.ceil(-this.time));
       if (c !== this.countShown && c <= 3) { this.countShown = c; this.emit({ type: 'count', n: c }); }
-      if (this.time >= 0) { this.phase = 'race'; this.emit({ type: 'go' }); } else { this.rankAll(); return; }
+      if (this.time >= 0) { this.phase = 'race'; this.emit({ type: 'go' }); for (const r of this.racers) if (r.gear.fusee) r.fx.fan = 1.5; } else { this.rankAll(); return; }
     }
     for (const r of this.racers) if (r.ctrl === 'cpu' && SK.AI) SK.AI.drive(this, r, dt);
     for (const r of this.racers) this.updateRacer(r, dt);
@@ -88,10 +94,14 @@
     if (r.flat > 0) r.flat -= dt;
     if (r.state === 'done') { r.prev = Object.assign({}, inp); return; }
     if (r.state === 'lift') {
-      if (this.time >= r.lift.end) {
-        r.lap++; r.z = 2; r.x = r.startX; r.yAbs = T.groundY(r.z); r.h = 0; r.speed = 8; r.state = 'ride'; r.lift = null; r.lapStart = this.time;
-        this.emit({ type: 'lapstart', r });
+      if (this.time >= r.lift.end) { // la chaise arrive en haut : on voit le coureur descendre du siège sur la piste
+        r.lap++; r.z = 2; r.x = r.startX; r.yAbs = T.groundY(r.z) + 4; r.h = 4; r.speed = 5; r.state = 'drop'; r.lift = null; r.lapStart = this.time; r.steer = 0;
       }
+      r.prev = Object.assign({}, inp); return;
+    }
+    if (r.state === 'drop') { // suspendu à la chaise, on descend doucement jusqu'à la neige
+      r.h = Math.max(0, r.h - 3.4 * dt); r.z += r.speed * dt; r.yAbs = T.groundY(r.z) + r.h;
+      if (r.h <= 0) { r.state = 'ride'; r.speed = 8; this.emit({ type: 'lapstart', r }); }
       r.prev = Object.assign({}, inp); return;
     }
     const s = T.segAt(r.z), surf = SK.SURFACES[s.surface] || SK.SURFACES.snow;
@@ -116,16 +126,20 @@
     }
     // ---- latéral : direction, force centrifuge, murs
     const kappa = s.curve / (SEG * SEG), centrifugal = kappa * r.speed * r.speed * 4.2;
+    r.steer += SK.clamp(inp.steer - r.steer, -7 * dt, 7 * dt); // la direction se prend progressivement (inclinaison)
+    const station = r.z >= this.L; // zone de la gare au bas de la piste
     if (!stunned && r.fx.snowman <= 0) {
       const grip = (r.state === 'air' ? 0.35 : 1) * surf.grip;
-      r.x += inp.steer * r.steerRate * Math.min(1, r.speed / 12) * grip * dt;
+      r.x += r.steer * r.steerRate * (station ? 0.9 : Math.min(1, r.speed / 12)) * grip * dt;
     }
+    if (station && r.lap + 1 < this.laps) { r.speed = Math.max(6, Math.min(r.speed, 14) - 10 * dt); target = 0; }
     r.x -= centrifugal * (r.state === 'air' ? 0.6 : 1) * (SK.SURFACES[s.surface] && s.surface === 'ice' ? 1.25 : 1) * dt;
     const lim = s.w - 0.9;
     if (r.x > lim || r.x < -lim) {
       r.x = SK.clamp(r.x, -lim, lim);
       if (r.wallT <= 0 && r.speed > 12 && !stunned) { this.emit({ type: 'wall', r }); r.wallT = 0.5; }
-      r.speed *= (1 - 1.8 * dt); if (r.speed > 18) r.speed = Math.max(18, r.speed - 25 * dt);
+      if (r.gear.veste) { r.speed *= (1 - 0.7 * dt); if (r.speed > 24) r.speed = Math.max(24, r.speed - 10 * dt); }
+      else { r.speed *= (1 - 1.8 * dt); if (r.speed > 18) r.speed = Math.max(18, r.speed - 25 * dt); }
     }
     if (r.wallT > 0) r.wallT -= dt;
     // ---- avance
@@ -143,10 +157,10 @@
     if (r.state === 'air') {
       r.airT += dt; r.vy -= SK.GRAVITY * dt; r.yAbs += r.vy * dt; r.h = Math.max(0, r.yAbs - gy);
       if (r.curTrick) { r.curTrick.t += dt * r.trickSpeed; if (r.curTrick.t >= r.curTrick.def.dur) { r.tricksDone.push(r.curTrick.def); r.curTrick = null; } }
-      else if (edge('trick')) {
+      else if (edge('trick') || (edge('jump') && r.airT > 0.08)) { // C ou X en l'air + direction = une des huit figures
         const dir = inp.up ? 'up' : inp.down ? 'down' : inp.steer < -0.3 ? 'left' : inp.steer > 0.3 ? 'right' : 'none';
-        const id = dir === 'up' ? 'back' : dir === 'down' ? 'front' : dir === 'left' ? 'spinL' : dir === 'right' ? 'spinR' : 'grab';
-        r.curTrick = { id, def: SK.TRICKS[id], t: 0 }; this.emit({ type: 'trickstart', r, id });
+        const id = SK.trickFor(edge('trick') ? 'trick' : 'jump', dir);
+        if (id) { r.curTrick = { id, def: SK.TRICKS[id], t: 0 }; this.emit({ type: 'trickstart', r, id }); }
       }
       if (r.yAbs <= gy) { // atterrissage
         r.yAbs = gy; r.h = 0; r.vy = 0; r.lastVy = 0; r.state = 'ride';
@@ -175,7 +189,7 @@
       }
       for (const c of sg.coins) {
         const cz = sg.z + SEG / 2;
-        if (c.taken <= this.time && cz >= zPrev && cz < r.z && Math.abs(r.x - c.x) < 1.5 && r.h < 2) { c.taken = this.time + SK.BOX_RESPAWN * 3; r.coins += SK.COIN_VALUE; r.coinsTotal += SK.COIN_VALUE; this.emit({ type: 'coin', r }); }
+        if (c.taken <= this.time && cz >= zPrev && cz < r.z && Math.abs(r.x - c.x) < (r.gear.aimant ? 2.8 : 1.5) && r.h < 2) { c.taken = this.time + SK.BOX_RESPAWN * 3; r.coins += SK.COIN_VALUE; r.coinsTotal += SK.COIN_VALUE; this.emit({ type: 'coin', r }); }
       }
     }
     for (const k of this.rocks) {
@@ -187,12 +201,16 @@
     if (edge('shoot') && r.shot && !stunned) this.fire(r);
     if (edge('item') && r.item && !stunned) this.useItem(r);
     // ---- fin de tour : remontée mécanique ou arrivée
-    if (r.z >= this.L) {
+    if (r.z >= this.L && r.lap + 1 >= this.laps) {
       r.lapTimes.push(this.time - r.lapStart);
-      if (r.lap + 1 >= this.laps) { r.state = 'done'; r.finishTime = this.time; r.z = this.L; this.lastFinish = this.time; this.emit({ type: 'finish', r }); }
-      else {
+      r.state = 'done'; r.finishTime = this.time; r.z = this.L; this.lastFinish = this.time; this.emit({ type: 'finish', r });
+    } else if (r.z >= this.gateZ) {
+      if (Math.abs(r.x - this.gateX) > this.gateW) { // barrière : il faut rejoindre le portail
+        r.z = this.gateZ - 0.1; r.speed = 6; if (r.wallT <= 0) { this.emit({ type: 'barrier', r }); r.wallT = 1.5; }
+      } else {
+        r.lapTimes.push(this.time - r.lapStart);
         const board = Math.max(this.nextChair, this.time); this.nextChair = board + SK.LIFT_INTERVAL;
-        r.state = 'lift'; r.lift = { board, end: board + SK.LIFT_RIDE, lapDone: r.lap + 1 }; r.z = this.L; r.speed = 0; r.h = 0; r.curTrick = null; r.tricksDone = []; r.pending = null;
+        r.state = 'lift'; r.lift = { board, end: board + SK.LIFT_RIDE - (r.gear.vip ? 1.5 : 0), lapDone: r.lap + 1 }; r.z = this.L; r.speed = 0; r.h = 0; r.curTrick = null; r.tricksDone = []; r.pending = null;
         r.fx.parachute = 0; r.fx.snowman = 0; r.fx.slow = 0;
         this.emit({ type: 'lift', r, wait: board - this.time });
       }
@@ -256,7 +274,7 @@
     if (kind === 'rocher') this.rocks.push({ z: r.z - 2.5, x: r.x, lap: r.lap, until: this.time + 30, owner: r, t0: this.time });
     else if (kind === 'ventilo') r.fx.fan = 3;
     else if (kind === 'invisible') r.fx.invisible = 6;
-    else if (kind === 'nuage') { for (const o of this.racers) if (o !== r && !o.immune()) o.fx.slow = 4; }
+    else if (kind === 'nuage') { for (const o of this.racers) if (o !== r && !o.immune()) o.fx.slow = o.gear.lunettes ? 2 : 4; }
     else if (kind === 'fantome') {
       const t = this.racerAhead(r);
       if (t && !t.immune() && (t.shot || t.item)) { if (t.shot) { r.shot = t.shot; t.shot = null; } else { r.item = t.item; t.item = null; } this.emit({ type: 'steal', r, from: t }); r.stats.hits++; }
@@ -266,7 +284,7 @@
     if (r.immune()) return false;
     if (from) from.stats.hits++;
     if (kind === 'bombe') this.fall(r, 1.6, false);
-    else if (kind === 'parachute') r.fx.parachute = 5;
+    else if (kind === 'parachute') r.fx.parachute = r.gear.lunettes ? 2.5 : 5;
     else if (kind === 'gel') this.freeze(r, 2);
     else if (kind === 'poele') this.fall(r, 1.3, true);
     else if (kind === 'bonhomme') { r.fx.snowman = 3; r.curTrick = null; }

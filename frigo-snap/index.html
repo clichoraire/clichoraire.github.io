@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frigo Snap</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <section id="screen-menu" class="screen">
+    <div class="menu-box">
+      <h1>FRIGO <span>SNAP</span></h1>
+      <p class="tagline">La vie secrète de l'étage du bas : un demi-avocat sur rails, un appareil photo, et des restes qui bougent dès que la porte se ferme. <span id="version"></span></p>
+      <canvas id="menu-anim" width="940" height="200"></canvas>
+      <div class="buttons">
+        <button id="btn-play" class="primary">Partir en virée <small id="play-progress"></small></button>
+        <button id="btn-guide">Le Guide des Restes Oubliés</button>
+        <button id="btn-help" class="ghost">Comment jouer ?</button>
+      </div>
+      <div class="options">
+        <label><input type="checkbox" id="opt-sound"> Sons</label>
+        <label><input type="checkbox" id="opt-invert"> Inverser la visée verticale</label>
+        <button id="btn-reset" class="ghost" style="font-size:13px;padding:6px 10px">Effacer la sauvegarde</button>
+      </div>
+      <section id="howto" class="hidden"><h2>Comment jouer ?</h2><div id="howto-grid"></div></section>
+    </div>
+  </section>
+
+  <section id="screen-levels" class="screen hidden">
+    <div class="panel">
+      <h2>Choisis ta virée</h2>
+      <p class="sub" id="levels-sub"></p>
+      <div id="level-cards" class="cards"></div>
+      <div class="buttons"><button id="btn-levels-back" class="ghost">Retour</button><button id="btn-levels-go" class="primary">En route !</button></div>
+    </div>
+  </section>
+
+  <section id="screen-run" class="screen hidden">
+    <div class="canvas-wrap"><div class="stage">
+      <canvas id="game" width="1280" height="720"></canvas>
+      <div id="pause" class="hidden"><h2>Pause</h2><p>Le frigo attend…</p><div class="buttons"><button id="btn-resume" class="primary">Reprendre</button><button id="btn-quit" class="ghost">Abandonner la virée</button></div></div>
+    </div></div>
+  </section>
+
+  <section id="screen-results" class="screen hidden">
+    <div class="panel">
+      <h2>Retour au grille-pain</h2>
+      <p class="sub" id="results-sub">Choisis le meilleur cliché de chaque espèce : Fernand n'en jugera qu'un par espèce.</p>
+      <div id="species-rows" class="species-rows"></div>
+      <div class="buttons"><button id="btn-results-go" class="primary">Soumettre à Fernand</button></div>
+    </div>
+  </section>
+
+  <section id="screen-judge" class="screen hidden">
+    <div class="panel">
+      <h2 id="judge-title">Sous la loupe de Fernand</h2>
+      <div class="judge-grid">
+        <div class="judge-photo"><canvas id="judge-photo" width="640" height="360"></canvas><div class="caption" id="judge-caption"></div><div class="stamp" id="judge-stamp"></div></div>
+        <div class="judge-side">
+          <canvas id="fernand-canvas" width="340" height="220"></canvas>
+          <div class="bubble" id="judge-bubble"></div>
+          <div id="judge-crits"></div>
+          <div class="judge-total" id="judge-total"></div>
+          <div class="buttons"><button id="btn-judge-next" class="primary">Suivant</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-guide" class="screen hidden">
+    <div class="panel">
+      <h2>Le Grand Guide des Restes Oubliés</h2>
+      <p class="sub" id="guide-sub"></p>
+      <div id="guide-grid" class="guide-grid"></div>
+      <div class="buttons"><button id="btn-guide-back" class="ghost">Retour</button></div>
+    </div>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="js/config.js"></script>
+<script src="js/game.js"></script>
+<script src="js/creatures.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

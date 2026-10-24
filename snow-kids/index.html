@@ -44,7 +44,7 @@
 
   <section id="screen-town" class="screen hidden">
     <div class="canvas-wrap"><div class="stage"><canvas id="town-canvas" width="1280" height="720"></canvas>
-      <div id="town-top"><span id="town-gold"></span><span id="town-char"></span><button id="btn-town-menu" class="ghost">Menu</button></div>
+      <div id="town-top"><span id="town-gold" class="gold-box"></span><span id="town-char"></span><button id="btn-town-menu" class="ghost">Menu</button></div>
       <div id="town-label"></div>
     </div></div>
   </section>
@@ -82,13 +82,21 @@
   </section>
 
   <section id="screen-shop" class="screen hidden">
-    <div class="panel">
-      <h2>Boutique de planches</h2>
-      <p class="sub">Acheter une planche, l'équiper pour l'aventure, ou l'améliorer (vitesse, virage, figures : jusqu'à +2 chacun).</p>
-      <p class="gold-line">🪙 <span id="shop-gold"></span> pièces · planche équipée : <span id="shop-equipped"></span></p>
-      <div id="board-list" class="board-list"></div>
-      <div class="buttons"><button id="btn-shop-back" class="ghost">Retour</button></div>
-    </div>
+    <div class="canvas-wrap"><div class="stage">
+      <canvas id="shop-canvas" width="1280" height="720"></canvas>
+      <div id="shop-gold" class="gold-box"></div>
+      <div id="shop-me"></div>
+      <div id="shop-tabs"></div>
+      <div id="shop-show">
+        <div id="shop-title"></div>
+        <div class="show-row"><button id="shop-prev" class="arrow">◀</button><canvas id="shop-item" width="260" height="260"></canvas><button id="shop-next" class="arrow">▶</button></div>
+        <div id="shop-strip"></div>
+        <div id="shop-name"></div>
+        <div id="shop-price" class="shop-price"></div>
+      </div>
+      <div id="shop-bottom"><div id="shop-desc"></div><button id="shop-buy">ACHETER</button></div>
+      <button id="btn-shop-back" class="ghost">RETOUR</button>
+    </div></div>
   </section>
 
   <section id="screen-story" class="screen hidden">
@@ -105,7 +113,7 @@
       <div id="pause" class="hidden">
         <div class="pause-box">
           <h2>PAUSE</h2>
-          <p><b>J1</b> : flèches diriger · ↑ se pencher (plus vite) · ↓ freiner · <kbd>X</kbd> sauter · <kbd>C</kbd> figure (+ direction) · <kbd>V</kbd> tir · <kbd>B</kbd> objet<br>
+          <p><b>J1</b> : flèches diriger · ↑ se pencher (plus vite) · ↓ freiner · <kbd>X</kbd> sauter · en l'air <kbd>C</kbd> ou <kbd>X</kbd> + direction = figures · <kbd>V</kbd> tir · <kbd>B</kbd> objet<br>
              <b>J2</b> : <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>G</kbd> sauter · <kbd>H</kbd> figure · <kbd>J</kbd> tir · <kbd>K</kbd> objet · <kbd>Échap</kbd> pause</p>
           <button id="btn-resume" class="primary">Reprendre</button>
           <button id="btn-quit" class="ghost">Abandonner la course</button>
@@ -132,6 +140,7 @@
 <script src="js/audio.js"></script>
 <script src="js/input.js"></script>
 <script src="js/town.js"></script>
+<script src="js/shop.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

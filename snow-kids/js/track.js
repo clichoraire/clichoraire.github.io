@@ -39,8 +39,12 @@
     const L = segs.length * SEG;
     // Zone d'arrivée : 40 segments plats après la ligne (gare de la remontée), pour le dessin seulement.
     for (let k = 0; k < 40; k++) { const s = push(0, prevW, k < 6 ? base * (1 - k / 6) : 0, null); s.finish = true; }
-    segs[segs.length - 40].props.push({ type: 'gate', x: 0, r: 0, decor: true, wide: true });
-    for (let k = 2; k < 40; k += 3) segs[segs.length - 40 + k].props.push({ type: 'liftpole', x: prevW + 4, r: 0, decor: true });
+    // Le portail de la remontée est dans un coin (côté selon la piste) ; une barrière ferme le reste à 15 m de la ligne.
+    const side = SK.COURSES.indexOf(course) % 2 ? -1 : 1, gateX = side * (prevW - 4.5), gateW = 4;
+    const gateSeg = segs[segs.length - 40 + 3];
+    gateSeg.props.push({ type: 'gate', x: gateX, r: 0, decor: true, wide: false, gateW });
+    gateSeg.barrier = { gateX, gateW };
+    for (let k = 5; k < 40; k += 3) segs[segs.length - 40 + k].props.push({ type: 'liftpole', x: side * (prevW + 4), r: 0, decor: true });
 
     // Décors hors piste
     const nRace = segs.length - 40;
@@ -75,7 +79,7 @@
     const landmarks = { rookie: 'lodge', snowman: 'bigsnowman', sunset: 'mesa', highway: 'tower', grass: 'windmill', sand: 'pyramid', silver: 'peak', ninja: 'pagoda', dizzy: 'ferris' };
     [0.33, 0.7].forEach((f, k) => { const s = segs[Math.floor(nRace * f)]; s.props.push({ type: landmarks[course.theme], x: (k ? -1 : 1) * (s.w + 18), r: 0, decor: true, big: true }); });
 
-    const track = { course, theme, segs, nRace, L, length: segs.length };
+    const track = { course, theme, segs, nRace, L, length: segs.length, gateX, gateW, gateZ: L + 3 * SEG, wEnd: prevW };
     track.segAt = z => segs[SK.clamp(Math.floor(z / SEG), 0, segs.length - 1)];
     track.groundY = z => { const s = track.segAt(z); const p = SK.clamp((z - s.z) / SEG, 0, 1); return s.y1 + (s.y2 - s.y1) * p; };
     track.widthAt = z => track.segAt(z).w;

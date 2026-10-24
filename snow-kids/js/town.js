@@ -74,12 +74,14 @@
   // opts : { canvas, charId, labelEl, onEnter(houseId), onBack }
   T.open = function (opts) {
     stop(); canvas = opts.canvas; const ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
-    let target = T._angle || 0, angle = target;
+    let target = T._angle || 0, angle = target, tw = null; // tw : animation de rotation en cours
+    const ease = p => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    const rotate = d => { target += d; T._angle = target; tw = { from: angle, to: target, t0: performance.now(), dur: 650 }; label(); SK.Audio.sfx('click'); };
     const houseAt = a => T.HOUSES.find(h => h.angle === ((a % 360) + 360) % 360);
     const label = () => { const h = houseAt(target); if (opts.labelEl) opts.labelEl.innerHTML = `<b>${h.name}</b><span>${h.desc}</span><em>← → se promener · Entrée / X entrer · Échap menu</em>`; };
     keyHandler = e => {
-      if (e.code === 'ArrowLeft' || e.code === 'KeyA') { target -= 90; T._angle = target; label(); SK.Audio.sfx('click'); e.preventDefault(); }
-      else if (e.code === 'ArrowRight' || e.code === 'KeyD') { target += 90; T._angle = target; label(); SK.Audio.sfx('click'); e.preventDefault(); }
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') { rotate(-90); e.preventDefault(); }
+      else if (e.code === 'ArrowRight' || e.code === 'KeyD') { rotate(90); e.preventDefault(); }
       else if (e.code === 'Enter' || e.code === 'KeyX' || e.code === 'Space') { e.preventDefault(); if (Math.abs(angle - target) < 8) opts.onEnter(houseAt(target).id); }
       else if (e.code === 'Escape') { if (opts.onBack) opts.onBack(); }
     };
@@ -90,13 +92,13 @@
       const hit = drawn.filter(d => Math.abs(mx - d.x) < d.hw && my > d.y - d.hh && my < d.y + 20).sort((a, b) => b.depth - a.depth)[0];
       if (!hit) return;
       if (hit.h.angle === ((target % 360) + 360) % 360) opts.onEnter(hit.h.id);
-      else { const diff = ((hit.h.angle - target) % 360 + 540) % 360 - 180; target += diff; T._angle = target; label(); SK.Audio.sfx('click'); }
+      else { const diff = ((hit.h.angle - target) % 360 + 540) % 360 - 180; rotate(diff); }
     };
     canvas.addEventListener('click', clickHandler);
     label();
     const frame = () => {
       raf = requestAnimationFrame(frame); const t = performance.now() / 1000, horizon = H * 0.45;
-      angle += (target - angle) * 0.12;
+      if (tw) { const p = Math.min(1, (performance.now() - tw.t0) / tw.dur); angle = tw.from + (tw.to - tw.from) * ease(p); if (p >= 1) tw = null; } else angle = target;
       scene(ctx, W, H, t, horizon);
       // place du village
       ctx.fillStyle = '#dde7f0'; ctx.beginPath(); ctx.ellipse(W / 2, H * 0.78, W * 0.42, H * 0.17, 0, 0, TAU); ctx.fill();

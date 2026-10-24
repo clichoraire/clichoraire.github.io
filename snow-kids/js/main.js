@@ -3,7 +3,7 @@
   'use strict';
   const $ = id => document.getElementById(id), A = SK.Audio, R = SK.Render, I = SK.Input;
   const SAVE_KEY = 'snowkids.save';
-  const DEFAULT_SAVE = { gold: 0, boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'slash', board: 'freestyle', char2: 'nancy', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {} };
+  const DEFAULT_SAVE = { gold: 0, boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'slash', board: 'freestyle', char2: 'nancy', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {}, gear: [] };
   let save = loadSave();
   function loadSave() { try { return Object.assign({}, DEFAULT_SAVE, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { return Object.assign({}, DEFAULT_SAVE); } }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* mode privé */ } }
@@ -11,18 +11,18 @@
 
   // ------------------------------------------------------------------ écrans
   const screens = ['menu', 'advselect', 'town', 'records', 'select', 'course', 'shop', 'story', 'race', 'result'];
-  function show(name) { if (name !== 'town' && name !== 'advselect') SK.Town.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
+  function show(name) { if (name !== 'town' && name !== 'advselect') SK.Town.close(); if (name !== 'shop') SK.Shop.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
   let flow = { mode: 'champ', players: 1, course: null, laps: 3, picks: [] };
 
   const fakeRacer = SK.fakeRacer;
-  const UPGRADE_MAX = 2, upgradeCost = lvl => 1000 * (lvl + 1);
-  // Planche avec ses améliorations achetées à la boutique
-  function effectiveBoard(id) { const b = SK.boardById(id), u = (save.upgrades || {})[b.id] || {}; return Object.assign({}, b, { speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), trick: b.trick + (u.trick || 0), base: b }); }
+  const effectiveBoard = id => SK.effectiveBoard(id, save);
+  const gold = n => `<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="">${SK.fmtGold(n)}</span>`;
+  const gearObj = () => { const o = {}; for (const g of save.gear || []) o[g] = true; return o; };
 
   // ---- menu
   function refreshMenu() {
     $('version').textContent = 'v' + SK.VERSION;
-    $('champ-progress').textContent = save.ending ? '✓ terminée · 🪙 ' + save.gold : save.unlocked + ' / ' + SK.COURSES.length + ' pistes · 🪙 ' + save.gold;
+    $('champ-progress').innerHTML = (save.ending ? '✓ terminée · ' : save.unlocked + ' / ' + SK.COURSES.length + ' pistes · ') + gold(save.gold);
     $('opt-diff').value = save.diff; $('opt-sound').checked = save.sound; $('opt-music').checked = save.music;
   }
   function initMenu() {
@@ -38,10 +38,10 @@
     $('btn-reset').onclick = () => { if (confirm('Effacer toute la progression (pièces, planches, pistes débloquées, Shinobin) ?')) { save = Object.assign({}, DEFAULT_SAVE); store(); refreshMenu(); toast('Sauvegarde effacée'); } };
     $('howto-grid').innerHTML = `
       <div><h3>Le but</h3><p>Descends la piste plus vite que les autres. Au bas de la piste, la <b>remontée mécanique</b> te ramène au sommet pour le tour suivant : une chaise part toutes les ${SK.LIFT_INTERVAL} secondes, une place par chaise. Au dernier tour, la ligne d'arrivée remplace la remontée.</p>
-      <h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↑</kbd> se pencher en avant (un peu plus de vitesse) · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> sauter (sur un tremplin : tiens le bouton pour décoller plus haut)</li><li><kbd>C</kbd> figure en l'air : seul = Grab, <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
+      <h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↑</kbd> se pencher en avant (un peu plus de vitesse) · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> sauter (sur un tremplin : tiens le bouton pour décoller plus haut)</li><li>En l'air, <kbd>C</kbd> + direction : Grab (seul), <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille 360</li><li>En l'air, <kbd>X</kbd> + direction : Method (seul), <kbd>↑</kbd> Rodéo, <kbd>↓</kbd> Tornade, <kbd>←</kbd>/<kbd>→</kbd> vrille 720 — plus longues, mieux payées</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
       <p>Joueur 2 : <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>, <kbd>G</kbd> saut, <kbd>H</kbd> figure, <kbd>J</kbd> tir, <kbd>K</kbd> objet. Les manettes marchent aussi (A saut, B figure, X tir, Y objet).</p></div>
-      <div><h3>Pièces et boîtes</h3><p>Les <b>pièces</b> 🪙 (10 chacune) traînent sur la piste et s'obtiennent surtout avec les <b>figures</b> : termine-les avant d'atterrir, sinon tu tombes ! Enchaîne plusieurs figures dans un même saut pour multiplier le gain.</p>
-      <p>Les <b>boîtes rouges</b> donnent un <b>tir</b> et coûtent ${SK.SHOT_COST} pièces. Les <b>boîtes bleues</b> donnent un <b>objet</b>, gratuit. Un seul tir et un seul objet à la fois.</p>
+      <div><h3>Or et boîtes</h3><p>Les <b>pièces d'or</b> (10 G chacune) traînent sur la piste et s'obtiennent surtout avec les <b>figures</b> : termine-les avant d'atterrir, sinon tu tombes ! Enchaîne plusieurs figures dans un même saut pour multiplier le gain.</p>
+      <p>Les <b>boîtes rouges</b> donnent un <b>tir</b> et coûtent ${SK.SHOT_COST} G. Les <b>boîtes bleues</b> donnent un <b>objet</b>, gratuit. Un seul tir et un seul objet à la fois.</p>
       <h3>Tirs (boîtes rouges)</h3><ul>${Object.values(SK.SHOTS).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.desc}</li>`).join('')}</ul></div>
       <div><h3>Objets (boîtes bleues)</h3><ul>${Object.values(SK.ITEMS).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.desc}</li>`).join('')}</ul>
       <h3>Aventure et village</h3><p>Choisis ton Kid, puis promène-toi dans le <b>village</b> (← → pour tourner, Entrée pour entrer dans une maison) : le <b>télésiège</b> mène aux pistes, la <b>boutique</b> vend, équipe et améliore les planches, la <b>maison des Kids</b> change de personnage, le <b>chalet des records</b> montre ta progression. Gagne chaque piste (1<sup>re</sup> place) pour débloquer la suivante ; les pièces ramassées et la prime de fin de course (${SK.PRIZES.slice(0, 4).join(' / ')}) remplissent ta tirelire.</p>
@@ -77,7 +77,7 @@
   function openTown() {
     show('town'); A.music('menu');
     if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
-    $('town-gold').textContent = '🪙 ' + save.gold; $('town-char').textContent = SK.charById(save.advChar).name + ' · planche ' + SK.boardById(save.advBoard).name;
+    $('town-gold').innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold)}</b>`; $('town-char').textContent = SK.charById(save.advChar).name + ' · planche ' + SK.boardById(save.advBoard).name;
     SK.Town.open({
       canvas: $('town-canvas'), charId: save.advChar, labelEl: $('town-label'),
       onEnter: id => {
@@ -94,7 +94,7 @@
   function openRecords() {
     show('records');
     const won = Object.keys(save.won).length;
-    $('records-sub').textContent = `🪙 ${save.gold} pièces · ${won} piste${won > 1 ? 's' : ''} gagnée${won > 1 ? 's' : ''} sur ${SK.COURSES.length} · ${save.boards.length} planche${save.boards.length > 1 ? 's' : ''}` + (save.shinobin ? ' · Shinobin débloqué 🥷' : '');
+    $('records-sub').innerHTML = `${gold(save.gold)} · ${won} piste${won > 1 ? 's' : ''} gagnée${won > 1 ? 's' : ''} sur ${SK.COURSES.length} · ${save.boards.length} planche${save.boards.length > 1 ? 's' : ''}` + (save.shinobin ? ' · Shinobin débloqué 🥷' : '');
     let html = '<table class="results"><tr><th>Piste</th><th>État</th><th class="num">Record</th></tr>';
     SK.COURSES.forEach((c, i) => { const unlocked = i < save.unlocked; html += `<tr><td>${i + 1}. ${unlocked || !c.hidden ? c.name : '???'}</td><td>${save.won[c.id] ? '🏆 gagnée' : unlocked ? 'débloquée' : '🔒'}</td><td class="num">${SK.fmtTime(save.best[c.id])}</td></tr>`; });
     $('records').innerHTML = html + '</table>';
@@ -160,7 +160,7 @@
     show('course');
     const champ = flow.mode === 'champ';
     $('course-title').textContent = champ ? 'Télésiège : choisis ta piste' : 'Choisis ta piste';
-    $('course-sub').textContent = champ ? 'Termine 1er pour débloquer la piste suivante. Prime : ' + SK.PRIZES.slice(0, 4).join(' / ') + ' pièces.' : flow.mode === 'time' ? 'Ton meilleur temps est affiché sur chaque piste.' : 'Les pistes se débloquent dans l\'aventure.';
+    $('course-sub').textContent = champ ? 'Termine 1er pour débloquer la piste suivante. Prime : ' + SK.PRIZES.slice(0, 4).map(p => p + ' G').join(' / ') + '.' : flow.mode === 'time' ? 'Ton meilleur temps est affiché sur chaque piste.' : 'Les pistes se débloquent dans l\'aventure.';
     $('laps-row').classList.toggle('hidden', champ);
     const cards = $('course-cards'); cards.innerHTML = '';
     let picked = null;
@@ -213,41 +213,23 @@
     $('btn-story-ok').onclick = () => { A.sfx('click'); next(); };
   }
 
-  // ---- boutique : acheter, équiper (aventure), améliorer
+  // ---- boutique (chalet dessiné dans js/shop.js)
   function openShop(back) {
     show('shop'); A.music('menu');
-    $('shop-gold').textContent = save.gold; $('shop-equipped').textContent = SK.boardById(save.advBoard).name;
-    const list = $('board-list'); list.innerHTML = '';
-    for (const b of SK.BOARDS) {
-      const owned = save.boards.includes(b.id), eq = effectiveBoard(b.id), u = (save.upgrades[b.id] = save.upgrades[b.id] || { speed: 0, corner: 0, trick: 0 });
-      const el = document.createElement('div'); el.className = 'board' + (owned ? ' owned' : '') + (save.advBoard === b.id ? ' equipped' : '');
-      el.innerHTML = `<div class="swatch" style="background:${b.color}"></div><div class="info"><b>${b.name}${save.advBoard === b.id ? ' · équipée' : ''}</b>${b.desc}<br>Vitesse ${fmtMod(eq.speed)} · Virage ${fmtMod(eq.corner)} · Figures ${fmtMod(eq.trick)}</div>`;
-      const col = document.createElement('div'); col.style.cssText = 'display:flex;flex-direction:column;gap:4px;align-items:flex-end';
-      const btn = document.createElement('button');
-      if (!owned) { btn.textContent = '🪙 ' + b.price; btn.className = save.gold >= b.price ? 'gold' : 'ghost'; btn.onclick = () => { if (save.gold < b.price) { A.sfx('nope'); toast('Pas assez de pièces : il te manque ' + (b.price - save.gold)); return; } save.gold -= b.price; save.boards.push(b.id); store(); A.sfx('buy'); toast(b.name + ' achetée !'); openShop(back); }; }
-      else if (save.advBoard === b.id) { btn.textContent = 'Équipée'; btn.disabled = true; btn.className = 'ghost'; }
-      else { btn.textContent = 'Équiper'; btn.onclick = () => { save.advBoard = b.id; save.board = b.id; store(); A.sfx('box'); openShop(back); }; }
-      col.appendChild(btn);
-      if (owned) {
-        const ups = document.createElement('div'); ups.className = 'ups';
-        for (const [k, lab] of [['speed', 'Vitesse'], ['corner', 'Virage'], ['trick', 'Figures']]) {
-          const ub = document.createElement('button'); const lvl = u[k] || 0;
-          if (lvl >= UPGRADE_MAX) { ub.textContent = lab + ' max'; ub.disabled = true; ub.className = 'ghost'; }
-          else { const cost = upgradeCost(lvl); ub.textContent = `${lab} +1 · 🪙 ${cost}`; ub.className = save.gold >= cost ? 'gold' : 'ghost'; ub.onclick = () => { if (save.gold < cost) { A.sfx('nope'); toast('Pas assez de pièces : il te manque ' + (cost - save.gold)); return; } save.gold -= cost; u[k] = lvl + 1; store(); A.sfx('buy'); toast(b.name + ' : ' + lab.toLowerCase() + ' amélioré !'); openShop(back); }; }
-          ups.appendChild(ub);
-        }
-        col.appendChild(ups);
-      }
-      el.appendChild(col); list.appendChild(el);
-    }
-    $('btn-shop-back').onclick = () => { A.sfx('click'); (back || (() => show('menu')))(); };
+    if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
+    save.gear = save.gear || []; save.upgrades = save.upgrades || {};
+    SK.Shop.open({
+      canvas: $('shop-canvas'), save, store, toast,
+      els: { gold: $('shop-gold'), tabs: $('shop-tabs'), title: $('shop-title'), icon: $('shop-item'), strip: $('shop-strip'), name: $('shop-name'), me: $('shop-me'), price: $('shop-price'), desc: $('shop-desc'), buy: $('shop-buy'), prev: $('shop-prev'), next: $('shop-next'), back: $('btn-shop-back') },
+      onBack: () => { SK.Shop.close(); (back || (() => show('menu')))(); },
+    });
   }
 
   // ------------------------------------------------------------------ course
   let race = null, raf = 0, paused = false, acc = 0, last = 0, overAt = 0, canvas, ctx;
   function pickAI(count, taken, allowShinobin) {
     const pool = SK.CHARACTERS.filter(c => !taken.includes(c.id) && (!c.hidden || (allowShinobin && save.shinobin)));
-    const rng = SK.rng(Date.now() & 0xffff), out = [];
+    const rng = SK.rng(flow.seed || (Date.now() & 0xffff)), out = [];
     while (out.length < count && pool.length) out.push(pool.splice(rng.int(pool.length), 1)[0]);
     const boardsByDiff = [['freestyle'], ['freestyle', 'fusee', 'virage', 'acrobate'], ['fusee', 'virage', 'acrobate', 'pro']];
     return out.map(c => ({ charId: c.id, boardId: rng.pick(boardsByDiff[save.diff]), ctrl: 'cpu' }));
@@ -255,12 +237,12 @@
   function startRace() {
     show('race'); A.init(); A.music(flow.course.theme);
     canvas = $('game'); ctx = canvas.getContext('2d');
-    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), ctrl: 'human', player: i }));
+    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), gear: gearObj(), ctrl: 'human', player: i }));
     if (flow.mode !== 'time') {
       racers.push(...pickAI(4 - racers.length, racers.map(r => r.charId), flow.mode !== 'champ'));
       if (flow.mode === 'champ' && flow.course.boss) racers.push({ charId: flow.course.boss, boardId: 'pro', ctrl: 'cpu', boss: true });
     }
-    race = new SK.Race({ course: flow.course, racers, laps: flow.laps, seed: (Date.now() & 0xfffff) + 1, difficulty: save.diff, mode: flow.mode });
+    race = new SK.Race({ course: flow.course, racers, laps: flow.laps, seed: flow.seed || (Date.now() & 0xfffff) + 1, difficulty: save.diff, mode: flow.mode });
     paused = false; acc = 0; last = 0; overAt = 0; $('pause').classList.add('hidden');
     cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }
@@ -291,16 +273,17 @@
         case 'count': A.sfx('count'); break;
         case 'go': A.sfx('go'); break;
         case 'coin': if (human) A.sfx('coin'); break;
-        case 'box': if (human) { A.sfx('box'); const d = e.kind === 'red' ? SK.SHOTS[e.got] : SK.ITEMS[e.got]; R.notify(r, d.icon + ' ' + d.name + (e.kind === 'red' ? '  (−' + SK.SHOT_COST + ' 🪙)' : ''), e.kind === 'red' ? '#ff8a80' : '#82b1ff'); } break;
-        case 'boxpoor': if (human) { A.sfx('nope'); R.notify(r, 'Boîte rouge : il faut ' + SK.SHOT_COST + ' pièces (tu en as ' + r.coins + ')', '#ff8a80'); } break;
+        case 'box': if (human) { A.sfx('box'); const d = e.kind === 'red' ? SK.SHOTS[e.got] : SK.ITEMS[e.got]; R.notify(r, d.icon + ' ' + d.name + (e.kind === 'red' ? '  (−' + SK.SHOT_COST + ' G)' : ''), e.kind === 'red' ? '#ff8a80' : '#82b1ff'); } break;
+        case 'boxpoor': if (human) { A.sfx('nope'); R.notify(r, 'Boîte rouge : il faut ' + SK.SHOT_COST + ' G (tu en as ' + r.coins + ')', '#ff8a80'); } break;
         case 'boxfull': if (human) { A.sfx('nope'); R.notify(r, e.kind === 'red' ? 'Tu as déjà un tir : utilise-le (' + (r.player === 1 ? 'J' : 'V') + ')' : 'Tu as déjà un objet : utilise-le (' + (r.player === 1 ? 'K' : 'B') + ')', '#ffcc80'); } break;
         case 'jump': if (human && e.big) A.sfx('jump'); break;
         case 'land': if (human) A.sfx('land'); break;
-        case 'trick': if (human) { A.sfx('trick'); R.notify(r, e.names.join(' + ') + '  +' + e.coins + ' 🪙', '#ffd600', true); } break;
+        case 'trick': if (human) { A.sfx('trick'); R.notify(r, e.names.join(' + ') + '  +' + e.coins + ' G', '#ffd600', true); } break;
         case 'fall': if (human) { A.sfx('fall'); R.notify(r, 'Chute !', '#ff8a80'); } break;
         case 'frozen': if (human) { A.sfx('freeze'); R.notify(r, 'Gelé !', '#80deea'); } break;
         case 'obstacle': break;
         case 'wall': if (human) A.sfx('wall'); break;
+        case 'barrier': if (human) { A.sfx('nope'); R.notify(r, 'Barrière ! Le portail de la remontée est ' + (race.gateX > r.x ? 'à droite →' : '← à gauche'), '#ff8a80'); } break;
         case 'shoot': if (human) { A.sfx('shoot'); } break;
         case 'item': if (human) { A.sfx(e.kind === 'ventilo' ? 'fan' : e.kind === 'invisible' ? 'invisible' : e.kind === 'nuage' ? 'rain' : e.kind === 'rocher' ? 'rock' : 'steal'); } break;
         case 'hit': if (human || fromHuman) { A.sfx(e.kind === 'gel' ? 'freeze' : e.kind === 'poele' ? 'pan' : e.kind === 'parachute' || e.kind === 'bonhomme' ? 'steal' : 'explode'); if (human) R.notify(r, SK.SHOTS[e.kind].icon + ' ' + SK.SHOTS[e.kind].name + (e.from ? ' de ' + e.from.def.name : '') + ' !', '#ff8a80'); if (fromHuman && !human) R.notify(e.from, SK.SHOTS[e.kind].icon + ' Touché : ' + r.def.name, '#69f0ae'); } break;
@@ -329,9 +312,9 @@
     }
     store();
     $('result-title').textContent = flow.course.name + ' — ' + (flow.mode === 'time' ? 'Contre-la-montre' : champ ? 'Aventure' : 'Course libre');
-    $('result-sub').textContent = flow.mode === 'time' ? (me && save.best[flow.course.id] === me.time ? '🏆 Nouveau record !' : 'Record : ' + SK.fmtTime(save.best[flow.course.id])) : 'Pièces gagnées : ' + earned + ' (ramassées + prime) · Total : 🪙 ' + save.gold;
-    let html = '<table class="results"><tr><th>Place</th><th>Coureur</th><th class="num">Temps</th><th class="num">Pièces</th><th class="num">Figures</th><th class="num">Touches</th><th class="num">Prime</th></tr>';
-    for (const x of res) html += `<tr class="${x.r.ctrl === 'human' ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][x.rank] || (x.rank + 1) + 'e'}</td><td>${x.name}${x.r.ctrl === 'human' ? ' (J' + (x.r.player + 1) + ')' : ''}${x.r.boss ? ' 🥷' : ''}</td><td class="num">${SK.fmtTime(x.time)}${x.estimated ? '*' : ''}</td><td class="num">${x.coins}</td><td class="num">${x.tricks}</td><td class="num">${x.stats.hits}</td><td class="num">${x.prize ? '+' + x.prize : ''}</td></tr>`;
+    $('result-sub').innerHTML = flow.mode === 'time' ? (me && save.best[flow.course.id] === me.time ? '🏆 Nouveau record !' : 'Record : ' + SK.fmtTime(save.best[flow.course.id])) : 'Gagné : ' + gold(earned) + ' (pièces ramassées + prime) · Tirelire : ' + gold(save.gold);
+    let html = '<table class="results"><tr><th>Place</th><th>Coureur</th><th class="num">Temps</th><th class="num">Or</th><th class="num">Figures</th><th class="num">Touches</th><th class="num">Prime</th></tr>';
+    for (const x of res) html += `<tr class="${x.r.ctrl === 'human' ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][x.rank] || (x.rank + 1) + 'e'}</td><td>${x.name}${x.r.ctrl === 'human' ? ' (J' + (x.r.player + 1) + ')' : ''}${x.r.boss ? ' 🥷' : ''}</td><td class="num">${SK.fmtTime(x.time)}${x.estimated ? '*' : ''}</td><td class="num">${x.coins} G</td><td class="num">${x.tricks}</td><td class="num">${x.stats.hits}</td><td class="num">${x.prize ? '+' + x.prize + ' G' : ''}</td></tr>`;
     html += '</table>';
     if (res.some(x => x.estimated)) html += '<p style="color:#90a4ae;font-size:12px">* temps estimé (course arrêtée après l\'arrivée des joueurs)</p>';
     if (champ && me) html += me.rank === 0 ? `<p class="story-text">🏆 <b>Victoire !</b> ${unlockedNew ? 'Nouvelle piste débloquée : <b>' + unlockedNew.name + '</b>.' : ''}</p>` : `<p class="story-text">Il faut finir <b>1er</b> pour débloquer la piste suivante. Réessaie, ou passe à la boutique.</p>`;
@@ -364,7 +347,7 @@
       ({ select: () => openSelect(0), course: openCourse, shop: () => openShop(openTown), story: () => story('ninja', () => show('menu')), town: openTown, adv: () => advSelect(() => show('menu')), records: openRecords })[q.get('screen')]();
     }
     if (q.has('demo')) { // ?demo=rookie : lance tout de suite une course (capture d'écran, tests)
-      flow = { mode: 'free', players: q.get('players') === '2' ? 2 : 1, picks: [{ charId: 'slash', boardId: 'freestyle' }, { charId: 'nancy', boardId: 'freestyle' }].slice(0, q.get('players') === '2' ? 2 : 1), course: SK.courseById(q.get('demo')) || SK.COURSES[0], laps: 3 };
+      flow = { mode: 'free', players: q.get('players') === '2' ? 2 : 1, picks: [{ charId: 'slash', boardId: 'freestyle' }, { charId: 'nancy', boardId: 'freestyle' }].slice(0, q.get('players') === '2' ? 2 : 1), course: SK.courseById(q.get('demo')) || SK.COURSES[0], laps: 3, seed: +(q.get('seed') || 0) || undefined };
       startRace();
       if (q.has('cpu')) for (const r of race.racers) r.ctrl = 'cpu';
       if (q.has('t')) { const n = Math.round(+q.get('t') / SK.STEP); for (let i = 0; i < n && race.phase !== 'over'; i++) race.update(SK.STEP); race.takeEvents(); }

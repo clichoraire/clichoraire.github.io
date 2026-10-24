@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.1';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.2';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -51,11 +51,37 @@ window.SK.VERSION = '1.1';   // à augmenter à chaque mise en ligne (affichée 
     { id: 'fusee', name: 'Fusée', price: 1500, speed: 2, corner: -1, trick: 0, color: '#e53935', desc: 'Plus rapide, mais elle tourne moins bien.' },
     { id: 'virage', name: 'Virage', price: 1500, speed: -1, corner: 2, trick: 0, color: '#1e88e5', desc: 'Accroche dans les virages, un peu moins rapide.' },
     { id: 'acrobate', name: 'Acrobate', price: 1500, speed: -1, corner: 0, trick: 2, color: '#fb8c00', desc: 'Figures plus rapides et mieux payées.' },
-    { id: 'alpine', name: 'Alpine', price: 3500, speed: 3, corner: -2, trick: -1, color: '#546e7a', desc: 'Une fusée. Pour ceux qui savent freiner.' },
-    { id: 'pro', name: 'Pro', price: 6000, speed: 1, corner: 1, trick: 1, color: '#8e24aa', desc: 'Meilleure que la Freestyle en tout.' },
-    { id: 'doree', name: 'Dorée', price: 15000, speed: 2, corner: 2, trick: 2, color: '#ffd600', desc: 'La planche des champions. Hors de prix.' },
+    { id: 'alpine', name: 'Alpine', price: 3500, unlock: { wins: 3 }, speed: 3, corner: -2, trick: -1, color: '#546e7a', desc: 'Une fusée. Pour ceux qui savent freiner.' },
+    { id: 'pro', name: 'Pro', price: 6000, unlock: { wins: 5 }, speed: 1, corner: 1, trick: 1, color: '#8e24aa', desc: 'Meilleure que la Freestyle en tout.' },
+    { id: 'doree', name: 'Dorée', price: 15000, unlock: { wins: 8 }, speed: 2, corner: 2, trick: 2, color: '#ffd600', desc: 'La planche des champions. Hors de prix.' },
   ];
   SK.boardById = id => SK.BOARDS.find(b => b.id === id) || SK.BOARDS[0];
+  // Articles de la boutique autres que les planches (achat unique, effet permanent en course)
+  SK.GEAR = [
+    { id: 'casque', cat: 'equip', name: 'Casque', price: 800, desc: 'Tu te relèves 20 % plus vite après une chute.' },
+    { id: 'gants', cat: 'equip', name: 'Gants de pro', price: 1200, unlock: { wins: 1 }, desc: 'Les figures s\'exécutent 10 % plus vite : plus de pièces par saut.' },
+    { id: 'bottes', cat: 'equip', name: 'Bottes à crampons', price: 1500, unlock: { wins: 2 }, desc: 'Plus d\'accroche : +10 % en virage, même sur la glace.' },
+    { id: 'lunettes', cat: 'equip', name: 'Lunettes anti-pluie', price: 1000, unlock: { wins: 3 }, desc: 'Le nuage et le parachute durent moitié moins longtemps sur toi.' },
+    { id: 'veste', cat: 'equip', name: 'Veste rembourrée', price: 900, unlock: { wins: 4 }, desc: 'Les murs te ralentissent beaucoup moins.' },
+    { id: 'portemonnaie', cat: 'gadget', name: 'Porte-monnaie', price: 2000, desc: 'Tu commences chaque course avec 100 pièces : de quoi ouvrir une boîte rouge tout de suite.' },
+    { id: 'aimant', cat: 'gadget', name: 'Aimant à pièces', price: 1800, unlock: { wins: 2 }, desc: 'Les pièces viennent à toi de plus loin.' },
+    { id: 'fusee', cat: 'gadget', name: 'Fusée de départ', price: 2500, unlock: { wins: 4 }, desc: 'Un turbo automatique au GO.' },
+    { id: 'sac', cat: 'gadget', name: 'Sac à objets', price: 2200, unlock: { wins: 5 }, desc: 'Tu commences chaque course avec un objet au hasard.' },
+    { id: 'vip', cat: 'other', name: 'Carte VIP du télésiège', price: 3000, unlock: { wins: 3 }, desc: 'Ta chaise monte 1,5 seconde plus vite que les autres.' },
+    { id: 'masque', cat: 'other', name: 'Masque de ninja', price: 30000, unlock: { course: 'ninja' }, desc: 'Débloque Shinobin comme personnage sans avoir à le battre.' },
+  ];
+  SK.gearById = id => SK.GEAR.find(g => g.id === id);
+  // Pourquoi un article est encore verrouillé (null = disponible). unlock: { wins: n } ou { course: id }
+  SK.lockReason = function (unlock, save) {
+    if (!unlock) return null;
+    const wins = Object.keys(save.won || {}).length;
+    if (unlock.wins != null && wins < unlock.wins) return `Gagne ${unlock.wins} piste${unlock.wins > 1 ? 's' : ''} dans l'aventure (${wins} / ${unlock.wins})`;
+    if (unlock.course && !(save.won || {})[unlock.course]) { const c = SK.courseById(unlock.course); return 'Gagne la course « ' + c.name + ' »' + (c.boss ? ' en battant Shinobin' : ''); }
+    return null;
+  };
+  SK.UPGRADE_MAX = 2; SK.upgradeCost = lvl => 1000 * (lvl + 1);
+  // Planche avec ses améliorations achetées (save.upgrades[boardId] = { speed, corner, trick })
+  SK.effectiveBoard = function (id, save) { const b = SK.boardById(id), u = (save && save.upgrades && save.upgrades[b.id]) || {}; return Object.assign({}, b, { speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), trick: b.trick + (u.trick || 0), base: b }); };
 
   // ------------------------------------------------------------------ tirs (boîtes rouges) et objets (boîtes bleues)
   SK.SHOTS = {
@@ -76,12 +102,20 @@ window.SK.VERSION = '1.1';   // à augmenter à chaque mise en ligne (affichée 
 
   // ------------------------------------------------------------------ figures (en l'air) : durée de base et pièces
   SK.TRICKS = {
-    grab:  { name: 'Grab',          dur: 0.35, coins: 10, dir: 'none' },
-    spinL: { name: 'Vrille 360',    dur: 0.55, coins: 20, dir: 'left' },
-    spinR: { name: 'Vrille 360',    dur: 0.55, coins: 20, dir: 'right' },
-    back:  { name: 'Salto arrière', dur: 0.85, coins: 40, dir: 'up' },
-    front: { name: 'Salto avant',   dur: 0.85, coins: 40, dir: 'down' },
+    // bouton C (figure) + direction
+    grab:    { name: 'Grab',           dur: 0.35, coins: 10, dir: 'none',  btn: 'trick', anim: 'grab' },
+    spinL:   { name: 'Vrille 360',     dur: 0.55, coins: 20, dir: 'left',  btn: 'trick', anim: 'spin', turns: 1, sign: -1 },
+    spinR:   { name: 'Vrille 360',     dur: 0.55, coins: 20, dir: 'right', btn: 'trick', anim: 'spin', turns: 1, sign: 1 },
+    back:    { name: 'Salto arrière',  dur: 0.85, coins: 40, dir: 'up',    btn: 'trick', anim: 'flip', sign: -1 },
+    front:   { name: 'Salto avant',    dur: 0.85, coins: 40, dir: 'down',  btn: 'trick', anim: 'flip', sign: 1 },
+    // bouton X (saut) + direction, en l'air
+    method:  { name: 'Method',         dur: 0.45, coins: 15, dir: 'none',  btn: 'jump', anim: 'method' },
+    spin2L:  { name: 'Vrille 720',     dur: 1.0,  coins: 50, dir: 'left',  btn: 'jump', anim: 'spin', turns: 2, sign: -1 },
+    spin2R:  { name: 'Vrille 720',     dur: 1.0,  coins: 50, dir: 'right', btn: 'jump', anim: 'spin', turns: 2, sign: 1 },
+    rodeo:   { name: 'Rodéo',          dur: 1.1,  coins: 70, dir: 'up',    btn: 'jump', anim: 'rodeo', sign: -1 },
+    tornade: { name: 'Tornade',        dur: 1.1,  coins: 70, dir: 'down',  btn: 'jump', anim: 'rodeo', sign: 1 },
   };
+  SK.trickFor = (btn, dir) => Object.keys(SK.TRICKS).find(id => SK.TRICKS[id].btn === btn && SK.TRICKS[id].dir === dir);
 
   // ------------------------------------------------------------------ surfaces
   SK.SURFACES = {

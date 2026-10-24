@@ -49,6 +49,7 @@
       if (race.rng() < D.err) best = scored[Math.min(scored.length - 1, 1 + race.rng.int(2))];
       ai.lane = best.xl;
     }
+    if (r.lap + 1 < race.laps && r.z > race.L - 90) ai.lane = race.gateX; // le portail de la remontée est dans un coin
     // ---- direction : viser la voie, compenser la force centrifuge, freiner si ça dérape trop
     const surf = SK.SURFACES[s.surface] || SK.SURFACES.snow, kappa = s.curve / (SEG * SEG), drift = kappa * r.speed * r.speed * 4.2 * (s.surface === 'ice' ? 1.25 : 1);
     const capacity = r.steerRate * surf.grip * Math.min(1, r.speed / 12);
@@ -70,11 +71,12 @@
         tLeft = drop <= 0 ? 0 : (vy + Math.sqrt(Math.max(0, vy * vy + 2 * g * drop))) / g;
       }
       const margin = 1.15 + (1 - D.trickAmbition) * 0.3;
-      const options = Object.keys(SK.TRICKS).filter(id => SK.TRICKS[id].dur / r.trickSpeed * margin + 0.08 < tLeft).sort((a, b) => SK.TRICKS[b].coins - SK.TRICKS[a].coins);
+      const options = Object.keys(SK.TRICKS).filter(id => SK.TRICKS[id].dur / r.trickSpeed * (margin + 0.3 * SK.TRICKS[id].dur) + 0.1 < tLeft).sort((a, b) => SK.TRICKS[b].coins - SK.TRICKS[a].coins);
       let pick = options[0];
       if (!pick && race.rng() < D.err * 0.4 && tLeft > 0.3) pick = 'grab'; // erreur : figure trop longue → chute
       if (pick && race.rng() < 0.9) {
-        const d = SK.TRICKS[pick].dir; inp.trick = true;
+        const d = SK.TRICKS[pick].dir; if (SK.TRICKS[pick].btn === 'jump') inp.jump = !wasJump; else inp.trick = true;
+        inp.steer = 0; inp.up = inp.down = false; // la direction tenue ne doit pas changer la figure voulue
         if (d === 'up') inp.up = true; else if (d === 'down') inp.down = true; else if (d === 'left') inp.steer = -1; else if (d === 'right') inp.steer = 1;
       }
     }

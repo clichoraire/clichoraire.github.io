@@ -99,3 +99,55 @@ table.results td.num { text-align: right; font-family: monospace; }
 .board .ups { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 .board .ups button { padding: 4px 8px; font-size: 12px; }
 .board.equipped { border: 2px solid var(--gold); }
+
+/* ---- argent : pièce d'or + montant en G */
+.gold-box { display: inline-flex; align-items: center; gap: 8px; background: #1b1f2e; color: #fff; font-weight: 900; font-size: 22px; padding: 6px 16px 6px 8px; border-radius: 14px; border: 3px solid #0d1019; box-shadow: 0 3px 0 #000, inset 0 1px 0 rgba(255,255,255,0.15); font-family: 'Arial Black', 'Trebuchet MS', sans-serif; letter-spacing: 0.5px; }
+.gold-box img { width: 32px; height: 32px; }
+.gold-inline { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; white-space: nowrap; }
+.gold-inline img { width: 1.1em; height: 1.1em; vertical-align: middle; }
+#town-top span.gold-box { background: #1b1f2e; color: #fff; }
+/* ---- boutique (chalet) */
+#screen-shop { background: #2b1a0e; padding: 0; }
+#shop-canvas { width: 100%; height: 100%; display: block; }
+#shop-gold { position: absolute; left: 1.2%; top: 2%; font-size: clamp(14px, 2.8vmin, 28px); }
+#shop-tabs { position: absolute; left: 50%; top: 2.2%; transform: translateX(-50%); display: flex; gap: 0.6vw; }
+.shop-tab { font: 900 clamp(10px, 1.8vmin, 18px) 'Arial Black', 'Trebuchet MS', sans-serif; padding: 0.8vmin 1.5vmin; border-radius: 10px; border: 3px solid #0d1019; box-shadow: 0 3px 0 #0d1019; text-transform: uppercase; opacity: 0.8; }
+.shop-tab.on { opacity: 1; transform: translateY(-2px); box-shadow: 0 5px 0 #0d1019, 0 0 0 3px rgba(255,255,255,0.5); }
+#shop-show { position: absolute; left: 50%; top: 13%; transform: translateX(-50%); width: 36%; min-width: 320px; background: rgba(20, 24, 42, 0.93); border: 3px solid #0d1019; border-radius: 18px; padding: 1.2vmin 1.5vmin 1vmin; text-align: center; color: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+#shop-title { font: 900 clamp(13px, 2.6vmin, 26px) 'Arial Black', 'Trebuchet MS', sans-serif; text-transform: uppercase; margin-bottom: 0.6vmin; }
+.show-row { display: flex; align-items: center; justify-content: center; gap: 1.2vmin; }
+#shop-item { width: 46%; height: auto; background: #27406f; border: 3px solid #f9b233; border-radius: 14px; }
+.arrow { background: #f9b233; color: #3e2723; box-shadow: 0 3px 0 #b7781a; font-size: clamp(14px, 2.8vmin, 28px); padding: 1.4vmin 1.3vmin; border-radius: 10px; }
+#shop-strip { display: flex; justify-content: center; gap: 0.6vmin; margin-top: 0.9vmin; flex-wrap: wrap; }
+#shop-strip .tile { width: 9.5%; min-width: 34px; height: auto; background: #27406f; border: 2px solid rgba(255,255,255,0.25); border-radius: 9px; cursor: pointer; }
+#shop-strip .tile.on { border-color: #f9b233; box-shadow: 0 0 0 2px #f9b233; background: #2f4f88; }
+#shop-strip .tile.locked { filter: grayscale(0.9) brightness(0.6); }
+#shop-strip .tile.owned { border-color: rgba(105, 240, 174, 0.7); }
+#shop-name { font: 900 clamp(11px, 1.9vmin, 19px) 'Arial Black', 'Trebuchet MS', sans-serif; text-transform: uppercase; margin-top: 0.8vmin; color: #cfd8dc; }
+.shop-price { color: #ffd54a; font: 900 clamp(14px, 2.8vmin, 28px) 'Arial Black', 'Trebuchet MS', sans-serif; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 1.2em; }
+.shop-price img { width: 1.1em; height: 1.1em; }
+.shop-price.poor { color: #ff8a80; }
+#shop-bottom { position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 0; width: 62%; min-width: 480px; background: #fff8e1; border: 4px solid #0d1019; border-radius: 18px; box-shadow: 0 6px 0 #0d1019, 0 10px 30px rgba(0,0,0,0.4); padding: 1.4vmin 1.6vmin; }
+#shop-desc { flex: 1; color: #3e2723; font-weight: 800; font-size: clamp(13px, 2.4vmin, 24px); line-height: 1.3; display: flex; flex-direction: column; justify-content: center; padding-right: 1.5vmin; }
+#shop-desc .dim { font-weight: 600; color: #6d4c41; font-size: 0.85em; }
+#shop-buy { background: #cfd8dc; color: #1b1f2e; border: 4px solid #0d1019; box-shadow: 0 5px 0 #0d1019; font: 900 clamp(16px, 3.2vmin, 32px) 'Arial Black', 'Trebuchet MS', sans-serif; padding: 0 2.8vmin; border-radius: 16px; min-width: 22%; }
+#shop-buy:disabled { opacity: 0.55; }
+#btn-shop-back { position: absolute; left: 50%; bottom: 2%; transform: translateX(-50%); font: 900 clamp(12px, 2.2vmin, 22px) 'Arial Black', 'Trebuchet MS', sans-serif; background: #37474f; border: 3px solid #0d1019; box-shadow: 0 4px 0 #0d1019; padding: 0.8vmin 3vmin; }
+#shop-me { position: absolute; left: 1.2%; top: 12%; width: 23%; min-width: 230px; background: rgba(20, 24, 42, 0.93); border: 3px solid #0d1019; border-radius: 16px; padding: 1vmin 1.3vmin; color: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+#shop-me h4 { margin: 0 0 0.6vmin; font: 900 clamp(12px, 2.2vmin, 22px) 'Arial Black', 'Trebuchet MS', sans-serif; text-transform: uppercase; color: #f9b233; text-align: center; }
+.me-top { display: flex; gap: 1vmin; align-items: center; }
+.me-char { width: 38%; height: auto; background: #27406f; border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); }
+.me-info { flex: 1; display: flex; flex-direction: column; gap: 0.4vmin; font-size: clamp(11px, 1.8vmin, 17px); }
+.me-info b { font-size: 1.25em; color: #ffd54a; }
+.me-board { display: inline-flex; align-items: center; gap: 6px; } .me-board i { width: 28px; height: 10px; border-radius: 6px; display: inline-block; border: 1px solid rgba(255,255,255,0.5); }
+.me-info small { color: #b0bec5; }
+.me-stats { margin-top: 0.8vmin; display: flex; flex-direction: column; gap: 0.5vmin; }
+.me-stat { display: grid; grid-template-columns: 4.6em 1fr 3.6em; align-items: center; gap: 6px; font-size: clamp(10px, 1.7vmin, 16px); font-weight: 800; }
+.me-stat .segs { display: flex; gap: 2px; } .me-stat .segs i { flex: 1; height: clamp(8px, 1.6vmin, 15px); background: #37474f; border-radius: 3px; }
+.me-stat .segs i.on { background: #4fc3f7; } .me-stat .segs i.gain { background: #69f0ae; animation: pulse 0.9s infinite alternate; } .me-stat .segs i.loss { background: #ff5252; animation: pulse 0.9s infinite alternate; }
+.me-stat em { font-style: normal; text-align: right; color: #cfd8dc; } .me-stat em.gain { color: #69f0ae; } .me-stat em.loss { color: #ff5252; }
+@keyframes pulse { from { opacity: 0.45; } to { opacity: 1; } }
+.me-gear { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.8vmin; min-height: 30px; }
+.me-gear canvas { width: 15%; height: auto; background: #27406f; border-radius: 8px; border: 2px solid rgba(105, 240, 174, 0.6); }
+.me-gear canvas.preview { border-color: #69f0ae; border-style: dashed; animation: pulse 0.9s infinite alternate; }
+.me-hint { margin: 0.6vmin 0 0; font-size: clamp(9px, 1.5vmin, 14px); color: #b0bec5; line-height: 1.3; }

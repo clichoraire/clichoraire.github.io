@@ -87,7 +87,7 @@
   const HOWTO = [
     { icon: '⛸️', cat: 'Déplacement', color: '#5fe3ff', title: 'Patiner partout', text: 'Dirige ton joueur sur la glace dans toutes les directions !', keys: `<div class="krow">${KEY('⬆')}</div><div class="krow">${KEY('⬅')}${KEY('⬇')}${KEY('➡')}</div>`, label: 'Flèches du clavier · joueur 2 : W A S D' },
     { icon: '🏒', cat: 'Passe', color: '#7dffa0', title: 'Faire une passe', text: 'Envoie la rondelle à un coéquipier. Vise-le avec ton joueur et appuie !', keys: `<div class="krow">${KEY('X')}</div>`, label: 'Touche X · joueur 2 : G' },
-    { icon: '🥅', cat: 'Tir', color: '#ffd166', title: 'Lancer au but', text: 'Appuie pour lancer. Garde la touche enfoncée pour charger un gros lancer frappé, puis relâche !', keys: `<div class="krow">${KEY('C')}</div>`, label: 'Touche C (tenir pour charger) · joueur 2 : H' },
+    { icon: '🥅', cat: 'Tir', color: '#ffd166', title: 'Lancer au but', text: 'Appuie pour lancer. Garde la touche enfoncée pour charger un gros lancer frappé : une flèche te montre où la rondelle va partir et grossit avec ta charge. Relâche quand elle est rouge !', keys: `<div class="krow">${KEY('C')}</div>`, label: 'Touche C (tenir pour charger) · joueur 2 : H' },
     { icon: '💥', cat: 'Défense', color: '#ff8a7a', title: 'Mise en échec', text: 'Sans la rondelle, la même touche fait foncer ton joueur : rentre dans l\'adversaire pour le faire tomber et lui voler la rondelle !', keys: `<div class="krow">${KEY('C')}</div>`, label: 'Touche C sans la rondelle · joueur 2 : H' },
     { icon: '✨', cat: 'Magie', color: '#d7a6ff', title: 'Pouvoir spécial', text: 'Chaque joueur a son pouvoir : biscuits, laser, téléportation… Regarde la barre en haut : quand elle brille, c\'est prêt !', keys: `<div class="krow">${KEY('V')}</div>`, label: 'Touche V · joueur 2 : J' },
     { icon: '👨‍👩‍👧', cat: 'Équipe', color: '#5fe3ff', title: 'Choisir ton joueur', text: 'Tu décides qui tu contrôles. Le numéro est écrit devant le nom de chacun sur la glace.', keys: `<div class="krow">${KEY('1')}${KEY('2')}${KEY('3')}</div>`, label: 'Touches 1, 2, 3 · joueur 2 : 8, 9, 0' },
@@ -165,6 +165,7 @@
 
   // ----- Match -----
   const ui = { humans: [], toasts: [], shake: 0, drill: null };
+  HK.app.ui = ui; // exposé pour les pages de test
   let raf = 0, acc = 0, lastT = 0, paused = false, excite = 0.25;
   app.practice = null;
   function startMatch(aId, bId, ctrl) {

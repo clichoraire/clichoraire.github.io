@@ -126,6 +126,31 @@
     ctx.fillStyle = '#3a3a3a'; ctx.beginPath(); ctx.ellipse(p.x, p.y - 1.4, 6.5, 3.6, 0, 0, TAU); ctx.fill();
   }
 
+  // Flèche de visée pendant qu'on charge un lancer (touche tenue) : part du joueur vers l'endroit où la rondelle va
+  // partir (même calcul que le tir : coin opposé au gardien, ou droit devant si on tourne le dos au but), et elle
+  // s'allonge, s'épaissit et passe du blanc à l'orange puis au rouge à mesure que la charge monte.
+  function drawAimArrow(ctx, g, s, now) {
+    const T = g.teams[s.team], side = -T.side, gx = HK.goalX(side), gl = g.teams[1 - s.team].goalie;
+    const hm = G.mouth / 2 - 11, aimY = gl.y > CY() ? CY() - hm : CY() + hm;
+    const toNet = Math.atan2(aimY - s.y, gx - s.x);
+    const da = Math.atan2(Math.sin(s.face - toNet), Math.cos(s.face - toNet));
+    const ang = Math.abs(da) > 1.1 ? s.face : toNet + da * 0.15;
+    const c = Math.max(0, Math.min(1, s.charge));
+    const len = 44 + 150 * c, w = 5 + 13 * c;
+    const r = 255, gg = Math.round(c < 0.5 ? 255 - c * 2 * 70 : 185 - (c - 0.5) * 2 * 150), b = Math.round(c < 0.5 ? 255 - c * 2 * 200 : 55 - (c - 0.5) * 2 * 30);
+    const col = `rgba(${r},${gg},${b},${0.55 + 0.4 * c})`;
+    ctx.save(); ctx.translate(s.x + Math.cos(ang) * (s.r + 8), s.y + 4 + Math.sin(ang) * (s.r + 8)); ctx.rotate(ang);
+    ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -w * 0.3); ctx.lineTo(len - w * 1.6, -w * 0.5); ctx.lineTo(len - w * 1.6, -w * 1.1); ctx.lineTo(len, 0); ctx.lineTo(len - w * 1.6, w * 1.1); ctx.lineTo(len - w * 1.6, w * 0.5); ctx.lineTo(0, w * 0.3); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // graduations de charge le long de la tige
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; for (let i = 1; i <= 4; i++) { const x = (len - w * 1.6) * i / 5; ctx.fillRect(x - 1, -w * 0.35, 2, w * 0.7); }
+    ctx.restore();
+    if (c >= 1) { // pleine charge : anneau qui pulse au bout de la flèche
+      const k = (now / 400) % 1, tx = s.x + Math.cos(ang) * (s.r + 8 + len), ty = s.y + 4 + Math.sin(ang) * (s.r + 8 + len);
+      ctx.strokeStyle = `rgba(255,70,40,${1 - k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(tx, ty, 8 + 16 * k, (8 + 16 * k) * 0.6, 0, 0, TAU); ctx.stroke();
+    }
+  }
+
   function drawFx(ctx, g, layer, now) {
     for (const f of g.fx) {
       const k = 1 - f.t / f.t0;   // progression 0..1
@@ -284,6 +309,7 @@
     const lampSide = g.phase === 'goal' && g.lastGoal ? -g.teams[g.lastGoal.team].side : 0;
     drawNet(ctx, -1, lampSide === -1); drawNet(ctx, 1, lampSide === 1);
     drawFx(ctx, g, 'under', now);
+    for (const h of ui.humans) { const s = g.controlled[h.team]; if (s && s.charge >= 0 && g.puck.owner === s) drawAimArrow(ctx, g, s, now); } // visée du lancer chargé
     for (const c of g.cones) { ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 3, c.r + 2, (c.r + 2) * 0.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.moveTo(c.x - c.r, c.y + 2); ctx.lineTo(c.x, c.y - c.r * 2.2); ctx.lineTo(c.x + c.r, c.y + 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(c.x - c.r * 0.55, c.y - c.r * 0.9, c.r * 1.1, 3); }
     for (const t of g.targets) { if (!t.active) continue; for (let i = 3; i >= 1; i--) { ctx.fillStyle = i % 2 ? '#e8352b' : '#fff'; S.circle(ctx, t.x, t.y, t.r * i / 3); ctx.fill(); } }
     if (ui.drill && ui.drill.gates) ui.drill.gates.forEach((gt, i) => { const cur = i === ui.drill.gateIdx, done = i < ui.drill.gateIdx; ctx.strokeStyle = done ? 'rgba(90,214,107,0.5)' : cur ? '#ffd166' : 'rgba(120,130,160,0.5)'; ctx.lineWidth = cur ? 4 : 2; ctx.setLineDash(cur ? [] : [6, 6]); ctx.beginPath(); ctx.arc(gt.x, gt.y, gt.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = ctx.strokeStyle; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(i + 1), gt.x, gt.y); });

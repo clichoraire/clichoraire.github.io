@@ -31,7 +31,7 @@ tools/headless.js simulation ordi contre ordi dans Node, pour l'équilibrage
 | Patiner | Flèches | W A S D | Stick / croix |
 | Passe | X | G | A |
 | Choisir son joueur | 1 · 2 · 3 | 8 · 9 · 0 | LB / RB |
-| Lancer (tenir pour charger) · mise en échec | C | H | B |
+| Lancer (tenir pour charger : une flèche montre où la rondelle partira et grossit avec la charge) · mise en échec | C | H | B |
 | Pouvoir spécial | V | J | X |
 | Pause · son | Échap ou P · M | | Start |
 
