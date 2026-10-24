@@ -7,12 +7,13 @@
 
   function Racer(race, opts, idx) {
     this.race = race; this.idx = idx; this.def = SK.charById(opts.charId) || SK.CHARACTERS[0]; this.board = opts.board || SK.boardById(opts.boardId);
-    this.ctrl = opts.ctrl || 'cpu'; this.player = opts.player == null ? -1 : opts.player; this.boss = !!opts.boss;
+    this.ctrl = opts.ctrl || 'cpu'; this.player = opts.player == null ? -1 : opts.player; this.boss = !!opts.boss; this.look = opts.look || null;
     const d = this.def, b = this.board;
     this.maxSpeed = 27 + 0.8 * d.speed + 0.8 * b.speed;
     this.steerRate = 6 + 1.6 * d.corner + 1.2 * b.corner;
     this.trickSpeed = 1 + 0.12 * (d.trick - 3) + 0.1 * b.trick;
     this.trickPay = 1 + 0.15 * (d.trick - 3) + 0.12 * b.trick;
+    this.jumpPower = 3.7 + 0.32 * ((d.jump || 3) + (b.jump || 0)); // vitesse verticale d'un saut au bouton
     this.stunFactor = 1 - 0.08 * (d.weight - 3);
     this.gear = opts.gear || {};
     if (this.gear.casque) this.stunFactor *= 0.8;
@@ -31,14 +32,15 @@
   Racer.prototype.immune = function () { return this.state === 'lift' || this.state === 'drop' || this.state === 'done' || this.fx.invisible > 0; };
 
   SK.Race = function (opts) {
-    this.course = opts.course; this.seed = opts.seed || 1; this.track = SK.buildTrack(this.course, this.seed);
+    this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; this.track = SK.buildTrack(this.course, this.seed, { slalom: this.mission && this.mission.type === 'slalom' });
+    this.gatesPassed = 0; this.gatesTotal = this.track.gates.length;
     this.L = this.track.L; this.gateX = this.track.gateX; this.gateW = this.track.gateW; this.gateZ = this.track.gateZ; this.laps = opts.laps || this.course.laps || SK.DEFAULT_LAPS; this.mode = opts.mode || 'race';
     this.difficulty = opts.difficulty == null ? 1 : opts.difficulty; this.rng = SK.rng(this.seed * 31 + 7);
     this.time = -3.4; this.phase = 'count'; this.countShown = -4; this.events = []; this.rocks = []; this.shots = []; this.nextChair = 0; this.lastFinish = 0;
     this.racers = opts.racers.map((r, i) => new Racer(this, r, i));
     const w0 = this.track.segs[0].w, n = this.racers.length;
     this.racers.forEach((r, i) => { r.x = n === 1 ? 0 : (-0.6 + 1.2 * i / (n - 1)) * w0; r.startX = r.x; r.z = 2 + i * 0.5; r.yAbs = this.track.groundY(r.z);
-      if (r.gear.portemonnaie && this.mode !== 'time') { r.coins = 100; r.coinsTotal = 100; }
+      if (r.gear.portemonnaie && this.mode !== 'time') { r.coins = 5; r.coinsTotal = 5; }
       if (r.gear.sac && this.mode !== 'time') r.item = this.rng.pick(SK.ITEM_IDS); });
     this.humans = this.racers.filter(r => r.ctrl === 'human');
   };
@@ -149,10 +151,10 @@
     const gy = T.groundY(r.z);
     if (r.state === 'ride' || (stunned && r.h <= 0)) {
       if (gy < r.yAbs - 1.0 && r.speed > 5 && !stunned) { // le sol se dérobe d'un coup (falaise) : envol
-        r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? 2.8 : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; this.emit({ type: 'jump', r, big: true });
+        r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * 0.6 : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; this.emit({ type: 'jump', r, big: true });
       } else {
         r.lastVy = dt > 0 ? (gy - r.yAbs) / dt : 0; r.yAbs = gy; r.h = 0;
-        if (!stunned && edge('jump') && r.speed > 3) { r.state = 'air'; r.vy = 4.6 + Math.max(0, r.lastVy); r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: false }); }
+        if (!stunned && edge('jump') && r.speed > 3) { r.state = 'air'; r.vy = r.jumpPower + Math.max(0, r.lastVy); r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: false }); }
       }
     }
     if (r.state === 'air') {
@@ -168,7 +170,7 @@
         if (r.curTrick || r.pending) { const why = r.pending; r.pending = null; r.curTrick = null; r.tricksDone = []; this.fall(r, why === 'gel' ? 0 : 1.4, why === 'poele'); if (why === 'gel') this.freeze(r, 2); }
         else if (r.tricksDone.length) {
           let total = 0; r.tricksDone.forEach((t, i) => { total += t.coins * (1 + 0.5 * i); });
-          total = Math.round(total * r.trickPay / 10) * 10;
+          total = Math.max(1, Math.round(total * r.trickPay));
           r.coins += total; r.coinsTotal += total; r.tricksCoins += total; r.tricksCount += r.tricksDone.length;
           this.emit({ type: 'trick', r, coins: total, names: r.tricksDone.map(t => t.name) });
           r.tricksDone = [];
@@ -184,6 +186,7 @@
         const pz = sg.z + (p.dz == null ? SEG / 2 : p.dz);
         if (pz >= zPrev && pz < r.z && Math.abs(r.x - p.x) < p.r + 0.7 && r.h < 1.1 && r.state !== 'fall') { this.fall(r, 1.3, false); this.emit({ type: 'obstacle', r, kind: p.type }); }
       }
+      if (sg.gate && r.ctrl === 'human') { const gz = sg.z + SEG / 2; if (gz >= zPrev && gz < r.z) { if (Math.abs(r.x - sg.gate.x) <= sg.gate.w) { this.gatesPassed++; this.emit({ type: 'gate', r, ok: true, n: sg.gate.n }); } else this.emit({ type: 'gate', r, ok: false, n: sg.gate.n }); } }
       for (const b of sg.boxes) {
         const bz = sg.z + SEG / 2;
         if (b.taken <= this.time && bz >= zPrev && bz < r.z && Math.abs(r.x - b.x) < 1.6 && r.h < 1.6) this.takeBox(r, b);
@@ -194,7 +197,7 @@
       }
     }
     for (const k of this.rocks) {
-      if (k.z >= zPrev && k.z < r.z && Math.abs(r.x - k.x) < 1.7 && r.h < 1.2 && !(k.owner === r && this.time - k.t0 < 1.5) && r.state !== 'fall') {
+      if (this.time >= (k.landed || 0) && k.z >= zPrev && k.z < r.z && Math.abs(r.x - k.x) < 1.7 && r.h < 1.2 && !(k.owner === r && this.time - k.t0 < 1.5) && r.state !== 'fall') {
         k.until = 0; this.fall(r, 1.4, false); this.emit({ type: 'rockhit', r, by: k.owner }); if (k.owner && k.owner !== r) k.owner.stats.hits++;
       }
     }
@@ -248,11 +251,10 @@
     if (this.mode === 'time') return;
     if (b.kind === 'red') {
       if (r.shot) { this.emit({ type: 'boxfull', r, kind: 'red' }); return; }
-      if (r.coins < SK.SHOT_COST) { this.emit({ type: 'boxpoor', r }); return; }
-      r.coins -= SK.SHOT_COST; r.shot = this.rng.pick(SK.SHOT_IDS); b.taken = this.time + SK.BOX_RESPAWN; this.emit({ type: 'box', r, kind: 'red', got: r.shot });
+      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.shot = this.rng.pick(SK.SHOT_IDS); b.taken = this.time + SK.BOX_RESPAWN; this.emit({ type: 'box', r, kind: 'red', got: r.shot });
     } else {
       if (r.item) { this.emit({ type: 'boxfull', r, kind: 'blue' }); return; }
-      r.item = this.rng.pick(SK.ITEM_IDS); b.taken = this.time + SK.BOX_RESPAWN; this.emit({ type: 'box', r, kind: 'blue', got: r.item });
+      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.item = this.rng.pick(SK.ITEM_IDS); b.taken = this.time + SK.BOX_RESPAWN; this.emit({ type: 'box', r, kind: 'blue', got: r.item });
     }
   };
   P.fire = function (r) {
@@ -272,7 +274,7 @@
   P.useItem = function (r) {
     const kind = r.item; r.item = null; r.stats.items++;
     this.emit({ type: 'item', r, kind });
-    if (kind === 'rocher') this.rocks.push({ z: r.z - 2.5, x: r.x, lap: r.lap, until: this.time + 30, owner: r, t0: this.time });
+    if (kind === 'rocher') { this.rocks.push({ z: r.z - 2.5, x: r.x, lap: r.lap, until: this.time + 30, owner: r, t0: this.time, landed: this.time + 0.7 }); r.rockAnim = this.time; }
     else if (kind === 'ventilo') r.fx.fan = 3;
     else if (kind === 'invisible') r.fx.invisible = 6;
     else if (kind === 'nuage') { for (const o of this.racers) if (o !== r && !o.immune()) o.fx.slow = o.gear.lunettes ? 2 : 4; }

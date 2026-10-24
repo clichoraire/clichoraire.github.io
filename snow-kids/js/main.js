@@ -3,14 +3,14 @@
   'use strict';
   const $ = id => document.getElementById(id), A = SK.Audio, R = SK.Render, I = SK.Input;
   const SAVE_KEY = 'snowkids.save';
-  const DEFAULT_SAVE = { gold: 0, boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'slash', board: 'freestyle', char2: 'nancy', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {}, gear: [] };
+  const DEFAULT_SAVE = { gold: 0, boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'slash', board: 'freestyle', char2: 'nancy', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {}, gear: [], wardrobe: [], look: {}, trophies: {}, missions: {} };
   let save = loadSave();
   function loadSave() { try { return Object.assign({}, DEFAULT_SAVE, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { return Object.assign({}, DEFAULT_SAVE); } }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* mode privé */ } }
   const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200); };
 
   // ------------------------------------------------------------------ écrans
-  const screens = ['menu', 'advselect', 'town', 'records', 'select', 'course', 'shop', 'story', 'race', 'result'];
+  const screens = ['menu', 'advselect', 'town', 'records', 'school', 'select', 'course', 'shop', 'story', 'race', 'result'];
   function show(name) { if (name !== 'town' && name !== 'advselect') SK.Town.close(); if (name !== 'shop') SK.Shop.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
   let flow = { mode: 'champ', players: 1, course: null, laps: 3, picks: [] };
 
@@ -18,6 +18,7 @@
   const effectiveBoard = id => SK.effectiveBoard(id, save);
   const gold = n => `<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="">${SK.fmtGold(n)}</span>`;
   const gearObj = () => { const o = {}; for (const g of save.gear || []) o[g] = true; return o; };
+  const lookFor = charId => SK.lookOf(SK.charById(charId) || SK.CHARACTERS[0], save);
 
   // ---- menu
   function refreshMenu() {
@@ -34,22 +35,22 @@
     $('btn-free').onclick = () => { flow = { mode: 'free', players: 1, picks: [] }; A.sfx('click'); openSelect(0); };
     $('btn-time').onclick = () => { flow = { mode: 'time', players: 1, picks: [] }; A.sfx('click'); openSelect(0); };
     $('btn-duo').onclick = () => { flow = { mode: 'free', players: 2, picks: [] }; A.sfx('click'); openSelect(0); };
-    $('btn-help').onclick = () => { A.sfx('click'); $('howto').classList.toggle('hidden'); if (!$('howto').classList.contains('hidden')) $('howto').scrollIntoView({ behavior: 'smooth' }); };
+    $('btn-help').onclick = () => { A.sfx('click'); $('howto').classList.toggle('hidden'); };
+    $('btn-help-close').onclick = () => { A.sfx('click'); $('howto').classList.add('hidden'); };
     $('btn-reset').onclick = () => { if (confirm('Effacer toute la progression (pièces, planches, pistes débloquées, Shinobin) ?')) { save = Object.assign({}, DEFAULT_SAVE); store(); refreshMenu(); toast('Sauvegarde effacée'); } };
     $('howto-grid').innerHTML = `
       <div><h3>Le but</h3><p>Descends la piste plus vite que les autres. Au bas de la piste, la <b>remontée mécanique</b> te ramène au sommet pour le tour suivant : une chaise part toutes les ${SK.LIFT_INTERVAL} secondes, une place par chaise. Au dernier tour, la ligne d'arrivée remplace la remontée.</p>
       <h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↑</kbd> se pencher en avant (un peu plus de vitesse) · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> sauter (sur un tremplin : tiens le bouton pour décoller plus haut)</li><li>En l'air, <kbd>C</kbd> + direction : Grab (seul), <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille 360</li><li>En l'air, <kbd>X</kbd> + direction : Method (seul), <kbd>↑</kbd> Rodéo, <kbd>↓</kbd> Tornade, <kbd>←</kbd>/<kbd>→</kbd> vrille 720 — plus longues, mieux payées</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
       <p>Joueur 2 : <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>, <kbd>G</kbd> saut, <kbd>H</kbd> figure, <kbd>J</kbd> tir, <kbd>K</kbd> objet. Les manettes marchent aussi (A saut, B figure, X tir, Y objet).</p></div>
-      <div><h3>Or et boîtes</h3><p>Les <b>pièces d'or</b> (10 G chacune) traînent sur la piste et s'obtiennent surtout avec les <b>figures</b> : termine-les avant d'atterrir, sinon tu tombes ! Enchaîne plusieurs figures dans un même saut pour multiplier le gain.</p>
-      <p>Les <b>boîtes rouges</b> donnent un <b>tir</b> et coûtent ${SK.SHOT_COST} G. Les <b>boîtes bleues</b> donnent un <b>objet</b>, gratuit. Un seul tir et un seul objet à la fois.</p>
+      <div><h3>Or et boîtes</h3><p>Les <b>pièces d'or</b> (1 G chacune) traînent sur la piste et s'obtiennent surtout avec les <b>figures</b> : termine-les avant d'atterrir, sinon tu tombes ! Enchaîne plusieurs figures dans un même saut pour multiplier le gain.</p>
+      <p>Les <b>boîtes rouges</b> donnent un <b>tir</b>, les <b>boîtes bleues</b> un <b>objet</b> ; chaque boîte coûte 1 pièce d'or (gratuite si tu n'en as pas). Un seul tir et un seul objet à la fois.</p>
       <h3>Tirs (boîtes rouges)</h3><ul>${Object.values(SK.SHOTS).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.desc}</li>`).join('')}</ul></div>
       <div><h3>Objets (boîtes bleues)</h3><ul>${Object.values(SK.ITEMS).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.desc}</li>`).join('')}</ul>
-      <h3>Aventure et village</h3><p>Choisis ton Kid, puis promène-toi dans le <b>village</b> (← → pour tourner, Entrée pour entrer dans une maison) : le <b>télésiège</b> mène aux pistes, la <b>boutique</b> vend, équipe et améliore les planches, la <b>maison des Kids</b> change de personnage, le <b>chalet des records</b> montre ta progression. Gagne chaque piste (1<sup>re</sup> place) pour débloquer la suivante ; les pièces ramassées et la prime de fin de course (${SK.PRIZES.slice(0, 4).join(' / ')}) remplissent ta tirelire.</p>
+      <h3>Aventure et village</h3><p>Choisis ton Kid, puis promène-toi dans le <b>village</b> (← → pour tourner, Entrée pour entrer dans une maison) : le <b>télésiège</b> mène aux pistes, la <b>boutique</b> vend, équipe et améliore les planches, la <b>maison des Kids</b> change de personnage, le <b>chalet des records</b> montre ta progression. L'<b>École</b> propose des missions (slalom entre drapeaux, figures, tir, pièces…), la <b>garde-robe</b> change ton look, la <b>salle des trophées</b> montre tes coupes. Gagne chaque piste (1<sup>re</sup> place) pour débloquer la suivante ; la première victoire sur une piste vaut un <b>trophée et ${SK.TROPHY_GOLD} G</b>. Chaque course rapporte une prime selon la place (${SK.PRIZES.slice(0, 4).join(' / ')}) plus les pièces ramassées.</p>
       <p>Au <b>Pays des Ninjas</b>, un cinquième coureur mystérieux se joint à la course… Bats-le partout et il deviendra jouable.</p>
       <h3>Surfaces</h3><p>La glace glisse (dirige tôt, freine), le sable et l'herbe ralentissent, les sables mouvants engluent. On peut sauter par-dessus les obstacles et les rochers.</p></div>`;
   }
-  // animation du menu : un coureur descend une pente, la neige tombe
-  function menuAnim(t) {
+  function menuAnim(t) { return; /* l'accueil est une illustration */
     const cv = $('menu-anim'), ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
     const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#5fb0ff'); g.addColorStop(1, '#dff3ff'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(W, 130); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
@@ -66,7 +67,7 @@
     show('advselect'); A.music('menu');
     const info = $('adv-info'); let current = save.advChar || 'slash';
     SK.Town.select({
-      canvas: $('adv-canvas'), unlocked: save.shinobin, current,
+      canvas: $('adv-canvas'), unlocked: save.shinobin, current, lookFor,
       onChange: c => { current = c.id; let bars = ''; for (const [k, lab] of [['speed', 'Vitesse'], ['corner', 'Virage'], ['trick', 'Figures']]) { bars += `<div class="stat"><span>${lab}</span>`; for (let i = 1; i <= 5; i++) bars += `<i class="${i <= c[k] ? 'on' : ''}"></i>`; bars += '</div>'; } info.innerHTML = `<b>${c.name}</b><div>${bars}</div><div style="max-width:420px">${c.desc}</div>`; },
       onPick: id => { A.sfx('box'); save.advChar = id; save.char = id; store(); openTown(); },
       onBack,
@@ -79,26 +80,45 @@
     if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
     $('town-gold').innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold)}</b>`; $('town-char').textContent = SK.charById(save.advChar).name + ' · planche ' + SK.boardById(save.advBoard).name;
     SK.Town.open({
-      canvas: $('town-canvas'), charId: save.advChar, labelEl: $('town-label'),
+      canvas: $('town-canvas'), charId: save.advChar, boardId: save.advBoard, look: lookFor(save.advChar), labelEl: $('town-label'),
       onEnter: id => {
         A.sfx('box');
         if (id === 'lift') { flow = { mode: 'champ', players: 1, picks: [{ charId: save.advChar, boardId: save.advBoard }] }; openCourse(); }
         else if (id === 'shop') openShop(openTown);
+        else if (id === 'look') openShop(openTown, 'linge');
+        else if (id === 'ecole') openSchool();
         else if (id === 'kids') advSelect(openTown);
         else openRecords();
       },
       onBack: () => { A.sfx('click'); show('menu'); },
     });
     $('btn-town-menu').onclick = () => { A.sfx('click'); show('menu'); };
+    $('btn-town-look').onclick = () => { A.sfx('click'); openShop(openTown, 'linge'); };
   }
   function openRecords() {
     show('records');
-    const won = Object.keys(save.won).length;
-    $('records-sub').innerHTML = `${gold(save.gold)} · ${won} piste${won > 1 ? 's' : ''} gagnée${won > 1 ? 's' : ''} sur ${SK.COURSES.length} · ${save.boards.length} planche${save.boards.length > 1 ? 's' : ''}` + (save.shinobin ? ' · Shinobin débloqué 🥷' : '');
-    let html = '<table class="results"><tr><th>Piste</th><th>État</th><th class="num">Record</th></tr>';
+    const won = Object.keys(save.won).length, done = Object.keys(save.missions || {}).length;
+    $('records-sub').innerHTML = `${gold(save.gold)} · ${won} trophée${won > 1 ? 's' : ''} sur ${SK.COURSES.length} · ${done} mission${done > 1 ? 's' : ''} réussie${done > 1 ? 's' : ''} sur ${SK.MISSIONS.length} · ${save.boards.length} planche${save.boards.length > 1 ? 's' : ''}` + (save.shinobin ? ' · Shinobin débloqué 🥷' : '');
+    let html = '<div class="trophies">' + SK.COURSES.map((c, i) => `<div class="trophy${save.won[c.id] ? '' : ' locked'}"><span class="cup">🏆</span><b>${i < save.unlocked || !c.hidden ? c.name : '???'}</b>${save.won[c.id] ? 'gagnée' : '—'}</div>`).join('') + '</div>';
+    html += '<table class="results"><tr><th>Piste</th><th>État</th><th class="num">Record</th></tr>';
     SK.COURSES.forEach((c, i) => { const unlocked = i < save.unlocked; html += `<tr><td>${i + 1}. ${unlocked || !c.hidden ? c.name : '???'}</td><td>${save.won[c.id] ? '🏆 gagnée' : unlocked ? 'débloquée' : '🔒'}</td><td class="num">${SK.fmtTime(save.best[c.id])}</td></tr>`; });
     $('records').innerHTML = html + '</table>';
     $('btn-records-back').onclick = () => { A.sfx('click'); openTown(); };
+  }
+  // ---- École : missions de pratique
+  function openSchool() {
+    show('school'); A.music('menu');
+    const done = Object.keys(save.missions || {}).length;
+    $('school-sub').textContent = done + ' / ' + SK.MISSIONS.length + ' missions réussies. Chaque mission réussie rapporte de l\'or la première fois ; tu peux les refaire pour battre ton score.';
+    const list = $('missions'); list.innerHTML = '';
+    for (const m of SK.MISSIONS) {
+      const best = (save.missions || {})[m.id], c = SK.courseById(m.course);
+      const el = document.createElement('div'); el.className = 'mission' + (best != null ? ' done' : '');
+      el.innerHTML = `<span class="star">${best != null ? '⭐' : '☆'}</span><h3>${m.name}</h3><p>${m.desc}</p><p class="meta">${c.name} · 1 tour · récompense ${m.reward} G${best != null ? ' · réussie (' + (m.type === 'time' ? SK.fmtTime(best) : best) + ')' : ''}</p>`;
+      el.onclick = () => { A.sfx('click'); flow = { mode: 'practice', players: 1, picks: [{ charId: save.advChar, boardId: save.advBoard }], mission: m, course: c, laps: 1 }; startRace(); };
+      list.appendChild(el);
+    }
+    $('btn-school-back').onclick = () => { A.sfx('click'); openTown(); };
   }
 
   // ---- sélection du personnage (course libre, contre-la-montre, 2 joueurs)
@@ -129,7 +149,7 @@
       if (other === c.id) { const tg = document.createElement('span'); tg.className = 'tag'; tg.textContent = 'J1'; el.appendChild(tg); }
       el.onclick = () => { A.sfx('click'); charId = c.id; draw(); };
       cards.appendChild(el);
-      const ctx = cv.getContext('2d'); ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(0, 0, 150, 140); R.drawRacer(ctx, fakeRacer(c.id), 75, 128, 52, 0, false);
+      const ctx = cv.getContext('2d'); ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(0, 0, 150, 140); R.drawRacer(ctx, fakeRacer(c.id, 'freestyle', 'ride', lookFor(c.id)), 75, 128, 52, 0, false);
     }
     const sel = $('sel-board'); sel.innerHTML = '';
     for (const b of SK.BOARDS) if (save.boards.includes(b.id)) { const o = document.createElement('option'); o.value = b.id; o.textContent = b.name + (b.speed || b.corner || b.trick ? ` (vit ${fmtMod(b.speed)} · vir ${fmtMod(b.corner)} · fig ${fmtMod(b.trick)})` : ''); sel.appendChild(o); }
@@ -201,7 +221,7 @@
     const th = SK.THEMES[which === 'ending' ? 'rookie' : which === 'dizzy' ? 'dizzy' : 'ninja'];
     const g = ctx.createLinearGradient(0, 0, 0, 220); g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, 900, 220);
     ctx.fillStyle = th.ground[0]; ctx.fillRect(0, 170, 900, 50); R.drawBackdrop(ctx, th.bg, 0, 170, 900, th, 0);
-    const me = fakeRacer(flow.picks[0].charId), sh = fakeRacer('shinobin');
+    const me = fakeRacer(flow.picks[0].charId, flow.picks[0].boardId, 'ride', lookFor(flow.picks[0].charId)), sh = fakeRacer('shinobin');
     R.drawRacer(ctx, me, 300, 205, 60, 0, false); if (which !== 'ending') { sh.state = 'air'; sh.h = 0.6; } R.drawRacer(ctx, sh, 600, 205, 60, 0, false);
     const myName = me.def.name;
     const texts = {
@@ -214,12 +234,12 @@
   }
 
   // ---- boutique (chalet dessiné dans js/shop.js)
-  function openShop(back) {
+  function openShop(back, tab) {
     show('shop'); A.music('menu');
     if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
     save.gear = save.gear || []; save.upgrades = save.upgrades || {};
     SK.Shop.open({
-      canvas: $('shop-canvas'), save, store, toast,
+      canvas: $('shop-canvas'), save, store, toast, tab,
       els: { gold: $('shop-gold'), tabs: $('shop-tabs'), title: $('shop-title'), icon: $('shop-item'), strip: $('shop-strip'), name: $('shop-name'), me: $('shop-me'), price: $('shop-price'), desc: $('shop-desc'), buy: $('shop-buy'), prev: $('shop-prev'), next: $('shop-next'), back: $('btn-shop-back') },
       onBack: () => { SK.Shop.close(); (back || (() => show('menu')))(); },
     });
@@ -237,12 +257,13 @@
   function startRace() {
     show('race'); A.init(); A.music(flow.course.theme);
     canvas = $('game'); ctx = canvas.getContext('2d');
-    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), gear: gearObj(), ctrl: 'human', player: i }));
-    if (flow.mode !== 'time') {
+    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), gear: gearObj(), look: lookFor(p.charId), ctrl: 'human', player: i }));
+    if (flow.mode === 'practice') { if (flow.mission.type === 'hits') racers.push(...pickAI(3, racers.map(r => r.charId), false)); }
+    else if (flow.mode !== 'time') {
       racers.push(...pickAI(4 - racers.length, racers.map(r => r.charId), flow.mode !== 'champ'));
       if (flow.mode === 'champ' && flow.course.boss) racers.push({ charId: flow.course.boss, boardId: 'pro', ctrl: 'cpu', boss: true });
     }
-    race = new SK.Race({ course: flow.course, racers, laps: flow.laps, seed: flow.seed || (Date.now() & 0xfffff) + 1, difficulty: save.diff, mode: flow.mode });
+    race = new SK.Race({ course: flow.course, racers, laps: flow.laps, seed: flow.seed || (Date.now() & 0xfffff) + 1, difficulty: save.diff, mode: flow.mode === 'practice' ? 'free' : flow.mode, mission: flow.mode === 'practice' ? flow.mission : null });
     paused = false; acc = 0; last = 0; overAt = 0; $('pause').classList.add('hidden');
     cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }
@@ -292,6 +313,7 @@
         case 'lift': if (human) { A.sfx('lift'); R.notify(r, 'Tour ' + (r.lap + 1) + ' terminé · Remontée', '#fff'); } break;
         case 'lapstart': if (human) R.notify(r, r.lap + 1 === race.laps ? 'Dernier tour !' : 'Tour ' + (r.lap + 1), '#ffd600', true); break;
         case 'finish': if (human) A.sfx(r.rank === 0 ? 'win' : 'finish'); break;
+        case 'gate': if (human) { A.sfx(e.ok ? 'coin' : 'nope'); R.notify(r, e.ok ? 'Porte ' + (e.n + 1) + ' ✓' : 'Porte ' + (e.n + 1) + ' ratée', e.ok ? '#69f0ae' : '#ff8a80', false, 1); } break;
       }
     }
   }
@@ -299,9 +321,17 @@
   // ---- résultats
   function showResults() {
     A.stopMusic(); show('result');
-    const res = race.results(), champ = flow.mode === 'champ', me = res.find(x => x.r.ctrl === 'human');
-    let earned = 0, unlockedNew = null, gotShinobin = false;
-    for (const x of res) if (x.r.ctrl === 'human') earned += x.coins + x.prize;
+    const res = race.results(), champ = flow.mode === 'champ', practice = flow.mode === 'practice', me = res.find(x => x.r.ctrl === 'human');
+    let earned = 0, unlockedNew = null, gotShinobin = false, trophy = false, missionOk = null;
+    for (const x of res) if (x.r.ctrl === 'human') earned += x.coins + (practice ? 0 : x.prize);
+    if (practice && me) { // évaluation de la mission
+      const m = flow.mission, r = me.r;
+      const v = m.type === 'slalom' ? race.gatesPassed : m.type === 'coins' ? r.coinsTotal : m.type === 'tricks' ? r.tricksCoins : m.type === 'hits' ? r.stats.hits : m.type === 'time' ? me.time : r.stats.falls;
+      missionOk = m.type === 'time' ? (me.time != null && me.time <= m.goal) : m.type === 'nofall' ? r.stats.falls === 0 : v >= m.goal;
+      flow.missionValue = v; flow.missionReward = 0;
+      if (missionOk) { save.missions = save.missions || {}; const prev = save.missions[m.id]; if (prev == null) { earned += m.reward; flow.missionReward = m.reward; } if (prev == null || (m.type === 'time' ? v < prev : v > prev)) save.missions[m.id] = v; }
+    }
+    if (champ && me && me.rank === 0 && !save.won[flow.course.id]) { trophy = true; earned += SK.TROPHY_GOLD; }
     if (flow.mode !== 'time') { save.gold += earned; }
     if (me) { const prev = save.best[flow.course.id]; if (me.time && (!prev || me.time < prev) && !me.estimated) save.best[flow.course.id] = me.time; }
     if (champ && me && me.rank === 0) {
@@ -311,17 +341,19 @@
       if (flow.course.id === 'dizzy' && !save.shinobin) { save.shinobin = true; gotShinobin = true; }
     }
     store();
-    $('result-title').textContent = flow.course.name + ' — ' + (flow.mode === 'time' ? 'Contre-la-montre' : champ ? 'Aventure' : 'Course libre');
-    $('result-sub').innerHTML = flow.mode === 'time' ? (me && save.best[flow.course.id] === me.time ? '🏆 Nouveau record !' : 'Record : ' + SK.fmtTime(save.best[flow.course.id])) : 'Gagné : ' + gold(earned) + ' (pièces ramassées + prime) · Tirelire : ' + gold(save.gold);
+    $('result-title').textContent = (practice ? 'École : ' + flow.mission.name : flow.course.name + ' — ' + (flow.mode === 'time' ? 'Contre-la-montre' : champ ? 'Aventure' : 'Course libre'));
+    $('result-sub').innerHTML = flow.mode === 'time' ? (me && save.best[flow.course.id] === me.time ? '🏆 Nouveau record !' : 'Record : ' + SK.fmtTime(save.best[flow.course.id])) : 'Gagné : ' + gold(earned) + (trophy ? ' (dont ' + SK.TROPHY_GOLD + ' G de trophée)' : practice ? (flow.missionReward ? ' (dont ' + flow.missionReward + ' G de mission)' : '') : ' (pièces ramassées + prime)') + ' · Tirelire : ' + gold(save.gold);
     let html = '<table class="results"><tr><th>Place</th><th>Coureur</th><th class="num">Temps</th><th class="num">Or</th><th class="num">Figures</th><th class="num">Touches</th><th class="num">Prime</th></tr>';
     for (const x of res) html += `<tr class="${x.r.ctrl === 'human' ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][x.rank] || (x.rank + 1) + 'e'}</td><td>${x.name}${x.r.ctrl === 'human' ? ' (J' + (x.r.player + 1) + ')' : ''}${x.r.boss ? ' 🥷' : ''}</td><td class="num">${SK.fmtTime(x.time)}${x.estimated ? '*' : ''}</td><td class="num">${x.coins} G</td><td class="num">${x.tricks}</td><td class="num">${x.stats.hits}</td><td class="num">${x.prize ? '+' + x.prize + ' G' : ''}</td></tr>`;
     html += '</table>';
     if (res.some(x => x.estimated)) html += '<p style="color:#90a4ae;font-size:12px">* temps estimé (course arrêtée après l\'arrivée des joueurs)</p>';
-    if (champ && me) html += me.rank === 0 ? `<p class="story-text">🏆 <b>Victoire !</b> ${unlockedNew ? 'Nouvelle piste débloquée : <b>' + unlockedNew.name + '</b>.' : ''}</p>` : `<p class="story-text">Il faut finir <b>1er</b> pour débloquer la piste suivante. Réessaie, ou passe à la boutique.</p>`;
+    if (champ && me) html += me.rank === 0 ? `<p class="story-text">🏆 <b>Victoire !</b> ${trophy ? 'Un trophée pour ta salle des trophées, et ' + SK.TROPHY_GOLD + ' G ! ' : ''}${unlockedNew ? 'Nouvelle piste débloquée : <b>' + unlockedNew.name + '</b>.' : ''}</p>` : `<p class="story-text">Il faut finir <b>1er</b> pour débloquer la piste suivante. Réessaie, ou passe à la boutique.</p>`;
+    if (practice) { const m = flow.mission, v = flow.missionValue; html += `<p class="story-text">${missionOk ? '⭐ <b>Mission réussie !</b>' : '✗ <b>Mission ratée.</b>'} ${m.type === 'time' ? 'Temps : ' + SK.fmtTime(v) + ' (objectif ' + SK.fmtTime(m.goal) + ')' : m.type === 'nofall' ? v + ' chute(s)' : v + ' / ' + m.goal}</p>`; }
     $('result').innerHTML = html;
     const btns = $('result-buttons'); btns.innerHTML = '';
     const mk = (label, cls, fn) => { const b = document.createElement('button'); b.textContent = label; b.className = cls; b.onclick = () => { A.sfx('click'); fn(); }; btns.appendChild(b); };
     mk('Rejouer', 'primary', startRace);
+    if (practice) { mk('Retour à l\'École', 'gold', openSchool); mk('Village', '', openTown); mk('Menu', 'ghost', () => show('menu')); return; }
     if (champ && unlockedNew) mk('Piste suivante : ' + unlockedNew.name, 'gold', () => { flow.course = unlockedNew; flow.laps = unlockedNew.laps; if (unlockedNew.boss) story(unlockedNew.id === 'ninja' ? 'ninja' : 'dizzy', startRace); else startRace(); });
     mk('Changer de piste', '', openCourse);
     if (champ) mk('Retour au village', 'gold', openTown); else if (flow.mode !== 'time') mk('Boutique', 'gold', () => openShop(() => show('menu')));
@@ -344,8 +376,9 @@
       flow = { mode: q.get('mode') || 'champ', players: 1, picks: [{ charId: 'slash', boardId: 'freestyle' }] };
       if (q.has('unlock')) { save.unlocked = +q.get('unlock'); save.gold = 4200; save.shinobin = q.has('shinobin'); }
       if (q.has('unlock')) { save.advChar = 'slash'; save.boards = ['freestyle', 'fusee']; }
-      ({ select: () => openSelect(0), course: openCourse, shop: () => openShop(openTown), story: () => story('ninja', () => show('menu')), town: openTown, adv: () => advSelect(() => show('menu')), records: openRecords })[q.get('screen')]();
+      ({ select: () => openSelect(0), course: openCourse, shop: () => openShop(openTown, q.get('tab') || undefined), story: () => story('ninja', () => show('menu')), town: openTown, adv: () => advSelect(() => show('menu')), records: openRecords, school: openSchool })[q.get('screen')]();
     }
+    if (q.has('mission')) { const m = SK.missionById(q.get('mission')); flow = { mode: 'practice', players: 1, picks: [{ charId: 'slash', boardId: 'freestyle' }], mission: m, course: SK.courseById(m.course), laps: 1, seed: 7 }; startRace(); if (q.has('t')) { const n = Math.round(+q.get('t') / SK.STEP); for (let i = 0; i < n && race.phase !== 'over'; i++) { race.setInput(0, { steer: Math.sin(i / 40) }); race.update(SK.STEP); } race.takeEvents(); } }
     if (q.has('demo')) { // ?demo=rookie : lance tout de suite une course (capture d'écran, tests)
       flow = { mode: 'free', players: q.get('players') === '2' ? 2 : 1, picks: [{ charId: 'slash', boardId: 'freestyle' }, { charId: 'nancy', boardId: 'freestyle' }].slice(0, q.get('players') === '2' ? 2 : 1), course: SK.courseById(q.get('demo')) || SK.COURSES[0], laps: 3, seed: +(q.get('seed') || 0) || undefined };
       startRace();

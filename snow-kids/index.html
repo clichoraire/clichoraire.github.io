@@ -9,27 +9,37 @@
 <body>
 <div id="app">
   <section id="screen-menu" class="screen">
-    <div class="menu-box">
-      <h1>SNOW <span>KIDS</span></h1>
-      <p class="tagline">Descente en planche à neige : tirs, objets, figures et remontée mécanique · 9 pistes · 1 ou 2 joueurs <span id="version"></span></p>
-      <canvas id="menu-anim" width="900" height="150"></canvas>
-      <div class="buttons">
-        <button id="btn-adv" class="primary">Aventure <small id="champ-progress"></small></button>
-        <button id="btn-free">Course libre</button>
-        <button id="btn-time">Contre-la-montre</button>
-        <button id="btn-duo">2 joueurs</button>
-        <button id="btn-help" class="ghost">Comment jouer ?</button>
-      </div>
-      <div class="options">
-        <label>Ordi <select id="opt-diff"></select></label>
-        <label><input type="checkbox" id="opt-sound"> Sons</label>
-        <label><input type="checkbox" id="opt-music"> Musique</label>
-        <button id="btn-reset" class="ghost" style="font-size:13px;padding:6px 10px">Effacer la sauvegarde</button>
+    <div class="menu-stage">
+      <h1 class="sr-only">Snow Kids</h1>
+      <div class="menu-buttons">
+        <button id="btn-adv" class="big primary">AVENTURE <small id="champ-progress"></small></button>
+        <div class="menu-row">
+          <button id="btn-free" class="big">COURSE LIBRE</button>
+          <button id="btn-time" class="big">CONTRE-LA-MONTRE</button>
+          <button id="btn-duo" class="big">2 JOUEURS</button>
+          <button id="btn-help" class="big ghost">COMMENT JOUER ?</button>
+        </div>
+        <div class="options">
+          <label>Ordi <select id="opt-diff"></select></label>
+          <label><input type="checkbox" id="opt-sound"> Sons</label>
+          <label><input type="checkbox" id="opt-music"> Musique</label>
+          <button id="btn-reset" class="ghost" style="font-size:12px;padding:5px 9px">Effacer la sauvegarde</button>
+          <span id="version"></span>
+        </div>
       </div>
       <section id="howto" class="hidden">
-        <h2>Comment jouer ?</h2>
+        <h2>Comment jouer ? <button id="btn-help-close" class="ghost" style="float:right;font-size:13px;padding:5px 10px">Fermer</button></h2>
         <div id="howto-grid"></div>
       </section>
+    </div>
+  </section>
+
+  <section id="screen-school" class="screen hidden">
+    <div class="panel">
+      <h2>École : pratiques et missions</h2>
+      <p class="sub" id="school-sub"></p>
+      <div id="missions" class="cards"></div>
+      <div class="buttons"><button id="btn-school-back" class="ghost">Retour au village</button></div>
     </div>
   </section>
 
@@ -44,14 +54,14 @@
 
   <section id="screen-town" class="screen hidden">
     <div class="canvas-wrap"><div class="stage"><canvas id="town-canvas" width="1280" height="720"></canvas>
-      <div id="town-top"><span id="town-gold" class="gold-box"></span><span id="town-char"></span><button id="btn-town-menu" class="ghost">Menu</button></div>
+      <div id="town-top"><span id="town-gold" class="gold-box"></span><span id="town-char"></span><button id="btn-town-look" class="gold">Apparence</button><button id="btn-town-menu" class="ghost">Menu</button></div>
       <div id="town-label"></div>
     </div></div>
   </section>
 
   <section id="screen-records" class="screen hidden">
     <div class="panel">
-      <h2>Chalet des records</h2>
+      <h2>Salle des trophées</h2>
       <p class="sub" id="records-sub"></p>
       <div id="records"></div>
       <div class="buttons"><button id="btn-records-back" class="ghost">Retour au village</button></div>

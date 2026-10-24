@@ -20,6 +20,7 @@
       if (d > 120) f *= 1 + Math.min(D.rubber, (d - 120) / 1200);
       else if (d < -120 && !r.boss) f *= 1 - Math.min(D.rubber * 0.6, (-d - 120) / 1500);
     }
+    if (race.mission && race.mission.type === 'hits') f = 0.55; // cibles lentes à l'École
     r.aiSpeed = f;
     if (r.state === 'lift' || r.state === 'done' || r.state === 'fall' || r.state === 'frozen') return;
     const T = race.track, i0 = SK.clamp(Math.floor(r.z / SEG), 0, T.segs.length - 1), s = T.segs[i0];
@@ -27,7 +28,7 @@
     ai.think -= dt;
     if (ai.think <= 0) {
       ai.think = D.react;
-      const wantRed = !r.shot && r.coins >= SK.SHOT_COST && race.mode !== 'time', wantBlue = !r.item && race.mode !== 'time';
+      const wantRed = !r.shot && race.mode !== 'time', wantBlue = !r.item && race.mode !== 'time';
       let wmin = s.w, curveSum = 0; const ahead = [];
       for (let j = 1; j <= 18 && i0 + j < T.segs.length; j++) { const sg = T.segs[i0 + j]; ahead.push(sg); wmin = Math.min(wmin, sg.w); curveSum += sg.curve; }
       const lanes = []; for (let k = 0; k < 11; k++) lanes.push((-0.85 + 1.7 * k / 10) * wmin);

@@ -9,7 +9,7 @@
     bamboo: { r: 0.8 }, teacup: { r: 1.8 }, balloon: { r: 1.2 }, lollipop: { r: 0.8 },
   };
 
-  SK.buildTrack = function (course, seed) {
+  SK.buildTrack = function (course, seed, opts) {
     const rng = SK.rng(seed || 7), theme = SK.THEMES[course.theme];
     const segs = []; let y = 0, surface = course.surface || 'snow', tunnel = false, prevW = 12;
     const ease = (a, b, p) => a + (b - a) * (1 - Math.cos(Math.min(1, Math.max(0, p)) * Math.PI)) / 2;
@@ -71,15 +71,18 @@
         [-0.6, 0, 0.6].forEach((f, k) => s.boxes.push({ kind: kinds[k], x: f * s.w, taken: 0 }));
       }
       if (sec.coins) {
-        const lane = rng.range(-0.6, 0.6), s0 = a + 2 + rng.int(Math.max(1, n - 2 * sec.coins - 4));
-        for (let k = 0; k < sec.coins; k++) { const s = segs[Math.min(b - 1, s0 + k * 2)]; s.coins.push({ x: lane * s.w, taken: 0 }); }
+        const nc = Math.max(2, Math.round(sec.coins * 0.6)), lane = rng.range(-0.6, 0.6), s0 = a + 2 + rng.int(Math.max(1, n - 2 * nc - 4));
+        for (let k = 0; k < nc; k++) { const s = segs[Math.min(b - 1, s0 + k * 2)]; s.coins.push({ x: lane * s.w, taken: 0 }); }
       }
     }
     // Repères de thème (gros décors au tiers et aux deux tiers)
     const landmarks = { rookie: 'lodge', snowman: 'bigsnowman', sunset: 'mesa', highway: 'tower', grass: 'windmill', sand: 'pyramid', silver: 'peak', ninja: 'pagoda', dizzy: 'ferris' };
     [0.33, 0.7].forEach((f, k) => { const s = segs[Math.floor(nRace * f)]; s.props.push({ type: landmarks[course.theme], x: (k ? -1 : 1) * (s.w + 18), r: 0, decor: true, big: true }); });
 
-    const track = { course, theme, segs, nRace, L, length: segs.length, gateX, gateW, gateZ: L + 3 * SEG, wEnd: prevW };
+    // Slalom (École) : portes de 6 m alternant gauche / droite, drapeau rouge puis bleu
+    const gates = [];
+    if (opts && opts.slalom) { let k = 0; for (let i = 24; i < nRace - 24; i += 14) { const s = segs[i]; if (s.ramp) continue; const x = (k % 2 ? 1 : -1) * s.w * 0.42, col = k % 2 ? '#1e88e5' : '#e53935'; s.gate = { x, w: 3.2, color: col, n: k }; s.props.push({ type: 'flag', x: x - 3.2, r: 0, decor: true, color: col }, { type: 'flag', x: x + 3.2, r: 0, decor: true, color: col }); gates.push(s); k++; } }
+    const track = { course, theme, segs, nRace, L, length: segs.length, gateX, gateW, gateZ: L + 3 * SEG, wEnd: prevW, gates };
     track.segAt = z => segs[SK.clamp(Math.floor(z / SEG), 0, segs.length - 1)];
     track.groundY = z => { const s = track.segAt(z); const p = SK.clamp((z - s.z) / SEG, 0, 1); return s.y1 + (s.y2 - s.y1) * p; };
     track.widthAt = z => track.segAt(z).w;

@@ -17,9 +17,12 @@
     { id: 'equip', name: 'Équipement', color: '#d93b3b', text: '#fff' },
     { id: 'up', name: 'Améliorations', color: '#4caf50', text: '#fff' },
     { id: 'gadget', name: 'Gadgets', color: '#3b7dd8', text: '#fff' },
+    { id: 'linge', name: 'Linge', color: '#ec407a', text: '#fff' },
+    { id: 'coiffure', name: 'Coiffure', color: '#00acc1', text: '#fff' },
     { id: 'other', name: 'Autres', color: '#7e57c2', text: '#fff' },
   ];
-  const UP_DEFS = [['speed', 'Vitesse', 'Ta planche équipée gagne +1 en vitesse de pointe.'], ['corner', 'Virage', 'Ta planche équipée accroche mieux : +1 en virage.'], ['trick', 'Figures', 'Figures plus rapides et mieux payées : +1 en figures.']];
+  const UP_DEFS = [['speed', 'Vitesse', 'Ta planche équipée gagne +1 en vitesse de pointe.'], ['corner', 'Virage', 'Ta planche équipée accroche mieux : +1 en virage.'], ['trick', 'Figures', 'Figures plus rapides et mieux payées : +1 en figures.'], ['jump', 'Saut', 'Ta planche équipée saute plus haut : +1 en saut.']];
+  const STATS = [['speed', 'Vitesse'], ['corner', 'Virage'], ['trick', 'Figures'], ['jump', 'Saut']];
 
   let raf = 0, keyHandler = null, ctx, canvas, state;
   function stop() { cancelAnimationFrame(raf); raf = 0; if (keyHandler) { window.removeEventListener('keydown', keyHandler); keyHandler = null; } }
@@ -28,31 +31,40 @@
 
   // Articles d'un onglet, avec leur état (possédé, équipé, verrouillé) pour cette sauvegarde
   function items(tab, save) {
-    if (tab === 'boards') return SK.BOARDS.map(b => { const eff = SK.effectiveBoard(b.id, save), owned = save.boards.includes(b.id), lock = owned ? null : SK.lockReason(b.unlock, save); return { id: b.id, kind: 'board', name: 'Planche ' + b.name, price: b.price, color: b.color, desc: b.desc + ` Vitesse ${mod(eff.speed)} · Virage ${mod(eff.corner)} · Figures ${mod(eff.trick)}.`, owned, lock, action: lock ? 'locked' : !owned ? 'buy' : save.advBoard === b.id ? 'equipped' : 'equip' }; });
-    if (tab === 'up') { const b = SK.boardById(save.advBoard), u = (save.upgrades[b.id] = save.upgrades[b.id] || { speed: 0, corner: 0, trick: 0 }); return UP_DEFS.map(([k, lab, d]) => { const lvl = u[k] || 0, max = lvl >= SK.UPGRADE_MAX, lock = max ? null : SK.lockReason(lvl >= 1 ? { wins: 3 } : null, save); return { id: 'up-' + k, kind: 'up', stat: k, boardId: b.id, name: lab + ' +1 · ' + b.name, price: max ? 0 : SK.upgradeCost(lvl), color: b.color, desc: d + ` Niveau actuel : ${lvl} / ${SK.UPGRADE_MAX}.`, owned: max, lock, action: lock ? 'locked' : max ? 'max' : 'buy', level: lvl }; }); }
+    if (tab === 'boards') return SK.BOARDS.map(b => { const eff = SK.effectiveBoard(b.id, save), owned = save.boards.includes(b.id), lock = owned ? null : SK.lockReason(b.unlock, save); return { id: b.id, kind: 'board', name: 'Planche ' + b.name, price: b.price, color: b.color, pattern: b.pattern, desc: b.desc + ` Vitesse ${mod(eff.speed)} · Virage ${mod(eff.corner)} · Figures ${mod(eff.trick)} · Saut ${mod(eff.jump)}.`, owned, lock, action: lock ? 'locked' : !owned ? 'buy' : save.advBoard === b.id ? 'equipped' : 'equip' }; });
+    if (tab === 'linge' || tab === 'coiffure') { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); return SK.WARDROBE.filter(w => w.cat === tab).map(w => { const owned = w.price === 0 || (save.wardrobe || []).includes(w.id), eq = look[w.slot] === w.value; return { id: w.id, kind: 'wardrobe', slot: w.slot, value: w.value, name: w.name, price: w.price, desc: w.desc, owned, lock: null, action: eq ? 'equipped' : owned ? 'equip' : 'buy' }; }); }
+    if (tab === 'up') { const b = SK.boardById(save.advBoard), u = (save.upgrades[b.id] = save.upgrades[b.id] || { speed: 0, corner: 0, trick: 0, jump: 0 }); return UP_DEFS.map(([k, lab, d]) => { const lvl = u[k] || 0, max = lvl >= SK.UPGRADE_MAX, lock = max ? null : SK.lockReason(lvl >= 1 ? { wins: 3 } : null, save); return { id: 'up-' + k, kind: 'up', stat: k, boardId: b.id, name: lab + ' +1 · ' + b.name, price: max ? 0 : SK.upgradeCost(lvl), color: b.color, desc: d + ` Niveau actuel : ${lvl} / ${SK.UPGRADE_MAX}.`, owned: max, lock, action: lock ? 'locked' : max ? 'max' : 'buy', level: lvl }; }); }
     return SK.GEAR.filter(g => g.cat === tab).map(g => { const owned = save.gear.includes(g.id) || (g.id === 'masque' && save.shinobin), lock = owned ? null : SK.lockReason(g.unlock, save); return { id: g.id, kind: 'gear', name: g.name, price: g.price, desc: g.desc, owned, lock, action: lock ? 'locked' : owned ? 'owned' : 'buy' }; });
   }
 
-  // Stats (sur 10) du Kid avec sa planche et son équipement ; previewIt = article sélectionné (acheté/équipé → aperçu)
+  // Stats du Kid avec sa planche et son équipement ; previewIt = article sélectionné (acheté/équipé → aperçu).
+  // Barre de 8 coches ; au-delà de 8, les coches repartent du début en rouge (comptées double).
   function statsFor(save, previewIt) {
     const ch = SK.charById(save.advChar) || SK.CHARACTERS[0];
-    const calc = (boardId, gear, up) => { const b = SK.effectiveBoard(boardId, save); return { speed: ch.speed + b.speed + (up.speed || 0), corner: ch.corner + b.corner + (up.corner || 0) + (gear.has('bottes') ? 1 : 0), trick: ch.trick + b.trick + (up.trick || 0) + (gear.has('gants') ? 1 : 0) }; };
+    const calc = (boardId, gear, up) => { const b = SK.effectiveBoard(boardId, save); return { speed: ch.speed + b.speed + (up.speed || 0), corner: ch.corner + b.corner + (up.corner || 0) + (gear.has('bottes') ? 1 : 0), trick: ch.trick + b.trick + (up.trick || 0) + (gear.has('gants') ? 1 : 0), jump: (ch.jump || 3) + (b.jump || 0) + (up.jump || 0) }; };
     const gear = new Set(save.gear || []), cur = calc(save.advBoard, gear, {});
     let boardId = save.advBoard, up = {}, g2 = new Set(gear);
     if (previewIt && (previewIt.action === 'buy' || previewIt.action === 'equip' || previewIt.action === 'locked')) {
-      if (previewIt.kind === 'board') boardId = previewIt.id; else if (previewIt.kind === 'up') up[previewIt.stat] = 1; else g2.add(previewIt.id);
+      if (previewIt.kind === 'board') boardId = previewIt.id; else if (previewIt.kind === 'up') up[previewIt.stat] = 1; else if (previewIt.kind === 'gear') g2.add(previewIt.id);
     }
     return { ch, cur, next: calc(boardId, g2, up) };
   }
-  function renderMe(E, save, it) {
-    const { ch, cur, next } = statsFor(save, it), board = SK.boardById(save.advBoard);
-    const bar = (k, lab) => { let seg = ''; for (let i = 1; i <= 10; i++) { const on = i <= Math.min(cur[k], next[k]), gain = i > cur[k] && i <= next[k], loss = i > next[k] && i <= cur[k]; seg += `<i class="${on ? 'on' : gain ? 'gain' : loss ? 'loss' : ''}"></i>`; } const d = next[k] - cur[k]; return `<div class="me-stat"><span>${lab}</span><div class="segs">${seg}</div><em class="${d > 0 ? 'gain' : d < 0 ? 'loss' : ''}">${cur[k]}${d ? ' → ' + next[k] : ''}</em></div>`; };
+  function previewLook(save, it) { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); if (it && it.kind === 'wardrobe' && it.action !== 'equipped') look[it.slot] = it.value; return look; }
+  function renderMe(E, save, it, tab) {
+    const { ch, cur, next } = statsFor(save, it), board = SK.boardById(save.advBoard), look = previewLook(save, it);
+    if (tab === 'linge' || tab === 'coiffure') { // cabine d'essayage : le personnage en grand
+      E.me.innerHTML = `<h4>Cabine d'essayage</h4><canvas class="me-big" width="260" height="300"></canvas><div class="me-info" style="text-align:center"><b>${ch.name}</b><small>${it && it.kind === 'wardrobe' && it.action !== 'equipped' ? 'Aperçu : ' + it.name : 'Choisis un vêtement ou une coiffure'}</small></div>`;
+      const cv = E.me.querySelector('.me-big'), c = cv.getContext('2d'); c.fillStyle = '#27406f'; c.fillRect(0, 0, 260, 300);
+      const fr = SK.fakeRacer(ch.id, board.id); fr.look = look; SK.Render.drawRacer(c, fr, 130, 280, 100, performance.now() / 1000, false);
+      return;
+    }
+    const bar = (k, lab) => { let seg = ''; for (let i = 1; i <= 8; i++) { const c0 = cur[k] >= i + 8 ? 'x2' : cur[k] >= i ? 'on' : '', n0 = next[k] >= i + 8 ? 'x2' : next[k] >= i ? 'on' : ''; let cls = n0; if (n0 !== c0) cls += (next[k] > cur[k] ? ' gain' : ' loss'); seg += `<i class="${cls}"></i>`; } const d = next[k] - cur[k]; return `<div class="me-stat"><span>${lab}</span><div class="segs">${seg}</div><em class="${d > 0 ? 'gain' : d < 0 ? 'loss' : ''}">${cur[k]}${d ? ' → ' + next[k] : ''}</em></div>`; };
     const owned = (save.gear || []).map(id => SK.gearById(id)).filter(Boolean);
-    E.me.innerHTML = `<h4>Mon équipement</h4><div class="me-top"><canvas class="me-char" width="110" height="120"></canvas><div class="me-info"><b>${ch.name}</b><span class="me-board"><i style="background:${board.color}"></i>${board.name}</span><small>${owned.length ? owned.length + ' article' + (owned.length > 1 ? 's' : '') : 'Aucun article'}</small></div></div>
-      <div class="me-stats">${bar('speed', 'Vitesse')}${bar('corner', 'Virage')}${bar('trick', 'Figures')}</div>
+    E.me.innerHTML = `<h4>Mon équipement</h4><div class="me-top"><canvas class="me-char" width="110" height="130"></canvas><div class="me-info"><b>${ch.name}</b><span class="me-board"><i style="background:${board.color}"></i>${board.name}</span><small>${owned.length ? owned.length + ' article' + (owned.length > 1 ? 's' : '') : 'Aucun article'}</small></div></div>
+      <div class="me-stats">${bar('speed', 'Vitesse')}${bar('corner', 'Virage')}${bar('trick', 'Figures')}${bar('jump', 'Saut')}</div>
       <div class="me-gear">${owned.map(g => `<canvas width="48" height="48" data-id="${g.id}" title="${g.name}"></canvas>`).join('')}${it && it.kind === 'gear' && !it.owned ? `<canvas width="48" height="48" data-id="${it.id}" class="preview" title="${it.name} (aperçu)"></canvas>` : ''}</div>
-      <p class="me-hint">${it && (it.action === 'buy' || it.action === 'equip' || it.action === 'locked') ? 'En vert : ce que « ' + it.name + ' » te ferait gagner.' : 'Choisis un article pour voir son effet sur tes barres.'}</p>`;
-    const cc = E.me.querySelector('.me-char'); const c = cc.getContext('2d'); SK.Render.drawRacer(c, SK.fakeRacer(ch.id, board.id), 55, 112, 44, 0, false);
+      <p class="me-hint">${it && (it.action === 'buy' || it.action === 'equip' || it.action === 'locked') ? 'En vert : ce que « ' + it.name + ' » te ferait gagner. Rouge plein = au-delà de 8, compté double.' : 'Choisis un article pour voir son effet sur tes barres. 8 coches max, puis les coches rouges comptent double.'}</p>`;
+    const cc = E.me.querySelector('.me-char'); const c = cc.getContext('2d'); const fr = SK.fakeRacer(ch.id, board.id); fr.look = look; SK.Render.drawRacer(c, fr, 55, 122, 42, 0, false);
     E.me.querySelectorAll('.me-gear canvas').forEach(cv => { S.drawItem(cv.getContext('2d'), { kind: 'gear', id: cv.dataset.id }, 24, 26, 14, 0); });
   }
 
@@ -60,18 +72,18 @@
   S.open = function (opts) {
     stop(); canvas = opts.canvas; ctx = canvas.getContext('2d');
     const save = opts.save, E = opts.els;
-    state = { tab: S._tab || 'boards', idx: 0 };
+    state = { tab: opts.tab || S._tab || 'boards', idx: 0 };
     const refresh = () => {
       const list = items(state.tab, save); if (state.idx >= list.length) state.idx = 0; const it = list[state.idx]; state.list = list;
       E.gold.innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold)}</b>`;
       E.tabs.innerHTML = S.TABS.map(t => `<button data-tab="${t.id}" class="shop-tab${t.id === state.tab ? ' on' : ''}" style="background:${t.color};color:${t.text}">${t.name}</button>`).join('');
       E.tabs.querySelectorAll('button').forEach(b => { b.onclick = () => { state.tab = b.dataset.tab; S._tab = state.tab; state.idx = 0; SK.Audio.sfx('click'); refresh(); }; });
       E.title.textContent = it.name;
-      E.name.textContent = it.action === 'locked' ? '🔒 Verrouillé' : it.action === 'buy' ? 'Prix' : it.action === 'max' ? 'Niveau maximum' : it.action === 'equipped' ? 'Planche équipée' : it.action === 'equip' ? 'Dans ton casier' : 'Déjà acheté';
+      E.name.textContent = it.action === 'locked' ? '🔒 Verrouillé' : it.action === 'buy' ? (it.price ? 'Prix' : 'Gratuit') : it.action === 'max' ? 'Niveau maximum' : it.action === 'equipped' ? 'Planche équipée' : it.action === 'equip' ? 'Dans ton casier' : 'Déjà acheté';
       E.price.innerHTML = it.action === 'buy' || it.action === 'locked' ? `<img src="${SK.COIN_SVG}" alt=""> ${SK.fmtGold(it.price)}` : '';
       E.price.className = 'shop-price' + ((it.action === 'buy' && save.gold < it.price) || it.action === 'locked' ? ' poor' : '');
       E.desc.innerHTML = it.lock ? `<b>Pour débloquer :</b> ${it.lock}.<br><span class="dim">${it.desc}</span>` : it.desc;
-      E.buy.textContent = it.action === 'buy' ? 'ACHETER' : it.action === 'equip' ? 'ÉQUIPER' : it.action === 'equipped' ? 'ÉQUIPÉE' : it.action === 'max' ? 'MAX' : it.action === 'locked' ? 'VERROUILLÉ' : 'POSSÉDÉ';
+      E.buy.textContent = it.action === 'buy' ? (it.price ? 'ACHETER' : 'PRENDRE') : it.action === 'equip' ? (it.kind === 'wardrobe' ? 'PORTER' : 'ÉQUIPER') : it.action === 'equipped' ? (it.kind === 'wardrobe' ? 'PORTÉ' : 'ÉQUIPÉE') : it.action === 'max' ? 'MAX' : it.action === 'locked' ? 'VERROUILLÉ' : 'POSSÉDÉ';
       E.buy.disabled = !(it.action === 'buy' || it.action === 'equip');
       E.buy.onclick = () => act(it);
       // vignettes : tous les articles de l'onglet
@@ -82,19 +94,22 @@
         const c = cv.getContext('2d'); S.drawItem(c, o, 48, 50, 30, 0); if (o.lock) padlock(c, 48, 50, 18); else if (o.owned) { c.fillStyle = '#69f0ae'; c.font = '900 22px sans-serif'; c.textAlign = 'center'; c.fillText('✓', 82, 26); }
         E.strip.appendChild(cv);
       });
-      renderMe(E, save, it);
+      renderMe(E, save, it, state.tab);
       const ic = E.icon.getContext('2d'); ic.clearRect(0, 0, E.icon.width, E.icon.height); S.drawItem(ic, it, E.icon.width / 2, E.icon.height / 2, E.icon.width * 0.36, performance.now() / 1000);
       if (it.lock) { ic.fillStyle = 'rgba(20,24,42,0.55)'; ic.fillRect(0, 0, E.icon.width, E.icon.height); padlock(ic, E.icon.width / 2, E.icon.height / 2, E.icon.width * 0.2); }
     };
+    const wear = it => { save.look = save.look || {}; const l = (save.look[save.advChar] = save.look[save.advChar] || {}); l[it.slot] = it.value; };
     const act = it => {
       if (it.action === 'buy') {
         if (save.gold < it.price) { SK.Audio.sfx('nope'); opts.toast('Pas assez d\'or : il te manque ' + SK.fmtGold(it.price - save.gold)); return; }
         save.gold -= it.price;
         if (it.kind === 'board') { save.boards.push(it.id); save.advBoard = it.id; save.board = it.id; opts.toast(it.name + ' achetée et équipée !'); }
         else if (it.kind === 'up') { save.upgrades[it.boardId][it.stat] = it.level + 1; opts.toast(it.name + ' : fait !'); }
+        else if (it.kind === 'wardrobe') { (save.wardrobe = save.wardrobe || []).push(it.id); wear(it); opts.toast(it.name + ' : acheté et porté !'); }
         else { save.gear.push(it.id); if (it.id === 'masque') save.shinobin = true; opts.toast(it.name + ' : acheté !'); }
         opts.store(); SK.Audio.sfx('buy'); refresh();
-      } else if (it.action === 'equip') { save.advBoard = it.id; save.board = it.id; opts.store(); SK.Audio.sfx('box'); opts.toast(it.name + ' équipée'); refresh(); }
+      } else if (it.action === 'equip' && it.kind === 'wardrobe') { wear(it); opts.store(); SK.Audio.sfx('box'); opts.toast(it.name + ' : porté'); refresh(); }
+      else if (it.action === 'equip') { save.advBoard = it.id; save.board = it.id; opts.store(); SK.Audio.sfx('box'); opts.toast(it.name + ' équipée'); refresh(); }
       else if (it.action === 'locked') { SK.Audio.sfx('nope'); opts.toast('Verrouillé : ' + it.lock); }
     };
     const move = d => { state.idx = (state.idx + d + state.list.length) % state.list.length; SK.Audio.sfx('click'); refresh(); };
@@ -181,20 +196,34 @@
   // ------------------------------------------------------------------ icônes des articles (vitrine, vignettes, étagères)
   S.drawItem = function (c, it, x, y, s, t, standing) {
     c.save(); c.translate(x, y);
-    const id = it.kind === 'up' ? 'up-' + it.stat : it.kind === 'board' ? 'board' : it.id;
+    const id = it.kind === 'up' ? 'up-' + it.stat : it.kind === 'board' ? 'board' : it.kind === 'wardrobe' ? it.slot : it.id;
     const tint = it.tint || '#1e88e5';
     const rr2 = (xx, yy, w, h, r) => { c.beginPath(); c.moveTo(xx + r, yy); c.arcTo(xx + w, yy, xx + w, yy + h, r); c.arcTo(xx + w, yy + h, xx, yy + h, r); c.arcTo(xx, yy + h, xx, yy, r); c.arcTo(xx, yy, xx + w, yy, r); c.closePath(); };
     switch (id) {
       case 'board': {
-        c.rotate(standing ? 0 : -0.6); const col = it.color || '#4caf50', bid = it.id;
+        c.rotate(standing ? 0 : -0.6); const col = it.color || '#4caf50', bid = it.pattern || (SK.boardById(it.id) || {}).pattern || 'stripes';
         c.fillStyle = col; rr2(-s * 0.36, -s * 1.15, s * 0.72, s * 2.3, s * 0.36); c.fill();
         c.save(); rr2(-s * 0.36, -s * 1.15, s * 0.72, s * 2.3, s * 0.36); c.clip();
-        if (bid === 'fusee') { c.fillStyle = '#ffab00'; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * 0.3 + k * s * 0.25, s * 1.1); c.quadraticCurveTo(-s * 0.1 + k * s * 0.25, s * 0.2 - k * s * 0.3, -s * 0.2 + k * s * 0.25, -s * 0.5 - k * s * 0.25); c.quadraticCurveTo(-s * 0.05 + k * s * 0.25, s * 0.3, s * 0.1 + k * s * 0.25, s * 1.1); c.fill(); } c.fillStyle = '#fff176'; c.beginPath(); c.moveTo(-s * 0.1, s * 1.1); c.quadraticCurveTo(0, 0.2 * s, -s * 0.05, -s * 0.2); c.quadraticCurveTo(0.05 * s, 0.4 * s, s * 0.12, s * 1.1); c.fill(); }
-        else if (bid === 'virage') { c.strokeStyle = '#fff'; c.lineWidth = s * 0.14; c.beginPath(); for (let k = -4; k <= 4; k++) c.lineTo((k % 2 ? -1 : 1) * s * 0.22, k * s * 0.26); c.stroke(); }
-        else if (bid === 'acrobate') { c.fillStyle = '#fff'; for (let k = -2; k <= 2; k++) star(c, (k % 2 ? -1 : 1) * s * 0.12, k * s * 0.42, s * 0.14); }
-        else if (bid === 'alpine') { c.fillStyle = '#b0bec5'; c.beginPath(); c.moveTo(-s * 0.4, -s * 1.2); c.lineTo(s * 0.4, -s * 0.4); c.lineTo(s * 0.4, s * 0.2); c.lineTo(-s * 0.4, -s * 0.6); c.fill(); c.fillStyle = '#263238'; c.fillRect(-s * 0.4, s * 0.5, s * 0.8, s * 0.1); }
-        else if (bid === 'pro') { c.fillStyle = '#ff4081'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(-s * 0.4, k * s * 0.4); c.lineTo(s * 0.4, k * s * 0.4 - s * 0.5); c.lineTo(s * 0.4, k * s * 0.4 - s * 0.3); c.lineTo(-s * 0.4, k * s * 0.4 + s * 0.2); c.fill(); } }
-        else if (bid === 'doree') { c.fillStyle = '#fff8e1'; for (let k = -2; k <= 2; k++) star(c, (k % 2 ? 0.15 : -0.12) * s, k * s * 0.4, s * 0.1); c.fillStyle = 'rgba(255,255,255,0.45)'; c.fillRect(-s * 0.3, -s * 1.2, s * 0.1, s * 2.4); }
+        if (bid === 'flames') { c.fillStyle = '#ffab00'; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * 0.3 + k * s * 0.25, s * 1.1); c.quadraticCurveTo(-s * 0.1 + k * s * 0.25, s * 0.2 - k * s * 0.3, -s * 0.2 + k * s * 0.25, -s * 0.5 - k * s * 0.25); c.quadraticCurveTo(-s * 0.05 + k * s * 0.25, s * 0.3, s * 0.1 + k * s * 0.25, s * 1.1); c.fill(); } c.fillStyle = '#fff176'; c.beginPath(); c.moveTo(-s * 0.1, s * 1.1); c.quadraticCurveTo(0, 0.2 * s, -s * 0.05, -s * 0.2); c.quadraticCurveTo(0.05 * s, 0.4 * s, s * 0.12, s * 1.1); c.fill(); }
+        else if (bid === 'zigzag') { c.strokeStyle = '#fff'; c.lineWidth = s * 0.14; c.beginPath(); for (let k = -4; k <= 4; k++) c.lineTo((k % 2 ? -1 : 1) * s * 0.22, k * s * 0.26); c.stroke(); }
+        else if (bid === 'stars') { c.fillStyle = '#fff'; for (let k = -2; k <= 2; k++) star(c, (k % 2 ? -1 : 1) * s * 0.12, k * s * 0.42, s * 0.14); }
+        else if (bid === 'twotone') { c.fillStyle = '#b0bec5'; c.beginPath(); c.moveTo(-s * 0.4, -s * 1.2); c.lineTo(s * 0.4, -s * 0.4); c.lineTo(s * 0.4, s * 0.2); c.lineTo(-s * 0.4, -s * 0.6); c.fill(); c.fillStyle = '#263238'; c.fillRect(-s * 0.4, s * 0.5, s * 0.8, s * 0.1); }
+        else if (bid === 'diagonal') { c.fillStyle = '#ff4081'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(-s * 0.4, k * s * 0.4); c.lineTo(s * 0.4, k * s * 0.4 - s * 0.5); c.lineTo(s * 0.4, k * s * 0.4 - s * 0.3); c.lineTo(-s * 0.4, k * s * 0.4 + s * 0.2); c.fill(); } }
+        else if (bid === 'gold') { c.fillStyle = '#fff8e1'; for (let k = -2; k <= 2; k++) star(c, (k % 2 ? 0.15 : -0.12) * s, k * s * 0.4, s * 0.1); c.fillStyle = 'rgba(255,255,255,0.45)'; c.fillRect(-s * 0.3, -s * 1.2, s * 0.1, s * 2.4); }
+        else if (bid === 'dots') { c.fillStyle = 'rgba(255,255,255,0.7)'; for (let k = -3; k <= 3; k++) { c.beginPath(); c.arc((k % 2 ? 0.15 : -0.15) * s, k * s * 0.33, s * 0.1, 0, TAU); c.fill(); } }
+        else if (bid === 'ice') { c.fillStyle = 'rgba(255,255,255,0.6)'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(0, k * s * 0.45 - s * 0.18); c.lineTo(s * 0.16, k * s * 0.45); c.lineTo(0, k * s * 0.45 + s * 0.18); c.lineTo(-s * 0.16, k * s * 0.45); c.fill(); } }
+        else if (bid === 'galaxy') { c.fillStyle = '#fff'; for (let k = 0; k < 14; k++) { c.beginPath(); c.arc(((k * 37) % 60 - 30) / 100 * s, ((k * 53) % 200 - 100) / 100 * s, s * (0.03 + (k % 3) * 0.02), 0, TAU); c.fill(); } c.fillStyle = 'rgba(255,64,129,0.5)'; c.beginPath(); c.ellipse(0, -s * 0.3, s * 0.3, s * 0.12, 0.6, 0, TAU); c.fill(); }
+        else if (bid === 'waves') { c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = s * 0.08; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(-s * 0.35, k * s * 0.42); c.quadraticCurveTo(-s * 0.15, k * s * 0.42 - s * 0.2, 0, k * s * 0.42); c.quadraticCurveTo(s * 0.15, k * s * 0.42 + s * 0.2, s * 0.35, k * s * 0.42); c.stroke(); } }
+        else if (bid === 'lightning') { c.fillStyle = '#fff'; c.beginPath(); c.moveTo(s * 0.1, -s * 1.0); c.lineTo(-s * 0.2, -s * 0.1); c.lineTo(s * 0.02, -s * 0.1); c.lineTo(-s * 0.12, s * 0.9); c.lineTo(s * 0.22, -s * 0.2); c.lineTo(0, -s * 0.2); c.closePath(); c.fill(); }
+        else if (bid === 'spikes') { c.fillStyle = '#2e7d32'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(-s * 0.36, k * s * 0.42); c.lineTo(-s * 0.1, k * s * 0.42 - s * 0.12); c.lineTo(-s * 0.1, k * s * 0.42 + s * 0.12); c.fill(); c.beginPath(); c.moveTo(s * 0.36, k * s * 0.42 + s * 0.2); c.lineTo(s * 0.1, k * s * 0.42 + s * 0.08); c.lineTo(s * 0.1, k * s * 0.42 + s * 0.32); c.fill(); } }
+        else if (bid === 'panda') { c.fillStyle = '#212121'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.arc((k % 2 ? 0.14 : -0.14) * s, k * s * 0.42, s * 0.14, 0, TAU); c.fill(); } }
+        else if (bid === 'lava') { c.fillStyle = '#ffab00'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(-s * 0.36, k * s * 0.42); c.quadraticCurveTo(0, k * s * 0.42 - s * 0.25, s * 0.36, k * s * 0.42 + s * 0.05); c.lineTo(s * 0.36, k * s * 0.42 + s * 0.18); c.quadraticCurveTo(0, k * s * 0.42 + s * 0.05, -s * 0.36, k * s * 0.42 + s * 0.2); c.fill(); } }
+        else if (bid === 'shuriken') { c.fillStyle = '#e53935'; for (let k = -1; k <= 1; k++) star(c, 0, k * s * 0.6, s * 0.2); }
+        else if (bid === 'rainbow') { ['#e53935', '#ff8f00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'].forEach((cc, k) => { c.fillStyle = cc; c.fillRect(-s * 0.36, (k - 3) * s * 0.3 - s * 0.05, s * 0.72, s * 0.3); }); }
+        else if (bid === 'teeth') { c.fillStyle = '#fff'; for (let k = -3; k <= 3; k++) { c.beginPath(); c.moveTo(-s * 0.36, k * s * 0.3); c.lineTo(-s * 0.12, k * s * 0.3 + s * 0.15); c.lineTo(-s * 0.36, k * s * 0.3 + s * 0.3); c.fill(); c.beginPath(); c.moveTo(s * 0.36, k * s * 0.3); c.lineTo(s * 0.12, k * s * 0.3 + s * 0.15); c.lineTo(s * 0.36, k * s * 0.3 + s * 0.3); c.fill(); } }
+        else if (bid === 'feathers') { c.fillStyle = '#ffd54a'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.ellipse((k % 2 ? 0.12 : -0.12) * s, k * s * 0.42, s * 0.1, s * 0.26, (k % 2 ? 0.5 : -0.5), 0, TAU); c.fill(); } }
+        else if (bid === 'crystal') { c.fillStyle = 'rgba(255,255,255,0.75)'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(0, k * s * 0.45 - s * 0.22); c.lineTo(s * 0.2, k * s * 0.45 + s * 0.05); c.lineTo(0, k * s * 0.45 + s * 0.22); c.lineTo(-s * 0.2, k * s * 0.45 + s * 0.05); c.fill(); } }
+        else if (bid === 'scales') { c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = s * 0.05; for (let k = -4; k <= 4; k++) for (let m = -1; m <= 1; m++) { c.beginPath(); c.arc((m * 0.22 + (k % 2 ? 0.11 : 0)) * s, k * s * 0.25, s * 0.12, 0, Math.PI); c.stroke(); } }
         else { c.fillStyle = 'rgba(255,255,255,0.45)'; for (let k = -2; k <= 2; k++) c.fillRect(-s * 0.4, k * s * 0.42 - s * 0.05, s * 0.8, s * 0.1); c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(-s * 0.08, -s * 1.2, s * 0.16, s * 2.4); }
         c.restore();
         c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = Math.max(1, s * 0.05); rr2(-s * 0.36, -s * 1.15, s * 0.72, s * 2.3, s * 0.36); c.stroke();
@@ -211,7 +240,12 @@
       case 'sac': { c.fillStyle = '#1e88e5'; rr2(-s * 0.8, -s * 0.7, s * 1.6, s * 1.6, s * 0.3); c.fill(); c.fillStyle = '#1565c0'; rr2(-s * 0.6, -s * 0.1, s * 1.2, s * 0.8, s * 0.2); c.fill(); c.strokeStyle = '#1565c0'; c.lineWidth = s * 0.18; c.beginPath(); c.arc(0, -s * 0.7, s * 0.45, Math.PI, 0); c.stroke(); c.fillStyle = '#fff'; c.font = 'bold ' + s * 0.8 + 'px sans-serif'; c.textAlign = 'center'; c.fillText('?', 0, s * 0.55); break; }
       case 'vip': { c.rotate(-0.15); c.fillStyle = '#ffd54a'; rr2(-s * 1.2, -s * 0.75, s * 2.4, s * 1.5, s * 0.2); c.fill(); c.fillStyle = '#263238'; c.fillRect(-s * 1.2, -s * 0.45, s * 2.4, s * 0.3); c.fillStyle = '#b8720c'; c.font = '900 ' + s * 0.7 + 'px sans-serif'; c.textAlign = 'center'; c.fillText('VIP', 0, s * 0.5); break; }
       case 'masque': { c.fillStyle = '#212121'; c.beginPath(); c.arc(0, 0, s, 0, TAU); c.fill(); c.fillStyle = '#f3c9a3'; rr2(-s * 0.75, -s * 0.3, s * 1.5, s * 0.45, s * 0.2); c.fill(); c.fillStyle = '#263238'; c.beginPath(); c.arc(-s * 0.3, -s * 0.08, s * 0.1, 0, TAU); c.arc(s * 0.3, -s * 0.08, s * 0.1, 0, TAU); c.fill(); c.fillStyle = '#d32f2f'; c.fillRect(-s, -s * 0.38, s * 2, s * 0.12); c.beginPath(); c.moveTo(s * 0.9, -s * 0.3); c.lineTo(s * 1.6, -s * 0.1); c.lineTo(s * 1.0, -s * 0.15); c.fill(); break; }
-      case 'up-speed': case 'up-corner': case 'up-trick': { const col = id === 'up-speed' ? '#4fc3f7' : id === 'up-corner' ? '#69f0ae' : '#ffd54a'; c.fillStyle = it.color || '#4caf50'; rr2(-s * 0.3, -s * 0.2, s * 0.6, s * 1.3, s * 0.3); c.fill(); c.fillStyle = col; c.beginPath(); c.moveTo(0, -s * 1.2); c.lineTo(s * 0.8, -s * 0.3); c.lineTo(s * 0.35, -s * 0.3); c.lineTo(s * 0.35, s * 0.3); c.lineTo(-s * 0.35, s * 0.3); c.lineTo(-s * 0.35, -s * 0.3); c.lineTo(-s * 0.8, -s * 0.3); c.closePath(); c.fill(); c.fillStyle = '#fff'; c.font = '900 ' + s * 0.5 + 'px sans-serif'; c.textAlign = 'center'; c.fillText(id === 'up-speed' ? '⚡' : id === 'up-corner' ? '↻' : '★', 0, s * 0.95); break; }
+      case 'jacket': { c.fillStyle = it.value; rr2(-s * 0.8, -s * 0.9, s * 1.6, s * 1.8, s * 0.3); c.fill(); rr2(-s * 1.2, -s * 0.8, s * 0.4, s * 1.1, s * 0.15); c.fill(); rr2(s * 0.8, -s * 0.8, s * 0.4, s * 1.1, s * 0.15); c.fill(); c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(-s * 0.05, -s * 0.9, s * 0.1, s * 1.8); c.fillStyle = '#fff'; c.beginPath(); c.moveTo(-s * 0.3, -s * 0.9); c.lineTo(0, -s * 0.6); c.lineTo(s * 0.3, -s * 0.9); c.fill(); break; }
+      case 'pants': { c.fillStyle = it.value; rr2(-s * 0.7, -s * 0.9, s * 1.4, s * 0.5, s * 0.1); c.fill(); rr2(-s * 0.7, -s * 0.5, s * 0.6, s * 1.4, s * 0.15); c.fill(); rr2(s * 0.1, -s * 0.5, s * 0.6, s * 1.4, s * 0.15); c.fill(); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(-s * 0.7, -s * 0.95, s * 1.4, s * 0.12); break; }
+      case 'hat': { const col = it.tint || '#1565c0'; if (it.value === 'cap') { c.fillStyle = col; c.beginPath(); c.arc(0, 0, s * 0.9, Math.PI, 0); c.fill(); c.beginPath(); c.ellipse(s * 0.5, s * 0.05, s * 0.8, s * 0.22, 0, 0, Math.PI); c.fill(); } else if (it.value === 'beanie') { c.fillStyle = col; c.beginPath(); c.arc(0, 0.1 * s, s * 0.9, Math.PI, 0); c.fill(); c.fillRect(-s * 0.95, 0, s * 1.9, s * 0.35); c.fillStyle = '#fff'; c.beginPath(); c.arc(0, -s * 0.95, s * 0.22, 0, TAU); c.fill(); } else if (it.value === 'band') { c.fillStyle = col; rr2(-s * 0.95, -s * 0.25, s * 1.9, s * 0.5, s * 0.2); c.fill(); } else { c.fillStyle = '#f3c9a3'; c.beginPath(); c.arc(0, 0, s * 0.8, 0, TAU); c.fill(); c.fillStyle = '#5d3a1a'; c.beginPath(); c.arc(0, -s * 0.1, s * 0.82, Math.PI, 0); c.fill(); } break; }
+      case 'hatColor': { c.fillStyle = it.value; c.beginPath(); c.arc(0, 0, s * 0.9, Math.PI, 0); c.fill(); c.beginPath(); c.ellipse(s * 0.5, s * 0.05, s * 0.8, s * 0.22, 0, 0, Math.PI); c.fill(); c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = s * 0.06; c.stroke(); break; }
+      case 'hair': case 'hairColor': case 'skin': { const L = { hair: it.slot === 'hair' ? it.value : 'short', hairColor: it.slot === 'hairColor' ? it.value : '#5d3a1a', skin: it.slot === 'skin' ? it.value : '#f3c9a3', hat: 'none', hatColor: '#000' }; const fr = { def: SK.CHARACTERS[0], look: L, fx: {}, state: 'ride', h: 0, input: {}, pose: 'side' }; c.save(); c.beginPath(); c.arc(0, 0, s * 1.1, 0, TAU); c.clip(); c.fillStyle = L.skin; c.fill(); c.scale(2.6, 2.6); c.translate(0, 0); c.restore(); SK.Render.drawFace(c, fr, 0, 0, s * 1.05); break; }
+      case 'up-speed': case 'up-corner': case 'up-trick': case 'up-jump': { const col = id === 'up-speed' ? '#4fc3f7' : id === 'up-corner' ? '#69f0ae' : id === 'up-jump' ? '#ff8a65' : '#ffd54a'; c.fillStyle = it.color || '#4caf50'; rr2(-s * 0.3, -s * 0.2, s * 0.6, s * 1.3, s * 0.3); c.fill(); c.fillStyle = col; c.beginPath(); c.moveTo(0, -s * 1.2); c.lineTo(s * 0.8, -s * 0.3); c.lineTo(s * 0.35, -s * 0.3); c.lineTo(s * 0.35, s * 0.3); c.lineTo(-s * 0.35, s * 0.3); c.lineTo(-s * 0.35, -s * 0.3); c.lineTo(-s * 0.8, -s * 0.3); c.closePath(); c.fill(); c.fillStyle = '#fff'; c.font = '900 ' + s * 0.5 + 'px sans-serif'; c.textAlign = 'center'; c.fillText(id === 'up-speed' ? '⚡' : id === 'up-corner' ? '↻' : id === 'up-jump' ? '↑' : '★', 0, s * 0.95); break; }
       default: { c.fillStyle = '#9e9e9e'; c.beginPath(); c.arc(0, 0, s * 0.8, 0, TAU); c.fill(); }
     }
     c.restore();

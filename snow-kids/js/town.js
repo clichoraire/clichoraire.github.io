@@ -5,13 +5,15 @@
   const R = SK.Render, TAU = Math.PI * 2;
   const T = SK.Town = {};
   // Faux coureur pour dessiner un personnage hors course
-  SK.fakeRacer = function (charId, boardId, state) { return { def: SK.charById(charId) || SK.CHARACTERS[0], board: SK.boardById(boardId), fx: { parachute: 0, fan: 0, invisible: 0, slow: 0, snowman: 0 }, state: state || 'ride', h: 0, vy: 0, input: { steer: 0, down: false, up: false }, curTrick: null, flat: 0, ctrl: 'cpu', player: -1, pose: 'side' }; };
+  SK.fakeRacer = function (charId, boardId, state, look) { return { def: SK.charById(charId) || SK.CHARACTERS[0], board: SK.boardById(boardId), look: look || null, fx: { parachute: 0, fan: 0, invisible: 0, slow: 0, snowman: 0 }, state: state || 'ride', h: 0, vy: 0, input: { steer: 0, down: false, up: false }, curTrick: null, flat: 0, ctrl: 'cpu', player: -1, pose: 'side' }; };
 
   T.HOUSES = [
     { id: 'lift', name: 'Télésiège', desc: 'Choisir une piste et partir en course.', angle: 0 },
-    { id: 'shop', name: 'Boutique de planches', desc: 'Acheter, équiper et améliorer tes planches.', angle: 90 },
+    { id: 'shop', name: 'Boutique', desc: 'Planches, équipement, gadgets, linge et coiffure.', angle: 60 },
+    { id: 'ecole', name: 'École', desc: 'Pratiques et missions : slalom, figures, tir, pièces…', angle: 120 },
     { id: 'kids', name: 'Maison des Kids', desc: 'Changer de personnage.', angle: 180 },
-    { id: 'records', name: 'Chalet des records', desc: 'Tes meilleurs temps, tes pistes gagnées et ta tirelire.', angle: 270 },
+    { id: 'look', name: 'Garde-robe', desc: 'Changer de look : vêtements, cheveux, peau.', angle: 240 },
+    { id: 'trophees', name: 'Salle des trophées', desc: 'Tes trophées, tes records et ta tirelire.', angle: 300 },
   ];
   let raf = 0, keyHandler = null, clickHandler = null, canvas = null;
   function stop() { cancelAnimationFrame(raf); raf = 0; if (keyHandler) { window.removeEventListener('keydown', keyHandler); keyHandler = null; } if (clickHandler && canvas) { canvas.removeEventListener('click', clickHandler); clickHandler = null; } }
@@ -60,7 +62,7 @@
         const c = list[i], sel = i === idx, s = (sel ? 78 : 60) * (W / 1280);
         const y = H * 0.84 + (sel ? -Math.abs(Math.sin(t * 6)) * 14 * bounce - 6 : 0);
         if (sel) { ctx.fillStyle = 'rgba(255,214,0,0.35)'; ctx.beginPath(); ctx.ellipse(x, H * 0.85, s * 1.1, s * 0.3, 0, 0, TAU); ctx.fill(); }
-        const fr = SK.fakeRacer(c.id); fr.input.steer = sel ? Math.sin(t * 3) * 0.3 : 0;
+        const fr = SK.fakeRacer(c.id, 'freestyle', 'ride', opts.lookFor ? opts.lookFor(c.id) : null); fr.input.steer = sel ? Math.sin(t * 3) * 0.3 : 0;
         if (!sel) ctx.globalAlpha = 0.85; R.drawRacer(ctx, fr, x, y, s, t, false); ctx.globalAlpha = 1;
         ctx.textAlign = 'center'; ctx.font = (sel ? 'bold 26px' : '18px') + ' sans-serif'; ctx.fillStyle = sel ? '#1565c0' : '#37474f'; ctx.fillText(c.name + (c.hidden ? ' 🥷' : ''), x, H * 0.84 - s * 2.35 - (sel ? 10 : 0));
         if (sel) { ctx.fillStyle = '#e53935'; ctx.beginPath(); ctx.moveTo(x, H * 0.84 - s * 2.3 + 6); ctx.lineTo(x - 12, H * 0.84 - s * 2.3 - 12); ctx.lineTo(x + 12, H * 0.84 - s * 2.3 - 12); ctx.fill(); }
@@ -73,6 +75,7 @@
   // ------------------------------------------------------------------ le village
   // opts : { canvas, charId, labelEl, onEnter(houseId), onBack }
   T.open = function (opts) {
+    T._look = opts.look || null;
     stop(); canvas = opts.canvas; const ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
     let target = T._angle || 0, angle = target, tw = null; // tw : animation de rotation en cours
     const ease = p => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
@@ -80,8 +83,8 @@
     const houseAt = a => T.HOUSES.find(h => h.angle === ((a % 360) + 360) % 360);
     const label = () => { const h = houseAt(target); if (opts.labelEl) opts.labelEl.innerHTML = `<b>${h.name}</b><span>${h.desc}</span><em>← → se promener · Entrée / X entrer · Échap menu</em>`; };
     keyHandler = e => {
-      if (e.code === 'ArrowLeft' || e.code === 'KeyA') { rotate(-90); e.preventDefault(); }
-      else if (e.code === 'ArrowRight' || e.code === 'KeyD') { rotate(90); e.preventDefault(); }
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') { rotate(-60); e.preventDefault(); }
+      else if (e.code === 'ArrowRight' || e.code === 'KeyD') { rotate(60); e.preventDefault(); }
       else if (e.code === 'Enter' || e.code === 'KeyX' || e.code === 'Space') { e.preventDefault(); if (Math.abs(angle - target) < 8) opts.onEnter(houseAt(target).id); }
       else if (e.code === 'Escape') { if (opts.onBack) opts.onBack(); }
     };
@@ -110,11 +113,11 @@
       for (const o of list) {
         const sc = 0.45 + 0.55 * Math.max(0, o.depth), x = W / 2 + Math.sin(o.a) * W * 0.38, y = horizon + 40 + 160 * sc;
         const sel = Math.abs(((o.h.angle - target) % 360 + 360) % 360) < 1;
-        drawHouse(ctx, o.h.id, x, y, 60 * sc, t, sel);
+        drawHouse(ctx, o.h.id, x, y, 52 * sc, t, sel);
         drawn.push({ h: o.h, x, y, hw: 150 * sc, hh: 220 * sc, depth: o.depth });
       }
       // le personnage, de dos (dessiné de face : il regarde le joueur)
-      const fr = SK.fakeRacer(opts.charId); fr.input.steer = Math.sin(t * 1.5) * 0.15; fr.input.up = false;
+      const fr = SK.fakeRacer(opts.charId, opts.boardId, 'ride', opts.look); fr.input.steer = Math.sin(t * 1.5) * 0.15; fr.input.up = false;
       R.drawRacer(ctx, fr, W / 2, H * 0.84, 58, t, false);
     };
     frame();
@@ -144,11 +147,22 @@
       rect(x + 0.8 * s, y - 3.0 * s, 0.35 * s, 0.9 * s, '#8d6e63');
       const fr = SK.fakeRacer(['nancy', 'jam', 'wendy'][Math.floor(t / 2) % 3]); R.drawRacer(ctx, fr, x - 2.3 * s, y, s * 0.55, t, false);
       rect(x - 1.5 * s, y - 2.85 * s, 3 * s, 0.55 * s, '#fff'); ctx.fillStyle = '#1565c0'; ctx.font = 'bold ' + 0.36 * s + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('MAISON DES KIDS', x, y - 2.45 * s);
+    } else if (id === 'ecole') {
+      rect(x - 2.0 * s, y - 2.1 * s, 4.0 * s, 2.1 * s, '#ffccbc'); tri(x, y - 2.1 * s, 4.6 * s, 1.2 * s, '#5d4037');
+      rect(x - 0.4 * s, y - 1.2 * s, 0.8 * s, 1.2 * s, '#4e342e'); for (let k = -1; k <= 1; k += 2) rect(x + k * 1.2 * s - 0.35 * s, y - 1.7 * s, 0.7 * s, 0.7 * s, '#b3e5fc');
+      rect(x - 0.3 * s, y - 3.0 * s, 0.6 * s, 0.9 * s, '#5d4037'); ctx.fillStyle = '#ffd600'; ctx.beginPath(); ctx.arc(x, y - 2.75 * s, 0.22 * s, 0, TAU); ctx.fill();
+      rect(x + 1.9 * s, y - 3.4 * s, 0.1 * s, 1.4 * s, '#616161'); rect(x + 2.0 * s, y - 3.4 * s, 0.9 * s, 0.5 * s, '#e53935'); rect(x + 2.0 * s, y - 3.4 * s, 0.9 * s, 0.17 * s, '#1e88e5');
+      rect(x - 1.5 * s, y - 2.75 * s + 0.8 * s, 3.0 * s, 0.5 * s, '#fff'); ctx.fillStyle = '#5d4037'; ctx.font = 'bold ' + 0.38 * s + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ÉCOLE', x, y - 2.75 * s + 1.18 * s);
+    } else if (id === 'look') {
+      rect(x - 1.7 * s, y - 2.0 * s, 3.4 * s, 2.0 * s, '#f8bbd0'); tri(x, y - 2.0 * s, 4.0 * s, 1.2 * s, '#ad1457');
+      rect(x - 0.4 * s, y - 1.2 * s, 0.8 * s, 1.2 * s, '#6d4c41'); rect(x - 1.4 * s, y - 1.7 * s, 0.8 * s, 1.0 * s, '#b3e5fc'); rect(x + 0.6 * s, y - 1.7 * s, 0.8 * s, 1.0 * s, '#b3e5fc');
+      const fr = SK.fakeRacer(['linda', 'slash', 'wendy'][Math.floor(t / 2.5) % 3]); R.drawRacer(ctx, fr, x - 1.0 * s, y - 0.75 * s, s * 0.38, t, false);
+      rect(x - 1.5 * s, y - 2.85 * s, 3.0 * s, 0.55 * s, '#fff'); ctx.fillStyle = '#ad1457'; ctx.font = 'bold ' + 0.36 * s + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('GARDE-ROBE', x, y - 2.45 * s);
     } else {
       rect(x - 1.6 * s, y - 1.9 * s, 3.2 * s, 1.9 * s, '#8d6e63'); tri(x, y - 1.9 * s, 3.8 * s, 1.2 * s, '#4e342e');
       rect(x - 0.4 * s, y - 1.1 * s, 0.8 * s, 1.1 * s, '#3e2723'); rect(x - 1.3 * s, y - 1.5 * s, 0.6 * s, 0.6 * s, '#fff59d'); rect(x + 0.7 * s, y - 1.5 * s, 0.6 * s, 0.6 * s, '#fff59d');
       ctx.fillStyle = '#ffd600'; ctx.font = 'bold ' + 1 * s + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🏆', x, y - 2.3 * s);
-      rect(x - 1.4 * s, y - 2.75 * s + 0.9 * s, 2.8 * s, 0.5 * s, '#fff'); ctx.fillStyle = '#5d4037'; ctx.font = 'bold ' + 0.38 * s + 'px sans-serif'; ctx.fillText('RECORDS', x, y - 2.75 * s + 1.27 * s);
+      rect(x - 1.4 * s, y - 2.75 * s + 0.9 * s, 2.8 * s, 0.5 * s, '#fff'); ctx.fillStyle = '#5d4037'; ctx.font = 'bold ' + 0.36 * s + 'px sans-serif'; ctx.fillText('TROPHÉES', x, y - 2.75 * s + 1.27 * s);
     }
   }
 })(window.SK);

@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.3';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.4';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -11,35 +11,36 @@ window.SK.VERSION = '1.3';   // à augmenter à chaque mise en ligne (affichée 
   SK.SLOPE = 0.07;                  // pente de base (m de dénivelé par m parcouru)
   SK.LIFT_INTERVAL = 2;             // une chaise de remontée part toutes les 2 s (une place par chaise)
   SK.LIFT_RIDE = 7;                 // durée de la remontée (s)
-  SK.SHOT_COST = 100;               // une boîte rouge (tir) coûte 100 pièces ; les bleues (objets) sont gratuites
-  SK.COIN_VALUE = 10;
+  SK.SHOT_COST = 1;                 // une boîte (rouge = tir, bleue = objet) coûte 1 pièce d'or si on en a une, sinon elle est gratuite
+  SK.COIN_VALUE = 1;                // une pièce d'or ramassée = 1 G
   SK.BOX_RESPAWN = 6;
   SK.DIFFICULTIES = ['Facile', 'Normal', 'Difficile'];
-  SK.PRIZES = [500, 300, 200, 100, 50];   // prime de fin de course selon la place
+  SK.PRIZES = [50, 30, 20, 10, 5];      // prime de fin de course selon la place
+  SK.TROPHY_GOLD = 200;                 // bonus la première fois qu'on gagne une piste de l'aventure (trophée)
   SK.LAPS_CHOICES = [1, 2, 3, 5];
   SK.DEFAULT_LAPS = 3;
 
   // ------------------------------------------------------------------ personnages (vitesse / virage / figures sur 5)
   SK.CHARACTERS = [
-    { id: 'slash', name: 'Slash', speed: 5, corner: 2, trick: 3, weight: 3, age: 10,
+    { id: 'slash', name: 'Slash', speed: 5, corner: 2, trick: 3, jump: 3, hairStyle: 'short', hat: 'cap', weight: 3, age: 10,
       colors: { jacket: '#e53935', pants: '#1e3a8a', hat: '#1565c0', hair: '#5d3a1a', skin: '#f3c9a3', board: '#ffb300' },
       desc: 'Le fonceur de la bande : la planche la plus rapide, mais il tourne large.' },
-    { id: 'nancy', name: 'Nancy', speed: 3, corner: 4, trick: 3, weight: 2, age: 10,
+    { id: 'nancy', name: 'Nancy', speed: 3, corner: 4, trick: 3, jump: 3, hairStyle: 'long', hat: 'beanie', weight: 2, age: 10,
       colors: { jacket: '#ec407a', pants: '#8e24aa', hat: '#f8bbd0', hair: '#fdd835', skin: '#f6d2b5', board: '#ab47bc' },
       desc: 'Toujours de bonne humeur ; une planche équilibrée qui pardonne les erreurs.' },
-    { id: 'jam', name: 'Jam', speed: 3, corner: 3, trick: 5, weight: 3, age: 11,
+    { id: 'jam', name: 'Jam', speed: 3, corner: 3, trick: 5, jump: 4, hairStyle: 'dreads', hat: 'cap', weight: 3, age: 11,
       colors: { jacket: '#43a047', pants: '#fdd835', hat: '#212121', hair: '#212121', skin: '#8d5a3b', board: '#00acc1' },
       desc: 'Le roi des figures : ses sauts rapportent beaucoup plus de pièces.' },
-    { id: 'linda', name: 'Linda', speed: 4, corner: 4, trick: 2, weight: 2, age: 11,
+    { id: 'linda', name: 'Linda', speed: 4, corner: 4, trick: 2, jump: 2, hairStyle: 'long', hat: 'cap', weight: 2, age: 11,
       colors: { jacket: '#1e88e5', pants: '#ffffff', hat: '#ffffff', hair: '#f9e36b', skin: '#f6d2b5', board: '#e53935' },
       desc: 'Rapide et précise dans les virages, mais les figures ne sont pas son fort.' },
-    { id: 'tommy', name: 'Tommy', speed: 4, corner: 1, trick: 2, weight: 5, age: 10,
+    { id: 'tommy', name: 'Tommy', speed: 4, corner: 1, trick: 2, jump: 2, hairStyle: 'short', hat: 'cap', weight: 5, age: 10,
       colors: { jacket: '#fb8c00', pants: '#3949ab', hat: '#6d4c41', hair: '#3e2723', skin: '#f3c9a3', board: '#2e7d32' },
       desc: 'Le costaud : lourd et stable, il se relève vite quand il tombe.' },
-    { id: 'wendy', name: 'Wendy', speed: 2, corner: 5, trick: 4, weight: 2, age: 9,
+    { id: 'wendy', name: 'Wendy', speed: 2, corner: 5, trick: 4, jump: 4, hairStyle: 'pigtails', hat: 'band', weight: 2, age: 9,
       colors: { jacket: '#7e57c2', pants: '#26a69a', hat: '#7e57c2', hair: '#d84315', skin: '#f6d2b5', board: '#ffee58' },
       desc: 'La plus jeune, lunettes sur le nez : elle tourne sur une pièce de dix cents.' },
-    { id: 'shinobin', name: 'Shinobin', speed: 5, corner: 5, trick: 5, weight: 3, age: '?', hidden: true,
+    { id: 'shinobin', name: 'Shinobin', speed: 5, corner: 5, trick: 5, jump: 5, hairStyle: 'short', hat: 'hood', weight: 3, age: '?', hidden: true,
       colors: { jacket: '#212121', pants: '#212121', hat: '#212121', hair: '#212121', skin: '#f3c9a3', board: '#b71c1c', scarf: '#d32f2f' },
       desc: 'Le ninja mystérieux qui hante le Pays des Ninjas. Parfait partout. Il faut le battre pour le débloquer.' },
   ];
@@ -47,30 +48,69 @@ window.SK.VERSION = '1.3';   // à augmenter à chaque mise en ligne (affichée 
 
   // ------------------------------------------------------------------ planches (boutique)
   SK.BOARDS = [
-    { id: 'freestyle', name: 'Freestyle', price: 0, speed: 0, corner: 0, trick: 0, color: '#4caf50', desc: 'La planche de départ, équilibrée.' },
-    { id: 'fusee', name: 'Fusée', price: 1500, speed: 2, corner: -1, trick: 0, color: '#e53935', desc: 'Plus rapide, mais elle tourne moins bien.' },
-    { id: 'virage', name: 'Virage', price: 1500, speed: -1, corner: 2, trick: 0, color: '#1e88e5', desc: 'Accroche dans les virages, un peu moins rapide.' },
-    { id: 'acrobate', name: 'Acrobate', price: 1500, speed: -1, corner: 0, trick: 2, color: '#fb8c00', desc: 'Figures plus rapides et mieux payées.' },
-    { id: 'alpine', name: 'Alpine', price: 3500, unlock: { wins: 3 }, speed: 3, corner: -2, trick: -1, color: '#546e7a', desc: 'Une fusée. Pour ceux qui savent freiner.' },
-    { id: 'pro', name: 'Pro', price: 6000, unlock: { wins: 5 }, speed: 1, corner: 1, trick: 1, color: '#8e24aa', desc: 'Meilleure que la Freestyle en tout.' },
-    { id: 'doree', name: 'Dorée', price: 15000, unlock: { wins: 8 }, speed: 2, corner: 2, trick: 2, color: '#ffd600', desc: 'La planche des champions. Hors de prix.' },
+    { id: 'freestyle', name: 'Freestyle', price: 0, speed: 0, corner: 0, trick: 0, jump: 0, color: '#4caf50', pattern: 'stripes', desc: 'La planche de départ, équilibrée.' },
+    { id: 'fusee', name: 'Fusée', price: 400, speed: 2, corner: -1, trick: 0, jump: 0, color: '#e53935', pattern: 'flames', desc: 'Plus rapide, mais elle tourne moins bien.' },
+    { id: 'virage', name: 'Virage', price: 400, speed: -1, corner: 2, trick: 0, jump: 0, color: '#1e88e5', pattern: 'zigzag', desc: 'Accroche dans les virages, un peu moins rapide.' },
+    { id: 'acrobate', name: 'Acrobate', price: 400, speed: -1, corner: 0, trick: 2, jump: 0, color: '#fb8c00', pattern: 'stars', desc: 'Figures plus rapides et mieux payées.' },
+    { id: 'kangourou', name: 'Kangourou', price: 400, speed: -1, corner: 0, trick: 0, jump: 2, color: '#8d6e63', pattern: 'dots', desc: 'Saute plus haut : plus de temps pour les figures.' },
+    { id: 'glacier', name: 'Glacier', price: 700, speed: 1, corner: 1, trick: 0, jump: 0, color: '#80deea', pattern: 'ice', desc: 'Rapide et stable sur la glace.', unlock: { wins: 1 } },
+    { id: 'comete', name: 'Comète', price: 800, speed: 2, corner: 0, trick: 0, jump: 1, color: '#5e35b1', pattern: 'galaxy', desc: 'Vite et haut.', unlock: { wins: 1 } },
+    { id: 'tornade', name: 'Tornade', price: 800, speed: 0, corner: 1, trick: 2, jump: 0, color: '#26a69a', pattern: 'waves', desc: 'Pour enchaîner les vrilles.', unlock: { wins: 2 } },
+    { id: 'eclair', name: 'Éclair', price: 900, speed: 3, corner: -1, trick: -1, jump: 0, color: '#fdd835', pattern: 'lightning', desc: 'Une flèche. Freine avant les virages !', unlock: { wins: 2 } },
+    { id: 'cactus', name: 'Cactus', price: 850, speed: 0, corner: 2, trick: 0, jump: 1, color: '#7cb342', pattern: 'spikes', desc: 'Accroche et saute : parfaite dans le désert.', unlock: { wins: 2 } },
+    { id: 'alpine', name: 'Alpine', price: 1200, speed: 3, corner: -2, trick: -1, jump: 0, color: '#546e7a', pattern: 'twotone', desc: 'Une fusée. Pour ceux qui savent freiner.', unlock: { wins: 3 } },
+    { id: 'panda', name: 'Panda', price: 1100, speed: 1, corner: 1, trick: 1, jump: 1, color: '#eceff1', pattern: 'panda', desc: 'Un peu de tout, en noir et blanc.', unlock: { wins: 3 } },
+    { id: 'lave', name: 'Lave', price: 1300, speed: 3, corner: 0, trick: 0, jump: 1, color: '#d84315', pattern: 'lava', desc: 'Brûlante en ligne droite.', unlock: { wins: 3 } },
+    { id: 'ninja', name: 'Ninja', price: 1500, speed: 1, corner: 3, trick: 1, jump: 0, color: '#212121', pattern: 'shuriken', desc: 'Précise comme un shuriken.', unlock: { wins: 4 } },
+    { id: 'arcenciel', name: 'Arc-en-ciel', price: 1600, speed: 0, corner: 0, trick: 3, jump: 2, color: '#ec407a', pattern: 'rainbow', desc: 'Faite pour voler et tourner.', unlock: { wins: 4 } },
+    { id: 'requin', name: 'Requin', price: 1700, speed: 3, corner: 2, trick: -1, jump: 0, color: '#1565c0', pattern: 'teeth', desc: 'Rapide et mordante dans les virages.', unlock: { wins: 4 } },
+    { id: 'pro', name: 'Pro', price: 2000, speed: 1, corner: 1, trick: 1, jump: 1, color: '#8e24aa', pattern: 'diagonal', desc: 'Meilleure que la Freestyle en tout.', unlock: { wins: 5 } },
+    { id: 'fusee2', name: 'Fusée II', price: 2200, speed: 4, corner: -1, trick: 0, jump: 1, color: '#b71c1c', pattern: 'flames', desc: 'La Fusée, en plus fou.', unlock: { wins: 5 } },
+    { id: 'phenix', name: 'Phénix', price: 2800, speed: 2, corner: 2, trick: 2, jump: 1, color: '#ff7043', pattern: 'feathers', desc: 'Renaît de ses cendres à chaque virage.', unlock: { wins: 6 } },
+    { id: 'cristal', name: 'Cristal', price: 3200, speed: 2, corner: 3, trick: 1, jump: 2, color: '#b3e5fc', pattern: 'crystal', desc: 'Légère et tranchante.', unlock: { wins: 6 } },
+    { id: 'dragon', name: 'Dragon', price: 4000, speed: 3, corner: 2, trick: 2, jump: 2, color: '#2e7d32', pattern: 'scales', desc: 'La planche des légendes.', unlock: { wins: 7 } },
+    { id: 'doree', name: 'Dorée', price: 5000, speed: 3, corner: 3, trick: 3, jump: 3, color: '#ffd600', pattern: 'gold', desc: 'La planche des champions. Hors de prix.', unlock: { wins: 8 } },
   ];
+
   SK.boardById = id => SK.BOARDS.find(b => b.id === id) || SK.BOARDS[0];
   // Articles de la boutique autres que les planches (achat unique, effet permanent en course)
   SK.GEAR = [
-    { id: 'casque', cat: 'equip', name: 'Casque', price: 800, desc: 'Tu te relèves 20 % plus vite après une chute.' },
-    { id: 'gants', cat: 'equip', name: 'Gants de pro', price: 1200, unlock: { wins: 1 }, desc: 'Les figures s\'exécutent 10 % plus vite : plus de pièces par saut.' },
-    { id: 'bottes', cat: 'equip', name: 'Bottes à crampons', price: 1500, unlock: { wins: 2 }, desc: 'Plus d\'accroche : +10 % en virage, même sur la glace.' },
-    { id: 'lunettes', cat: 'equip', name: 'Lunettes anti-pluie', price: 1000, unlock: { wins: 3 }, desc: 'Le nuage et le parachute durent moitié moins longtemps sur toi.' },
-    { id: 'veste', cat: 'equip', name: 'Veste rembourrée', price: 900, unlock: { wins: 4 }, desc: 'Les murs te ralentissent beaucoup moins.' },
-    { id: 'portemonnaie', cat: 'gadget', name: 'Porte-monnaie', price: 2000, desc: 'Tu commences chaque course avec 100 pièces : de quoi ouvrir une boîte rouge tout de suite.' },
-    { id: 'aimant', cat: 'gadget', name: 'Aimant à pièces', price: 1800, unlock: { wins: 2 }, desc: 'Les pièces viennent à toi de plus loin.' },
-    { id: 'fusee', cat: 'gadget', name: 'Fusée de départ', price: 2500, unlock: { wins: 4 }, desc: 'Un turbo automatique au GO.' },
-    { id: 'sac', cat: 'gadget', name: 'Sac à objets', price: 2200, unlock: { wins: 5 }, desc: 'Tu commences chaque course avec un objet au hasard.' },
-    { id: 'vip', cat: 'other', name: 'Carte VIP du télésiège', price: 3000, unlock: { wins: 3 }, desc: 'Ta chaise monte 1,5 seconde plus vite que les autres.' },
-    { id: 'masque', cat: 'other', name: 'Masque de ninja', price: 30000, unlock: { course: 'ninja' }, desc: 'Débloque Shinobin comme personnage sans avoir à le battre.' },
+    { id: 'casque', cat: 'equip', name: 'Casque', price: 300, desc: 'Tu te relèves 20 % plus vite après une chute.' },
+    { id: 'gants', cat: 'equip', name: 'Gants de pro', price: 400, unlock: { wins: 1 }, desc: 'Les figures s\'exécutent 10 % plus vite : plus de pièces par saut.' },
+    { id: 'bottes', cat: 'equip', name: 'Bottes à crampons', price: 500, unlock: { wins: 2 }, desc: 'Plus d\'accroche : +10 % en virage, même sur la glace.' },
+    { id: 'lunettes', cat: 'equip', name: 'Lunettes anti-pluie', price: 350, unlock: { wins: 3 }, desc: 'Le nuage et le parachute durent moitié moins longtemps sur toi.' },
+    { id: 'veste', cat: 'equip', name: 'Veste rembourrée', price: 300, unlock: { wins: 4 }, desc: 'Les murs te ralentissent beaucoup moins.' },
+    { id: 'portemonnaie', cat: 'gadget', name: 'Porte-monnaie', price: 600, desc: 'Tu commences chaque course avec 5 pièces d\'or dans les poches.' },
+    { id: 'aimant', cat: 'gadget', name: 'Aimant à pièces', price: 550, unlock: { wins: 2 }, desc: 'Les pièces viennent à toi de plus loin.' },
+    { id: 'fusee', cat: 'gadget', name: 'Fusée de départ', price: 800, unlock: { wins: 4 }, desc: 'Un turbo automatique au GO.' },
+    { id: 'sac', cat: 'gadget', name: 'Sac à objets', price: 700, unlock: { wins: 5 }, desc: 'Tu commences chaque course avec un objet au hasard.' },
+    { id: 'vip', cat: 'other', name: 'Carte VIP du télésiège', price: 900, unlock: { wins: 3 }, desc: 'Ta chaise monte 1,5 seconde plus vite que les autres.' },
+    { id: 'masque', cat: 'other', name: 'Masque de ninja', price: 5000, unlock: { course: 'ninja' }, desc: 'Débloque Shinobin comme personnage sans avoir à le battre.' },
   ];
   SK.gearById = id => SK.GEAR.find(g => g.id === id);
+  // Garde-robe : vêtements et coiffure (achat unique, puis équipé par personnage dans save.look[charId])
+  SK.WARDROBE = [];
+  [['#e53935', 'rouge'], ['#1e88e5', 'bleu'], ['#43a047', 'vert'], ['#fb8c00', 'orange'], ['#8e24aa', 'violet'], ['#fdd835', 'jaune'], ['#ec407a', 'rose'], ['#212121', 'noir'], ['#ffffff', 'blanc'], ['#00acc1', 'turquoise']].forEach(([c, n], i) =>
+    SK.WARDROBE.push({ id: 'jacket-' + i, cat: 'linge', slot: 'jacket', name: 'Manteau ' + n, price: i < 3 ? 60 : 120, value: c, desc: 'Un manteau ' + n + ' bien chaud.' }));
+  [['#1e3a8a', 'bleu marine'], ['#212121', 'noir'], ['#8d6e63', 'brun'], ['#e53935', 'rouge'], ['#ffffff', 'blanc'], ['#43a047', 'vert'], ['#7e57c2', 'violet'], ['#fdd835', 'jaune']].forEach(([c, n], i) =>
+    SK.WARDROBE.push({ id: 'pants-' + i, cat: 'linge', slot: 'pants', name: 'Pantalon ' + n, price: i < 2 ? 50 : 100, value: c, desc: 'Un pantalon de neige ' + n + '.' }));
+  [['cap', 'Casquette'], ['beanie', 'Tuque'], ['band', 'Bandeau'], ['none', 'Tête nue']].forEach(([v, n], i) =>
+    SK.WARDROBE.push({ id: 'hat-' + v, cat: 'linge', slot: 'hat', name: n, price: v === 'none' ? 0 : 90, value: v, desc: v === 'none' ? 'Cheveux au vent.' : n + ' : se combine avec la couleur de chapeau.' }));
+  [['#1565c0', 'bleu'], ['#e53935', 'rouge'], ['#212121', 'noir'], ['#ffffff', 'blanc'], ['#43a047', 'vert'], ['#ff8f00', 'orange'], ['#f8bbd0', 'rose']].forEach(([c, n], i) =>
+    SK.WARDROBE.push({ id: 'hatColor-' + i, cat: 'linge', slot: 'hatColor', name: 'Chapeau ' + n, price: 40, value: c, desc: 'Couleur du chapeau : ' + n + '.' }));
+  [['short', 'Cheveux courts'], ['long', 'Cheveux longs'], ['dreads', 'Dreadlocks'], ['pigtails', 'Couettes'], ['spiky', 'Pics'], ['bald', 'Crâne rasé']].forEach(([v, n]) =>
+    SK.WARDROBE.push({ id: 'hair-' + v, cat: 'coiffure', slot: 'hair', name: n, price: 70, value: v, desc: 'Coupe : ' + n.toLowerCase() + '.' }));
+  [['#5d3a1a', 'bruns'], ['#fdd835', 'blonds'], ['#212121', 'noirs'], ['#d84315', 'roux'], ['#9e9e9e', 'gris'], ['#1e88e5', 'bleus'], ['#ec407a', 'roses'], ['#43a047', 'verts']].forEach(([c, n], i) =>
+    SK.WARDROBE.push({ id: 'hairColor-' + i, cat: 'coiffure', slot: 'hairColor', name: 'Cheveux ' + n, price: i < 4 ? 40 : 80, value: c, desc: 'Teinture : cheveux ' + n + '.' }));
+  [['#f6d2b5', 'très claire'], ['#f3c9a3', 'claire'], ['#d9a37a', 'dorée'], ['#b07a4a', 'mate'], ['#8d5a3b', 'foncée'], ['#5d3a1f', 'très foncée']].forEach(([c, n], i) =>
+    SK.WARDROBE.push({ id: 'skin-' + i, cat: 'coiffure', slot: 'skin', name: 'Peau ' + n, price: 0, value: c, desc: 'Gratuit : chacun sa peau.' }));
+  SK.wardrobeById = id => SK.WARDROBE.find(w => w.id === id);
+  // Apparence d'un personnage = ses couleurs d'origine + ce qui est équipé dans save.look[charId]
+  SK.lookOf = function (def, save) {
+    const base = { jacket: def.colors.jacket, pants: def.colors.pants, hat: def.hat || 'cap', hatColor: def.colors.hat, hair: def.hairStyle || 'short', hairColor: def.colors.hair, skin: def.colors.skin, scarf: def.colors.scarf };
+    const l = save && save.look && save.look[def.id];
+    return l ? Object.assign(base, l) : base;
+  };
   // Pourquoi un article est encore verrouillé (null = disponible). unlock: { wins: n } ou { course: id }
   SK.lockReason = function (unlock, save) {
     if (!unlock) return null;
@@ -79,9 +119,9 @@ window.SK.VERSION = '1.3';   // à augmenter à chaque mise en ligne (affichée 
     if (unlock.course && !(save.won || {})[unlock.course]) { const c = SK.courseById(unlock.course); return 'Gagne la course « ' + c.name + ' »' + (c.boss ? ' en battant Shinobin' : ''); }
     return null;
   };
-  SK.UPGRADE_MAX = 2; SK.upgradeCost = lvl => 1000 * (lvl + 1);
+  SK.UPGRADE_MAX = 2; SK.upgradeCost = lvl => 400 * (lvl + 1);
   // Planche avec ses améliorations achetées (save.upgrades[boardId] = { speed, corner, trick })
-  SK.effectiveBoard = function (id, save) { const b = SK.boardById(id), u = (save && save.upgrades && save.upgrades[b.id]) || {}; return Object.assign({}, b, { speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), trick: b.trick + (u.trick || 0), base: b }); };
+  SK.effectiveBoard = function (id, save) { const b = SK.boardById(id), u = (save && save.upgrades && save.upgrades[b.id]) || {}; return Object.assign({}, b, { speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), trick: b.trick + (u.trick || 0), jump: (b.jump || 0) + (u.jump || 0), base: b }); };
 
   // ------------------------------------------------------------------ tirs (boîtes rouges) et objets (boîtes bleues)
   SK.SHOTS = {
@@ -103,17 +143,17 @@ window.SK.VERSION = '1.3';   // à augmenter à chaque mise en ligne (affichée 
   // ------------------------------------------------------------------ figures (en l'air) : durée de base et pièces
   SK.TRICKS = {
     // bouton C (figure) + direction
-    grab:    { name: 'Grab',           dur: 0.35, coins: 10, dir: 'none',  btn: 'trick', anim: 'grab' },
-    spinL:   { name: 'Vrille 360',     dur: 0.55, coins: 20, dir: 'left',  btn: 'trick', anim: 'spin', turns: 1, sign: -1 },
-    spinR:   { name: 'Vrille 360',     dur: 0.55, coins: 20, dir: 'right', btn: 'trick', anim: 'spin', turns: 1, sign: 1 },
-    back:    { name: 'Salto arrière',  dur: 0.85, coins: 40, dir: 'up',    btn: 'trick', anim: 'flip', sign: -1 },
-    front:   { name: 'Salto avant',    dur: 0.85, coins: 40, dir: 'down',  btn: 'trick', anim: 'flip', sign: 1 },
+    grab:    { name: 'Grab',           dur: 0.35, coins: 1, dir: 'none',  btn: 'trick', anim: 'grab' },
+    spinL:   { name: 'Vrille 360',     dur: 0.55, coins: 2, dir: 'left',  btn: 'trick', anim: 'spin', turns: 1, sign: -1 },
+    spinR:   { name: 'Vrille 360',     dur: 0.55, coins: 2, dir: 'right', btn: 'trick', anim: 'spin', turns: 1, sign: 1 },
+    back:    { name: 'Salto arrière',  dur: 0.85, coins: 4, dir: 'up',    btn: 'trick', anim: 'flip', sign: -1 },
+    front:   { name: 'Salto avant',    dur: 0.85, coins: 4, dir: 'down',  btn: 'trick', anim: 'flip', sign: 1 },
     // bouton X (saut) + direction, en l'air
-    method:  { name: 'Method',         dur: 0.45, coins: 15, dir: 'none',  btn: 'jump', anim: 'method' },
-    spin2L:  { name: 'Vrille 720',     dur: 1.0,  coins: 50, dir: 'left',  btn: 'jump', anim: 'spin', turns: 2, sign: -1 },
-    spin2R:  { name: 'Vrille 720',     dur: 1.0,  coins: 50, dir: 'right', btn: 'jump', anim: 'spin', turns: 2, sign: 1 },
-    rodeo:   { name: 'Rodéo',          dur: 1.1,  coins: 70, dir: 'up',    btn: 'jump', anim: 'rodeo', sign: -1 },
-    tornade: { name: 'Tornade',        dur: 1.1,  coins: 70, dir: 'down',  btn: 'jump', anim: 'rodeo', sign: 1 },
+    method:  { name: 'Method',         dur: 0.45, coins: 2, dir: 'none',  btn: 'jump', anim: 'method' },
+    spin2L:  { name: 'Vrille 720',     dur: 1.0,  coins: 5, dir: 'left',  btn: 'jump', anim: 'spin', turns: 2, sign: -1 },
+    spin2R:  { name: 'Vrille 720',     dur: 1.0,  coins: 5, dir: 'right', btn: 'jump', anim: 'spin', turns: 2, sign: 1 },
+    rodeo:   { name: 'Rodéo',          dur: 1.1,  coins: 7, dir: 'up',    btn: 'jump', anim: 'rodeo', sign: -1 },
+    tornade: { name: 'Tornade',        dur: 1.1,  coins: 7, dir: 'down',  btn: 'jump', anim: 'rodeo', sign: 1 },
   };
   SK.trickFor = (btn, dir) => Object.keys(SK.TRICKS).find(id => SK.TRICKS[id].btn === btn && SK.TRICKS[id].dir === dir);
 
@@ -234,6 +274,20 @@ window.SK.VERSION = '1.3';   // à augmenter à chaque mise en ligne (affichée 
       ] },
   ];
   SK.courseById = id => SK.COURSES.find(c => c.id === id);
+
+  // ------------------------------------------------------------------ École : missions de pratique (1 tour)
+  SK.MISSIONS = [
+    { id: 'slalom1', type: 'slalom', course: 'rookie', goal: 12, reward: 60, name: 'Slalom débutant', desc: 'Passe entre les drapeaux : gauche, droite, gauche, droite… Au moins 12 portes sur 16.' },
+    { id: 'coins1', type: 'coins', course: 'grass', goal: 12, reward: 60, name: 'Chasse aux pièces', desc: 'Ramasse au moins 12 pièces d\'or en un tour de la Vallée d\'herbe.' },
+    { id: 'tricks1', type: 'tricks', course: 'rookie', goal: 12, reward: 70, name: 'Première figures', desc: 'Gagne au moins 12 G en figures (saute au sommet des bosses avec X, puis C ou X + direction).' },
+    { id: 'shots1', type: 'hits', course: 'highway', goal: 3, reward: 100, name: 'Stand de tir', desc: 'Trois coureurs lents roulent devant toi : touche-les 3 fois avec les tirs des boîtes rouges.' },
+    { id: 'time1', type: 'time', course: 'rookie', goal: 60, reward: 80, name: 'Contre la montre', desc: 'Descends le Mont Débutant en moins de 1:00. Penche-toi (↑) dans les lignes droites !' },
+    { id: 'nofall1', type: 'nofall', course: 'sunset', goal: 0, reward: 80, name: 'Pas une chute', desc: 'Un tour du Rocher du Couchant sans tomber : évite les rochers, saute par-dessus (X).' },
+    { id: 'slalom2', type: 'slalom', course: 'silver', goal: 18, reward: 130, name: 'Slalom sur glace', desc: 'Même chose sur la glace du Mont d\'Argent : 18 portes sur 22. Anticipe, ça glisse.' },
+    { id: 'tricks2', type: 'tricks', course: 'dizzy', goal: 35, reward: 160, name: 'Roi des airs', desc: 'Gagne 35 G en figures au Pays Vertige : enchaîne Rodéo, Tornade et vrilles 720.' },
+    { id: 'shots2', type: 'hits', course: 'ninja', goal: 6, reward: 180, name: 'Tireur d\'élite', desc: 'Six touches en un tour du Pays des Ninjas. Le Fantôme vole les tirs des autres !' },
+  ];
+  SK.missionById = id => SK.MISSIONS.find(m => m.id === id);
 
   // ------------------------------------------------------------------ outils communs
   SK.rng = function (seed) {   // mulberry32
