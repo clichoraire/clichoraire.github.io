@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '2.1';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '2.2';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -117,7 +117,7 @@ window.ZC.VERSION = '2.1';   // à augmenter à chaque mise en ligne (affichée 
     fortify: { name: 'Centre de commandement', hotkey: 'Q', max: 1, cost: (lvl, n) => 800 + 400 * (n || 0), time: () => 75, desc: 'Transforme ce bunker en centre de commandement : 6 places en garnison, 6000 PV, armure 8, et il produit dropships, travailleurs et héros comme votre QG. Le premier coûte 800 minerais, puis 400 de plus à chaque centre' },
   };
   ZC.RESEARCH_QUEUE_MAX = 3;  // recherches en attente par bunker
-  ZC.MISSION_DEFAULTS = { startUnits: 0, startWorkers: 3 }; // départ des missions de l'aventure : 3 travailleurs, aucun soldat (sauf si le scénario en fournit)
+  ZC.MISSION_DEFAULTS = { startUnits: 3, startWorkers: 1 }; // départ des missions de l'aventure : 1 travailleur et 3 soldats par bunker (début lent ; les scénarios de survie en donnent plus)
   ZC.SIEGE_BONUS = 0.25;      // bonus de dégâts contre les bâtiments par niveau de démolition
   ZC.BUNKER_CAPACITY = 4;     // unités en garnison par bunker ; un bunker vide ne tire pas
   ZC.HQ_CAPACITY = 6;         // le centre de commandement en accueille six

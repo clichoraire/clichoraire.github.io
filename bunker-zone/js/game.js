@@ -472,7 +472,7 @@
         const cands = map.zones.filter(z => z.owner < 0 && !z.bunker).sort((a, b) => cheb(a, hz) - cheb(b, hz) || map.manhattan(a, hz) - map.manhattan(b, hz) || Math.random() - 0.5);
         for (const z of cands.slice(0, s.extraZones)) {
           const b = this.buildBunker(z, me.id, null, true);
-          troops(me, b, z, Math.floor(s.startUnits / 2)); // moitié des soldats de départ par zone d'avance (aucun si la mission part sans soldat)
+          troops(me, b, z, s.startUnits); // chaque bunker d'avance reçoit les mêmes soldats de départ que le centre
         }
       }
       this.recount();

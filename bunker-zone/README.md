@@ -87,9 +87,10 @@ juste dessous, un second clic ou « Jouer la mission » lance le briefing.
   deux zones d'avance, 2v2 avec un allié, bande 3x9, course aux secteurs (le premier à 12 zones gagne, vous
   ou un ennemi), mode évolution, rush à vagues rapides, tournoi, siège de 8 minutes, prise en tenaille sur 7x3,
   3v3, conquête totale (éliminer les ennemis et occuper les 25 zones), forteresse finale 9x9.
-- **Départ de mission** : 3 travailleurs et aucun soldat (l'armée vient des vagues de vos bunkers), sauf
-  quand le scénario en fournit : les deux missions de survie sans minerai (Tenir la ligne, Siège) partent avec
-  8 soldats et le Rush avec 4. Les Renforts de la boutique s'ajoutent toujours (+2 par niveau).
+- **Départ de mission** : 1 travailleur et 3 soldats par bunker (centre et zones d'avance), pour un début
+  lent où l'armée vient surtout des vagues. Exceptions : les missions de survie sans minerai partent avec
+  2 travailleurs et 4 (Tenir la ligne, 9 bunkers) ou 5 (Siège, 3 bunkers) soldats par bunker, le Rush avec 4
+  soldats. Les Renforts de la boutique s'ajoutent toujours (+2 par niveau, au centre).
   Dans les missions, les IA n'ont pas de héros : le vôtre est le seul sur la carte.
 - **Effacer la partie** (bouton rouge de l'écran d'aventure) : après confirmation, remet toute la progression
   à zéro (missions, points, boutique, niveaux et choix du héros). Définitif.
