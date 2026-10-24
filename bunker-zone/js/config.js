@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '3.0';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '3.1';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -39,10 +39,10 @@ window.ZC.VERSION = '3.0';   // à augmenter à chaque mise en ligne (affichée 
   // Quatre races, deux niveaux chacune : l'unité de niveau 1 est produite par les bunkers, l'Évolution
   // (armes, armure et portée au niveau 3) transforme les soldats d'un bunker en unité de niveau 2.
   ZC.RACES = {
-    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine', l3: 'colossus',  worker: 'workerHuman',  tower: 'towerHuman', addon: 'addonHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Soldats à distance polyvalents, robustes une fois en exo-armure.' },
-    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast', l3: 'ravager',      worker: 'workerInsect', tower: 'towerInsect', addon: 'addonInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'Nuées rapides de coureurs au corps à corps, puis bêtes chitineuses massives.' },
-    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', l3: 'avatar', worker: 'workerEnergy', tower: 'towerEnergy', addon: 'addonEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Lames d\'énergie protégées par un bouclier, puis archontes mécaniques à frappes de zone.' },
-    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech', l3: 'fortress',  worker: 'workerMecha',  tower: 'towerMecha', addon: 'addonMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Robots éclaireurs véloces, puis mechs de siège à obus explosifs à longue portée.' },
+    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine', l3: 'colossus',  worker: 'workerHuman',  tower: 'towerHuman', addon: 'addonHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Des fusils, du nombre et de la force brute : pas de robots. Soldats à distance polyvalents, robustes en exo-armure ; leurs bunkers produisent un soldat de plus une vague sur quatre.', waveBonus: 4 },
+    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast', l3: 'ravager',      worker: 'workerInsect', tower: 'towerInsect', addon: 'addonInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'L\'essaim : nuées rapides de coureurs au corps à corps (deux par vague), puis bêtes chitineuses et ravageurs alpha massifs.' },
+    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', l3: 'avatar', worker: 'workerEnergy', tower: 'towerEnergy', addon: 'addonEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Guerriers qui façonnent l\'énergie pure : lames protégées par un bouclier qui se régénère, puis archontes et avatars à frappes de zone.' },
+    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech', l3: 'fortress',  worker: 'workerMecha',  tower: 'towerMecha', addon: 'addonMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Une IA et ses machines : robots éclaireurs véloces, mechs de siège, forteresses mobiles. Automatisés, ils ne se mettent jamais à couvert : leurs bunkers tirent tout seuls (tourelle intégrée), mais produisent une vague sur quatre en moins.', noGarrison: true, waveSkip: 4, auto: { dmg: 7, hits: 2, range: 160, cooldown: 0.7, antiAir: true } },
   };
   ZC.UNITS = {
     // --- Humains
@@ -125,7 +125,11 @@ window.ZC.VERSION = '3.0';   // à augmenter à chaque mise en ligne (affichée 
   ZC.SIEGE_BONUS = 0.25;      // bonus de dégâts contre les bâtiments par niveau de démolition
   ZC.BUNKER_CAPACITY = 4;     // unités en garnison par bunker ; un bunker vide ne tire pas
   ZC.HQ_CAPACITY = 6;         // le centre de commandement en accueille six
-  ZC.capacity = (b) => !b || !b.def ? ZC.BUNKER_CAPACITY : b.def.hq ? ZC.HQ_CAPACITY : b.def.capacity !== undefined ? b.def.capacity : b.def.extractor ? 0 : ZC.BUNKER_CAPACITY;
+  ZC.capacity = (b) => {
+    if (!b || !b.def) return ZC.BUNKER_CAPACITY;
+    if (b.game && b.game.players[b.owner] && (ZC.RACES[b.game.players[b.owner].race] || {}).noGarrison && !b.def.tower) return 0; // mécas : tourelle intégrée, pas de garnison
+    return b.def.hq ? ZC.HQ_CAPACITY : b.def.capacity !== undefined ? b.def.capacity : b.def.extractor ? 0 : ZC.BUNKER_CAPACITY;
+  };
   ZC.TOWER = { cost: 75, buildTime: 15, perZone: 3 };     // tours : coût, secondes de construction par un travailleur, maximum par zone
   ZC.SPEEDS = [1, 2, 3, 5];   // vitesses de lecture disponibles en partie (bouton du HUD, touches + / -)
   // Économie : gisements de minerai vert (style StarCraft) récoltés par les travailleurs

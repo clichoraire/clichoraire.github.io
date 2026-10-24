@@ -344,6 +344,14 @@
           for (let i = 0; i < 3; i++) ctx.fillRect(9 + Math.random() * 6, (Math.random() - 0.5) * 8, 1.5, 1.5);
         }
       }
+      if (u.def.structure && !u.def.tower && !u.def.extractor && !u.def.addon && !u.building && ZC.RACES[g.players[u.owner].race].auto) { // tourelle intégrée (mécas)
+        const a = u.turretFacing || 0, hot = u.attackAnim > 0;
+        ctx.save(); ctx.translate(0, -10);
+        ctx.fillStyle = '#3a4250'; ctx.strokeStyle = '#8c96a8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, 7, 0, TAU); ctx.fill(); ctx.stroke();
+        ctx.rotate(a); ctx.fillStyle = '#2a2f38'; ctx.fillRect(3, -2, 11, 4); ctx.fillStyle = g.players[u.owner].hex; ctx.fillRect(3, -1, 4, 2);
+        if (hot) { ctx.fillStyle = '#fff8d0'; ctx.fillRect(14, -2.5, 4, 5); }
+        ctx.restore();
+      }
       if (u.def.tower && u.garrison.length) { // tour de guet occupée : soldats sur la plateforme
         for (let i = 0; i < u.garrison.length; i++) { const gx = (i - (u.garrison.length - 1) / 2) * 9; ctx.fillStyle = '#2b2f36'; ctx.beginPath(); ctx.arc(gx, -2, 3.5, 0, TAU); ctx.fill(); ctx.fillStyle = g.players[u.owner].hex; ctx.beginPath(); ctx.arc(gx, -2, 2, 0, TAU); ctx.fill(); if (u.attackAnim > 0) { ctx.fillStyle = '#fff8d0'; ctx.fillRect(gx + 3, -3, 4, 2); } }
       } else if (u.def.structure && u.garrison.length) { // meurtrières occupées

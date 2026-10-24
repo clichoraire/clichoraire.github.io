@@ -70,7 +70,7 @@
     get isAir() { return !!this.def.air; }
     get mobile() { return !this.def.structure; }
     // Peut entrer dans un bunker : unité au sol, à distance, pas trop grosse
-    get canGarrison() { return !this.def.structure && !this.def.air && this.def.range > 0 && this.def.size !== 'large'; }
+    get canGarrison() { return !this.def.structure && !this.def.air && this.def.range > 0 && this.def.size !== 'large' && !(ZC.RACES[this.def.race] || {}).noGarrison; }
     get isWorker() { return !!this.def.worker; }
 
     // Bonus passifs du joueur (boutique de l'aventure), nul hors aventure
@@ -233,6 +233,25 @@
     }
 
     // Tourelle autonome : vise et tire d'elle-même
+    // Tourelle intégrée des bunkers mécas : tire toute seule sur l'ennemi le plus proche (les améliorations d'armes et de portée du bunker comptent)
+    autoFire(dt, A) {
+      const g = this.game, me = this.owner;
+      const range = A.range + this.up.range * ZC.TILE;
+      let t = this.target;
+      if (t && (t.dead || t.inside || g.allied(t.owner, me) || ZC.dist(this.x, this.y, t.x, t.y) > range + this.radius + t.radius)) t = null;
+      if (!t) {
+        let bd = Infinity;
+        for (const u of g.unitsNear(this.x, this.y, range + this.radius + 20, u => !g.allied(u.owner, me) && !u.def.structure && (!u.def.air || A.antiAir))) { const d = ZC.dist(this.x, this.y, u.x, u.y); if (d < bd) { bd = d; t = u; } }
+      }
+      this.target = t;
+      if (!t) return;
+      this.turretFacing = Math.atan2(t.y - this.y, t.x - this.x);
+      if (this.cooldown > 0) return;
+      this.cooldown = A.cooldown; this.attackAnim = 0.15;
+      g.applyDamage(t, A.dmg + this.up.weapons, A.hits, 'normal', this);
+      g.addEffect({ type: 'tracer', x: this.x + Math.cos(this.turretFacing) * (this.radius - 2), y: this.y - 10 + Math.sin(this.turretFacing) * (this.radius - 2), tx: t.x, ty: t.y, life: 0.12, color: this.player.hex, r: t.radius });
+      g.emit('attack', { unit: this, target: t });
+    }
     towerFire(dt) {
       let t = this.target;
       if (t && (!this.canTarget(t) || !this.inRange(t))) t = null;
@@ -328,8 +347,10 @@
           if (q.t >= q.total) { this.queue.shift(); this.game.productionDone(this, q); }
         }
         if (this.def.tower && this.building) return;
+        const auto = !this.def.tower && !this.def.extractor && !this.def.addon ? ZC.RACES[this.player.race].auto : null;
         if (this.def.tower && this.def.dmg > 0) this.towerFire(dt);
         else if (this.garrison.length) this.bunkerFire(dt);
+        else if (auto) this.autoFire(dt, auto);
         else this.target = null;
         if (this.research.length) {
           const r = this.research[0];

@@ -922,8 +922,11 @@
         const p = this.players[z.owner];
         if (!p.alive) continue;
         const b = z.bunker;
-        const type = this.bunkerSpawnType(b), def = ZC.UNITS[type];
-        const n = def.spawn * (z.super ? s.superZoneMult : 1);
+        const type = this.bunkerSpawnType(b), def = ZC.UNITS[type], R = ZC.RACES[p.race] || {};
+        b.waveNo = (b.waveNo || 0) + 1;
+        let n = def.spawn * (z.super ? s.superZoneMult : 1);
+        if (R.waveSkip && b.waveNo % R.waveSkip === 0) n = 0;            // mécas : une vague sur quatre sans production
+        if (R.waveBonus && b.waveNo % R.waveBonus === 0) n += 1;         // humains : un soldat de plus une vague sur quatre
         const income = (s.incomePerBunker + (p.bonus ? p.bonus.income : 0)) * (z.super ? s.superZoneMult : 1);
         p.minerals += income;
         p.mineralsEarned += income;

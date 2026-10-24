@@ -34,7 +34,12 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
   mech de siège → forteresse mobile, obus explosifs à très longue portée). Les unités de niveau 3 sont nettement
   plus grandes, avec une parure propre à chaque race (épaulières et visière rouge, cornes et yeux luisants, halo
   d'énergie, antenne clignotante) et un anneau doré au sol. Le joueur choisit sa race dans les options ; les IA
-  tirent la leur au hasard.
+  tirent la leur au hasard. Chaque race a son caractère : les **Humains** misent sur le nombre et la force brute (un soldat de
+  plus une vague sur quatre), l'**Essaim** sur la nuée (deux coureurs par vague), les **Guerriers d'énergie** sur des
+  boucliers qui se régénèrent et des frappes de zone, et les **Mécas** sur l'automatisation : leurs unités ne se mettent
+  jamais à couvert (aucune garnison possible), mais leurs bunkers et centres ont une **tourelle intégrée** qui tire toute
+  seule (7 x2 dégâts à 5 cases, plus les améliorations d'armes et de portée du bunker) ; en contrepartie, une vague sur
+  quatre ne produit rien.
 - **Centre de commandement** (Q, 400 minerais, 75 s) : promeut un bunker au niveau du QG : 6 places en
   garnison, 6000 PV, armure 8, et il produit lui aussi dropships (D), travailleurs et héros (F). Si le QG
   d'origine tombe, les autres centres prennent le relais.
