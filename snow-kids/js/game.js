@@ -127,6 +127,7 @@
     // ---- latéral : direction, force centrifuge, murs
     const kappa = s.curve / (SEG * SEG), centrifugal = kappa * r.speed * r.speed * 4.2;
     r.steer += SK.clamp(inp.steer - r.steer, -7 * dt, 7 * dt); // la direction se prend progressivement (inclinaison)
+    r.crouch = (r.crouch || 0) + SK.clamp((inp.up && r.state === 'ride' && !stunned ? 1 : 0) - (r.crouch || 0), -5 * dt, 5 * dt); // penché en avant, genoux fléchis
     const station = r.z >= this.L; // zone de la gare au bas de la piste
     if (!stunned && r.fx.snowman <= 0) {
       const grip = (r.state === 'air' ? 0.35 : 1) * surf.grip;

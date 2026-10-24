@@ -57,7 +57,7 @@
         let id = null;
         if (p.isHuman && this.campaign) id = this.campaign.hero.id;
         else if (p.isHuman) id = s.hero === 'none' ? null : (ZC.HEROES[s.hero] && ZC.HEROES[s.hero].race === p.race ? s.hero : ZC.pick(ZC.heroesOf(p.race)).id);
-        else id = s.aiHeroes === false ? null : ZC.pick(ZC.heroesOf(p.race)).id;
+        else id = (s.aiHeroes === false || this.campaign) ? null : ZC.pick(ZC.heroesOf(p.race)).id; // missions : les IA n'ont pas de héros (sinon des Kael partout)
         p.heroId = id; p.powers = {};
         if (id) this.spawnHero(p);
       }
@@ -472,7 +472,7 @@
         const cands = map.zones.filter(z => z.owner < 0 && !z.bunker).sort((a, b) => cheb(a, hz) - cheb(b, hz) || map.manhattan(a, hz) - map.manhattan(b, hz) || Math.random() - 0.5);
         for (const z of cands.slice(0, s.extraZones)) {
           const b = this.buildBunker(z, me.id, null, true);
-          troops(me, b, z, Math.max(2, Math.floor(s.startUnits / 2)));
+          troops(me, b, z, Math.floor(s.startUnits / 2)); // moitié des soldats de départ par zone d'avance (aucun si la mission part sans soldat)
         }
       }
       this.recount();

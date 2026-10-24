@@ -1,7 +1,7 @@
 // Frigo Snap — constantes, outils, espèces, niveaux et répliques du Chef Fernand.
 // Tout vit dans l'espace de noms FS. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.FS = window.FS || {};
-window.FS.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.FS.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (FS) {
   'use strict';
   FS.W = 1280; FS.H = 720;          // canevas logique
@@ -11,7 +11,8 @@ window.FS.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée 
   FS.RAIL_SPEED = 1.7;              // vitesse du chariot (unités / s)
   FS.DASH_MULT = 2.2;               // accélérateur (outil « Pédale »)
   FS.FILM = 60;                     // nombre de clichés par virée
-  FS.MAX_YAW = 80 * Math.PI / 180;  // on peut tourner la tête à ±80°
+  FS.MAX_YAW = 80 * Math.PI / 180;  // angle de vue utile pour le photographe automatique (le joueur tourne librement à 360°)
+  FS.MOUSE_SENS = 0.0028;           // radians par pixel de souris
   FS.MAX_PITCH = 38 * Math.PI / 180;
   FS.BAIT_LIFE = 30;                // un croûton reste 30 s au sol
   FS.ATTRACT_R = 9;                 // rayon d'attraction d'un croûton
@@ -119,11 +120,15 @@ window.FS.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée 
       props: [
         { kind: 'lettuce', x: -9, z: 20, s: 4 }, { kind: 'carrot', x: 11, z: 36, s: 1, rot: 0.3 }, { kind: 'carrot', x: 12.5, z: 40, s: 1, rot: -0.2 }, { kind: 'carrot', x: 13, z: 44, s: 1, rot: 0.1 },
         { kind: 'tomato', x: -8, z: 48, s: 1.6 }, { kind: 'tomato', x: -10.5, z: 50, s: 1.4 }, { kind: 'pepper', x: 14, z: 60, s: 2.2 },
-        { kind: 'jar', x: -8, z: 78, s: 2.2, label: 'Confiture', color: '#8e3b46' }, // le Moisissurex est dessus
+        { kind: 'jar', x: -8, z: 78, s: 2.2, label: 'Confiture', color: '#8e3b46', scale: 1 }, // le Moisissurex est dessus (échelle liée à la créature)
         { kind: 'yogurt', x: 8, z: 92, s: 2 }, { kind: 'yogurt', x: 11, z: 94, s: 2 }, { kind: 'milk', x: -12, z: 100, s: 3.5 },
         { kind: 'bread', x: 6, z: 150, s: 3 }, { kind: 'jar', x: -13, z: 164, s: 2.6, label: 'Mayo', color: '#f1e6b3' },
+        { kind: 'cheese', x: -13, z: 30, s: 2.2 }, { kind: 'grapes', x: 13, z: 72, s: 2 }, { kind: 'can', x: -14, z: 86, s: 2.2, color: '#d32f2f' }, { kind: 'can', x: -13.5, z: 89, s: 2.2, color: '#1565c0' },
+        { kind: 'tupperware', x: 13, z: 104, s: 3, color: '#80cbc4' }, { kind: 'broccoli', x: -12, z: 118, s: 2.4 }, { kind: 'onion', x: 12, z: 122, s: 1.6 }, { kind: 'apple', x: 10, z: 68, s: 1.5 },
+        { kind: 'puddle', x: -7, z: 60, s: 2.5, color: 'rgba(255,120,80,0.35)' }, { kind: 'crumbs', x: 4, z: 150, s: 3 }, { kind: 'puddle', x: 9, z: 112, s: 2, color: 'rgba(255,214,0,0.3)' },
         { kind: 'wallback', z: 194 }, { kind: 'wallside', x: -17 }, { kind: 'wallside', x: 17 },
       ],
+      scatter: { count: 42, kinds: ['tomato', 'apple', 'onion', 'lemon', 'can', 'yogurt', 'cupcake', 'crumbs', 'puddle', 'mug', 'spoon'] },
       creatures: [
         ['bocal', 7.5, 44], ['cornichon', 10, 38, { hideAt: [11, 36] }], ['cornichon', 11.5, 42, { hideAt: [12.5, 40] }], ['cornichon', 12, 46, { hideAt: [13, 44] }],
         ['moisissurex', -8, 78, { y: 2.3 }],
@@ -139,11 +144,15 @@ window.FS.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée 
       props: [
         { kind: 'butterdish', x: 8, z: 26, s: 3 }, { kind: 'bottle', x: -10, z: 30, s: 3.2, color: '#2e7d32' }, { kind: 'bottle', x: -12, z: 36, s: 3.6, color: '#6d4c41' },
         { kind: 'carton', x: -7.5, z: 66, s: 1 }, // boîte d'œufs (les œufs sont des créatures)
-        { kind: 'jar', x: 7.5, z: 94, s: 2.4, label: 'Olives', color: '#7cb342' }, { kind: 'jar', x: -9, z: 122, s: 2.2, label: 'Moutarde', color: '#f9a825' },
-        { kind: 'jar', x: -7.5, z: 128, s: 2.4, label: 'Confiture', color: '#8e3b46' },
+        { kind: 'jar', x: 7.5, z: 94, s: 2.4, label: 'Olives', color: '#7cb342', scale: 1 }, { kind: 'jar', x: -9, z: 122, s: 2.2, label: 'Moutarde', color: '#f9a825' },
+        { kind: 'jar', x: -7.5, z: 128, s: 2.4, label: 'Confiture', color: '#8e3b46', scale: 1 },
         { kind: 'bottle', x: 10, z: 150, s: 3.4, color: '#b71c1c' }, { kind: 'carrot', x: 11, z: 140, s: 1, rot: 0.5 },
+        { kind: 'can', x: 11, z: 60, s: 2.4, color: '#ff8f00' }, { kind: 'can', x: 12, z: 64, s: 2.4, color: '#43a047' }, { kind: 'mug', x: -10, z: 84, s: 2 }, { kind: 'cheese', x: 10, z: 112, s: 2 },
+        { kind: 'tupperware', x: -11, z: 150, s: 2.6, color: '#ce93d8' }, { kind: 'lemon', x: -12, z: 46, s: 1.3 }, { kind: 'lemon', x: -10.5, z: 44, s: 1.2 }, { kind: 'puddle', x: 6, z: 46, s: 2.4, color: 'rgba(255,224,130,0.4)' },
+        { kind: 'cupcake', x: 11, z: 130, s: 1.8 }, { kind: 'spoon', x: -9, z: 104, s: 2.4 }, { kind: 'grapes', x: -12, z: 170, s: 2 },
         { kind: 'wallback', z: 188 }, { kind: 'wallside', x: -15 }, { kind: 'wallside', x: 15 },
       ],
+      scatter: { count: 40, kinds: ['bottle', 'can', 'lemon', 'cupcake', 'crumbs', 'puddle', 'mug', 'yogurt', 'apple', 'cheese'] },
       creatures: [
         ['beurre', 7, 36, { patrol: [[7, 20], [7, 50]] }],
         ['oeuf', -9, 65, { idx: 0 }], ['oeuf', -7.5, 65, { idx: 1 }], ['oeuf', -6, 65, { idx: 2 }], ['oeuf', -9, 67, { idx: 3 }], ['oeuf', -7.5, 67, { idx: 4 }], ['oeuf', -6, 67, { idx: 5 }],
@@ -155,14 +164,18 @@ window.FS.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée 
     {
       id: 'grotte', name: 'La Grotte d\'Aluminium', sub: 'Restes emballés et plat de lasagnes', unlock: 30000,
       desc: 'Un tunnel de papier d\'aluminium froissé, sombre et brillant. Le Yéti-Roquefort y ronfle, des spaghetti flottent dans l\'air.',
-      palette: { floor: '#8f979c', floor2: '#7c858a', wall: '#aab3b8', fog: '#5f6a70', fogD: 42, sky: '#4c565c', light: '#c9d6dc', dark: true },
+      palette: { floor: '#8f979c', floor2: '#7c858a', wall: '#aab3b8', fog: '#5f6a70', fogD: 42, sky: '#4c565c', light: '#c9d6dc', dark: true, lightLevel: 0.8 },
       rail: [[0, -8], [0, 12], [-3, 30], [2, 48], [6, 66], [0, 84], [-5, 102], [-2, 122], [2, 142], [0, 160], [0, 180]],
       props: [
         { kind: 'foil', x: -10, z: 20, s: 5 }, { kind: 'foil', x: 11, z: 28, s: 4 }, { kind: 'lasagna', x: 9, z: 50, s: 4 }, { kind: 'foil', x: -12, z: 58, s: 6 },
         { kind: 'cave', x: -9, z: 70, s: 6 }, { kind: 'foil', x: 12, z: 86, s: 4.5 }, { kind: 'bread', x: -9, z: 112, s: 3 }, { kind: 'foil', x: 11, z: 118, s: 5 },
         { kind: 'yogurt', x: 10, z: 138, s: 2 }, { kind: 'foil', x: -11, z: 150, s: 5 },
+        { kind: 'pizzabox', x: -13, z: 40, s: 4 }, { kind: 'can', x: 13, z: 72, s: 2.4, color: '#5d4037' }, { kind: 'tupperware', x: 13, z: 96, s: 3, color: '#90a4ae' }, { kind: 'brokenjar', x: -13, z: 130, s: 2.4, color: '#8e3b46' },
+        { kind: 'cheese', x: 12, z: 160, s: 2.4 }, { kind: 'mug', x: -12, z: 170, s: 2.2 }, { kind: 'puddle', x: 6, z: 56, s: 3, color: 'rgba(120,20,20,0.35)' }, { kind: 'crumbs', x: -5, z: 120, s: 3.5 },
+        { kind: 'cobweb', x: -16, z: 30, s: 4, hang: true }, { kind: 'cobweb', x: 16, z: 140, s: 3.5, hang: true, flip: true }, { kind: 'bulb', x: 2, z: 90, s: 3, hang: true },
         { kind: 'wallback', z: 192 }, { kind: 'wallside', x: -16 }, { kind: 'wallside', x: 16 },
       ],
+      scatter: { count: 40, kinds: ['foil', 'can', 'crumbs', 'puddle', 'spoon', 'onion', 'bottle', 'mug', 'brokenjar'] },
       creatures: [
         ['meduse', 7, 40, { y: 2.2, patrol: [[7, 34], [4, 48]] }], ['meduse', -6, 96, { y: 2.6, patrol: [[-6, 90], [-8, 104]] }],
         ['yeti', -8, 70, { facing: 1.2 }],
@@ -173,15 +186,21 @@ window.FS.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée 
     {
       id: 'congelo', name: 'Le Fond du Congélateur', sub: 'Banquise, petits pois et glaçons', unlock: 55000,
       desc: 'Brume glacée et givre partout. Des pingouins-petits-pois, des girafes de céleri, un pot de crème glacée qui gronde, et quelque chose sous la banquise.',
-      palette: { floor: '#dff2fb', floor2: '#cbe6f4', wall: '#e9f6fc', fog: '#d3e9f4', fogD: 38, sky: '#eaf6fb', light: '#ffffff', ice: true },
+      palette: { floor: '#dff2fb', floor2: '#cbe6f4', wall: '#e9f6fc', fog: '#d3e9f4', fogD: 50, sky: '#eaf6fb', light: '#ffffff', ice: true, lightLevel: 0.6, flicker: true, broken: true },
       rail: [[0, -8], [0, 12], [3, 32], [-2, 52], [-6, 72], [-2, 92], [4, 112], [0, 132], [0, 152], [0, 172]],
       props: [
         { kind: 'icecube', x: -9, z: 18, s: 2.2 }, { kind: 'icecube', x: 11, z: 24, s: 1.8 }, { kind: 'peabag', x: 12, z: 84, s: 4 },
         { kind: 'icewall', x: -11, z: 74, s: 7 }, // le Léviathan dort dessous
         { kind: 'icecube', x: 11, z: 70, s: 2.5 }, { kind: 'icecube', x: 10, z: 104, s: 2 }, { kind: 'icecube', x: 12, z: 108, s: 1.6 }, { kind: 'icecube', x: 9, z: 112, s: 2.2 },
         { kind: 'tub', x: -9, z: 130, s: 3 }, { kind: 'icecube', x: 8, z: 148, s: 2 }, { kind: 'peabag', x: -10, z: 152, s: 3.5 },
+        { kind: 'brokenjar', x: -12, z: 30, s: 2.6, color: '#1565c0' }, { kind: 'shelfpiece', x: 12, z: 36, s: 5 }, { kind: 'shards', x: 10, z: 40, s: 3 }, { kind: 'bulb', x: -3, z: 50, s: 3.5, hang: true, broken: true },
+        { kind: 'icicle', x: 6, z: 20, s: 2.5, hang: true }, { kind: 'icicle', x: -8, z: 64, s: 3, hang: true }, { kind: 'icicle', x: 9, z: 96, s: 2.2, hang: true }, { kind: 'icicle', x: -5, z: 124, s: 3.2, hang: true }, { kind: 'icicle', x: 12, z: 150, s: 2.6, hang: true },
+        { kind: 'tupperware', x: 13, z: 128, s: 3, color: '#b0bec5', rot: 0.5 }, { kind: 'pizzabox', x: -13, z: 100, s: 4, rot: -0.3 }, { kind: 'brokenjar', x: 12, z: 166, s: 2.4, color: '#7cb342' },
+        { kind: 'frost', x: -4, z: 40, s: 4 }, { kind: 'frost', x: 8, z: 90, s: 5 }, { kind: 'frost', x: -9, z: 140, s: 4.5 }, { kind: 'shards', x: -11, z: 112, s: 2.5 }, { kind: 'cobweb', x: 16, z: 60, s: 4, hang: true, flip: true }, { kind: 'cobweb', x: -16, z: 160, s: 4, hang: true },
         { kind: 'wallback', z: 184 }, { kind: 'wallside', x: -16 }, { kind: 'wallside', x: 16 },
       ],
+      scatter: { count: 44, kinds: ['icecube', 'shards', 'frost', 'can', 'brokenjar', 'yogurt', 'crumbs', 'spoon', 'bottle'] },
+      cracks: 14,
       creatures: [
         ['pois', 7, 80], ['pois', 8.5, 82], ['pois', 6, 84], ['pois', 9, 86], ['pois', 7.5, 88], ['pois', 5.5, 81],
         ['leviathan', -9, 74, { facing: 1.3 }],

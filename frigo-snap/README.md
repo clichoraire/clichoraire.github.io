@@ -11,7 +11,9 @@ Ouvrir `index.html` dans un navigateur suffit. Pour un serveur local : `python3 
 
 ## Règles
 
-- **Virée** : le chariot avance tout seul (~110 s). Souris pour tourner la tête, clic gauche / Espace pour la photo
+- **Virée** : le chariot avance tout seul (~110 s). On est minuscule : le décor (bocaux, canettes, brocolis…) est à l'échelle
+  d'un dinosaure, et les derniers tableaux sont sombres, fissurés, avec une ampoule qui clignote. Souris (capturée au clic)
+  pour tourner la tête librement à 360°, clic gauche / Espace pour la photo
   (60 clichés), clic droit / E pour l'outil visé, 1-4 ou molette pour changer d'outil, Échap pour la pause.
 - **Outils** (débloqués avec les points cumulés) : Croûton à l'ail (appât, 0), Goutte de Tabasco (agitateur, 5 000),
   Clic du briquet piézo (bruit, 20 000), Flash stroboscopique (révélateur, 42 000), Pédale d'accélérateur (70 000).
@@ -37,6 +39,7 @@ Léviathan surgit), Sorbet-Volcan (Tabasco puis clic → fontaine de cerises).
 ## Fichiers
 
 `js/config.js` (constantes, espèces, niveaux, répliques), `js/game.js` (rail, caméra, outils, clichés, barème),
-`js/creatures.js` (comportements), `js/sprites.js` (dessin des créatures), `js/render.js` (décor, viseur, Fernand),
+`js/creatures.js` (comportements), `js/sprites.js` (dessin des créatures), `js/props.js` (décor : boîtes en vraie 3D et
+objets ronds à dégradés), `js/render.js` (scène, viseur, Fernand),
 `js/audio.js`, `js/main.js` (écrans et sauvegarde `localStorage` clé `frigosnap.save`).
 `tools/headless.js --all` : photographe automatique qui vérifie que chaque secret est atteignable et calibre les points.

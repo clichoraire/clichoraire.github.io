@@ -37,8 +37,10 @@
       while (hi - lo > 1) { const m = (lo + hi) >> 1; if (s[m].d <= d) lo = m; else hi = m; }
       const a = s[lo], b = s[Math.min(hi, s.length - 1)], seg = Math.max(1e-6, b.d - a.d), t = clamp((d - a.d) / seg, 0, 1);
       const x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t);
-      const b2 = s[Math.min(lo + 6, s.length - 1)], a2 = s[Math.max(lo - 6, 0)];
-      return { x, z, yaw: Math.atan2(b2.x - a2.x, b2.z - a2.z) };
+      // cap interpolé entre deux échantillons (sans cela la caméra saute à chaque échantillon)
+      const yawAt = i => { const p = s[Math.max(i - 6, 0)], q = s[Math.min(i + 6, s.length - 1)]; return Math.atan2(q.x - p.x, q.z - p.z); };
+      const y0 = yawAt(lo), y1 = yawAt(Math.min(hi, s.length - 1)); let dy = y1 - y0; while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
+      return { x, z, yaw: y0 + dy * t };
     }
   }
   FS.Rail = Rail;
@@ -79,6 +81,7 @@
       this.creatures = []; this.projectiles = []; this.baits = []; this.events = []; this.photos = []; this.film = FS.FILM;
       this.cooldowns = {}; this.tool = 'crouton'; this.specials = 0; this.fx = [];
       for (const c of this.level.creatures) { const cr = new Creature(c[0], c[1], c[2], c[3] || {}, this); this.creatures.push(cr); (FS.Behaviours[c[0]] || FS.Behaviours.default).init(cr, this); }
+      this.props = this.level.props.concat(FS.scatterProps(this.level, this.rail));
       this.updateCamera();
     }
     emit(e) { this.events.push(e); }
@@ -89,7 +92,7 @@
 
     updateCamera() {
       const p = this.rail.at(this.dist);
-      this.baseYaw = p.yaw; this.cam.x = p.x; this.cam.z = p.z; this.cam.y = FS.CAM_H + Math.sin(this.time * 7) * 0.015;
+      this.baseYaw = p.yaw; this.cam.x = p.x; this.cam.z = p.z; this.cam.y = FS.CAM_H;
       this.cam.yaw = this.baseYaw + this.look.yaw; this.cam.pitch = this.look.pitch;
     }
     // Direction visée (centre de l'écran) et point d'impact : première créature touchée, sinon le sol, sinon 24 unités devant
@@ -134,8 +137,8 @@
       this.dist += sp * dt;
       if (this.dist >= this.rail.length - 0.01) { this.dist = this.rail.length; this.phase = 'over'; this.emit({ type: 'end' }); }
       // tête : lissage vers la cible
-      this.look.yaw += (clamp(this.lookTarget.yaw, -FS.MAX_YAW, FS.MAX_YAW) - this.look.yaw) * Math.min(1, dt * 9);
-      this.look.pitch += (clamp(this.lookTarget.pitch, -FS.MAX_PITCH, FS.MAX_PITCH) - this.look.pitch) * Math.min(1, dt * 9);
+      this.look.yaw += (this.lookTarget.yaw - this.look.yaw) * Math.min(1, dt * 12); // rotation libre (360°)
+      this.look.pitch += (clamp(this.lookTarget.pitch, -FS.MAX_PITCH, FS.MAX_PITCH) - this.look.pitch) * Math.min(1, dt * 12);
       this.updateCamera();
       // projectiles
       for (const p of this.projectiles) {
@@ -198,6 +201,31 @@
     }
   }
   FS.Run = Run;
+
+  // Décor dispersé : petits objets placés au hasard (graine fixe par niveau), loin du rail, des créatures et des autres objets
+  FS.scatterProps = function (level, rail) {
+    const sc = level.scatter; if (!sc) return [];
+    const rng = FS.rng(sc.seed || 1234 + level.rail.length); const out = [];
+    const sides = level.props.filter(p => p.kind === 'wallside'), back = level.props.find(p => p.kind === 'wallback');
+    const xl = (sides.length ? Math.min(...sides.map(p => p.x)) : -16) + 1.5, xr = (sides.length ? Math.max(...sides.map(p => p.x)) : 16) - 1.5, zb = (back ? back.z : 180) - 2;
+    const taken = level.props.filter(p => !p.kind.startsWith('wall')).map(p => [p.x, p.z, 4.5]).concat(level.creatures.map(c => [c[1], c[2], 3]));
+    const FLAT = ['crumbs', 'puddle', 'frost'];
+    for (let tries = 0; tries < sc.count * 30 && out.length < sc.count; tries++) {
+      const x = xl + rng() * (xr - xl), z = 2 + rng() * (zb - 2), kind = rng.pick(sc.kinds), flat = FLAT.includes(kind);
+      let ok = true;
+      for (const s of rail.samples) if (Math.hypot(s.x - x, s.z - z) < (flat ? 1.2 : 5.5)) { ok = false; break; }
+      if (ok) for (const t of taken) if (Math.hypot(t[0] - x, t[1] - z) < (flat ? 1.5 : t[2])) { ok = false; break; }
+      if (!ok) continue;
+      const p = { kind, x, z, s: 0.9 + rng() * 1.1, rot: (rng() - 0.5) * 0.3, scattered: true };
+      if (kind === 'can') p.color = rng.pick(['#d32f2f', '#1565c0', '#43a047', '#ff8f00', '#6a1b9a']);
+      if (kind === 'bottle') p.color = rng.pick(['#2e7d32', '#6d4c41', '#b71c1c', '#37474f']);
+      if (kind === 'brokenjar') p.color = rng.pick(['#8e3b46', '#f9a825', '#7cb342', '#1565c0']);
+      if (kind === 'puddle') p.color = rng.pick(['rgba(255,120,80,0.3)', 'rgba(255,214,0,0.3)', 'rgba(120,160,255,0.25)', 'rgba(120,20,20,0.3)']);
+      if (flat) p.s *= 1.6;
+      out.push(p); taken.push([x, z, flat ? 1.5 : 4.5]);
+    }
+    return out;
+  };
 
   // ------------------------------------------------------------------ barème du Chef Fernand
   FS.scorePhoto = function (photo) {

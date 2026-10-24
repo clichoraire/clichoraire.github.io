@@ -123,6 +123,7 @@
       ZC.Audio.setEnabled(!!this.settings.sound);
       ZC.Music.setEnabled(this.settings.music !== false);
       ZC.Music.start();
+      ZC.Audio.play('load', 0);
       this.game = new ZC.Game(this.gs);
       this.renderer = new ZC.Renderer(this.canvas, this.game);
       this.ui.showHud(true); // avant resize : le canvas doit laisser la place à la console

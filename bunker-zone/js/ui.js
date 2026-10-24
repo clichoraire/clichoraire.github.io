@@ -588,7 +588,7 @@
           <div class="adv-top">
             <div class="adv-title" id="adv-title">AVENTURE</div>
             <div class="adv-points">★ <b id="adv-points">0</b> points <span class="adv-stats" id="adv-stats"></span></div>
-            <div class="adv-btns"><button id="btn-shop">Boutique</button><button id="btn-heroes">Héros</button><button id="btn-adv-back">Retour</button></div>
+            <div class="adv-btns"><button id="btn-shop">Boutique</button><button id="btn-heroes">Héros</button><button id="btn-adv-reset" class="danger" title="Efface toute la progression de l'aventure : missions, points, boutique, héros">Effacer la partie</button><button id="btn-adv-back">Retour</button></div>
           </div>
           <div class="adv-worlds" id="adv-worlds"></div>
           <div class="adv-desc" id="adv-desc"></div>
@@ -671,6 +671,11 @@
       q('#btn-shop').addEventListener('click', () => this.showShop());
       q('#btn-shop-back').addEventListener('click', () => this.showCampaign());
       q('#btn-heroes').addEventListener('click', () => this.showHeroes());
+      q('#btn-adv-reset').addEventListener('click', () => {
+        const c = this.app.campaign, n = Object.keys(c.data.missions || {}).filter(id => Object.values(c.data.missions[id] || {}).some(Boolean)).length;
+        if (!confirm('Effacer votre partie d\'aventure ?\n\n' + (n ? n + ' mission' + (n > 1 ? 's' : '') + ' réussie' + (n > 1 ? 's' : '') + ', ' : '') + c.data.points + ' points, améliorations de la boutique et niveaux des héros : tout repart à zéro.\n\nCette action est définitive.')) { ZC.Audio.play('error', 0); return; }
+        c.reset(); ZC.Audio.play('lost', 0); this.showCampaign();
+      });
       q('#btn-heroes-back').addEventListener('click', () => this.showCampaign());
       q('#btn-mission-back').addEventListener('click', () => this.showCampaign());
       q('#dlg-next').addEventListener('click', () => this.dialogNext());
@@ -687,6 +692,30 @@
       q('#btn-observe').addEventListener('click', () => this.app.resume());
       q('#btn-replay').addEventListener('click', () => this.app.restart());
       q('#btn-menu').addEventListener('click', () => this.app.quitToMenu());
+      this.bindMenuSounds();
+    }
+
+    // Sons de l'interface des menus : tic au survol, clic sur les boutons et cartes (sauf si l'action vient déjà
+    // de jouer un son : navigation, refus, achat...). Délégué au conteneur : les listes régénérées en profitent.
+    bindMenuSounds() {
+      const SEL = 'button, .mcard, .card, .hero, .world, .sw-lbl';
+      const A = ZC.Audio;
+      let hovered = null;
+      this.menus.addEventListener('mouseover', (e) => {
+        const el = e.target.closest(SEL);
+        if (!el || el === hovered) { if (!el) hovered = null; return; }
+        hovered = el;
+        if (el.disabled || el.classList.contains('locked')) return;
+        A.play('tick', 70);
+      });
+      this.menus.addEventListener('mouseleave', () => { hovered = null; });
+      this.menus.addEventListener('click', (e) => {
+        const el = e.target.closest(SEL);
+        if (!el || el.disabled) return;
+        A.init();
+        if (A.recent(['nav', 'error', 'load', 'upgrade', 'select', 'click'], 80)) return;
+        A.play('click', 0);
+      });
     }
 
     hideMenus() { for (const k in this.m) this.m[k].classList.add('hidden'); }
@@ -696,7 +725,7 @@
     }
 
     showStart(s) {
-      this.hideMenus();
+      this.hideMenus(); ZC.Audio.play('nav', 0);
       const colorSw = ZC.PLAYER_COLORS.map((c, i) => '<label class="sw-lbl" title="' + c.name + '"><input type="radio" name="playerColor" value="' + i + '"' + (i === s.playerColor ? ' checked' : '') + '><span class="sw" style="background:' + c.hex + '"></span></label>').join('');
       this.menus.querySelector('#start-form').innerHTML = `
         <label>Mode de jeu<select name="mode">${opt(['classic', 'evolution', 'rounds'], ['Classique (marines)', 'Évolution (l\'unité change)', 'Tournoi (premier à N rounds)'], s.mode)}</select></label>
@@ -744,16 +773,16 @@
       };
     }
 
-    showPause() { this.hideMenus(); this.updateSoundButton(); this.m.pause.classList.remove('hidden'); }
+    showPause() { this.hideMenus(); ZC.Audio.play('nav', 0); this.updateSoundButton(); this.m.pause.classList.remove('hidden'); }
 
     // ------------------------------------------------------------ Mode aventure
     showPlay() {
-      this.hideMenus(); this.m.play.classList.remove('hidden');
+      this.hideMenus(); ZC.Audio.play('nav', 0); this.m.play.classList.remove('hidden');
       this.m.play.querySelectorAll('canvas[data-art]').forEach(cv => ZC.drawCardArt(cv, cv.dataset.art)); // illustrations des cartes (sprites du jeu)
     }
 
     showCampaign(worldId) {
-      this.hideMenus();
+      this.hideMenus(); ZC.Audio.play('nav', 0);
       const c = this.app.campaign, q = (s) => this.menus.querySelector(s);
       if (worldId) c.selectWorld(worldId);
       if (!c.worldUnlocked(c.data.world)) c.selectWorld('w1');
@@ -866,6 +895,7 @@
     }
 
     showMission(id) {
+      ZC.Audio.play('nav', 0);
       this.hideMenus();
       const c = this.app.campaign, m = c.mission(id), q = (s) => this.menus.querySelector(s);
       this.mis = { id, diff: c.done(id, 'easy') ? (c.done(id, 'medium') ? 'hard' : 'medium') : 'easy', lines: c.dialogue(id), i: 0 };
@@ -922,6 +952,7 @@
       root.querySelectorAll('canvas.hp-cv').forEach(cv => { const ch = ZC.CHARACTERS[cv.dataset.p]; ZC.drawCharPortrait(cv.getContext('2d'), ch.portrait, cv.width, ch.tint); });
     }
     showShop() {
+      ZC.Audio.play('nav', 0);
       this.hideMenus();
       const c = this.app.campaign, q = (s) => this.menus.querySelector(s);
       q('#shop-points').textContent = String(c.points);
@@ -935,6 +966,7 @@
       this.m.shop.classList.remove('hidden');
     }
     showHeroes() {
+      ZC.Audio.play('nav', 0);
       this.hideMenus();
       const c = this.app.campaign, q = (s) => this.menus.querySelector(s);
       q('#hero-list').innerHTML = this.heroCards(true);

@@ -34,7 +34,7 @@
     $('btn-reset').onclick = () => { if (confirm('Effacer toute la progression (points, Guide, outils débloqués) ?')) { save = Object.assign({}, DEFAULT_SAVE); store(); refreshMenu(); toast('Sauvegarde effacée'); } };
     $('howto-grid').innerHTML = `
       <div><h3>Le but</h3><p>Ton demi-avocat à roulettes suit les rails tout seul. Toi, tu <b>photographies</b> les créatures du frigo : ${FS.FILM} clichés par virée. À la fin, le Chef Fernand juge <b>un seul cliché par espèce</b> et te donne des points.</p>
-      <h3>Commandes</h3><ul><li><b>Souris</b> : tourner la tête (le réticule reste au centre). <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> marchent aussi.</li><li><b>Clic gauche</b> ou <kbd>Espace</kbd> : prendre la photo.</li><li><b>Clic droit</b> ou <kbd>E</kbd> : utiliser l'outil choisi, là où tu vises.</li><li><kbd>1</kbd> à <kbd>4</kbd> ou la <b>molette</b> : changer d'outil · <kbd>Maj</kbd> : pédale (quand elle est débloquée) · <kbd>Échap</kbd> : pause.</li></ul></div>
+      <h3>Commandes</h3><ul><li><b>Souris</b> : tourner la tête librement, à 360° (clique dans l'image pour capturer la souris, <kbd>Échap</kbd> la libère et met en pause). <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> marchent aussi.</li><li><b>Clic gauche</b> ou <kbd>Espace</kbd> : prendre la photo.</li><li><b>Clic droit</b> ou <kbd>E</kbd> : utiliser l'outil choisi, là où tu vises.</li><li><kbd>1</kbd> à <kbd>4</kbd> ou la <b>molette</b> : changer d'outil · <kbd>Maj</kbd> : pédale (quand elle est débloquée) · <kbd>Échap</kbd> : pause.</li></ul></div>
       <div><h3>Le barème de Fernand</h3><ul><li><b>Cadrage et taille</b> (0 à 1 000) : la créature au centre, ni minuscule ni coupée par le bord.</li><li><b>Pose et dynamisme</b> (200 à 1 500) : endormie ou immobile, c'est fade ; en mouvement, au repas ou en pleine réaction, ça croustille.</li><li><b>Angle</b> (100 à 1 000) : de face ou de trois-quarts. « Tu me montres le mauvais côté du gigot ! »</li><li><b>Garniture</b> (+200 par autre créature dans le champ, max +800).</li><li><b>Comportement secret</b> : 2 500 points fixes à la place de la pose, pour une réaction en chaîne réussie.</li></ul>
       <p>Chaque cliché reçoit un sceau au beurre : ${FS.STAMPS.map(s => '<b>' + s.name + '</b>').join(', ')}.</p></div>
       <div><h3>Les outils</h3><ul>${FS.TOOLS.map(t => `<li><b>${t.name}</b>${t.unlock ? ` <small>(${FS.fmt(t.unlock)} pts)</small>` : ''} : ${t.desc}</li>`).join('')}</ul>
@@ -80,24 +80,25 @@
   // ------------------------------------------------------------------ la virée
   let run = null, ui = null, raf = 0, last = 0, acc = 0, paused = false;
   const canvas = $('game'), gctx = canvas.getContext('2d');
-  const mouse = { x: 0.5, y: 0.5, inside: false }, keys = {};
+  const mouse = { x: 0.5, y: 0.5, inside: false, locked: false }, keys = {};
   let wantPhoto = false, wantTool = false;
   function startRun(level) {
     show('run'); A.unlock();
     run = new FS.Run({ level, tools: unlockedTools(save.total), seed: (Date.now() % 100000) + 1 });
     run.tool = 'crouton'; ui = { lastPhoto: null, lastPhotoT: 0, endT: 0 }; paused = false; $('pause').classList.add('hidden');
     last = performance.now(); acc = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+    lockMouse();
   }
+  function lockMouse() { try { if (canvas.requestPointerLock && document.pointerLockElement !== canvas) canvas.requestPointerLock(); } catch (e) { /* pas de capture possible : la souris tourne la vue tant qu'elle survole l'image */ } }
+  document.addEventListener('pointerlockchange', () => { mouse.locked = document.pointerLockElement === canvas; if (!mouse.locked && run && current === 'run' && !paused && run.phase === 'ride') pause(true); });
   function loop(now) {
     if (current !== 'run') return;
     raf = requestAnimationFrame(loop);
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (!paused) {
-      // visée : position de la souris → angle de la tête
-      const mx = (mouse.x - 0.5) * 2, my = (mouse.y - 0.5) * 2;
-      let yaw = mx * FS.MAX_YAW * 1.1, pitch = -my * FS.MAX_PITCH * 1.1 * (save.invert ? -1 : 1);
-      if (keys.ArrowLeft) yaw -= FS.MAX_YAW; if (keys.ArrowRight) yaw += FS.MAX_YAW; if (keys.ArrowUp) pitch += FS.MAX_PITCH; if (keys.ArrowDown) pitch -= FS.MAX_PITCH;
-      run.lookTarget.yaw = yaw; run.lookTarget.pitch = pitch; run.dash = !!keys.Shift;
+      // visée : les mouvements de la souris (capturée au clic) tournent la tête librement, les flèches aussi
+      const turn = 1.6 * dt; if (keys.ArrowLeft) run.lookTarget.yaw -= turn; if (keys.ArrowRight) run.lookTarget.yaw += turn; if (keys.ArrowUp) run.lookTarget.pitch += turn; if (keys.ArrowDown) run.lookTarget.pitch -= turn;
+      run.lookTarget.pitch = FS.clamp(run.lookTarget.pitch, -FS.MAX_PITCH, FS.MAX_PITCH); run.dash = !!keys.Shift;
       acc += dt; let n = 0; while (acc >= FS.STEP && n < 8) { run.update(FS.STEP); acc -= FS.STEP; n++; }
       if (wantTool) { wantTool = false; if (!run.useTool(run.tool)) A.sfx('empty'); }
       ui.lastPhotoT -= dt;
@@ -105,6 +106,7 @@
     }
     R.frame(gctx, run, run.time);
     if (wantPhoto) { wantPhoto = false; takePhoto(); }
+    ui.unlocked = !mouse.locked && !!canvas.requestPointerLock;
     R.hud(gctx, run, ui);
     if (run.phase === 'over') { ui.endT += dt; gctx.fillStyle = `rgba(0,0,0,${Math.min(0.7, ui.endT * 0.5)})`; gctx.fillRect(0, 0, FS.W, FS.H); gctx.fillStyle = '#fff'; gctx.font = 'bold 48px Trebuchet MS, sans-serif'; gctx.textAlign = 'center'; gctx.fillText('Fin de la virée !', FS.W / 2, FS.H / 2); gctx.textAlign = 'left'; if (ui.endT > 2) { cancelAnimationFrame(raf); openResults(); } }
   }
@@ -128,13 +130,13 @@
       else if (e.type === 'end') A.sfx('end');
     }
   }
-  function pause(v) { paused = v; $('pause').classList.toggle('hidden', !v); if (!v) last = performance.now(); }
+  function pause(v) { paused = v; $('pause').classList.toggle('hidden', !v); if (!v) { last = performance.now(); lockMouse(); } else if (document.pointerLockElement === canvas) document.exitPointerLock(); }
   $('btn-resume').onclick = () => { A.sfx('click'); pause(false); };
   $('btn-quit').onclick = () => { A.sfx('click'); cancelAnimationFrame(raf); run = null; show('levels'); openLevels(); };
 
   // ---- entrées
-  canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); mouse.x = FS.clamp((e.clientX - r.left) / r.width, 0, 1); mouse.y = FS.clamp((e.clientY - r.top) / r.height, 0, 1); });
-  canvas.addEventListener('mousedown', e => { if (!run || paused) return; if (e.button === 0) wantPhoto = true; else if (e.button === 2) wantTool = true; e.preventDefault(); });
+  canvas.addEventListener('mousemove', e => { if (!run || paused || current !== 'run') return; const k = FS.MOUSE_SENS; run.lookTarget.yaw += (e.movementX || 0) * k; run.lookTarget.pitch -= (e.movementY || 0) * k * (save.invert ? -1 : 1); });
+  canvas.addEventListener('mousedown', e => { if (!run || paused) return; e.preventDefault(); if (!mouse.locked && canvas.requestPointerLock) { lockMouse(); return; } if (e.button === 0) wantPhoto = true; else if (e.button === 2) wantTool = true; });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('wheel', e => { if (!run) return; e.preventDefault(); const list = FS.TOOLS.filter(t => t.id !== 'dash' && run.hasTool(t.id)); let i = list.findIndex(t => t.id === run.tool); i = (i + (e.deltaY > 0 ? 1 : -1) + list.length) % list.length; run.tool = list[i].id; A.sfx('tick'); }, { passive: false });
   window.addEventListener('keydown', e => {

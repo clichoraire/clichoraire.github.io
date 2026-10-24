@@ -87,6 +87,12 @@ juste dessous, un second clic ou « Jouer la mission » lance le briefing.
   deux zones d'avance, 2v2 avec un allié, bande 3x9, course aux secteurs (le premier à 12 zones gagne, vous
   ou un ennemi), mode évolution, rush à vagues rapides, tournoi, siège de 8 minutes, prise en tenaille sur 7x3,
   3v3, conquête totale (éliminer les ennemis et occuper les 25 zones), forteresse finale 9x9.
+- **Départ de mission** : 3 travailleurs et aucun soldat (l'armée vient des vagues de vos bunkers), sauf
+  quand le scénario en fournit : les deux missions de survie sans minerai (Tenir la ligne, Siège) partent avec
+  8 soldats et le Rush avec 4. Les Renforts de la boutique s'ajoutent toujours (+2 par niveau).
+  Dans les missions, les IA n'ont pas de héros : le vôtre est le seul sur la carte.
+- **Effacer la partie** (bouton rouge de l'écran d'aventure) : après confirmation, remet toute la progression
+  à zéro (missions, points, boutique, niveaux et choix du héros). Définitif.
 - **Trois difficultés par mission** (Facile, Moyen, Difficile : IA agressives et une IA ennemie de
   plus). Chaque difficulté réussie rapporte ses propres points, une seule fois : refaire une mission
   dans une difficulté plus élevée est conseillé. Les points augmentent avec la mission et le monde.
@@ -128,6 +134,7 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 | Carte de commandes | icônes dessinées ; pastilles de niveau sur chaque amélioration (vert acquis, jaune en file, « MAX ») ; le bouton s'enfonce quand l'ordre passe et tremble en rouge s'il est refusé |
 | Travailleurs | clic droit sur un gisement vert : récolter (G) ; clic droit sur un bunker allié abîmé : réparer (R) ; B : construire un extracteur sur un gisement ; les travailleurs ne font pas partie de « toute l'armée » (Z) |
 | Vitesse de lecture x1, x2, x3, x5 | boutons dans la barre du haut, ou + / − (la vitesse revient à x1 à chaque nouvelle partie) |
+| Sons d'interface | échantillons wav de `assets/` : tic au survol des boutons, clic, « whoosh » de changement d'écran, chargement au lancement d'une partie ; refus (buzz court), bunker perdu (négatif long) et alerte « on vous attaque » (écho) ; coupés avec le réglage Son, repli sur des sons synthétisés si les fichiers ne sont pas chargés |
 | Musique | 3 pistes de `assets/` jouées en boucle (ordre mélangé) pendant les parties, atténuées en pause ; réglable dans Options et le menu pause |
 | Mode admin (option du menu, triche) | dropships et améliorations gratuits et instantanés ; Alt+M +1000 minerais ; Alt+H soigner toutes vos unités et structures ; Alt+U toutes les améliorations au maximum sur le bunker sélectionné (ou tous) ; Alt+S vague immédiate ; Alt+K détruire les unités sélectionnées, même ennemies |
 
