@@ -537,7 +537,6 @@
       const isHQ = silent === 'hq' || (!p.hq && p.bunkers === 0);
       const b = this.spawnUnit(owner, isHQ ? 'hq' : 'bunker', zone.cx, zone.cy);
       b.zone = zone;
-      if (dropship) { b.building = true; b.buildT = 0; b.buildTotal = this.settings.landingTime; b.hp = b.maxHp * 0.1; } // chantier : 10 % des PV, le reste vient avec l'avancement
       zone.bunker = b;
       const prev = zone.owner;
       zone.owner = owner;

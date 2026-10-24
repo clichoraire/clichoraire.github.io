@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '2.2';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '2.3';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -171,7 +171,7 @@ window.ZC.VERSION = '2.2';   // à augmenter à chaque mise en ligne (affichée 
     zoneTiles: 12,        // taille d'une zone en cases
     spawnInterval: 8,     // secondes entre deux vagues
     roundDuration: 100,   // secondes par round (mode évolution)
-    landingTime: 6.0,     // secondes pour qu'un dropship construise un bunker (prise d'une zone)
+    landingTime: 5.0,     // secondes d'atterrissage du dropship avant que le bunker apparaisse (interrompu si un ennemi est dans la zone)
     dropshipCost: 150,    // coût de base d'un dropship
     dropshipCostPerBunker: 30, // surcoût par bunker possédé
     dropshipBuildTime: 12,     // secondes de construction du premier dropship

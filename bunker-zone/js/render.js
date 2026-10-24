@@ -293,10 +293,11 @@
         ctx.beginPath(); ctx.ellipse(u.rx + 12, u.ry + 18, u.radius * 1.3, u.radius * 0.7, 0, 0, TAU); ctx.fill();
         const bob = -14 + Math.sin(t * 2 + u.id) * 2;
         this.drawUnit(ctx, u, t, bob);
-        if (u.order.type === 'build' && u.landT > 0) {
+        if (u.order.type === 'build' && (u.landT > 0 || u.landBlocked)) { // anneau d'atterrissage ; rouge et clignotant si un ennemi bloque
           const frac = u.landT / g.settings.landingTime;
-          ctx.beginPath(); ctx.arc(u.rx, u.ry, 30, -Math.PI / 2, -Math.PI / 2 + TAU * frac);
-          ctx.strokeStyle = g.players[u.owner].hex; ctx.lineWidth = 4; ctx.stroke();
+          ctx.beginPath(); ctx.arc(u.rx, u.ry, 30, 0, TAU); ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 4; ctx.stroke();
+          if (frac > 0) { ctx.beginPath(); ctx.arc(u.rx, u.ry, 30, -Math.PI / 2, -Math.PI / 2 + TAU * frac); ctx.strokeStyle = u.landBlocked ? (Math.sin(t * 10) > 0 ? '#ff4040' : '#802020') : g.players[u.owner].hex; ctx.lineWidth = 4; ctx.stroke(); }
+          if (u.landBlocked && Math.sin(t * 10) > 0) { ctx.fillStyle = '#ff4040'; ctx.font = 'bold 11px Verdana, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ENNEMI', u.rx, u.ry - 36); }
         }
       }
 

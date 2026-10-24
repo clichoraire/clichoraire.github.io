@@ -38,7 +38,7 @@
       this.attackedT = -100;                // instant (temps de jeu) du dernier coup reçu (alerte minimap des bunkers)
       this.attackAnim = 0;
       this.stimT = 0;
-      this.landT = 0;
+      this.landT = 0; this.landBlocked = false;  // dropship : progression de l'atterrissage, et arrêt (ennemi dans la zone)
       this.buff = null;                     // pouvoir du héros sur soi / ses alliés : { speedMult, cdMult, dmgMult, armor, rangeAdd, immobile, t }
       this.debuff = null;                   // malus infligé par un ennemi : { speedMult, cdMult, dmgMult, t }
       this.stunT = 0;                       // étourdi : ne bouge ni ne tire
@@ -356,8 +356,15 @@
           const claimable = z && z.owner < 0 && !z.bunker;
           if (!claimable) { this.order = { type: 'idle' }; break; }
           const d = ZC.dist(this.x, this.y, o.x, o.y);
-          if (d > 6) this.moveTo(o.x, o.y, dt);
-          else { this.game.buildBunker(z, this.owner, this); return; } // arrivé : le chantier démarre tout de suite (le bunker se construit sur place)
+          if (d > 6) { this.moveTo(o.x, o.y, dt); this.landT = 0; this.landBlocked = false; break; }
+          // Arrivé : le dropship se pose pendant landingTime. L'atterrissage s'arrête tant qu'un ennemi au sol est dans la zone
+          // (la progression est conservée et reprend quand la zone est dégagée).
+          const g = this.game, me = this.owner;
+          const blocked = g.units.some(u => !u.dead && !u.def.air && !u.def.structure && !g.allied(u.owner, me) && g.map.zoneAt(u.x, u.y) === z);
+          if (blocked) { if (!this.landBlocked) { this.landBlocked = true; g.emit('landBlocked', { player: me, unit: this, zone: z }); } break; }
+          this.landBlocked = false;
+          this.landT += dt;
+          if (this.landT >= g.settings.landingTime) { g.buildBunker(z, this.owner, this); return; }
           break;
         }
 

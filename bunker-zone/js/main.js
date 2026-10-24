@@ -62,6 +62,7 @@
         if (s.unitCap === 100) delete s.unitCap;  // ancien défaut (plafond absolu à 100) : on repasse au nouveau défaut, illimité
         if (s.startUnits === 8) delete s.startUnits;      // anciens défauts (8 soldats, 2 travailleurs) : nouveau départ à 0 soldat et 5 travailleurs
         if (s.startWorkers === 2) delete s.startWorkers;
+        if (s.landingTime === 6) delete s.landingTime;        // ancien défaut (6 s) : nouveau défaut 5 s
         if (s.hero && s.hero !== 'random' && s.hero !== 'none' && !ZC.HEROES[s.hero]) delete s.hero;
         return s;
       } catch (e) { return {}; }
@@ -229,9 +230,12 @@
           break;
         case 'capture': {
           const p = g.players[d.player];
-          if (d.player === me) { A.play('build', 0); ui.message(d.byDropship ? (d.hq ? 'Centre de commandement' : 'Bunker') + ' en construction (' + Math.round(g.settings.landingTime) + ' s) : protégez le chantier ! (' + p.zones + ' zones)' : (d.hq ? 'Nouveau centre de commandement établi' : 'Bunker construit') + ' ! (' + p.zones + ' zones)', p.hex); }
+          if (d.player === me) { A.play('build', 0); ui.message((d.hq ? 'Nouveau centre de commandement établi' : 'Bunker construit') + ' ! (' + p.zones + ' zones)', p.hex); }
           break;
         }
+        case 'landBlocked':
+          if (d.player === me) { A.play('error', 0); ui.message('Atterrissage interrompu en zone ' + (d.zone.ix + 1) + '-' + (d.zone.iy + 1) + ' : un ennemi est dans la zone. Dégagez-la, le dropship reprendra.', '#ff5050'); this.lastEvent = { x: d.unit.x, y: d.unit.y }; }
+          break;
         case 'bunkerDone': {
           const z = d.bunker.zone, zn = z ? ' en zone ' + (z.ix + 1) + '-' + (z.iy + 1) : '';
           if (d.player === me && d.bunker.def.addon) { A.play('build', 0); ui.message(d.bunker.def.name + ' terminé : sélectionnez-le pour développer les pouvoirs de ' + ZC.HEROES[g.human.heroId].name + ' (T, Y).', g.players[me].hex); }

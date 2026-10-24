@@ -42,10 +42,11 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
   occupants tirent depuis le bunker avec leur propre arme, à +1 case de portée, et sont protégés.
   **Un bunker vide ne tire pas.** Touche U pour décharger ; si le bunker est détruit, les occupants
   en sortent vivants. Les IA garnissent aussi leurs bunkers.
-- **Prendre une zone libre** : envoyer un dropship au centre de la zone (clic droit). Dès qu'il arrive,
-  la zone est prise et le bunker apparaît en **chantier** : 10 % de ses points de vie, le reste vient en 6 s
-  (temps d'atterrissage). Un chantier ne produit pas, ne tire pas et n'accueille personne ; l'ennemi doit le
-  détruire pour vous arrêter. Le dropship est lent (nettement moins rapide qu'un marine) : escortez-le.
+- **Prendre une zone libre** : envoyer un dropship au centre de la zone (clic droit). Arrivé, il se pose
+  pendant 5 s (anneau de progression ; temps réglable dans Options), puis le bunker apparaît et la zone est
+  prise. **L'atterrissage s'arrête tant qu'un ennemi au sol est dans la zone** (anneau rouge « ENNEMI ») ; la
+  progression est conservée et reprend dès que la zone est dégagée. Le dropship (150 PV) peut être abattu
+  pendant qu'il se pose, et il est lent (nettement moins rapide qu'un marine) : escortez-le.
 - **Prendre une zone ennemie** : détruire son bunker (3000 PV, armure 5 : un marine de base ne fait
   que 1 dégât par tir, d'où l'intérêt des améliorations d'armes) libère la zone, mais ne la donne pas :
   il faut ensuite y poser un dropship comme pour une zone libre.

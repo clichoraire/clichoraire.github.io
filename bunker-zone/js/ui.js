@@ -455,7 +455,7 @@
         else if (u.def.extractor) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s du gisement, directement dans votre banque</div>';
         else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : 'Q centre de commandement · ') + 'W/R/E/X améliorations · Q centre · A annexe (centre) · V évolution · G envoyer les troupes · U décharger la garnison</div>';
         else if (u.def.worker) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Clic droit sur un gisement vert : récolter (G) · clic droit sur un bunker allié abîmé : réparer (R, ' + ZC.REPAIR.costPerSec + ' minerais/s)</div>';
-        else if (u.type === 'dropship') extra = '<div class="line sub">Clic droit sur une zone libre : construire un bunker (' + g.settings.landingTime + ' s)</div>';
+        else if (u.type === 'dropship') extra = '<div class="line sub">Clic droit sur une zone libre : construire un bunker (' + g.settings.landingTime + ' s d\'atterrissage, interrompu si un ennemi est dans la zone)</div>';
         else extra = '<div class="line sub">' + (u.def.level ? 'Niveau ' + u.def.level + ' · ' : '') + 'Dégâts ' + u.damage + (u.def.hits > 1 ? ' x' + u.def.hits : '') + ' (' + u.def.dtype + ') · Armure ' + u.armor + ' · Portée ' + (u.def.range ? (u.range / ZC.TILE) : 'mêlée') + (u.home && u.home.zone ? ' · Bunker ' + (u.home.zone.ix + 1) + '-' + (u.home.zone.iy + 1) : '') + '</div><div class="line sub" id="u-kills"></div>' + (u.canGarrison ? '<div class="line sub">Clic droit sur un bunker allié : entrer en garnison</div>' : '');
         info.innerHTML = `
           <div class="single">
@@ -746,7 +746,7 @@
         <label>Supply par bunker<select name="supplyPerBunker">${opt([10, 15, 20, 30, 50], ['+10', '+15', '+20', '+30', '+50'], s.supplyPerBunker)}</select></label>
         <label>Revenu par bunker / vague<select name="incomePerBunker">${opt([0, 2, 3, 5], ['Aucun (kills seulement)', '2 minerais', '3 minerais', '5 minerais'], s.incomePerBunker)}</select></label>
         <label>Coût d'un dropship<select name="dropshipCost">${opt([100, 150, 250], null, s.dropshipCost)}</select></label>
-        <label>Temps d'atterrissage<select name="landingTime">${opt([3, 6, 10], ['3 s (rapide)', '6 s', '10 s (lent)'], s.landingTime)}</select></label>
+        <label>Temps d'atterrissage<select name="landingTime">${opt([3, 5, 8], ['3 s (rapide)', '5 s', '8 s (lent)'], s.landingTime)}</select></label>
         <label>Durée d'un round (évolution)<select name="roundDuration">${opt([60, 100, 150, 240], ['1:00', '1:40', '2:30', '4:00'], s.roundDuration)}</select></label>
         <label>Gisements de minerai<select name="mineralZones">${opt([0, 0.2, 0.4, 0.7], ['Aucun (zones de départ non plus)', 'Rares', 'Normaux', 'Abondants'], s.mineralZones)}</select></label>
         <label>Travailleurs au départ<select name="startWorkers">${opt([0, 2, 4, 5, 8], ['0', '2', '4', '5', '8'], s.startWorkers)}</select></label>
