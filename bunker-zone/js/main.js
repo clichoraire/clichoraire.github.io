@@ -296,7 +296,7 @@
           if (d.player === me) ui.message('Supply max atteinte (' + d.cap + ') : ' + (!g.settings.unitCap || d.cap < g.settings.unitCap ? 'chaque nouveau bunker ajoute +' + g.settings.supplyPerBunker + '.' : 'limite absolue de la partie.'), '#ffd040');
           break;
         case 'workerCap':
-          if (d.player === me) { A.play('error', 0); ui.message('Maximum de ' + d.cap + ' travailleurs atteint (' + ZC.WORKER.perBunker + ' par bunker' + (d.cap >= ZC.WORKER.max ? ', ' + ZC.WORKER.max + ' au plus' : ', construisez un bunker') + ').', '#ff5050'); }
+          if (d.player === me) { A.play('error', 0); ui.message('Maximum de ' + d.cap + ' travailleurs atteint (' + ZC.WORKER.perBunker + ' par bunker : construisez un bunker).', '#ff5050'); }
           break;
         case 'repairNoMinerals':
           if (d.player === me) { A.play('error', 0); ui.message('Réparation interrompue : plus de minerai (' + ZC.REPAIR.costPerSec + ' minerais/s).', '#ff5050'); }

@@ -343,7 +343,7 @@
         const wn = g.workers(me.id).length, wq = g.workersQueued(me.id), wc = g.workerCap(me.id);
         this.txt(this.el.workers, wn + (wq ? '+' + wq : '') + '/' + wc);
         this.el.workers.parentNode.classList.toggle('maxed', wn + wq >= wc);
-        this.el.workers.parentNode.title = 'Travailleurs : ' + wn + ' sur ' + wc + (wq ? ' (' + wq + ' en production)' : '') + ' — ' + ZC.WORKER.perBunker + ' par bunker, ' + ZC.WORKER.max + ' au plus';
+        this.el.workers.parentNode.title = 'Travailleurs : ' + wn + ' sur ' + wc + (wq ? ' (' + wq + ' en production)' : '') + ' — ' + ZC.WORKER.perBunker + ' par bunker';
         this.el.supply.parentNode.title = 'Supply : ' + Math.round(me.supply) + ' sur ' + cap + ' (' + s.supplyBase + ' + ' + s.supplyPerBunker + ' par bunker' + (s.unitCap > 0 ? ', max ' + s.unitCap : ', sans limite') + ')';
         this.txt(this.el.kills, String(me.kills));
         this.txt(this.el.minerals, String(Math.floor(me.minerals)));

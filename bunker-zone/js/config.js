@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '2.3';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '2.4';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -132,7 +132,7 @@ window.ZC.VERSION = '2.3';   // à augmenter à chaque mise en ligne (affichée 
     mineTime: 5,        // secondes de récolte par voyage (environ 45 minerais par minute et par travailleur)
     color: '#39ff14',   // vert fluo
   };
-  ZC.WORKER = { cost: 50, time: 15, perBunker: 5, max: 20 }; // travailleurs : coût, temps de production au QG, maximum par bunker possédé (QG compris) et maximum absolu par joueur
+  ZC.WORKER = { cost: 50, time: 15, perBunker: 5 }; // travailleurs : coût, temps de production au QG, maximum par bunker possédé (QG compris) ; aucun plafond absolu
   ZC.REPAIR = { hpPerSec: 40, costPerSec: 3 };
   ZC.EXTRACTOR = { cost: 100, buildTime: 20, rate: 1.2 };  // extracteur : coût, secondes de construction par un travailleur, minerai extrait par seconde (≈ 1,6 travailleur)          // réparation d'un bunker par un travailleur : PV par seconde, minerai par seconde
   ZC.BUNKER_RANGE_BONUS = 1;  // cases de portée en plus pour les unités en garnison

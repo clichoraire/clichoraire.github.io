@@ -150,7 +150,7 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
   pour lire son contenu.
 - **Travailleurs** (un par race : Ouvrier, Drone, Sonde, Foreur) : produits au centre de commandement (carte
   « Unités », F puis W, 50 minerais, 15 s). Le maximum monte avec vos bunkers : 5 travailleurs par bunker
-  possédé, QG compris, et 20 au plus. Ils récoltent 5 minerais par voyage (environ 45 par minute
+  possédé, QG compris, sans plafond absolu. Ils récoltent 5 minerais par voyage (environ 45 par minute
   chacun), cinq travailleurs au plus par gisement en même temps, et rapportent le minerai au bunker ou au QG le plus
   proche. Un travailleur neuf part de lui-même récolter le gisement le plus proche. On commence avec 5 travailleurs
   (option). Ils ne combattent pas, n'entrent pas en garnison et sont exclus de « toute l'armée ».
