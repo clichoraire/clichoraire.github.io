@@ -17,7 +17,7 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
 - Chaque joueur commence avec un **centre de commandement** (6000 PV, armure 8), aucun soldat (réglable ; les vagues font l'armée), 5 travailleurs, un dropship
   et 50 minerais. Seul le centre de commandement produit des dropships ; s'il est détruit, plus
   d'expansion possible (sauf si le joueur perd tout : son prochain bunker devient le nouveau QG).
-- **Chaque bunker a ses propres améliorations** (armes, armure, portée, démolition, stimpack), recherchées en le
+- **Chaque bunker a ses propres améliorations** (armes, armure, portée, démolition), recherchées en le
   sélectionnant (30 à 45 s, plus long à chaque niveau, une recherche à la fois), et qui ne
   s'appliquent qu'aux marines qu'il a produits. Détruire un bunker rapporte 100 minerais, un centre
   de commandement 250. Les niveaux se lisent sur les unités : **chaque niveau d'armes change la forme
@@ -50,8 +50,8 @@ Pour un serveur local : `python3 -m http.server 8000` puis http://localhost:8000
   que 1 dégât par tir, d'où l'intérêt des améliorations d'armes) libère la zone, mais ne la donne pas :
   il faut ensuite y poser un dropship comme pour une zone libre.
 - **Minerais** : gagnés par les zones tenues et les kills (10 par marine, 150 par bunker). Ils achètent
-  des dropships (produits par un bunker en 12 s, puis de plus en plus longs à chaque commande ; coût croissant avec le nombre de bunkers) et des améliorations : armes, armure, portée, démolition,
-  stimpack (touche T sur les marines : +50 % de vitesse et de cadence pendant 10 s, coûte 10 PV).
+  des dropships (produits par un bunker en 12 s, puis de plus en plus longs à chaque commande ; coût croissant avec le nombre de bunkers) et des améliorations : armes, armure, portée, démolition.
+  Le stimpack n'est plus une amélioration de troupes : c'est un pouvoir du héros Sergent Kael.
 - Un joueur qui perd son dernier bunker reçoit de quoi racheter un dropship.
 - Un joueur sans bunker ni unité est éliminé. Le dernier survivant gagne.
 - Les stats des unités (vie, armure, dégâts, portée, supply, dégâts normaux / concussifs / explosifs
@@ -110,8 +110,9 @@ Mondes, scénarios, dialogues, héros et boutique sont décrits dans `js/campaig
 | Sélectionner / cadre | clic gauche / glisser |
 | Déplacer / attaquer | clic droit |
 | Dropship : construire un bunker | clic droit sur une zone libre, ou B puis clic |
-| Bunker sélectionné | clic droit : point de ralliement ; G envoyer toutes ses troupes vers un point ; D dropship ; W armes ; R armure ; E portée ; X démolition ; T stimpack ; V évolution (inactif tant que les conditions ne sont pas remplies) |
-| Stimpack sur les marines sélectionnés | T |
+| Bunker sélectionné | clic droit : point de ralliement ; G envoyer toutes ses troupes vers un point ; D dropship ; W armes ; R armure ; E portée ; X démolition ; Q centre de commandement ; V évolution (inactif tant que les conditions ne sont pas remplies) ; A annexe (centre de commandement) |
+| Pouvoirs du héros sélectionné (puis clic sur la cible au besoin) | T, Y |
+| Développer un pouvoir (annexe sélectionnée) | T, Y |
 | Acheter un dropship / bunker suivant | D / N |
 | Évolution (bunker sélectionné, armes, armure et portée au niveau 3) | V |
 | Garnison | clic droit sur un bunker allié avec des unités sélectionnées (4 max, 6 dans le centre de commandement) ; U (bunker sélectionné) décharger |
@@ -170,9 +171,35 @@ chevrons, compte à rebours, qui s'emballe dans les 5 dernières secondes), flè
 champ, losange clignotant sur la minimap, direction dans la barre du haut. Espace centre la caméra sur la dernière alerte. Facile / moyen / difficile règlent la taille des vagues (x0,7 / x1 / x1,5).
 Test : `node tools/headless.js 0 5 normal 300 --passive --invasion=1`.
 
+## Héros et pouvoirs
+
+Chaque joueur a un héros, humain comme IA : trois au choix par race (option « Votre héros », aléatoire par défaut),
+chacun avec **deux pouvoirs uniques** qu'il faut d'abord **développer**. Pour cela, un centre de commandement construit
+son **annexe** (A, 150 minerais, 20 s de chantier ; laboratoire, chambre d'évolution, sanctuaire ou atelier selon la race).
+L'annexe sélectionnée propose les deux pouvoirs (T, Y, 150 à 250 minerais, 40 à 60 s). Une fois développé, un pouvoir se
+lance avec le héros sélectionné (T, Y ; les pouvoirs visés demandent un clic, le héros s'approche s'il est trop loin) et
+se recharge (12 à 35 s). L'annexe tombe avec son centre. Le héros mort se ressuscite au centre (F puis H).
+
+| Race | Héros | Pouvoirs |
+|---|---|---|
+| Humains | Sergent Kael | Stimpack (vitesse et cadence +50 % pendant 10 s, 10 PV) · Grenade lacrymogène (vide la garnison d'un bunker ennemi, personne n'y rentre pendant 10 s) |
+| Humains | Médecin Sato | Soins de combat (80 PV aux alliés proches) · Bouclier déployable (+4 d'armure aux alliés proches, 8 s) |
+| Humains | Lieutenant Brax | Barrage d'artillerie (trois obus sur le point visé) · Charge (fonce, 25 dégâts et 1 s d'étourdissement à l'arrivée) |
+| Essaim | Reine Vhyss | Essaim (4 coureurs pendant 15 s) · Rugissement (ennemis proches : dégâts ÷2 et ralentis 6 s) |
+| Essaim | Traqueur Nex | Bond (saute sur le point visé, 30 dégâts) · Venin (6 PV/s pendant 8 s aux ennemis proches, armure ignorée) |
+| Essaim | Broyeur Kurg | Carapace (+5 d'armure 8 s) · Séisme (ennemis proches assommés 3 s) |
+| Énergie | Lieutenante Voss | Nova psionique (60 dégâts de zone sur le point visé) · Égide (recharge les boucliers alliés, +2 d'armure 6 s) |
+| Énergie | Templier Zar | Lames de lumière (dégâts ×2 pendant 8 s) · Transfert (téléportation) |
+| Énergie | Oracle Lyra | Stase (ennemis du point visé ralentis de 60 %, 6 s) · Régénération (70 PV et boucliers aux alliés proches) |
+| Mécas | Commandant Dax | Mode siège (immobile 10 s : +3 cases de portée, dégâts ×1,5) · Obus perforant (400 dégâts à un bâtiment) |
+| Mécas | Unité K-7 | Surcadence (cadence ×2 pendant 8 s) · Impulsion EM (vide les boucliers, assomme 2 s) |
+| Mécas | Ingénieure Voxx | Réparation d'urgence (600 PV aux bâtiments alliés proches) · Tourelle déployable (25 s) |
+
+Les **centres de commandement** supplémentaires (Q sur un bunker) coûtent 800 minerais, puis 400 de plus à chaque centre.
+
 ## Options du menu
 
-Mode (classique, évolution ou tournoi), rounds à gagner et limite de temps d'un round (tournoi), race, nombre d'IA (1 à 7), difficulté, largeur et hauteur de la carte (3 à 11 zones, hauteur 1 pour un couloir),
+Mode (classique, évolution ou tournoi), rounds à gagner et limite de temps d'un round (tournoi), race, héros (trois par race, ou aléatoire), nombre d'IA (1 à 7), difficulté, largeur et hauteur de la carte (3 à 11 zones, hauteur 1 pour un couloir),
 taille des zones, terrain (jungle, badlands, plateforme spatiale), couleur, intervalle des vagues,
 unités de départ, supply gagnée par bunker (le plafond monte avec chaque bunker, QG compris : 30 + 20 par bunker) et supply max absolue (illimitée par défaut), revenu par bunker, coût des dropships, temps d'atterrissage,
 durée des rounds, vitesse, limite de sélection à 12 comme SC1, son, mode admin (triche), défilement au bord.

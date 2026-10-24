@@ -50,15 +50,39 @@
     extract: svg('<path d="M5 9h14v4H5z"/><path d="M8 13v3l4 5 4-5v-3"/><path d="M9 5h6v4H9z"/>', '#39ff14'),
   };
   ZC.CMD_ICONS = ICONS;
+  // Icônes des pouvoirs de héros (par famille d'effet, voir ZC.POWERS[id].icon)
+  const PICONS = {
+    stim: ICONS.stim,
+    gas: svg('<path d="M7 17a4 4 0 0 1 0-8 5 5 0 0 1 9.5-1A4 4 0 0 1 17 17H7z"/><path d="M9 20v1M13 20v2M17 20v1"/>', '#b8e060'),
+    heal: svg('<path d="M12 4v16M4 12h16"/>', '#7dff5a'),
+    shield: svg('<path d="' + SHIELD + '"/>', '#5ab8ff'),
+    blast: svg('<path d="M12 3l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2z"/>', '#ff8a3a'),
+    dash: svg('<path d="M3 12h12M10 6l6 6-6 6"/><path d="M19 5v14"/>', '#ffd040'),
+    swarm: svg('<circle cx="7" cy="8" r="2.5"/><circle cx="15" cy="6" r="2.5"/><circle cx="10" cy="16" r="2.5"/><circle cx="18" cy="15" r="2.5"/>', '#ff8a6a'),
+    roar: svg('<path d="M8 9a5 5 0 0 0 0 6M5 6a9 9 0 0 0 0 12M16 9a5 5 0 0 1 0 6M19 6a9 9 0 0 1 0 12"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>', '#ff8a6a'),
+    poison: svg('<path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/>', '#7dff5a'),
+    stun: svg('<path d="M12 3l1.8 5.2H19l-4.3 3.2 1.7 5.3L12 13.5l-4.4 3.2 1.7-5.3L5 8.2h5.2z"/>', '#ffd040'),
+    nova: svg('<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>', '#c8a0ff'),
+    blades: svg('<path d="M5 19L19 5M5 5l14 14"/><path d="M4 10l2 2M10 4l2 2M18 14l2 2M14 18l2 2"/>', '#fff0a0'),
+    blink: svg('<path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z"/><path d="M19 17l.7 2.3L22 20l-2.3.7L19 23l-.7-2.3L16 20l2.3-.7z"/>', '#9ad0ff'),
+    slow: svg('<path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/>', '#c8a0ff'),
+    siege: ICONS.range,
+    gear: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>', '#9ad0ff'),
+    emp: svg('<path d="M13 2L5 14h6l-1 8 8-12h-6l1-8z"/>', '#9ad0ff'),
+    wrench: ICONS.repair,
+    tower: ICONS.tower,
+  };
+  const powerIcon = (pid) => PICONS[ZC.POWERS[pid].icon] || ICONS.hero;
 
   const HELP = `
     <div class="help-grid">
       <div><b>Clic gauche</b> sélection / glisser pour un cadre &nbsp; <b>Clic droit</b> déplacer / attaquer</div>
       <div><b>Dropship + clic droit</b> sur une zone libre : construire un bunker (ou <b>B</b> puis clic)</div>
-      <div><b>Bunker sélectionné</b> : clic droit = point de ralliement ; <b>W</b> armes, <b>R</b> armure, <b>E</b> portée, <b>X</b> démolition (dégâts contre les bâtiments), <b>T</b> stimpack (pour ses marines)</div>
+      <div><b>Bunker sélectionné</b> : clic droit = point de ralliement ; <b>W</b> armes, <b>R</b> armure, <b>E</b> portée, <b>X</b> démolition (dégâts contre les bâtiments), <b>Q</b> centre de commandement (800 minerais, puis +400 à chaque centre)</div>
+      <div><b>Héros</b> (un par joueur, trois au choix par race) : <b>A</b> sur un centre de commandement construit son annexe ; sélectionnez l'annexe pour développer ses deux pouvoirs (<b>T</b>, <b>Y</b>), puis lancez-les avec le héros sélectionné (<b>T</b>, <b>Y</b>, clic sur la cible au besoin)</div>
       <div><b>G</b> (bunker sélectionné) envoyer toutes ses troupes vers le point cliqué &nbsp; <b>N</b> bunker suivant</div>
       <div><b>Clic droit sur un bunker allié</b> : les unités sélectionnées entrent en garnison (4 max ; un bunker vide ne tire pas) &nbsp; <b>U</b> décharger &nbsp; <b>V</b> évolution (armes, armure et portée au niveau 3) : les soldats du bunker passent au niveau 2</div>
-      <div><b>D</b> dropship (centre de commandement) &nbsp; <b>F</b> carte « Unités » du QG : <b>W</b> travailleur, <b>H</b> ressusciter le héros (aventure), <b>X</b> retour &nbsp; <b>T</b> stimuler les marines sélectionnés</div>
+      <div><b>D</b> dropship (centre de commandement) &nbsp; <b>F</b> carte « Unités » du QG : <b>W</b> travailleur, <b>H</b> ressusciter le héros, <b>X</b> retour</div>
       <div><b>Travailleurs</b> : clic droit sur un gisement vert = récolter (<b>G</b>), clic droit sur un bunker allié abîmé = réparer (<b>R</b>, ${ZC.REPAIR.hpPerSec} PV/s contre ${ZC.REPAIR.costPerSec} minerais/s), <b>B</b> construire un extracteur sur un gisement (${ZC.EXTRACTOR.cost} minerais, mine tout seul), <b>T</b> construire une tour dans une de vos zones (${ZC.TOWER.cost} minerais ; chez les humains, des soldats doivent y monter pour qu'elle tire)</div>
       <div><b>A</b> attaque-déplacement &nbsp; <b>M</b> déplacer &nbsp; <b>S</b> stop &nbsp; <b>H</b> tenir &nbsp; <b>P</b> patrouille</div>
       <div><b>Double-clic / Ctrl+clic</b> même type à l'écran &nbsp; <b>Maj+clic</b> ajouter</div>
@@ -182,7 +206,8 @@
       if (this.lockAll) disabled = 'lock'; // bunker en chantier : tout est verrouillé
       let pips = '';
       if (lvl) {
-        if (lvl.done >= lvl.max) pips = '<span class="lv max">MAX</span>';
+        if (lvl.text) pips = '<span class="lv max">' + esc(lvl.text) + '</span>';
+        else if (lvl.done >= lvl.max) pips = '<span class="lv max">MAX</span>';
         else { pips = '<span class="lv">'; for (let i = 0; i < lvl.max; i++) pips += '<i class="' + (i < lvl.done ? 'on' : i < lvl.done + lvl.queued ? 'q' : '') + '"></i>'; pips += '</span>'; }
       }
       return '<button data-cmd="' + cmd + '" class="' + (disabled ? 'disabled' : '') + '"' + (disabled === 'lock' ? ' data-lock="1"' : '') + ' title="' + esc(label) + (cost ? ' — ' + cost + ' minerais' : '') + '">' +
@@ -197,9 +222,14 @@
     }
     // Empreinte de la carte : niveaux, files, garnison. Si elle change, la carte se redessine (pastilles à jour)
     cardSignature() {
-      const g = this.app.game, b = g.selectedBunker;
-      if (!b) return 'n' + g.ownSelection.length;
-      return b.id + ':' + (b.building ? 'B' : '') + Object.values(b.up).join('') + ':' + b.research.map(r => r.what[0]).join('') + ':' + b.queue.length + ':' + b.garrison.length + ':' + (g.hero ? (g.hero.dead ? 'd' : 'v') : '') + ':' + (g.workers(g.humanId).length + g.workersQueued(g.humanId));
+      const g = this.app.game, b = g.selectedBunker, me = g.human;
+      if (!b) {
+        const a = g.selectedAddon;
+        if (a) return 'a' + a.id + ':' + a.research.map(r => r.what).join(',') + ':' + Object.keys(me.powers).join(',') + (a.building ? 'B' : '');
+        const h = g.hero && !g.hero.dead && g.ownSelection.includes(g.hero) ? g.hero : null, H = h && ZC.HEROES[me.heroId];
+        return 'n' + g.ownSelection.length + (H ? ':' + H.powers.map(pid => (me.powers[pid] ? '1' : '0') + Math.ceil(h.cd[pid] || 0)).join(',') : '');
+      }
+      return b.id + ':' + (b.building ? 'B' : '') + (b.addon && !b.addon.dead ? (b.addon.building ? 'ab' : 'a') : '') + Object.values(b.up).join('') + ':' + b.research.map(r => r.what[0]).join('') + ':' + b.queue.length + ':' + b.garrison.length + ':' + (g.hero ? (g.hero.dead ? 'd' : 'v') : '') + ':' + (g.workers(g.humanId).length + g.workersQueued(g.humanId));
     }
     // Un groupe de la carte : un titre et une grille 3 x 3 (les cases vides complètent la grille)
     cardGroup(title, buttons) {
@@ -215,9 +245,15 @@
       const move = () => cb('move', '➜', 'M', 'Déplacer'), stop = () => cb('stop', '■', 'S', 'Stop'), hold = () => cb('hold', '⛨', 'H', 'Tenir la position');
       let groups;
       if (kind === 'units') {
-        const bio = g.ownSelection.some(u => u.def.bio && (u.up.stim > 0 || u.def.hero));
-        groups = [['Ordres', [move(), stop(), cb('attack', '⚔', 'A', 'Attaquer'), cb('patrol', '↻', 'P', 'Patrouiller'), hold()]],
-          ['Coups spéciaux', bio ? [cb('stim', '⚡', 'T', 'Stimpack : +50% vitesse et cadence pendant ' + ZC.STIM.duration + ' s, coûte ' + ZC.STIM.hpCost + ' PV')] : []]];
+        // Coups spéciaux : les deux pouvoirs du héros, s'il est dans la sélection (verrouillés tant qu'ils ne sont pas développés ou en recharge)
+        const hero = g.hero && !g.hero.dead && g.ownSelection.includes(g.hero) ? g.hero : null, H = hero && ZC.HEROES[me.heroId];
+        const spec = H ? H.powers.map((pid, i) => {
+          const pw = ZC.POWERS[pid], dev = !!me.powers[pid], cd = hero.cd[pid] || 0;
+          const how = pw.target === 'self' ? '' : ' : cliquez sur ' + (pw.target === 'structure' ? 'un bâtiment ennemi' : 'un point') + (pw.range ? ' à ' + (pw.range / ZC.TILE) + ' cases ou moins (le héros s\'approche sinon)' : '');
+          const label = pw.name + ' — ' + pw.desc + (dev ? (cd > 0 ? ' — recharge : ' + Math.ceil(cd) + ' s' : ' — PRÊT' + how) + ' — recharge ' + pw.cd + ' s' : ' — À DÉVELOPPER dans l\'annexe d\'un centre de commandement (A sur le centre), ' + pw.cost + ' minerais');
+          return cb('power' + (i + 1), powerIcon(pid), pw.key, label, 0, !dev || cd > 0 ? 'lock' : false, dev ? (cd > 0 ? { text: Math.ceil(cd) + ' s' } : null) : { text: 'À DÉV.' });
+        }) : [];
+        groups = [['Ordres', [move(), stop(), cb('attack', '⚔', 'A', 'Attaquer'), cb('patrol', '↻', 'P', 'Patrouiller'), hold()]], ['Coups spéciaux' + (H ? ' · ' + H.name : ''), spec]];
       } else if (kind === 'workers') {
         const tw = ZC.UNITS[ZC.RACES[me.race].tower];
         groups = [['Ordres', [move(), stop(), hold(),
@@ -229,10 +265,17 @@
       } else if (kind === 'tower') {
         const tw = g.selectedTower;
         groups = [['Garnison', tw.garrison.length ? [cb('unload', '⇩', 'U', 'Faire descendre la garnison (' + tw.garrison.length + ' unités)')] : []], ['', []]];
+      } else if (kind === 'addon') { // annexe : développement des deux pouvoirs du héros
+        const a = g.selectedAddon, H = ZC.HEROES[me.heroId];
+        const btns = H ? H.powers.map(pid => {
+          const pw = ZC.POWERS[pid], dev = !!me.powers[pid], q = a.research.some(r => r.what === pid);
+          return cb(pid, powerIcon(pid), pw.key, pw.name + ' — ' + pw.desc + (dev ? ' — DÉVELOPPÉ' : q ? ' — en développement' : ' — développement ' + pw.time + ' s') + (a.building ? ' (annexe en construction)' : ''), dev || q ? 0 : pw.cost, dev || q || a.building ? 'lock' : me.minerals < pw.cost, { done: dev ? 1 : 0, queued: q ? 1 : 0, max: 1 });
+        }) : [];
+        groups = [['Pouvoirs' + (H ? ' de ' + H.name : ''), btns], ['', []]];
       } else if (kind === 'hqUnits') { // carte « Unités » du centre de commandement
         const wk = ZC.UNITS[ZC.RACES[me.race].worker], wc = g.workerCost(me.id), wn = g.workers(me.id).length + g.workersQueued(me.id), wmax = g.workerCap(me.id), cap = wn >= wmax;
         const prod = [cb('worker', '⚒', 'W', wk.name + ' (' + wn + '/' + wmax + ', ' + ZC.WORKER.perBunker + ' par bunker) : récolte le minerai des gisements et répare les bunkers — ' + Math.round(g.workerTime(me.id)) + ' s de production', wc, cap ? 'lock' : me.minerals < wc)];
-        if (g.campaign && g.hero) {
+        if (g.hero) {
           const h = g.hero, can = g.canReviveHero(me.id), hc = g.heroReviveCost(me.id);
           prod.push(cb('hero', '★', 'H', h.dead ? (g.heroQueued(me.id) ? h.def.name + ' : résurrection en cours' : 'Ressusciter ' + h.def.name + ' (niveau ' + h.heroLevel + ') — ' + Math.round(ZC.HERO_RESPAWN) + ' s') : h.def.name + ' est en vie', h.dead && can ? hc : 0, !can ? 'lock' : me.minerals < hc));
         }
@@ -250,7 +293,11 @@
         const ev = ZC.UPGRADES.evolve, evCost = g.upgradeCost(b, 'evolve'), can = g.canEvolve(b);
         const l2 = ZC.UNITS[ZC.UNITS[g.spawnTypeFor(me)].evolvesTo || g.spawnTypeFor(me)];
         const evolve = cb('evolve', '⬆', ev.hotkey, evCost < 0 ? 'Évolution terminée : ce bunker produit des ' + l2.name : 'Évolution (' + ev.time() + ' s) : ' + ev.desc + '. Transforme en ' + l2.name + (can ? '' : ' — INDISPONIBLE : armes, armure et portée doivent être au niveau ' + ev.requires + ' (terminées ou en file)'), evCost < 0 ? 0 : evCost, evCost < 0 || !can ? 'lock' : me.minerals < evCost, { done: b.up.evolve, queued: g.pendingLevel(b, 'evolve') - b.up.evolve, max: 1 });
-        const upgrades = [up('weapons', '✦'), up('armor', '⛨'), up('range', '⟶'), up('siege', '💣'), up('stim', '⚡'), evolve];
+        const upgrades = [up('weapons', '✦'), up('armor', '⛨'), up('range', '⟶'), up('siege', '💣'), evolve];
+        if (b.def.hq) { // annexe : une par centre, où se développent les pouvoirs du héros
+          const a = b.addon && !b.addon.dead ? b.addon : null, an = ZC.UNITS[ZC.RACES[me.race].addon].name, H = ZC.HEROES[me.heroId];
+          upgrades.push(cb('addon', '⚗', 'A', an + (!H ? ' : inutile sans héros' : a ? (a.building ? ' : en construction' : ' : construite — sélectionnez-la pour développer les pouvoirs de ' + H.name) : ' (' + ZC.ADDON.buildTime + ' s) : annexe où se développent les deux pouvoirs de ' + H.name), a || !H ? 0 : ZC.ADDON.cost, a || !H ? 'lock' : me.minerals < ZC.ADDON.cost, { done: a && !a.building ? 1 : 0, queued: a && a.building ? 1 : 0, max: 1 }));
+        }
         if (!b.def.hq) {
           const ft = ZC.UPGRADES.fortify, ftCost = g.upgradeCost(b, 'fortify');
           upgrades.push(cb('fortify', '⌂', ft.hotkey, ft.name + ' (' + ft.time() + ' s) : ' + ft.desc, ftCost < 0 ? 0 : ftCost, ftCost < 0 ? 'lock' : me.minerals < ftCost, { done: b.up.fortify, queued: g.pendingLevel(b, 'fortify') - b.up.fortify, max: 1 }));
@@ -388,6 +435,7 @@
     selectionKind() {
       const g = this.app.game;
       if (g.selectedBunker) return this.sub === 'units' && g.selectedBunker.def.hq ? 'hqUnits' : 'bunker';
+      if (g.selectedAddon) return 'addon';
       if (g.selectedTower) return 'tower';
       const own = g.ownSelection;
       if (!own.length) return 'none';
@@ -402,9 +450,10 @@
       if (sel.length === 1) {
         const u = sel[0], p = g.players[u.owner];
         let extra = '';
-        if (u.def.tower) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">' + (u.def.manned ? 'Tour habitée : clic droit avec des soldats pour y monter (' + u.def.capacity + ' places, portée +' + u.def.rangeBonus + ' cases) · U faire descendre' : 'Tourelle autonome · portée ' + (u.def.range / ZC.TILE) + ' cases · dégâts ' + u.def.dmg) + '</div>';
+        if (u.def.addon) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Annexe du centre de commandement : développez-y les deux pouvoirs de votre héros (T, Y). Elle tombe avec son centre.</div><div class="line build" id="u-research"></div>';
+        else if (u.def.tower) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">' + (u.def.manned ? 'Tour habitée : clic droit avec des soldats pour y monter (' + u.def.capacity + ' places, portée +' + u.def.rangeBonus + ' cases) · U faire descendre' : 'Tourelle autonome · portée ' + (u.def.range / ZC.TILE) + ' cases · dégâts ' + u.def.dmg) + '</div>';
         else if (u.def.extractor) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Extrait ' + ZC.EXTRACTOR.rate + ' minerai/s du gisement, directement dans votre banque</div>';
-        else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : 'Q centre de commandement · ') + 'W/R/E/X/T améliorations · V évolution · G envoyer les troupes · U décharger la garnison</div>';
+        else if (u.def.structure) extra = '<div class="line sub" id="u-extra"></div><div class="line sub" id="u-up"></div><div class="line build" id="u-build"></div><div class="line build" id="u-research"></div>' + '<div class="line sub">Clic droit : point de ralliement · ' + (u.def.hq ? 'D dropship · F unités (travailleurs' + (g.campaign ? ', héros' : '') + ') · ' : 'Q centre de commandement · ') + 'W/R/E/X améliorations · Q centre · A annexe (centre) · V évolution · G envoyer les troupes · U décharger la garnison</div>';
         else if (u.def.worker) extra = '<div class="line sub" id="u-kills"></div><div class="line sub">Clic droit sur un gisement vert : récolter (G) · clic droit sur un bunker allié abîmé : réparer (R, ' + ZC.REPAIR.costPerSec + ' minerais/s)</div>';
         else if (u.type === 'dropship') extra = '<div class="line sub">Clic droit sur une zone libre : construire un bunker (' + g.settings.landingTime + ' s)</div>';
         else extra = '<div class="line sub">' + (u.def.level ? 'Niveau ' + u.def.level + ' · ' : '') + 'Dégâts ' + u.damage + (u.def.hits > 1 ? ' x' + u.def.hits : '') + ' (' + u.def.dtype + ') · Armure ' + u.armor + ' · Portée ' + (u.def.range ? (u.range / ZC.TILE) : 'mêlée') + (u.home && u.home.zone ? ' · Bunker ' + (u.home.zone.ix + 1) + '-' + (u.home.zone.iy + 1) : '') + '</div><div class="line sub" id="u-kills"></div>' + (u.canGarrison ? '<div class="line sub">Clic droit sur un bunker allié : entrer en garnison</div>' : '');
@@ -451,7 +500,9 @@
         const f = u.hp / u.maxHp;
         hp.innerHTML = '<span class="k">Vie</span> <span style="color:' + (f > 0.66 ? '#10fc18' : f > 0.33 ? '#fcfc38' : '#fc3838') + '">' + Math.ceil(u.hp) + ' / ' + u.maxHp + '</span>';
         info.querySelector('#u-shield').innerHTML = u.def.shield ? '<span class="k">Bouclier</span> <span style="color:#4aa8ff">' + Math.ceil(u.shield) + ' / ' + u.def.shield + '</span>' : '';
+        const p0 = g.players[u.owner];
         const k = info.querySelector('#u-kills'); if (k && u.building && u.buildTotal) k.textContent = 'En construction : ' + Math.round(Math.min(100, u.buildT / u.buildTotal * 100)) + ' % · ' + Math.ceil(u.buildTotal - u.buildT) + ' s · ne produit pas et ne tire pas encore';
+        else if (k && u.def.addon) { const H = ZC.HEROES[p0.heroId]; k.textContent = H ? 'Pouvoirs de ' + H.name + ' : ' + H.powers.map(pid => ZC.POWERS[pid].name + (p0.powers[pid] ? ' ✓' : u.research.some(r => r.what === pid) ? ' (en cours)' : ' (à développer)')).join(' · ') : 'Aucun héros'; }
         else if (k && u.def.tower) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.TOWER.buildTime * 100)) + ' %' : (u.def.manned ? 'Garnison ' + u.garrison.length + '/' + u.def.capacity + (u.garrison.length ? '' : ' (ne tire pas)') : 'En veille') + ' · Kills : ' + u.kills;
         else if (k && u.def.extractor) k.textContent = u.building ? 'En construction : ' + Math.round(Math.min(100, u.buildT / ZC.EXTRACTOR.buildTime * 100)) + ' %' : u.patch && u.patch.amount > 0 ? 'En activité · gisement : ' + Math.round(u.patch.amount) : 'Gisement épuisé';
         else if (k && u.def.worker) k.textContent = (u.order.type === 'gather' ? (u.slot ? 'Récolte en cours' : u.carry >= ZC.MINERALS.carry ? 'Rapporte ' + u.carry + ' minerais' : 'En route vers le gisement') : u.order.type === 'repair' ? 'Réparation' + (u.repairing ? ' en cours (' + ZC.REPAIR.costPerSec + ' minerais/s)' : '') : 'Inactif') + (u.carry > 0 && u.order.type !== 'gather' ? ' · transporte ' + u.carry + ' minerais' : '');
@@ -459,7 +510,7 @@
         const ex = info.querySelector('#u-extra');
         if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + g.workerCap(u.owner) + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
         const upl = info.querySelector('#u-up');
-        if (upl) upl.textContent = (u.building && u.buildTotal ? 'EN CONSTRUCTION : ' + Math.round(Math.min(100, u.buildT / u.buildTotal * 100)) + ' % · ' + Math.ceil(u.buildTotal - u.buildT) + ' s · ' : '') + (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.siege ? ' · Démolition +' + u.up.siege : '') + (u.up.stim ? ' · Stimpack' : '');
+        if (upl) upl.textContent = (u.building && u.buildTotal ? 'EN CONSTRUCTION : ' + Math.round(Math.min(100, u.buildT / u.buildTotal * 100)) + ' % · ' + Math.ceil(u.buildTotal - u.buildT) + ' s · ' : '') + (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.siege ? ' · Démolition +' + u.up.siege : '');
         // Files d'attente en icônes : le premier élément porte sa barre de progression, les suivants attendent
         const qIcon = (cmd, key, pct, title, gold, kind, i) => '<span class="qi' + (pct !== undefined ? ' cur' : '') + '" data-q="' + kind + '" data-i="' + i + '" title="' + esc(title) + ' — clic : annuler (même en cours) et rembourser">' + (ICONS[cmd] || '') + '<i>' + key + '</i>' + (pct !== undefined ? '<b class="' + (gold ? 'gold' : '') + '" style="width:' + pct.toFixed(0) + '%"></b>' : '') + '</span>';
         const rd = info.querySelector('#u-research');
@@ -467,9 +518,10 @@
           if (u.research.length) {
             const r0 = u.research[0], lvls = {};
             rd.innerHTML = '<span class="k">Recherche</span> ' + u.research.map((r, i) => {
-              const d = ZC.UPGRADES[r.what]; lvls[r.what] = (lvls[r.what] || u.up[r.what]) + 1;
-              return qIcon(r.what === 'stim' ? 'stimResearch' : r.what, d.hotkey, i === 0 ? Math.min(100, r.t / r.total * 100) : undefined, d.name + ' niveau ' + lvls[r.what] + (i === 0 ? ' · ' + Math.ceil(r.total - r.t) + ' s' : ' · en attente'), true, 'research', i);
-            }).join('') + ' <span class="bt">' + ZC.UPGRADES[r0.what].name + ' +' + (u.up[r0.what] + 1) + ' · ' + Math.ceil(r0.total - r0.t) + ' s' + (u.research.length > 1 ? ' · ' + (u.research.length - 1) + ' en attente' : '') + '</span>';
+              const pw = ZC.POWERS[r.what], d = pw || ZC.UPGRADES[r.what]; if (!pw) lvls[r.what] = (lvls[r.what] || u.up[r.what]) + 1;
+              const ico = pw ? '<span class="qi' + (i === 0 ? ' cur' : '') + '" data-q="research" data-i="' + i + '" title="' + esc(d.name + (i === 0 ? ' · ' + Math.ceil(r.total - r.t) + ' s' : ' · en attente') + ' — clic : annuler et rembourser') + '">' + powerIcon(r.what) + '<i>' + pw.key + '</i>' + (i === 0 ? '<b class="gold" style="width:' + Math.min(100, r.t / r.total * 100).toFixed(0) + '%"></b>' : '') + '</span>' : null;
+              return ico || qIcon(r.what, d.hotkey, i === 0 ? Math.min(100, r.t / r.total * 100) : undefined, d.name + ' niveau ' + lvls[r.what] + (i === 0 ? ' · ' + Math.ceil(r.total - r.t) + ' s' : ' · en attente'), true, 'research', i);
+            }).join('') + ' <span class="bt">' + (ZC.POWERS[r0.what] ? ZC.POWERS[r0.what].name : ZC.UPGRADES[r0.what].name + ' +' + (u.up[r0.what] + 1)) + ' · ' + Math.ceil(r0.total - r0.t) + ' s' + (u.research.length > 1 ? ' · ' + (u.research.length - 1) + ' en attente' : '') + '</span>';
           } else rd.innerHTML = '<span class="k">Recherche</span> <span class="bt">aucune en cours</span>';
         }
         const bd = info.querySelector('#u-build');
@@ -575,7 +627,8 @@
           <h1>OPTIONS</h1>
           <p class="tag">Chaque zone a un bunker en son centre : qui tient le bunker tient la zone, et chaque bunker produit des marines à chaque vague.<br>
           Votre centre de commandement est le seul à produire des dropships, qui construisent des bunkers sur les zones libres. Détruire un bunker ennemi libère sa zone.<br>
-          Chaque bunker a ses propres améliorations (armes, armure, portée, démolition, stimpack), qui ne s'appliquent qu'aux marines qu'il produit. Gagnez des minerais par les zones et les kills.<br>
+          Chaque bunker a ses propres améliorations (armes, armure, portée, démolition), qui ne s'appliquent qu'aux marines qu'il produit. Gagnez des minerais par les zones et les kills.<br>
+          Chaque joueur a un héros (trois au choix par race) aux deux pouvoirs uniques, à développer dans l'annexe d'un centre de commandement.<br>
           Le joueur qui détruit tous les bunkers adverses l'emporte.</p>
           <div class="cols">
             <div class="form" id="start-form"></div>
@@ -651,6 +704,7 @@
         <label>Tournoi : limite par round<select name="roundTimeLimit">${opt([0, 180, 300, 480, 720], ['Aucune (élimination)', '3:00', '5:00', '8:00', '12:00'], s.roundTimeLimit)}</select></label>
         <label>Adversaires (IA)<select name="aiCount">${opt([1, 2, 3, 4, 5, 6, 7], null, s.aiCount)}</select></label>
         <label>Difficulté<select name="difficulty">${opt(['easy', 'normal', 'hard'], ['Facile', 'Normal', 'Difficile'], s.difficulty)}</select></label>
+        <label>Votre héros<select name="hero">${opt(['random', 'none'].concat(Object.keys(ZC.HEROES)), ['Aléatoire (selon la race)', 'Aucun'].concat(Object.values(ZC.HEROES).map(h => ZC.RACES[h.race].name + ' · ' + h.name)), s.hero || 'random')}</select></label>
         <label>Votre race<select name="playerRace">${opt(Object.keys(ZC.RACES), Object.values(ZC.RACES).map(r => r.name), s.playerRace)}</select></label>
         <label>Largeur de carte (zones)<select name="mapZones">${opt([3, 5, 7, 9, 11], null, s.mapZones)}</select></label>
         <label>Hauteur de carte<select name="mapZonesY">${opt([0, 1, 3, 5, 7, 9], ['Carrée', '1 (couloir)', '3', '5', '7', '9'], s.mapZonesY || 0)}</select></label>
@@ -680,7 +734,7 @@
       const f = this.menus.querySelector('#start-form');
       const v = (n) => f.querySelector('[name="' + n + '"]').value;
       return {
-        mode: v('mode'), aiCount: +v('aiCount'), difficulty: v('difficulty'), mapZones: +v('mapZones'), mapZonesY: +v('mapZonesY'), playerRace: v('playerRace'), zoneTiles: +v('zoneTiles'), tileset: v('tileset'),
+        mode: v('mode'), aiCount: +v('aiCount'), difficulty: v('difficulty'), hero: v('hero'), mapZones: +v('mapZones'), mapZonesY: +v('mapZonesY'), playerRace: v('playerRace'), zoneTiles: +v('zoneTiles'), tileset: v('tileset'),
         playerColor: +f.querySelector('[name="playerColor"]:checked').value,
         spawnInterval: +v('spawnInterval'), roundDuration: +v('roundDuration'), roundsToWin: +v('roundsToWin'), roundTimeLimit: +v('roundTimeLimit'),
         startUnits: +v('startUnits'), unitCap: +v('unitCap'), supplyPerBunker: +v('supplyPerBunker'),
@@ -854,14 +908,14 @@
     }
     heroCards(big) {
       const c = this.app.campaign;
-      return Object.values(ZC.HEROES).map(h => {
+      return ZC.heroesOf(ZC.ADVENTURE_RACE).map(h => {
         const st = c.hero(h.id), def = ZC.UNITS[h.unit], sc = ZC.heroScale(st.level);
         const next = st.level >= ZC.HERO_MAX_LEVEL ? null : ZC.heroXpFor(st.level + 1), prev = ZC.heroXpFor(st.level);
         const pct = next ? Math.round((st.xp - prev) / (next - prev) * 100) : 100;
-        return '<div class="hero' + (c.data.hero === h.id ? ' sel' : '') + '" data-id="' + h.id + '"><canvas class="hp-cv" data-p="' + h.id + '" width="64" height="64"></canvas><div class="hero-txt"><div class="hn">' + esc(h.name) + ' <small>' + esc(h.title) + '</small></div>' +
+        return '<div class="hero' + (c.heroId === h.id ? ' sel' : '') + '" data-id="' + h.id + '"><canvas class="hp-cv" data-p="' + h.id + '" width="64" height="64"></canvas><div class="hero-txt"><div class="hn">' + esc(h.name) + ' <small>' + esc(h.title) + '</small></div>' +
           '<div class="hl">Niveau ' + st.level + (next ? ' · ' + Math.floor(st.xp) + ' / ' + next + ' XP' : ' (max)') + '</div><div class="xpbar"><span style="width:' + pct + '%"></span></div>' +
-          (big ? '<div class="hs">' + Math.round(def.hp * sc.hp) + ' PV · ' + Math.round(def.dmg * sc.dmg) + (def.hits > 1 ? ' x' + def.hits : '') + ' dégâts · armure ' + (def.armor + sc.armor) + ' · portée ' + (def.range / ZC.TILE) + '</div><div class="hd">' + esc(h.desc) + '</div>' : '') +
-          '<div class="hsel">' + (c.data.hero === h.id ? '✓ Sélectionné' : 'Choisir') + '</div></div></div>';
+          (big ? '<div class="hs">' + Math.round(def.hp * sc.hp) + ' PV · ' + Math.round(def.dmg * sc.dmg) + (def.hits > 1 ? ' x' + def.hits : '') + ' dégâts · armure ' + (def.armor + sc.armor) + ' · portée ' + (def.range / ZC.TILE) + '</div><div class="hd">' + esc(h.desc) + '</div><div class="hd"><b class="gold">Pouvoirs</b> (à développer dans l\'annexe) : ' + h.powers.map(pid => esc(ZC.POWERS[pid].name) + ' (' + ZC.POWERS[pid].key + ') — ' + esc(ZC.POWERS[pid].desc)).join(' · ') + '</div>' : '') +
+          '<div class="hsel">' + (c.heroId === h.id ? '✓ Sélectionné' : 'Choisir') + '</div></div></div>';
       }).join('');
     }
     drawHeroPortraits(root) {

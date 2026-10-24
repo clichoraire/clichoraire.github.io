@@ -6,7 +6,7 @@
   const EMPTY = { steer: 0, up: false, down: false, jump: false, trick: false, shoot: false, item: false };
 
   function Racer(race, opts, idx) {
-    this.race = race; this.idx = idx; this.def = SK.charById(opts.charId) || SK.CHARACTERS[0]; this.board = SK.boardById(opts.boardId);
+    this.race = race; this.idx = idx; this.def = SK.charById(opts.charId) || SK.CHARACTERS[0]; this.board = opts.board || SK.boardById(opts.boardId);
     this.ctrl = opts.ctrl || 'cpu'; this.player = opts.player == null ? -1 : opts.player; this.boss = !!opts.boss;
     const d = this.def, b = this.board;
     this.maxSpeed = 27 + 0.8 * d.speed + 0.8 * b.speed;
@@ -106,6 +106,7 @@
     if (!stunned) {
       let f = surf.speed * (r.fx.fan > 0 ? 1.45 : 1) * (r.fx.parachute > 0 ? 0.55 : 1) * (r.fx.slow > 0 ? 0.7 : 1) * (r.fx.snowman > 0 ? 0.5 : 1) * (r.aiSpeed || 1);
       if (inp.down && r.state === 'ride') f *= 0.8;
+      else if (inp.up && r.state === 'ride') f *= 1.08; // penché vers l'avant : un peu plus de vitesse
       target = r.maxSpeed * f;
     }
     if (r.state === 'air') { /* en l'air : la vitesse se conserve (légère perte) */ r.speed = Math.max(0, r.speed - 0.6 * dt); }
@@ -132,7 +133,7 @@
     // ---- relief, sauts, figures
     const gy = T.groundY(r.z);
     if (r.state === 'ride' || (stunned && r.h <= 0)) {
-      if (gy < r.yAbs - 0.5 && r.speed > 5 && !stunned) { // le sol se dérobe (fin de tremplin) : envol
+      if (gy < r.yAbs - 1.0 && r.speed > 5 && !stunned) { // le sol se dérobe d'un coup (falaise) : envol
         r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? 2.8 : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; this.emit({ type: 'jump', r, big: true });
       } else {
         r.lastVy = dt > 0 ? (gy - r.yAbs) / dt : 0; r.yAbs = gy; r.h = 0;
@@ -225,11 +226,13 @@
     r.state = 'frozen'; r.stun = Math.max(r.stun, dur); r.speed = 0; r.curTrick = null; r.tricksDone = []; this.emit({ type: 'frozen', r });
   };
   P.takeBox = function (r, b) {
+    if (this.mode === 'time') return;
     if (b.kind === 'red') {
-      if (r.shot || r.coins < SK.SHOT_COST || this.mode === 'time') return;
+      if (r.shot) { this.emit({ type: 'boxfull', r, kind: 'red' }); return; }
+      if (r.coins < SK.SHOT_COST) { this.emit({ type: 'boxpoor', r }); return; }
       r.coins -= SK.SHOT_COST; r.shot = this.rng.pick(SK.SHOT_IDS); b.taken = this.time + SK.BOX_RESPAWN; this.emit({ type: 'box', r, kind: 'red', got: r.shot });
     } else {
-      if (r.item || this.mode === 'time') return;
+      if (r.item) { this.emit({ type: 'boxfull', r, kind: 'blue' }); return; }
       r.item = this.rng.pick(SK.ITEM_IDS); b.taken = this.time + SK.BOX_RESPAWN; this.emit({ type: 'box', r, kind: 'blue', got: r.item });
     }
   };

@@ -13,6 +13,15 @@
     kael:  { name: 'Sergent Kael',      side: 'hero',  role: 'Héros · exo-marine',                 portrait: 'exo_idle',    tint: null,                    color: '#8ad88a' },
     voss:  { name: 'Lieutenante Voss',  side: 'hero',  role: 'Héros · archonte',                   portrait: 'archon_idle', tint: null,                    color: '#7fd0ff' },
     dax:   { name: 'Commandant Dax',    side: 'hero',  role: 'Héros · mech de siège',              portrait: 'siege_idle',  tint: null,                    color: '#c8d4e8' },
+    sato:  { name: 'Médecin Sato',      side: 'hero',  role: 'Héros · médecin de combat',          portrait: 'marine_idle', tint: 'rgba(120,255,160,0.25)', color: '#8ad88a' },
+    brax:  { name: 'Lieutenant Brax',   side: 'hero',  role: 'Héros · artilleur',                  portrait: 'exo_idle',    tint: 'rgba(255,160,80,0.25)',  color: '#ffb060' },
+    vhyss: { name: 'Reine Vhyss',       side: 'hero',  role: 'Héros · bête-reine',                 portrait: 'beast_idle',  tint: null,                    color: '#ff8a6a' },
+    nex:   { name: 'Traqueur Nex',      side: 'hero',  role: 'Héros · coureur alpha',              portrait: 'runner_idle', tint: null,                    color: '#ff8a6a' },
+    kurg:  { name: 'Broyeur Kurg',      side: 'hero',  role: 'Héros · colosse',                    portrait: 'beast_idle',  tint: 'rgba(255,200,80,0.25)',  color: '#ffb060' },
+    zar:   { name: 'Templier Zar',      side: 'hero',  role: 'Héros · lame de lumière',            portrait: 'blade_idle',  tint: null,                    color: '#7fd0ff' },
+    lyra:  { name: 'Oracle Lyra',       side: 'hero',  role: 'Héros · archonte de soutien',        portrait: 'archon_idle', tint: 'rgba(200,160,255,0.3)',  color: '#c8a0ff' },
+    k7:    { name: 'Unité K-7',         side: 'hero',  role: 'Héros · prototype',                  portrait: 'scout_idle',  tint: null,                    color: '#c8d4e8' },
+    voxx:  { name: 'Ingénieure Voxx',   side: 'hero',  role: 'Héros · ingénieure',                 portrait: 'scout_idle',  tint: 'rgba(255,220,80,0.25)',  color: '#ffd040' },
     varek: { name: 'Seigneur Varek',    side: 'enemy', role: 'Chef des renégats humains',          portrait: 'a_idleE',     tint: 'rgba(255,40,40,0.35)',  color: '#ff5050' },
     szeth: { name: 'Matriarche Szeth',  side: 'enemy', role: 'Esprit-ruche de Nidus',              portrait: 'beast_idle',  tint: null,                    color: '#ff8a6a' },
     aelon: { name: 'Hiérarque Aelon',   side: 'enemy', role: 'Conclave de Lumen',                  portrait: 'archon_idle', tint: 'rgba(200,120,255,0.3)', color: '#c8a0ff' },
@@ -20,24 +29,14 @@
   };
 
   // ------------------------------------------------------------ Héros
-  ZC.HEROES = {
-    kael: { id: 'kael', unit: 'heroKael', name: 'Sergent Kael', title: 'Le Vétéran',
-      desc: 'Exo-marine d\'élite : fusil gauss lourd à longue portée, stimpack permanent (T). Polyvalent, frappe aussi les unités volantes.' },
-    voss: { id: 'voss', unit: 'heroVoss', name: 'Lieutenante Voss', title: 'L\'Archonte',
-      desc: 'Archonte mécanique : frappes d\'énergie de zone, bouclier qui se recharge. Dévastatrice contre les nuées.' },
-    dax:  { id: 'dax',  unit: 'heroDax',  name: 'Commandant Dax', title: 'Le Blindé',
-      desc: 'Mech de siège de commandement : obus explosifs à très longue portée, blindage épais. Lent mais écrase bunkers et grosses unités.' },
-  };
-  ZC.HERO_MAX_LEVEL = 10;
-  ZC.HERO_RESPAWN = 20;                                 // secondes pour ressusciter le héros au centre de commandement
-  ZC.heroReviveCost = (lvl) => 100 + 25 * lvl;           // coût de la résurrection selon le niveau
-  ZC.heroXpFor = (lvl) => 50 * lvl * (lvl + 1);
-  ZC.heroLevel = (xp) => { let l = 0; while (l < ZC.HERO_MAX_LEVEL && xp >= ZC.heroXpFor(l + 1)) l++; return l; };
-  ZC.heroScale = (lvl) => ({ hp: 1 + 0.08 * lvl, dmg: 1 + 0.08 * lvl, armor: Math.floor(lvl / 3) });
+  // Les héros (trois par race, deux pouvoirs chacun) sont définis dans config.js (ZC.HEROES / ZC.POWERS). L'aventure se joue avec les humains.
+  // Niveaux, expérience et résurrection des héros : définis dans config.js (les héros existent dans toutes les parties)
   // Répliques des héros avant mission (choisies selon la mission)
   const HERO_LINES = {
     kael: ['Je prends la tête de l\'escouade, Commandant. Dites-moi où tirer.', 'Mes gars sont prêts. On tient, on avance, on nettoie.', 'Encore une grille à reprendre. J\'ai connu pire.', 'Je couvre vos bunkers. Personne ne passe.', 'Donnez l\'ordre, Commandant. Le reste, c\'est mon affaire.', 'On ne laisse personne derrière. Jamais.'],
     voss: ['Mes lames chantent déjà. Qu\'ils viennent.', 'Un bouclier, deux lames, zéro pitié. Allons-y.', 'Je prends le centre. Gardez-moi les flancs.', 'Le Conclave m\'a appris une chose : frapper d\'abord.', 'Six minutes, six heures, peu importe. Je tiens.', 'Ils vont voir ce qu\'un archonte fait à une nuée.'],
+    sato: ['Je soigne, je couvre, et au besoin je tire aussi. Allons-y.', 'Personne ne meurt aujourd\'hui, pas tant que j\'ai des bandages.', 'Gardez vos soldats groupés : mes soins ne portent pas loin.', 'Un bouclier déployé, et vos hommes deviennent des murs.'],
+    brax: ['Donnez-moi des coordonnées et je fais pleuvoir l\'acier.', 'Trois obus, une seconde, plus de problème.', 'Je charge devant. Suivez le bruit.', 'L\'artillerie ne négocie pas, Commandant.'],
     dax:  ['Mon mech est chaud. Donnez-moi une cible et je vous ouvre la route.', 'Les obus parlent plus fort que les discours, Commandant.', 'Je tire à six cases. Ils ne m\'approcheront même pas.', 'Blindage à cent pour cent. On rentre par la porte.', 'Un bunker ennemi ? Deux obus et on en reparle.', 'Je suis lent, mais je ne recule pas.'],
   };
 
@@ -153,7 +152,7 @@
 
   // ------------------------------------------------------------ Progression sauvegardée
   const KEY = 'bz-campaign';
-  const blank = () => ({ points: 0, earned: 0, upgrades: {}, missions: {}, heroes: { kael: { xp: 0 }, voss: { xp: 0 }, dax: { xp: 0 } }, hero: 'kael', world: 'w1' });
+  const blank = () => ({ points: 0, earned: 0, upgrades: {}, missions: {}, heroes: Object.fromEntries(Object.keys(ZC.HEROES).map(k => [k, { xp: 0 }])), hero: 'kael', world: 'w1' });
 
   class Campaign {
     constructor() { this.data = blank(); this.load(); }
@@ -189,14 +188,16 @@
     }
     bonus() { return ZC.campaignBonus(this.data.upgrades); }
 
-    hero(id) { const h = this.data.heroes[id || this.data.hero]; return { id: id || this.data.hero, xp: h.xp, level: ZC.heroLevel(h.xp) }; }
-    selectHero(id) { if (ZC.HEROES[id]) { this.data.hero = id; this.save(); } }
+    // Héros choisi : toujours un héros de la race de l'aventure (les anciens choix d'autres races retombent sur Kael)
+    get heroId() { const id = this.data.hero; return ZC.HEROES[id] && ZC.HEROES[id].race === ZC.ADVENTURE_RACE ? id : 'kael'; }
+    hero(id) { id = id || this.heroId; const h = this.data.heroes[id] || (this.data.heroes[id] = { xp: 0 }); return { id, xp: h.xp, level: ZC.heroLevel(h.xp) }; }
+    selectHero(id) { if (ZC.HEROES[id] && ZC.HEROES[id].race === ZC.ADVENTURE_RACE) { this.data.hero = id; this.save(); } }
     selectWorld(id) { if (this.world(id)) { this.data.world = id; this.save(); } }
 
     // Dialogue d'avant-mission : briefing, provocation du chef ennemi, réplique du héros choisi
     dialogue(id) {
-      const m = this.mission(id), h = this.data.hero;
-      return [m.line, m.taunt, [h, HERO_LINES[h][m.index % HERO_LINES[h].length]]];
+      const m = this.mission(id), h = this.heroId, lines = HERO_LINES[h] || HERO_LINES.kael;
+      return [m.line, m.taunt, [h, lines[m.index % lines.length]]];
     }
 
     // Réglages de partie pour une mission (fusionnés avec les réglages généraux du joueur)

@@ -171,6 +171,39 @@
     ctx.fillStyle = '#6cd4ff'; ctx.beginPath(); ctx.moveTo(0, -16 + h); ctx.lineTo(7, -4 + h); ctx.lineTo(0, 6 + h); ctx.lineTo(-7, -4 + h); ctx.closePath(); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,' + bl + ')'; ctx.beginPath(); ctx.moveTo(0, -12 + h); ctx.lineTo(3, -5 + h); ctx.lineTo(0, -1 + h); ctx.lineTo(-3, -5 + h); ctx.closePath(); ctx.fill();
   };
+  // Annexes des centres de commandement (petit bâtiment accolé) : laboratoire, chambre d'évolution, sanctuaire, atelier
+  S.addonHuman = function (ctx, c, a, m, atk, t) { // laboratoire : bloc gris, antenne parabolique, baie bleutée
+    ell(ctx, 0, 6, 16, 10, '#2b2f36', '#0e1114', 1.5);
+    ctx.fillStyle = '#4a515c'; ctx.fillRect(-12, -10, 24, 18); ctx.strokeStyle = '#14171c'; ctx.lineWidth = 1.5; ctx.strokeRect(-12, -10, 24, 18);
+    ctx.fillStyle = '#6b737e'; ctx.fillRect(-10, -8, 20, 4);
+    ctx.fillStyle = c; ctx.fillRect(-12, 4, 24, 3);
+    ctx.fillStyle = 'rgba(90,184,255,' + (0.5 + 0.3 * Math.sin(t * 3)) + ')'; ctx.fillRect(-8, -3, 16, 5);
+    ctx.save(); ctx.translate(6, -12); ctx.rotate(Math.sin(t * 0.7) * 0.3); ell(ctx, 0, 0, 6, 3, '#c8d0d8', '#14171c', 1); ctx.fillStyle = '#14171c'; ctx.fillRect(-0.7, -5, 1.4, 5); ctx.restore();
+    circ(ctx, -8, -12, 1.6, 'rgba(255,80,60,' + (0.4 + 0.6 * (Math.sin(t * 5) + 1) / 2) + ')');
+  };
+  S.addonInsect = function (ctx, c, a, m, atk, t) { // chambre d'évolution : cocon charnu qui palpite, veines colorées
+    ell(ctx, 0, 6, 16, 10, '#4a2230', '#2a1018', 1.5);
+    const pulse = 1 + 0.05 * Math.sin(t * 2.5);
+    ell(ctx, 0, -1, 12 * pulse, 13 * pulse, '#8c4a5e', '#2a1018', 1.2);
+    ell(ctx, -3, -5, 5, 6, '#b06a7c');
+    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-8, 6); ctx.quadraticCurveTo(-2, -2, 2, -10); ctx.moveTo(8, 6); ctx.quadraticCurveTo(4, 0, -1, -8); ctx.stroke();
+    circ(ctx, 0, -2, 2.2, 'rgba(255,170,90,' + (0.5 + 0.5 * (Math.sin(t * 2.5) + 1) / 2) + ')');
+  };
+  S.addonEnergy = function (ctx, c, a, m, atk, t) { // sanctuaire : obélisque de cristal et anneau flottant
+    ell(ctx, 0, 7, 15, 9, '#2a2f55', '#0e1130', 1.5);
+    ctx.fillStyle = '#c9b25a'; ctx.beginPath(); ctx.moveTo(-9, 6); ctx.lineTo(9, 6); ctx.lineTo(6, 2); ctx.lineTo(-6, 2); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#5a4a10'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#9ad0ff'; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(5, 2); ctx.lineTo(-5, 2); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#2a4a8a'; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(2, 0); ctx.lineTo(-1, 0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0, -6 + Math.sin(t * 2) * 1.5, 9, 3, 0, 0, TAU); ctx.stroke();
+  };
+  S.addonMecha = function (ctx, c, a, m, atk, t) { // atelier : hangar à toit rayé, engrenage qui tourne
+    ell(ctx, 0, 6, 16, 10, '#2b2f36', '#0e1114', 1.5);
+    ctx.fillStyle = '#3a414a'; ctx.fillRect(-13, -8, 26, 16); ctx.strokeStyle = '#14171c'; ctx.lineWidth = 1.5; ctx.strokeRect(-13, -8, 26, 16);
+    ctx.fillStyle = '#7d858f'; for (let i = -12; i < 12; i += 4) ctx.fillRect(i, -8, 2, 6);
+    ctx.fillStyle = c; ctx.fillRect(-13, 5, 26, 3);
+    ctx.save(); ctx.translate(6, -1); ctx.rotate(t * 1.5); ctx.fillStyle = '#c8d0d8'; for (let i = 0; i < 6; i++) { ctx.rotate(TAU / 6); ctx.fillRect(-1.2, 0, 2.4, 5.5); } ctx.restore(); circ(ctx, 6, -1, 2.5, '#3a414a', '#c8d0d8', 1);
+    circ(ctx, -7, -2, 2, 'rgba(108,212,255,' + (0.4 + 0.6 * (Math.sin(t * 4) + 1) / 2) + ')');
+  };
   S.towerMecha = function (ctx, c, a, m, atk, t, facing) { // tourelle : base, dôme et canon orienté vers la cible
     ell(ctx, 0, 4, 15, 10, '#2b2f36', '#0e1114', 1.5);
     circ(ctx, 0, 0, 10, '#555d68', '#14171c', 1);

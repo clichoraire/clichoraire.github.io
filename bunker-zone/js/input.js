@@ -199,6 +199,14 @@
       }
       const sel = g.ownSelection;
       if (!sel.length) return;
+      if (this.mode === 'power1' || this.mode === 'power2') {
+        const h = g.hero, H = ZC.HEROES[g.human.heroId]; if (!h || h.dead || !H) return;
+        const pid = H.powers[this.mode === 'power1' ? 0 : 1], pw = ZC.POWERS[pid];
+        const r = g.usePower(h, pid, w.x, w.y, target);
+        if (!r.ok) { ZC.Audio.play('error', 0); this.app.ui.message(r.why === 'target' ? (pid === 'gas' ? 'Visez un bunker ou une tour ennemie (avec des places à l\'intérieur).' : 'Visez un bâtiment ennemi.') : r.why === 'cd' ? pw.name + ' se recharge.' : r.why === 'stun' ? h.def.name + ' est étourdi.' : pw.name + ' n\'est pas développé.', '#ff5050'); return; }
+        this.marker(w.x, w.y, '#ffd040'); ZC.Audio.play('order');
+        return;
+      }
       if (this.mode === 'build') {
         const z = g.map.zoneAt(w.x, w.y);
         if (z && z.owner < 0 && !z.bunker && g.orderBuild(sel, z)) { this.marker(z.cx, z.cy, g.human.hex); ZC.Audio.play('order'); }
@@ -267,8 +275,19 @@
         case 'dropship':
           buy('dropship', g.selectedBunker);
           break;
-        case 'fortify': case 'evolve': case 'weapons': case 'armor': case 'range': case 'siege': case 'stimResearch': { // sur tous les bunkers sélectionnés
-          const what = cmd === 'stimResearch' ? 'stim' : cmd, bs = g.selectedBunkers;
+        case 'addon': buy('addon', g.selectedBunker); break;
+        case 'power1': case 'power2': { // pouvoir du héros : immédiat, ou mode de visée
+          const h = g.hero, H = g.human && ZC.HEROES[g.human.heroId];
+          if (!h || h.dead || !H || !sel.includes(h)) { ui.pressButton(cmd, false); break; }
+          const pid = H.powers[cmd === 'power1' ? 0 : 1], pw = ZC.POWERS[pid];
+          if (!g.human.powers[pid]) { ui.pressButton(cmd, false); ZC.Audio.play('error', 0); ui.message(pw.name + ' : à développer dans l\'annexe d\'un centre de commandement (A sur le centre).', '#ff5050'); break; }
+          if ((h.cd[pid] || 0) > 0) { ui.pressButton(cmd, false); ZC.Audio.play('error', 0); ui.message(pw.name + ' : recharge, encore ' + Math.ceil(h.cd[pid]) + ' s.', '#ff5050'); break; }
+          if (pw.target === 'self') { const r = g.usePower(h, pid); ui.pressButton(cmd, r.ok); }
+          else this.setMode(cmd);
+          break;
+        }
+        case 'fortify': case 'evolve': case 'weapons': case 'armor': case 'range': case 'siege': { // sur tous les bunkers sélectionnés
+          const what = cmd, bs = g.selectedBunkers;
           let ok = false;
           for (const b of bs) if (g.buy(me, what, b)) ok = true;
           ui.pressButton(cmd, ok);
@@ -281,6 +300,8 @@
           if (ok) ZC.Audio.play('order', 0);
           break;
         }
+        default:
+          if (ZC.POWERS[cmd]) buy(cmd, g.selectedAddon); // développement d'un pouvoir dans l'annexe sélectionnée
       }
     }
 
@@ -326,7 +347,7 @@
         if (c) { this.command(c); return; }
       }
       switch (e.code) {
-        case 'KeyA': this.command('attack'); break;
+        case 'KeyA': this.command(bunkerSel && g.selectedBunker.def.hq ? 'addon' : 'attack'); break;
         case 'KeyM': this.command('move'); break;
         case 'KeyP': this.command('patrol'); break;
         case 'KeyS': this.command('stop'); break;
@@ -342,7 +363,8 @@
         case 'KeyR': if (bunkerSel) this.command('armor'); else if (workerSel) this.command('repair'); break;
         case 'KeyE': if (bunkerSel) this.command('range'); break;
         case 'KeyX': if (bunkerSel) this.command('siege'); break;
-        case 'KeyT': this.command(bunkerSel ? 'stimResearch' : workerSel ? 'tower' : 'stim'); break;
+        case 'KeyT': if (workerSel) this.command('tower'); else if (g.selectedAddon) { const H = ZC.HEROES[g.human.heroId]; if (H) this.command(H.powers[0]); } else if (!bunkerSel) this.command('power1'); break;
+        case 'KeyY': if (g.selectedAddon) { const H = ZC.HEROES[g.human.heroId]; if (H) this.command(H.powers[1]); } else if (!bunkerSel && !workerSel) this.command('power2'); break;
         case 'KeyZ': { const all = g.units.filter(u => u.owner === g.humanId && !u.def.structure && !u.def.air && !u.def.worker); if (all.length) { g.select(all, false); ZC.Audio.play('select'); } break; }
         case 'KeyC': { const sel = g.selection.filter(u => u.owner === g.humanId); if (sel.length) this.centerOnUnits(sel); break; }
         case 'KeyL': app.ui.toggleLeaderboard(); break;

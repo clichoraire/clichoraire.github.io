@@ -54,6 +54,7 @@
     const capacity = r.steerRate * surf.grip * Math.min(1, r.speed / 12);
     inp.steer = SK.clamp((ai.lane - r.x) / 1.6 + (capacity > 0 ? drift / capacity : 0), -1, 1);
     if (r.state === 'ride' && Math.abs(drift) > capacity * 0.8) inp.down = true;
+    else if (r.state === 'ride' && r.speed > 8) inp.up = true; // penché vers l'avant
     // ---- sauts : tremplin imminent (tenir le bouton) ou obstacle inévitable
     const next = T.segs[Math.min(T.segs.length - 1, i0 + 1)];
     if (r.state === 'ride') {

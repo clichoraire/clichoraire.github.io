@@ -3,25 +3,26 @@
   'use strict';
   const $ = id => document.getElementById(id), A = SK.Audio, R = SK.Render, I = SK.Input;
   const SAVE_KEY = 'snowkids.save';
-  const DEFAULT_SAVE = { gold: 0, boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'slash', board: 'freestyle', char2: 'nancy', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false };
+  const DEFAULT_SAVE = { gold: 0, boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'slash', board: 'freestyle', char2: 'nancy', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {} };
   let save = loadSave();
   function loadSave() { try { return Object.assign({}, DEFAULT_SAVE, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { return Object.assign({}, DEFAULT_SAVE); } }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* mode privé */ } }
   const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200); };
 
   // ------------------------------------------------------------------ écrans
-  const screens = ['menu', 'select', 'course', 'shop', 'story', 'race', 'result'];
-  function show(name) { for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
+  const screens = ['menu', 'advselect', 'town', 'records', 'select', 'course', 'shop', 'story', 'race', 'result'];
+  function show(name) { if (name !== 'town' && name !== 'advselect') SK.Town.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
   let flow = { mode: 'champ', players: 1, course: null, laps: 3, picks: [] };
 
-  // Faux coureur pour dessiner un personnage hors course
-  function fakeRacer(charId, boardId, state) { return { def: SK.charById(charId), board: SK.boardById(boardId), fx: { parachute: 0, fan: 0, invisible: 0, slow: 0, snowman: 0 }, state: state || 'ride', h: 0, vy: 0, input: { steer: 0, down: false }, curTrick: null, flat: 0, ctrl: 'cpu', player: -1 }; }
+  const fakeRacer = SK.fakeRacer;
+  const UPGRADE_MAX = 2, upgradeCost = lvl => 1000 * (lvl + 1);
+  // Planche avec ses améliorations achetées à la boutique
+  function effectiveBoard(id) { const b = SK.boardById(id), u = (save.upgrades || {})[b.id] || {}; return Object.assign({}, b, { speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), trick: b.trick + (u.trick || 0), base: b }); }
 
   // ---- menu
   function refreshMenu() {
     $('version').textContent = 'v' + SK.VERSION;
-    $('champ-progress').textContent = save.ending ? '✓ terminé' : save.unlocked + ' / ' + SK.COURSES.length + ' pistes';
-    $('gold-menu').textContent = '🪙 ' + save.gold;
+    $('champ-progress').textContent = save.ending ? '✓ terminée · 🪙 ' + save.gold : save.unlocked + ' / ' + SK.COURSES.length + ' pistes · 🪙 ' + save.gold;
     $('opt-diff').value = save.diff; $('opt-sound').checked = save.sound; $('opt-music').checked = save.music;
   }
   function initMenu() {
@@ -29,22 +30,21 @@
     $('opt-diff').onchange = () => { save.diff = +$('opt-diff').value; store(); };
     $('opt-sound').onchange = () => { save.sound = $('opt-sound').checked; A.setEnabled(save.sound); store(); };
     $('opt-music').onchange = () => { save.music = $('opt-music').checked; A.setMusic(save.music); store(); };
-    $('btn-champ').onclick = () => { flow = { mode: 'champ', players: 1, picks: [] }; A.sfx('click'); openSelect(0); };
+    $('btn-adv').onclick = () => { A.sfx('click'); openAdventure(); };
     $('btn-free').onclick = () => { flow = { mode: 'free', players: 1, picks: [] }; A.sfx('click'); openSelect(0); };
     $('btn-time').onclick = () => { flow = { mode: 'time', players: 1, picks: [] }; A.sfx('click'); openSelect(0); };
     $('btn-duo').onclick = () => { flow = { mode: 'free', players: 2, picks: [] }; A.sfx('click'); openSelect(0); };
-    $('btn-shop').onclick = () => { A.sfx('click'); openShop(); };
     $('btn-help').onclick = () => { A.sfx('click'); $('howto').classList.toggle('hidden'); if (!$('howto').classList.contains('hidden')) $('howto').scrollIntoView({ behavior: 'smooth' }); };
     $('btn-reset').onclick = () => { if (confirm('Effacer toute la progression (pièces, planches, pistes débloquées, Shinobin) ?')) { save = Object.assign({}, DEFAULT_SAVE); store(); refreshMenu(); toast('Sauvegarde effacée'); } };
     $('howto-grid').innerHTML = `
       <div><h3>Le but</h3><p>Descends la piste plus vite que les autres. Au bas de la piste, la <b>remontée mécanique</b> te ramène au sommet pour le tour suivant : une chaise part toutes les ${SK.LIFT_INTERVAL} secondes, une place par chaise. Au dernier tour, la ligne d'arrivée remplace la remontée.</p>
-      <h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> sauter (sur un tremplin : tiens le bouton pour décoller plus haut)</li><li><kbd>C</kbd> figure en l'air : seul = Grab, <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
+      <h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↑</kbd> se pencher en avant (un peu plus de vitesse) · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> sauter (sur un tremplin : tiens le bouton pour décoller plus haut)</li><li><kbd>C</kbd> figure en l'air : seul = Grab, <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
       <p>Joueur 2 : <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>, <kbd>G</kbd> saut, <kbd>H</kbd> figure, <kbd>J</kbd> tir, <kbd>K</kbd> objet. Les manettes marchent aussi (A saut, B figure, X tir, Y objet).</p></div>
       <div><h3>Pièces et boîtes</h3><p>Les <b>pièces</b> 🪙 (10 chacune) traînent sur la piste et s'obtiennent surtout avec les <b>figures</b> : termine-les avant d'atterrir, sinon tu tombes ! Enchaîne plusieurs figures dans un même saut pour multiplier le gain.</p>
       <p>Les <b>boîtes rouges</b> donnent un <b>tir</b> et coûtent ${SK.SHOT_COST} pièces. Les <b>boîtes bleues</b> donnent un <b>objet</b>, gratuit. Un seul tir et un seul objet à la fois.</p>
       <h3>Tirs (boîtes rouges)</h3><ul>${Object.values(SK.SHOTS).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.desc}</li>`).join('')}</ul></div>
       <div><h3>Objets (boîtes bleues)</h3><ul>${Object.values(SK.ITEMS).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.desc}</li>`).join('')}</ul>
-      <h3>Championnat et boutique</h3><p>Gagne chaque piste (1<sup>re</sup> place) pour débloquer la suivante. Les pièces ramassées et la prime de fin de course (${SK.PRIZES.slice(0, 4).join(' / ')}) s'accumulent pour acheter de meilleures planches à la <b>boutique</b>.</p>
+      <h3>Aventure et village</h3><p>Choisis ton Kid, puis promène-toi dans le <b>village</b> (← → pour tourner, Entrée pour entrer dans une maison) : le <b>télésiège</b> mène aux pistes, la <b>boutique</b> vend, équipe et améliore les planches, la <b>maison des Kids</b> change de personnage, le <b>chalet des records</b> montre ta progression. Gagne chaque piste (1<sup>re</sup> place) pour débloquer la suivante ; les pièces ramassées et la prime de fin de course (${SK.PRIZES.slice(0, 4).join(' / ')}) remplissent ta tirelire.</p>
       <p>Au <b>Pays des Ninjas</b>, un cinquième coureur mystérieux se joint à la course… Bats-le partout et il deviendra jouable.</p>
       <h3>Surfaces</h3><p>La glace glisse (dirige tôt, freine), le sable et l'herbe ralentissent, les sables mouvants engluent. On peut sauter par-dessus les obstacles et les rochers.</p></div>`;
   }
@@ -60,7 +60,48 @@
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; for (let i = 0; i < 40; i++) ctx.fillRect((i * 97.3 + t * 20) % W, (i * 61.7 + t * 50) % H, 3, 3);
   }
 
-  // ---- sélection du personnage
+  // ---- Aventure : choix du Kid sur la neige, puis le village
+  function openAdventure() { if (save.advChar && SK.charById(save.advChar) && (save.advChar !== 'shinobin' || save.shinobin)) openTown(); else advSelect(() => show('menu')); }
+  function advSelect(onBack) {
+    show('advselect'); A.music('menu');
+    const info = $('adv-info'); let current = save.advChar || 'slash';
+    SK.Town.select({
+      canvas: $('adv-canvas'), unlocked: save.shinobin, current,
+      onChange: c => { current = c.id; let bars = ''; for (const [k, lab] of [['speed', 'Vitesse'], ['corner', 'Virage'], ['trick', 'Figures']]) { bars += `<div class="stat"><span>${lab}</span>`; for (let i = 1; i <= 5; i++) bars += `<i class="${i <= c[k] ? 'on' : ''}"></i>`; bars += '</div>'; } info.innerHTML = `<b>${c.name}</b><div>${bars}</div><div style="max-width:420px">${c.desc}</div>`; },
+      onPick: id => { A.sfx('box'); save.advChar = id; save.char = id; store(); openTown(); },
+      onBack,
+    });
+    $('btn-adv-back').onclick = () => { A.sfx('click'); onBack(); };
+    $('btn-adv-ok').onclick = () => { A.sfx('box'); save.advChar = current; save.char = current; store(); openTown(); };
+  }
+  function openTown() {
+    show('town'); A.music('menu');
+    if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
+    $('town-gold').textContent = '🪙 ' + save.gold; $('town-char').textContent = SK.charById(save.advChar).name + ' · planche ' + SK.boardById(save.advBoard).name;
+    SK.Town.open({
+      canvas: $('town-canvas'), charId: save.advChar, labelEl: $('town-label'),
+      onEnter: id => {
+        A.sfx('box');
+        if (id === 'lift') { flow = { mode: 'champ', players: 1, picks: [{ charId: save.advChar, boardId: save.advBoard }] }; openCourse(); }
+        else if (id === 'shop') openShop(openTown);
+        else if (id === 'kids') advSelect(openTown);
+        else openRecords();
+      },
+      onBack: () => { A.sfx('click'); show('menu'); },
+    });
+    $('btn-town-menu').onclick = () => { A.sfx('click'); show('menu'); };
+  }
+  function openRecords() {
+    show('records');
+    const won = Object.keys(save.won).length;
+    $('records-sub').textContent = `🪙 ${save.gold} pièces · ${won} piste${won > 1 ? 's' : ''} gagnée${won > 1 ? 's' : ''} sur ${SK.COURSES.length} · ${save.boards.length} planche${save.boards.length > 1 ? 's' : ''}` + (save.shinobin ? ' · Shinobin débloqué 🥷' : '');
+    let html = '<table class="results"><tr><th>Piste</th><th>État</th><th class="num">Record</th></tr>';
+    SK.COURSES.forEach((c, i) => { const unlocked = i < save.unlocked; html += `<tr><td>${i + 1}. ${unlocked || !c.hidden ? c.name : '???'}</td><td>${save.won[c.id] ? '🏆 gagnée' : unlocked ? 'débloquée' : '🔒'}</td><td class="num">${SK.fmtTime(save.best[c.id])}</td></tr>`; });
+    $('records').innerHTML = html + '</table>';
+    $('btn-records-back').onclick = () => { A.sfx('click'); openTown(); };
+  }
+
+  // ---- sélection du personnage (course libre, contre-la-montre, 2 joueurs)
   function openSelect(player) {
     show('select'); A.music('menu');
     const two = flow.players === 2;
@@ -78,7 +119,7 @@
     };
     for (const c of list) {
       const el = document.createElement('div'); el.className = 'card' + (c.locked ? ' locked' : ''); el.dataset.id = c.id;
-      if (c.locked) { el.innerHTML = '<div style="font-size:70px;line-height:130px">🔒</div><h3>???</h3><div class="desc">Un coureur caché… Termine le championnat pour le découvrir.</div>'; cards.appendChild(el); continue; }
+      if (c.locked) { el.innerHTML = '<div style="font-size:70px;line-height:130px">🔒</div><h3>???</h3><div class="desc">Un coureur caché… Termine l\'aventure pour le découvrir.</div>'; cards.appendChild(el); continue; }
       const cv = document.createElement('canvas'); cv.width = 150; cv.height = 140; el.appendChild(cv);
       const h = document.createElement('h3'); h.textContent = c.name + (c.hidden ? ' 🥷' : ''); el.appendChild(h);
       const stats = document.createElement('div');
@@ -118,8 +159,8 @@
   function openCourse() {
     show('course');
     const champ = flow.mode === 'champ';
-    $('course-title').textContent = champ ? 'Championnat : choisis ta piste' : 'Choisis ta piste';
-    $('course-sub').textContent = champ ? 'Termine 1er pour débloquer la piste suivante. Prime : ' + SK.PRIZES.slice(0, 4).join(' / ') + ' pièces.' : flow.mode === 'time' ? 'Ton meilleur temps est affiché sur chaque piste.' : 'Les pistes se débloquent dans le championnat.';
+    $('course-title').textContent = champ ? 'Télésiège : choisis ta piste' : 'Choisis ta piste';
+    $('course-sub').textContent = champ ? 'Termine 1er pour débloquer la piste suivante. Prime : ' + SK.PRIZES.slice(0, 4).join(' / ') + ' pièces.' : flow.mode === 'time' ? 'Ton meilleur temps est affiché sur chaque piste.' : 'Les pistes se débloquent dans l\'aventure.';
     $('laps-row').classList.toggle('hidden', champ);
     const cards = $('course-cards'); cards.innerHTML = '';
     let picked = null;
@@ -143,7 +184,7 @@
     if (champ) picked = SK.COURSES[Math.min(save.unlocked, SK.COURSES.length) - 1].id;
     draw();
     const sel = $('sel-laps'); sel.innerHTML = ''; SK.LAPS_CHOICES.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); }); sel.value = save.laps;
-    $('btn-course-back').onclick = () => { A.sfx('click'); openSelect(flow.players - 1); };
+    $('btn-course-back').onclick = () => { A.sfx('click'); if (champ) openTown(); else openSelect(flow.players - 1); };
     $('btn-course-ok').onclick = () => {
       if (!picked) return A.sfx('nope');
       save.laps = +sel.value; store();
@@ -172,21 +213,34 @@
     $('btn-story-ok').onclick = () => { A.sfx('click'); next(); };
   }
 
-  // ---- boutique
-  function openShop() {
+  // ---- boutique : acheter, équiper (aventure), améliorer
+  function openShop(back) {
     show('shop'); A.music('menu');
-    $('shop-gold').textContent = save.gold;
+    $('shop-gold').textContent = save.gold; $('shop-equipped').textContent = SK.boardById(save.advBoard).name;
     const list = $('board-list'); list.innerHTML = '';
     for (const b of SK.BOARDS) {
-      const owned = save.boards.includes(b.id);
-      const el = document.createElement('div'); el.className = 'board' + (owned ? ' owned' : '');
-      el.innerHTML = `<div class="swatch" style="background:${b.color}"></div><div class="info"><b>${b.name}</b>${b.desc}<br>Vitesse ${fmtMod(b.speed)} · Virage ${fmtMod(b.corner)} · Figures ${fmtMod(b.trick)}</div>`;
+      const owned = save.boards.includes(b.id), eq = effectiveBoard(b.id), u = (save.upgrades[b.id] = save.upgrades[b.id] || { speed: 0, corner: 0, trick: 0 });
+      const el = document.createElement('div'); el.className = 'board' + (owned ? ' owned' : '') + (save.advBoard === b.id ? ' equipped' : '');
+      el.innerHTML = `<div class="swatch" style="background:${b.color}"></div><div class="info"><b>${b.name}${save.advBoard === b.id ? ' · équipée' : ''}</b>${b.desc}<br>Vitesse ${fmtMod(eq.speed)} · Virage ${fmtMod(eq.corner)} · Figures ${fmtMod(eq.trick)}</div>`;
+      const col = document.createElement('div'); col.style.cssText = 'display:flex;flex-direction:column;gap:4px;align-items:flex-end';
       const btn = document.createElement('button');
-      if (owned) { btn.textContent = 'Possédée'; btn.disabled = true; btn.className = 'ghost'; }
-      else { btn.textContent = '🪙 ' + b.price; btn.className = save.gold >= b.price ? 'gold' : 'ghost'; btn.onclick = () => { if (save.gold < b.price) { A.sfx('nope'); toast('Pas assez de pièces : il te manque ' + (b.price - save.gold)); return; } save.gold -= b.price; save.boards.push(b.id); store(); A.sfx('buy'); toast(b.name + ' achetée !'); openShop(); }; }
-      el.appendChild(btn); list.appendChild(el);
+      if (!owned) { btn.textContent = '🪙 ' + b.price; btn.className = save.gold >= b.price ? 'gold' : 'ghost'; btn.onclick = () => { if (save.gold < b.price) { A.sfx('nope'); toast('Pas assez de pièces : il te manque ' + (b.price - save.gold)); return; } save.gold -= b.price; save.boards.push(b.id); store(); A.sfx('buy'); toast(b.name + ' achetée !'); openShop(back); }; }
+      else if (save.advBoard === b.id) { btn.textContent = 'Équipée'; btn.disabled = true; btn.className = 'ghost'; }
+      else { btn.textContent = 'Équiper'; btn.onclick = () => { save.advBoard = b.id; save.board = b.id; store(); A.sfx('box'); openShop(back); }; }
+      col.appendChild(btn);
+      if (owned) {
+        const ups = document.createElement('div'); ups.className = 'ups';
+        for (const [k, lab] of [['speed', 'Vitesse'], ['corner', 'Virage'], ['trick', 'Figures']]) {
+          const ub = document.createElement('button'); const lvl = u[k] || 0;
+          if (lvl >= UPGRADE_MAX) { ub.textContent = lab + ' max'; ub.disabled = true; ub.className = 'ghost'; }
+          else { const cost = upgradeCost(lvl); ub.textContent = `${lab} +1 · 🪙 ${cost}`; ub.className = save.gold >= cost ? 'gold' : 'ghost'; ub.onclick = () => { if (save.gold < cost) { A.sfx('nope'); toast('Pas assez de pièces : il te manque ' + (cost - save.gold)); return; } save.gold -= cost; u[k] = lvl + 1; store(); A.sfx('buy'); toast(b.name + ' : ' + lab.toLowerCase() + ' amélioré !'); openShop(back); }; }
+          ups.appendChild(ub);
+        }
+        col.appendChild(ups);
+      }
+      el.appendChild(col); list.appendChild(el);
     }
-    $('btn-shop-back').onclick = () => { A.sfx('click'); show('menu'); };
+    $('btn-shop-back').onclick = () => { A.sfx('click'); (back || (() => show('menu')))(); };
   }
 
   // ------------------------------------------------------------------ course
@@ -201,7 +255,7 @@
   function startRace() {
     show('race'); A.init(); A.music(flow.course.theme);
     canvas = $('game'); ctx = canvas.getContext('2d');
-    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, ctrl: 'human', player: i }));
+    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), ctrl: 'human', player: i }));
     if (flow.mode !== 'time') {
       racers.push(...pickAI(4 - racers.length, racers.map(r => r.charId), flow.mode !== 'champ'));
       if (flow.mode === 'champ' && flow.course.boss) racers.push({ charId: flow.course.boss, boardId: 'pro', ctrl: 'cpu', boss: true });
@@ -238,6 +292,8 @@
         case 'go': A.sfx('go'); break;
         case 'coin': if (human) A.sfx('coin'); break;
         case 'box': if (human) { A.sfx('box'); const d = e.kind === 'red' ? SK.SHOTS[e.got] : SK.ITEMS[e.got]; R.notify(r, d.icon + ' ' + d.name + (e.kind === 'red' ? '  (−' + SK.SHOT_COST + ' 🪙)' : ''), e.kind === 'red' ? '#ff8a80' : '#82b1ff'); } break;
+        case 'boxpoor': if (human) { A.sfx('nope'); R.notify(r, 'Boîte rouge : il faut ' + SK.SHOT_COST + ' pièces (tu en as ' + r.coins + ')', '#ff8a80'); } break;
+        case 'boxfull': if (human) { A.sfx('nope'); R.notify(r, e.kind === 'red' ? 'Tu as déjà un tir : utilise-le (' + (r.player === 1 ? 'J' : 'V') + ')' : 'Tu as déjà un objet : utilise-le (' + (r.player === 1 ? 'K' : 'B') + ')', '#ffcc80'); } break;
         case 'jump': if (human && e.big) A.sfx('jump'); break;
         case 'land': if (human) A.sfx('land'); break;
         case 'trick': if (human) { A.sfx('trick'); R.notify(r, e.names.join(' + ') + '  +' + e.coins + ' 🪙', '#ffd600', true); } break;
@@ -272,7 +328,7 @@
       if (flow.course.id === 'dizzy' && !save.shinobin) { save.shinobin = true; gotShinobin = true; }
     }
     store();
-    $('result-title').textContent = flow.course.name + ' — ' + (flow.mode === 'time' ? 'Contre-la-montre' : champ ? 'Championnat' : 'Course libre');
+    $('result-title').textContent = flow.course.name + ' — ' + (flow.mode === 'time' ? 'Contre-la-montre' : champ ? 'Aventure' : 'Course libre');
     $('result-sub').textContent = flow.mode === 'time' ? (me && save.best[flow.course.id] === me.time ? '🏆 Nouveau record !' : 'Record : ' + SK.fmtTime(save.best[flow.course.id])) : 'Pièces gagnées : ' + earned + ' (ramassées + prime) · Total : 🪙 ' + save.gold;
     let html = '<table class="results"><tr><th>Place</th><th>Coureur</th><th class="num">Temps</th><th class="num">Pièces</th><th class="num">Figures</th><th class="num">Touches</th><th class="num">Prime</th></tr>';
     for (const x of res) html += `<tr class="${x.r.ctrl === 'human' ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][x.rank] || (x.rank + 1) + 'e'}</td><td>${x.name}${x.r.ctrl === 'human' ? ' (J' + (x.r.player + 1) + ')' : ''}${x.r.boss ? ' 🥷' : ''}</td><td class="num">${SK.fmtTime(x.time)}${x.estimated ? '*' : ''}</td><td class="num">${x.coins}</td><td class="num">${x.tricks}</td><td class="num">${x.stats.hits}</td><td class="num">${x.prize ? '+' + x.prize : ''}</td></tr>`;
@@ -285,10 +341,10 @@
     mk('Rejouer', 'primary', startRace);
     if (champ && unlockedNew) mk('Piste suivante : ' + unlockedNew.name, 'gold', () => { flow.course = unlockedNew; flow.laps = unlockedNew.laps; if (unlockedNew.boss) story(unlockedNew.id === 'ninja' ? 'ninja' : 'dizzy', startRace); else startRace(); });
     mk('Changer de piste', '', openCourse);
-    if (flow.mode !== 'time') mk('Boutique', 'gold', openShop);
+    if (champ) mk('Retour au village', 'gold', openTown); else if (flow.mode !== 'time') mk('Boutique', 'gold', () => openShop(() => show('menu')));
     mk('Menu', 'ghost', () => show('menu'));
     if (me && me.rank === 0) A.sfx('win');
-    if (gotShinobin) setTimeout(() => { A.sfx('unlock'); story('ending', () => { save.ending = true; store(); show('menu'); }); }, 900);
+    if (gotShinobin) setTimeout(() => { A.sfx('unlock'); story('ending', () => { save.ending = true; store(); openTown(); }); }, 900);
     else if (unlockedNew) setTimeout(() => A.sfx('unlock'), 600);
   }
 
@@ -304,7 +360,8 @@
     if (q.has('screen')) { // ?screen=select|course|shop (captures d'écran)
       flow = { mode: q.get('mode') || 'champ', players: 1, picks: [{ charId: 'slash', boardId: 'freestyle' }] };
       if (q.has('unlock')) { save.unlocked = +q.get('unlock'); save.gold = 4200; save.shinobin = q.has('shinobin'); }
-      ({ select: () => openSelect(0), course: openCourse, shop: openShop, story: () => story('ninja', () => show('menu')) })[q.get('screen')]();
+      if (q.has('unlock')) { save.advChar = 'slash'; save.boards = ['freestyle', 'fusee']; }
+      ({ select: () => openSelect(0), course: openCourse, shop: () => openShop(openTown), story: () => story('ninja', () => show('menu')), town: openTown, adv: () => advSelect(() => show('menu')), records: openRecords })[q.get('screen')]();
     }
     if (q.has('demo')) { // ?demo=rookie : lance tout de suite une course (capture d'écran, tests)
       flow = { mode: 'free', players: q.get('players') === '2' ? 2 : 1, picks: [{ charId: 'slash', boardId: 'freestyle' }, { charId: 'nancy', boardId: 'freestyle' }].slice(0, q.get('players') === '2' ? 2 : 1), course: SK.courseById(q.get('demo')) || SK.COURSES[0], laps: 3 };

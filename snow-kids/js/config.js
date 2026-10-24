@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.1';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -118,7 +118,7 @@ window.SK.VERSION = '1.0';   // à augmenter à chaque mise en ligne (affichée 
   };
 
   // ------------------------------------------------------------------ pistes (les 9 tableaux, dans l'ordre du championnat)
-  // Sections : s = ligne droite, c = virage (c > 0 vers la droite), r = tremplin (montée de h m puis à-pic),
+  // Sections : s = ligne droite, c = virage (c > 0 vers la droite), r = bosse-tremplin (montée de h m sur n segments puis redescente ; sauter au sommet pour décoller),
   // b = bosses, x = changement de surface, tunnel = marche/arrêt. w = demi-largeur (m). obst/boxes/coins = garnitures.
   SK.COURSES = [
     { id: 'rookie', name: 'Mont Débutant', original: 'Rookie Mountain', theme: 'rookie', surface: 'snow', laps: 3,

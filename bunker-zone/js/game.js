@@ -38,64 +38,182 @@
       this.waveCount = 0;
       // Mode aventure : bonus passifs, héros, objectif de mission
       this.campaign = s.campaign || null;
-      this.hero = null; this.heroDown = false; this.heroXpGained = 0;
+      this.hero = null; this.heroDown = false; this.heroXpGained = 0; // héros du joueur humain (chaque joueur a le sien : p.hero)
+      this.timers = [];          // actions différées { t, fn } (barrage d'artillerie...)
       this.patches = [];         // gisements de minerai { zone, x, y, amount, max, crystals, busy }
       this.invasionT = s.invasion ? 25 : 0; this.invasionCount = 0; // vagues d'envahisseurs (missions de survie)
       this.nextInvasion = null;  // point du bord d'où la prochaine vague surgira (annoncé à l'avance)
       this.setupPlayers();
       if (s.invasion) this.planInvasion();
-      if (this.campaign && this.human) this.spawnHero();
+      this.spawnHeroes();
     }
 
-    // ---------------------------------------------------------- héros (mode aventure)
-    spawnHero() {
-      const c = this.campaign, me = this.human;
-      const at = me.hq && !me.hq.dead ? me.hq : this.units.find(u => !u.dead && u.owner === me.id && u.def.structure);
+    // ---------------------------------------------------------- héros (un par joueur, trois au choix par race)
+    // Humain : réglage « hero » (ou le héros de l'aventure) ; IA : un héros de sa race au hasard
+    spawnHeroes() {
+      const s = this.settings;
+      for (const p of this.players) {
+        if (p.invader) continue;
+        let id = null;
+        if (p.isHuman && this.campaign) id = this.campaign.hero.id;
+        else if (p.isHuman) id = s.hero === 'none' ? null : (ZC.HEROES[s.hero] && ZC.HEROES[s.hero].race === p.race ? s.hero : ZC.pick(ZC.heroesOf(p.race)).id);
+        else id = s.aiHeroes === false ? null : ZC.pick(ZC.heroesOf(p.race)).id;
+        p.heroId = id; p.powers = {};
+        if (id) this.spawnHero(p);
+      }
+    }
+    spawnHero(p) {
+      p = p || this.human; if (!p || !p.heroId) return null;
+      const at = p.hq && !p.hq.dead ? p.hq : this.units.find(u => !u.dead && u.owner === p.id && u.def.structure && !u.def.addon && !u.def.extractor && !u.def.tower);
       if (!at) return null;
-      const u = this.spawnUnit(me.id, c.hero.unit, at.x + 40, at.y + at.radius + 30);
-      u.heroLevel = c.hero.level; u.xp = c.hero.xp; u.up = at.up; u.home = at;
-      u.maxHp = Math.round(u.def.hp * ZC.heroScale(u.heroLevel).hp * (me.bonus ? me.bonus.hp : 1)); u.hp = u.maxHp;
+      const H = ZC.HEROES[p.heroId], c = p.isHuman ? this.campaign : null, prev = p.hero;
+      const u = this.spawnUnit(p.id, H.unit, at.x + 40, at.y + at.radius + 30);
+      u.heroLevel = prev ? prev.heroLevel : c ? c.hero.level : 0; u.xp = prev ? prev.xp : c ? c.hero.xp : 0; u.up = at.up; u.home = at;
+      u.maxHp = Math.round(u.def.hp * ZC.heroScale(u.heroLevel).hp * (p.bonus ? p.bonus.hp : 1)); u.hp = u.maxHp;
       u.facing = Math.PI / 2;
-      this.hero = u; this.heroRespawnT = 0;
-      this.addEffect({ type: 'spawn', x: u.x, y: u.y, life: 0.8, color: me.hex });
+      p.hero = u;
+      if (p.isHuman) { this.hero = u; this.heroRespawnT = 0; }
+      this.addEffect({ type: 'spawn', x: u.x, y: u.y, life: 0.8, color: p.hex });
       return u;
     }
-    heroGainXp(amount) {
-      const h = this.hero; if (!h || h.dead) return;
-      const mult = this.human.bonus ? this.human.bonus.heroXp : 1;
+    heroGainXp(h, amount) {
+      if (!h || h.dead) return;
+      const p = this.players[h.owner], mult = p.bonus ? p.bonus.heroXp : 1;
       const gain = amount * mult;
-      h.xp += gain; this.heroXpGained += gain;
+      h.xp += gain; if (p.isHuman) this.heroXpGained += gain;
       const lvl = ZC.heroLevel(h.xp);
       if (lvl > h.heroLevel) {
         h.heroLevel = lvl;
-        const max = Math.round(h.def.hp * ZC.heroScale(lvl).hp * (this.human.bonus ? this.human.bonus.hp : 1));
+        const max = Math.round(h.def.hp * ZC.heroScale(lvl).hp * (p.bonus ? p.bonus.hp : 1));
         h.hp += max - h.maxHp; h.maxHp = max;
         this.addEffect({ type: 'spawn', x: h.x, y: h.y, life: 0.8, color: '#ffd040' });
-        this.emit('heroLevel', { unit: h, level: lvl });
+        this.emit('heroLevel', { unit: h, level: lvl, player: p.id });
       }
     }
-    // Le héros ne revient pas tout seul : on le ressuscite au centre de commandement (carte « Unités », H)
+    // Le héros ne revient pas tout seul : on le ressuscite au centre de commandement (carte « Unités », H) ; l'IA le fait quand elle a les moyens
     updateHero() {
-      if (!this.campaign || !this.human || !this.hero) return;
-      if (this.hero.dead && !this.heroDown) { this.heroDown = true; this.emit('heroDown', { unit: this.hero }); }
+      for (const p of this.players) {
+        const h = p.hero; if (!h || !h.dead) continue;
+        if (p.isHuman) { if (!this.heroDown) { this.heroDown = true; this.emit('heroDown', { unit: h }); } }
+        else if (p.alive && p.hq && !p.hq.dead && !this.heroQueued(p.id) && p.minerals >= this.heroReviveCost(p.id) + 150) this.buy(p.id, 'hero', p.hq);
+      }
     }
     // Résurrection possible : héros mort, pas déjà en cours
     canReviveHero(player) {
-      return !!this.campaign && player === this.humanId && !!this.hero && this.hero.dead && !this.heroQueued(player);
+      const p = this.players[player];
+      return !!p.hero && p.hero.dead && !this.heroQueued(player);
     }
     heroQueued(player) {
       for (const u of this.units) if (!u.dead && u.owner === player && u.def.structure && u.queue.some(q => q.what === 'hero')) return true;
       return false;
     }
-    heroReviveCost(player) { return this.isAdmin(player) ? 0 : Math.round(ZC.heroReviveCost(this.hero ? this.hero.heroLevel : 0) * (this.human.bonus ? this.human.bonus.costMult : 1)); }
-    reviveHero() {
-      const dead = this.hero, u = this.spawnHero();
+    heroReviveCost(player) { const p = this.players[player]; return this.isAdmin(player) ? 0 : Math.round(ZC.heroReviveCost(p.hero ? p.hero.heroLevel : 0) * (p.bonus ? p.bonus.costMult : 1)); }
+    reviveHero(player) {
+      const p = this.players[player === undefined ? this.humanId : player];
+      const u = this.spawnHero(p);
       if (!u) return null;
-      u.xp = dead.xp; u.heroLevel = dead.heroLevel;
-      u.maxHp = Math.round(u.def.hp * ZC.heroScale(u.heroLevel).hp * (this.human.bonus ? this.human.bonus.hp : 1)); u.hp = u.maxHp;
-      this.heroDown = false;
-      this.emit('heroBack', { unit: u });
+      if (p.isHuman) this.heroDown = false;
+      this.emit('heroBack', { unit: u, player: p.id });
       return u;
+    }
+
+    // ---------------------------------------------------------- pouvoirs des héros
+    // Lance un pouvoir si tout est en règle ; sinon le héros va à portée et le lance en arrivant. Renvoie { ok, why }
+    usePower(hero, pid, tx, ty, target) {
+      const pw = ZC.POWERS[pid];
+      if (!pw || !hero || hero.dead || !hero.def.hero) return { ok: false, why: 'locked' };
+      const p = this.players[hero.owner];
+      if (!p.powers[pid]) return { ok: false, why: 'locked' };
+      if ((hero.cd[pid] || 0) > 0) return { ok: false, why: 'cd' };
+      if (hero.stunT > 0) return { ok: false, why: 'stun' };
+      if (pw.target === 'self') { this.castPower(hero, pid); return { ok: true }; }
+      if (pw.target === 'structure') {
+        if (!target || target.dead || !target.def.structure || this.allied(target.owner, hero.owner)) return { ok: false, why: 'target' };
+        if (pid === 'gas' && ZC.capacity(target) <= 0) return { ok: false, why: 'target' };
+      }
+      const x = target ? target.x : tx, y = target ? target.y : ty;
+      const reach = (pw.range || 0) + hero.radius + (target ? target.radius : 0);
+      if (ZC.dist(hero.x, hero.y, x, y) <= reach) this.castPower(hero, pid, x, y, target);
+      else hero.setOrder({ type: 'cast', pid, x, y, target: target || null });
+      return { ok: true };
+    }
+    // Unités vivantes dans un rayon (bord à bord) ; pred filtre
+    unitsNear(x, y, r, pred) {
+      const q = this.hash.query(x, y, r + 40, this._q), out = [];
+      for (let i = 0; i < q.length; i++) { const u = q[i]; if (!u.dead && ZC.dist(x, y, u.x, u.y) <= r + u.radius && (!pred || pred(u))) out.push(u); }
+      return out;
+    }
+    areaDamage(x, y, r, dmg, dtype, att, hitStructures) {
+      for (const u of this.unitsNear(x, y, r, u => !this.allied(u.owner, att.owner) && (hitStructures || !u.def.structure))) this.applyDamage(u, dmg, 1, dtype, att);
+    }
+    castPower(hero, pid, x, y, target) {
+      const pw = ZC.POWERS[pid], p = this.players[hero.owner], me = hero.owner;
+      hero.cd[pid] = pw.cd;
+      const ally = (u) => this.allied(u.owner, me), enemy = (u) => !this.allied(u.owner, me);
+      const mobileAlly = (u) => ally(u) && !u.def.structure, mobileEnemy = (u) => enemy(u) && !u.def.structure;
+      const buffAll = (list, b) => { for (const u of list) u.buff = Object.assign({}, b); };
+      const fx = (type, ex, ey, life, r, color) => this.addEffect({ type, x: ex, y: ey, life, r, color: color || p.hex });
+      switch (pid) {
+        case 'stim': hero.stim(); break;
+        case 'gas': this.unloadBunker(target); target.gasT = ZC.GAS_DURATION; fx('gas', target.x, target.y, ZC.GAS_DURATION, target.radius + 18, '#b8e060'); break;
+        case 'heal': for (const u of this.unitsNear(hero.x, hero.y, 96, mobileAlly)) { u.hp = Math.min(u.maxHp, u.hp + 80); fx('heal', u.x, u.y, 0.8, u.radius); } break;
+        case 'shieldwall': buffAll(this.unitsNear(hero.x, hero.y, 120, mobileAlly), { armor: 4, t: 8 }); fx('aura', hero.x, hero.y, 0.8, 120, '#5ab8ff'); break;
+        case 'barrage': {
+          fx('marker', x, y, 1.0, 0, '#ff6a3a');
+          [1.0, 1.4, 1.8].forEach((d, i) => this.timers.push({ t: d, fn: () => { const ox = x + (i - 1) * 22, oy = y + (i % 2 ? 14 : -10); this.areaDamage(ox, oy, 40, 35, 'explosive', hero, true); fx('explosion', ox, oy, 0.5, 20); } }));
+          break;
+        }
+        case 'charge': case 'leap': {
+          fx('spawn', hero.x, hero.y, 0.5, 0);
+          hero.x = ZC.clamp(x, hero.radius, this.map.w - hero.radius); hero.y = ZC.clamp(y, hero.radius, this.map.h - hero.radius); hero.prevX = hero.x; hero.prevY = hero.y; hero.px = hero.x; hero.py = hero.y;
+          for (const u of this.unitsNear(hero.x, hero.y, 46, mobileEnemy)) { this.applyDamage(u, pid === 'charge' ? 25 : 30, 1, 'normal', hero); if (pid === 'charge') u.stunT = Math.max(u.stunT, 1); }
+          fx('shock', hero.x, hero.y, 0.5, 46);
+          break;
+        }
+        case 'swarm': for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.4, u = this.spawnUnit(me, 'runner', hero.x + Math.cos(a) * 26, hero.y + Math.sin(a) * 26); u.expireT = 15; u.up = hero.up; u.home = hero.home; fx('spawn', u.x, u.y, 0.5, 0); } break;
+        case 'roar': for (const u of this.unitsNear(hero.x, hero.y, 128, mobileEnemy)) u.debuff = { dmgMult: 0.5, speedMult: 0.7, t: 6 }; fx('shock', hero.x, hero.y, 0.7, 128, '#ff8a6a'); break;
+        case 'venom': for (const u of this.unitsNear(hero.x, hero.y, 100, mobileEnemy)) u.poison = { dps: 6, t: 8, by: hero }; fx('aura', hero.x, hero.y, 0.8, 100, '#7dff5a'); break;
+        case 'carapace': hero.buff = { armor: 5, t: 8 }; fx('aura', hero.x, hero.y, 0.6, hero.radius + 10, '#ffd040'); break;
+        case 'quake': for (const u of this.unitsNear(hero.x, hero.y, 110, u => mobileEnemy(u) && !u.def.air)) { u.stunT = Math.max(u.stunT, 3); this.applyDamage(u, 15, 1, 'normal', hero); } fx('shock', hero.x, hero.y, 0.8, 110, '#c8a070'); break;
+        case 'nova': this.areaDamage(x, y, 60, 60, 'normal', hero, false); fx('psi2', x, y, 0.6, 24); break;
+        case 'aegis': for (const u of this.unitsNear(hero.x, hero.y, 120, mobileAlly)) { u.shield = u.def.shield; u.buff = { armor: 2, t: 6 }; } fx('aura', hero.x, hero.y, 0.8, 120, '#9ad0ff'); break;
+        case 'lightblades': hero.buff = { dmgMult: 2, t: 8 }; fx('aura', hero.x, hero.y, 0.6, hero.radius + 10, '#fff0a0'); break;
+        case 'blink': fx('psi', hero.x, hero.y, 0.4, 10); hero.x = ZC.clamp(x, hero.radius, this.map.w - hero.radius); hero.y = ZC.clamp(y, hero.radius, this.map.h - hero.radius); hero.prevX = hero.x; hero.prevY = hero.y; hero.px = hero.x; hero.py = hero.y; fx('psi', hero.x, hero.y, 0.4, 10); break;
+        case 'stasis': for (const u of this.unitsNear(x, y, 80, mobileEnemy)) u.debuff = { speedMult: 0.4, cdMult: 1.6, t: 6 }; fx('aura', x, y, 1.0, 80, '#c8a0ff'); break;
+        case 'regen': for (const u of this.unitsNear(hero.x, hero.y, 120, mobileAlly)) { u.hp = Math.min(u.maxHp, u.hp + 70); u.shield = u.def.shield; fx('heal', u.x, u.y, 0.8, u.radius); } break;
+        case 'siegemode': hero.buff = { rangeAdd: 3 * ZC.TILE, dmgMult: 1.5, immobile: true, t: 10 }; hero.order = { type: 'hold' }; fx('aura', hero.x, hero.y, 0.6, hero.radius + 12, '#ffd040'); break;
+        case 'piercing': this.applyDamage(target, 400, 1, 'normal', hero); fx('explosion', target.x, target.y, 0.6, 26); break;
+        case 'overclock': hero.buff = { cdMult: 0.5, t: 8 }; fx('aura', hero.x, hero.y, 0.6, hero.radius + 10, '#9ad0ff'); break;
+        case 'emp': for (const u of this.unitsNear(hero.x, hero.y, 110, mobileEnemy)) { u.shield = 0; u.stunT = Math.max(u.stunT, 2); } fx('shock', hero.x, hero.y, 0.7, 110, '#9ad0ff'); break;
+        case 'repairfield':
+          for (const u of this.unitsNear(hero.x, hero.y, 170, u => ally(u) && u.def.structure && !u.building)) { u.hp = Math.min(u.maxHp, u.hp + 600); fx('repair', u.x, u.y, 0.8, u.radius); }
+          for (const u of this.unitsNear(hero.x, hero.y, 120, u => mobileAlly(u) && !u.def.bio)) { u.hp = Math.min(u.maxHp, u.hp + 60); fx('heal', u.x, u.y, 0.8, u.radius); }
+          break;
+        case 'turret': { const u = this.spawnUnit(me, ZC.RACES[p.race].tower, hero.x + 30, hero.y + 4); u.facing = -Math.PI / 2; u.expireT = 25; u.up = hero.up; fx('spawn', u.x, u.y, 0.6, 0); break; }
+      }
+      this.emit('power', { player: me, hero, what: pid, x: x === undefined ? hero.x : x, y: y === undefined ? hero.y : y });
+    }
+
+    // ---------------------------------------------------------- annexe du centre de commandement
+    // Petit bâtiment accolé au centre ; on y développe les deux pouvoirs du héros. Tombe avec son centre.
+    buildAddon(hq, instant) {
+      const p = this.players[hq.owner], type = ZC.RACES[p.race].addon, def = ZC.UNITS[type];
+      const a = this.spawnUnit(hq.owner, type, hq.x + hq.radius + def.radius + 10, hq.y + 8);
+      a.facing = -Math.PI / 2; a.parent = hq; hq.addon = a;
+      if (!instant) { a.building = true; a.buildT = 0; a.buildTotal = ZC.ADDON.buildTime; a.hp = a.maxHp * 0.1; }
+      this.addEffect({ type: 'spawn', x: a.x, y: a.y, life: 0.8, color: p.hex });
+      return a;
+    }
+    powerDone(addon, what) {
+      const p = this.players[addon.owner];
+      p.powers[what] = true;
+      this.emit('powerDone', { player: addon.owner, what, addon });
+    }
+    // Centres de commandement créés par le joueur (en plus de son QG), en comptant ceux en file : le prix monte avec
+    centersBuilt(player) {
+      let n = -1;
+      for (const u of this.units) if (!u.dead && u.owner === player && u.def.structure) { if (u.def.hq) n++; n += u.research.filter(r => r.what === 'fortify').length; }
+      return Math.max(0, n);
     }
 
     // ---------------------------------------------------------- gisements de minerai et travailleurs
@@ -232,7 +350,7 @@
     productionDone(b, q) {
       if (q.what === 'dropship') this.dropshipReady(b);
       else if (q.what === 'worker') this.spawnWorker(b);
-      else if (q.what === 'hero') { if (this.hero && this.hero.dead) this.reviveHero(); }
+      else if (q.what === 'hero') { const p = this.players[b.owner]; if (p.hero && p.hero.dead) this.reviveHero(b.owner); }
     }
 
     on(fn) { this.listeners.push(fn); }
@@ -242,7 +360,7 @@
     get isTournament() { return this.settings.mode === 'rounds'; }
     // ---------------------------------------------------------- garnison des bunkers
     enterBunker(u, b) {
-      if (b.def.extractor || b.building) return false;
+      if (b.def.extractor || b.def.addon || b.building || b.gasT > 0) return false;
       if (u.dead || b.dead || u.inside || b.garrison.length >= ZC.capacity(b) || !u.canGarrison) return false;
       u.inside = b; u.order = { type: 'idle' }; u.target = null; u.moving = false; u.stimT = 0;
       u.x = b.x; u.y = b.y; u.prevX = b.x; u.prevY = b.y;
@@ -301,7 +419,7 @@
           isHuman, alive: true,
           zones: 0, bunkers: 0, unitCount: 0, supply: 0, kills: 0, losses: 0, captures: 0, eliminatedAt: -1,
           minerals: s.startMinerals, mineralsEarned: 0, dropshipsBuilt: 0, roundsWon: 0,
-          hq: null, bonus: null,
+          hq: null, bonus: null, heroId: null, hero: null, powers: {},
           race: isHuman ? (ZC.RACES[s.playerRace] ? s.playerRace : 'human') : (ZC.RACES[s.aiRace] ? s.aiRace : raceKeys[Math.floor(Math.random() * raceKeys.length)]),
           team: s.teams && s.teams[i] !== undefined ? s.teams[i] : i,
         };
@@ -314,7 +432,7 @@
         const col = ZC.PLAYER_COLORS[colors[ci++] % ZC.PLAYER_COLORS.length];
         this.players.push({
           id: this.players.length, name: s.invasion.name || 'Envahisseurs', hex: col.hex, colorName: col.name, isHuman: false, alive: true, invader: true,
-          zones: 0, bunkers: 0, unitCount: 0, supply: 0, kills: 0, losses: 0, captures: 0, eliminatedAt: -1, minerals: 0, mineralsEarned: 0, dropshipsBuilt: 0, roundsWon: 0, hq: null, bonus: null,
+          zones: 0, bunkers: 0, unitCount: 0, supply: 0, kills: 0, losses: 0, captures: 0, eliminatedAt: -1, minerals: 0, mineralsEarned: 0, dropshipsBuilt: 0, roundsWon: 0, hq: null, bonus: null, heroId: null, hero: null, powers: {},
           race: ZC.RACES[s.aiRace] ? s.aiRace : raceKeys[Math.floor(Math.random() * raceKeys.length)], team: 99,
         });
       }
@@ -373,7 +491,7 @@
       this.roundTime = 0; this.roundTimer = 0; this.endCheckT = 0;
       this.humanDefeated = false; this.heroDown = false;
       this.placeStart();
-      if (this.campaign && this.human) { const xp = this.hero ? this.hero.xp : this.campaign.hero.xp, lvl = this.hero ? this.hero.heroLevel : this.campaign.hero.level; const u = this.spawnHero(); if (u) { u.xp = xp; u.heroLevel = lvl; } }
+      for (const p of this.players) if (p.heroId) this.spawnHero(p); // les héros reviennent avec leur niveau (p.hero garde l'ancien)
     }
 
     spawnUnit(owner, type, x, y) {
@@ -403,7 +521,7 @@
         if (u.dead) continue;
         const p = this.players[u.owner];
         if (u.def.structure) {
-          if (u.def.extractor || u.def.tower) { for (const gu of u.garrison) { p.unitCount++; p.supply += gu.def.supply; } continue; }
+          if (u.def.extractor || u.def.tower || u.def.addon) { for (const gu of u.garrison) { p.unitCount++; p.supply += gu.def.supply; } continue; }
           p.bunkers++; if (u.def.hq && !p.hq) p.hq = u;  // plusieurs centres possibles (amélioration) : le premier sert de QG principal
           for (const gu of u.garrison) { p.unitCount++; p.supply += gu.def.supply; }
         }
@@ -488,15 +606,36 @@
         this.emit('buy', { player, what, bunker: b, total, queued: b.queue.length });
         return true;
       }
+      if (what === 'addon') { // annexe du centre de commandement (une par centre)
+        const b = bunker && bunker.def.hq ? bunker : this.productionCenter(player, bunker);
+        if (!b || b.dead || !b.def.hq || b.owner !== player || b.building || (b.addon && !b.addon.dead) || !p.heroId) return false;
+        const cost = admin ? 0 : ZC.ADDON.cost;
+        if (p.minerals < cost) { this.emit('notEnough', { player }); return false; }
+        p.minerals -= cost;
+        this.buildAddon(b, admin);
+        this.emit('buy', { player, what: 'addon', bunker: b, total: ZC.ADDON.buildTime });
+        return true;
+      }
+      if (ZC.POWERS[what]) { // développement d'un pouvoir du héros, dans l'annexe
+        const a = bunker, pw = ZC.POWERS[what];
+        if (!a || a.dead || !a.def.addon || a.owner !== player || a.building || pw.hero !== p.heroId || p.powers[what] || a.research.some(r => r.what === what)) return false;
+        if (admin) { this.powerDone(a, what); return true; }
+        if (a.research.length >= ZC.RESEARCH_QUEUE_MAX) { this.emit('queueFull', { player }); return false; }
+        if (p.minerals < pw.cost) { this.emit('notEnough', { player }); return false; }
+        p.minerals -= pw.cost;
+        a.research.push({ what, t: 0, total: pw.time, cost: pw.cost });
+        this.emit('buy', { player, what, bunker: a, total: pw.time, power: true, queued: a.research.length });
+        return true;
+      }
       const def = ZC.UPGRADES[what];
-      if (!def || !bunker || bunker.dead || bunker.owner !== player || !bunker.def.structure) return false;
+      if (!def || !bunker || bunker.dead || bunker.owner !== player || !bunker.def.structure || bunker.def.addon) return false;
       const lvl = this.pendingLevel(bunker, what);
       if (lvl >= def.max) return false;
       if (what === 'evolve' && !this.canEvolve(bunker)) { this.emit('needUpgrades', { player }); return false; }
       if (what === 'fortify' && bunker.def.hq) return false;
       if (admin) { this.researchDone(bunker, what); return true; } // admin : gratuit et instantané
       if (bunker.research.length >= ZC.RESEARCH_QUEUE_MAX) { this.emit('queueFull', { player }); return false; }
-      const cost = def.cost(lvl);
+      const cost = def.cost(lvl, what === 'fortify' ? this.centersBuilt(player) : 0);
       if (p.minerals < cost) { this.emit('notEnough', { player }); return false; }
       p.minerals -= cost;
       const total = def.time(lvl);
@@ -538,6 +677,7 @@
       this.addEffect({ type: 'spawn', x: b.x, y: b.y - 10, life: 0.8, color: this.players[b.owner].hex });
     }
     researchDone(bunker, what) {
+      if (ZC.POWERS[what]) { this.powerDone(bunker, what); return; }
       bunker.up[what]++;
       if (what === 'evolve') this.evolveTroops(bunker);
       if (what === 'fortify') this.promoteBunker(bunker);
@@ -590,7 +730,7 @@
     upgradeCost(bunker, what) {
       const def = ZC.UPGRADES[what], lvl = this.pendingLevel(bunker, what);
       if (what === 'fortify' && bunker.def.hq) return -1;  // déjà un centre de commandement
-      return lvl >= def.max ? -1 : this.isAdmin(bunker.owner) ? 0 : def.cost(lvl);
+      return lvl >= def.max ? -1 : this.isAdmin(bunker.owner) ? 0 : def.cost(lvl, what === 'fortify' ? this.centersBuilt(bunker.owner) : 0);
     }
 
     // ---------------------------------------------------------- pouvoirs du mode admin (joueur humain)
@@ -604,7 +744,8 @@
           break;
         case 'maxUpgrades': { // toutes les améliorations au maximum sur le bunker sélectionné (ou tous vos bunkers)
           const bs = this.selectedBunker ? [this.selectedBunker] : this.units.filter(u => !u.dead && u.owner === me.id && u.def.structure);
-          for (const b of bs) { b.research = []; for (const k in ZC.UPGRADES) if (k !== 'evolve' && k !== 'fortify') b.up[k] = ZC.UPGRADES[k].max; if (!b.up.evolve) this.researchDone(b, 'evolve'); }
+          for (const b of bs) { if (b.def.addon) continue; b.research = []; for (const k in ZC.UPGRADES) if (k !== 'evolve' && k !== 'fortify') b.up[k] = ZC.UPGRADES[k].max; if (!b.up.evolve) this.researchDone(b, 'evolve'); }
+          for (const k in ZC.POWERS) if (ZC.POWERS[k].hero === me.heroId) me.powers[k] = true;
           break;
         }
         case 'wave': this.spawnWave(); break;
@@ -683,6 +824,7 @@
       }
       this.separate();
       for (let i = 0; i < units.length; i++) units[i].postMove(dt);
+      if (this.timers.length) { const due = this.timers.filter(x => (x.t -= dt) <= 0); if (due.length) { this.timers = this.timers.filter(x => x.t > 0); for (const x of due) x.fn(); } }
 
       // Nettoyage des morts
       let hadDead = false;
@@ -900,9 +1042,11 @@
       u.dead = true;
       u.hp = 0;
       const owner = this.players[u.owner];
+      if (u.def.addon && u.parent) u.parent.addon = null;
+      if (u.addon && !u.addon.dead) this.kill(u.addon, att); // l'annexe tombe avec son centre
       if (att && !att.dead && att.owner !== u.owner) {
         att.kills++;
-        if (att.def.hero && att === this.hero) this.heroGainXp(u.def.bounty);
+        if (att.def.hero) this.heroGainXp(att, u.def.bounty);
         const kp = this.players[att.owner];
         kp.kills++;
         kp.minerals += u.def.bounty;
@@ -919,10 +1063,9 @@
         if (this.decals.length > 220) this.decals.shift();
       }
       if (u.def.extractor && u.patch && u.patch.extractor === u) u.patch.extractor = null;
+      if (u.def.structure && (u.queue.length || u.research.length)) { this.emit('queueLost', { player: owner.id, count: u.queue.length, research: u.research.length, hero: u.queue.some(q => q.what === 'hero') }); u.queue = []; u.research = []; }
       if (u.def.structure && u.zone) {
         const z = u.zone;
-        if (u.queue.length || u.research.length) this.emit('queueLost', { player: owner.id, count: u.queue.length, research: u.research.length, hero: u.queue.some(q => q.what === 'hero') });
-        u.queue = []; u.research = [];
         z.bunker = null; z.owner = -1; z.ruined = true; z.flashT = 1.2;
         this.recount();
         this.emit('bunkerDestroyed', { zone: z, player: owner.id, killer: att ? att.owner : -1, hq: !!u.def.hq, lastHQ: !!u.def.hq && !(owner.hq && !owner.hq.dead), bounty: u.def.bounty });
@@ -1017,11 +1160,12 @@
     get ownSelection() { return this.selection.filter(u => u.owner === this.humanId && !u.dead && !u.def.structure); }
     // Bunkers / centres de commandement sélectionnés (la sélection ne doit contenir que ça) ; le premier sert de référence
     get selectedBunkers() {
-      const isB = (u) => u.owner === this.humanId && !u.dead && u.def.structure && !u.def.extractor && !u.def.tower;
+      const isB = (u) => u.owner === this.humanId && !u.dead && u.def.structure && !u.def.extractor && !u.def.tower && !u.def.addon;
       return this.selection.length && this.selection.every(isB) ? this.selection : [];
     }
     get selectedBunker() { const bs = this.selectedBunkers; return bs.length ? bs[0] : null; }
     get selectedTower() { const u = this.selection[0]; return this.selection.length === 1 && u.owner === this.humanId && u.def.tower ? u : null; }
+    get selectedAddon() { const u = this.selection[0]; return this.selection.length === 1 && u.owner === this.humanId && u.def.addon ? u : null; }
 
     // ---------------------------------------------------------- fin
     checkEnd() {

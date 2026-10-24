@@ -26,9 +26,13 @@
         const ww = ease(prevW, w, k / trans); let curve = 0, dy = base;
         if (sec.t === 'c') { const q = n / 4; curve = sec.c * (k < q ? ease(0, 1, k / q) : k > 3 * q ? ease(1, 0, (k - 3 * q) / q) : 1); }
         if (sec.t === 'b') { const f = kk => sec.a * Math.sin(2 * Math.PI * kk * 3 / n); dy += f(k + 1) - f(k); }
-        if (sec.t === 'r') { dy += sec.h / n; const s = push(curve, ww, dy, sec); s.ramp = true; if (k === n - 1) { s.jump = true; y -= sec.h + 1.5; } continue; }
+        if (sec.t === 'r') { // bosse-tremplin : montée de h sur n segments, puis redescente sur n segments (pas de saut sans appuyer)
+          const up = push(curve, ww, dy + sec.h / n, sec); up.ramp = true; if (k === n - 1) up.jump = true;
+          continue;
+        }
         push(curve, ww, dy, sec);
       }
+      if (sec.t === 'r') for (let k = 0; k < n; k++) { const d = push(0, w, base - sec.h / n, sec); d.ramp = true; d.down = true; }
       prevW = w;
       sec._start = start; sec._end = segs.length;
     }
@@ -43,7 +47,6 @@
     for (let i = 2; i < segs.length; i++) {
       const s = segs[i];
       if (s.tunnel) continue;
-      if (i % 3 === 0 && !s.ramp) { s.props.push({ type: 'fence', x: -(s.w + 1.3), r: 0, decor: true, v: 0.3 }); s.props.push({ type: 'fence', x: s.w + 1.3, r: 0, decor: true, v: 0.7 }); }
       if (rng() < 0.55) { const side = rng() < 0.5 ? -1 : 1; s.props.push({ type: rng.pick(theme.decor), x: side * (s.w + 3 + rng() * 22), r: 0, decor: true, v: rng() }); }
       if (rng() < 0.25) { const side = rng() < 0.5 ? -1 : 1; s.props.push({ type: rng.pick(theme.decor), x: side * (s.w + 20 + rng() * 40), r: 0, decor: true, v: rng(), far: true }); }
     }

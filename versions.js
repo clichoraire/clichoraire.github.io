@@ -1,1 +1,1 @@
-window.GAME_VERSIONS = { 'bunker-zone/': '1.9', 'hockey-boisjoli/': '1.3', 'snow-kids/': '1.0' };
+window.GAME_VERSIONS = { 'bunker-zone/': '2.0', 'hockey-boisjoli/': '1.3', 'snow-kids/': '1.1' };

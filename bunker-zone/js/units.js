@@ -39,9 +39,16 @@
       this.attackAnim = 0;
       this.stimT = 0;
       this.landT = 0;
+      this.buff = null;                     // pouvoir du héros sur soi / ses alliés : { speedMult, cdMult, dmgMult, armor, rangeAdd, immobile, t }
+      this.debuff = null;                   // malus infligé par un ennemi : { speedMult, cdMult, dmgMult, t }
+      this.stunT = 0;                       // étourdi : ne bouge ni ne tire
+      this.poison = null;                   // { dps, t, by } : perd des PV chaque seconde, armure ignorée
+      this.expireT = 0;                     // > 0 : unité temporaire (essaim, tourelle déployée) qui disparaît à zéro
+      this.gasT = 0;                        // bâtiment enfumé : personne n'y entre
+      this.cd = {};                         // héros : temps de recharge de ses pouvoirs
       this.rally = null;                    // point de ralliement (bunker)
       this.queue = [];                      // dropships en construction (centre de commandement)
-      this.up = { weapons: 0, armor: 0, range: 0, siege: 0, stim: 0, evolve: 0, fortify: 0 }; // améliorations du bunker (les unités partagent celles de leur bunker d'origine)
+      this.up = { weapons: 0, armor: 0, range: 0, siege: 0, evolve: 0, fortify: 0 }; // améliorations du bunker (les unités partagent celles de leur bunker d'origine)
       this.home = null;                     // bunker d'origine (unités mobiles)
       this.research = [];                   // recherches en cours { what, t, total } (bunker)
       this.zone = null;                     // zone possédée (bunker)
@@ -70,14 +77,16 @@
     get damage() {
       if (this.def.dmg <= 0) return 0;
       const b = this.bonus, h = this.def.hero ? ZC.heroScale(this.heroLevel) : null;
-      return Math.round(this.def.dmg * (h ? h.dmg : 1)) + this.up.weapons + (b ? b.dmg : 0);
+      const base = Math.round(this.def.dmg * (h ? h.dmg : 1)) + this.up.weapons + (b ? b.dmg : 0);
+      const m = (this.buff && this.buff.dmgMult ? this.buff.dmgMult : 1) * (this.debuff && this.debuff.dmgMult ? this.debuff.dmgMult : 1);
+      return m === 1 ? base : Math.max(1, Math.round(base * m));
     }
     get armor() {
       if (this.def.structure) return this.def.armor;
       const b = this.bonus, h = this.def.hero ? ZC.heroScale(this.heroLevel) : null;
-      return this.def.armor + this.up.armor + (b ? b.armor : 0) + (h ? h.armor : 0);
+      return this.def.armor + this.up.armor + (b ? b.armor : 0) + (h ? h.armor : 0) + (this.buff && this.buff.armor ? this.buff.armor : 0);
     }
-    get range() { return this.def.range + this.up.range * ZC.TILE * (this.def.range > 0 ? 1 : 0.5); }
+    get range() { return this.def.range + this.up.range * ZC.TILE * (this.def.range > 0 ? 1 : 0.5) + (this.buff && this.buff.rangeAdd ? this.buff.rangeAdd : 0); }
 
     // Évolution : l'unité devient son niveau 2 en gardant sa proportion de vie
     transformTo(type) {
@@ -87,8 +96,11 @@
       this.maxHp = Math.round(def.hp * (b ? b.hp : 1)); this.hp = Math.max(1, Math.round(this.maxHp * ratio));
       this.shield = def.shield; this.cooldown = Math.max(this.cooldown, 0.5);
     }
-    get speed() { return this.def.speed * (this.stimT > 0 ? ZC.STIM.speedMult : 1); }
-    get attackCooldown() { return this.def.cooldown * (this.stimT > 0 ? ZC.STIM.cooldownMult : 1); }
+    get speed() {
+      if (this.buff && this.buff.immobile) return 0;
+      return this.def.speed * (this.stimT > 0 ? ZC.STIM.speedMult : 1) * (this.buff && this.buff.speedMult ? this.buff.speedMult : 1) * (this.debuff && this.debuff.speedMult ? this.debuff.speedMult : 1);
+    }
+    get attackCooldown() { return this.def.cooldown * (this.stimT > 0 ? ZC.STIM.cooldownMult : 1) * (this.buff && this.buff.cdMult ? this.buff.cdMult : 1) * (this.debuff && this.debuff.cdMult ? this.debuff.cdMult : 1); }
 
     isIdle() {
       return (this.order.type === 'idle' || this.order.type === 'hold') && !this.target;
@@ -119,6 +131,7 @@
           else { this.order = { type: 'attackmove', x: o.target.x, y: o.target.y }; this.target = null; }
           break;
         case 'build':      this.order = { type: 'build', x: o.x, y: o.y, zoneId: o.zoneId }; this.target = null; this.landT = 0; break;
+        case 'cast':       this.order = { type: 'cast', pid: o.pid, x: o.x, y: o.y, target: o.target || null }; this.target = null; break; // héros : va à portée puis lance le pouvoir
         case 'enter':      if (this.canGarrison && o.bunker) { this.order = { type: 'enter', bunker: o.bunker, x: o.bunker.x, y: o.bunker.y }; this.target = null; } break;
         case 'gather':     if (this.isWorker && o.patch) { this.order = { type: 'gather', patch: o.patch, x: o.patch.x, y: o.patch.y, spot: null }; this.target = null; } break;
         case 'repair':     if (this.isWorker && o.target && o.target.def.structure) { this.order = { type: 'repair', target: o.target, x: o.target.x, y: o.target.y, patch: o.patch || null }; this.target = null; } break;
@@ -271,6 +284,16 @@
       if (this.hitFlash > 0) this.hitFlash -= dt;
       if (this.attackAnim > 0) this.attackAnim -= dt;
       if (this.stimT > 0) this.stimT -= dt;
+      if (this.buff && (this.buff.t -= dt) <= 0) this.buff = null;
+      if (this.debuff && (this.debuff.t -= dt) <= 0) this.debuff = null;
+      if (this.gasT > 0) this.gasT -= dt;
+      for (const k in this.cd) if (this.cd[k] > 0) this.cd[k] -= dt;
+      if (this.poison) {
+        this.poison.t -= dt; this.hp -= this.poison.dps * dt; this.hitFlash = Math.max(this.hitFlash, 0.05);
+        if (this.hp <= 0) { this.game.kill(this, this.poison.by && !this.poison.by.dead ? this.poison.by : null); return; }
+        if (this.poison.t <= 0) this.poison = null;
+      }
+      if (this.expireT > 0 && (this.expireT -= dt) <= 0) { this.game.kill(this, null); return; } // unité temporaire : disparaît
       if (this.def.shield > 0 && this.shield < this.def.shield) {
         this.shield = Math.min(this.def.shield, this.shield + 0.7 * dt);
       }
@@ -314,6 +337,7 @@
       this.moving = false;
       this.wantMove = false;
       if (!this.moving) this.anim += dt * 2;
+      if (this.stunT > 0) { this.stunT -= dt; return; } // étourdi : rien
 
       if (this.target && !this.canTarget(this.target)) {
         this.target = null;
@@ -341,6 +365,14 @@
           if (!this.target) { this.order = { type: 'idle' }; break; }
           this.engage(this.target, dt);
           break;
+        case 'cast': {
+          const pw = ZC.POWERS[o.pid], tgt = o.target;
+          if (!pw || (tgt && tgt.dead)) { this.order = { type: 'idle' }; break; }
+          const tx = tgt ? tgt.x : o.x, ty = tgt ? tgt.y : o.y, reach = (pw.range || 0) + this.radius + (tgt ? tgt.radius : 0);
+          if (ZC.dist(this.x, this.y, tx, ty) > reach) this.moveTo(tx, ty, dt);
+          else { this.order = { type: 'idle' }; this.game.castPower(this, o.pid, o.x, o.y, tgt); }
+          break;
+        }
 
         case 'gather': this.gather(o, dt); break;
         case 'repair': this.repair(o, dt); break;
@@ -349,7 +381,7 @@
 
         case 'enter': { // rejoindre un bunker allié et y entrer s'il reste de la place
           const b = o.bunker;
-          if (!b || b.dead || b.building || b.owner !== this.owner || b.garrison.length >= ZC.capacity(b)) { this.order = { type: 'idle' }; break; }
+          if (!b || b.dead || b.building || b.gasT > 0 || b.owner !== this.owner || b.garrison.length >= ZC.capacity(b)) { this.order = { type: 'idle' }; break; }
           if (ZC.dist(this.x, this.y, b.x, b.y) > b.radius + this.radius + 6) this.moveTo(b.x, b.y, dt);
           else { this.game.enterBunker(this, b); return; }
           break;
@@ -465,7 +497,7 @@
     }
 
     stim() {
-      if (!this.def.bio || (this.up.stim < 1 && !this.def.hero) || this.hp <= ZC.STIM.hpCost) return false;
+      if (!this.def.hero || this.hp <= ZC.STIM.hpCost) return false; // stimpack : pouvoir de héros uniquement
       this.hp -= ZC.STIM.hpCost;
       this.stimT = ZC.STIM.duration;
       return true;

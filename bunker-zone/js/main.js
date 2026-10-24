@@ -62,6 +62,7 @@
         if (s.unitCap === 100) delete s.unitCap;  // ancien défaut (plafond absolu à 100) : on repasse au nouveau défaut, illimité
         if (s.startUnits === 8) delete s.startUnits;      // anciens défauts (8 soldats, 2 travailleurs) : nouveau départ à 0 soldat et 5 travailleurs
         if (s.startWorkers === 2) delete s.startWorkers;
+        if (s.hero && s.hero !== 'random' && s.hero !== 'none' && !ZC.HEROES[s.hero]) delete s.hero;
         return s;
       } catch (e) { return {}; }
     }
@@ -232,9 +233,17 @@
         }
         case 'bunkerDone': {
           const z = d.bunker.zone, zn = z ? ' en zone ' + (z.ix + 1) + '-' + (z.iy + 1) : '';
-          if (d.player === me) { A.play('build', 0); ui.message((d.hq ? 'Centre de commandement' : 'Bunker') + ' terminé' + zn + ' : il produit à partir de la prochaine vague.', g.players[me].hex); }
+          if (d.player === me && d.bunker.def.addon) { A.play('build', 0); ui.message(d.bunker.def.name + ' terminé : sélectionnez-le pour développer les pouvoirs de ' + ZC.HEROES[g.human.heroId].name + ' (T, Y).', g.players[me].hex); }
+          else if (d.player === me) { A.play('build', 0); ui.message((d.hq ? 'Centre de commandement' : 'Bunker') + ' terminé' + zn + ' : il produit à partir de la prochaine vague.', g.players[me].hex); }
           break;
         }
+        case 'powerDone':
+          if (d.player === me) { A.play('upgrade', 0); const pw = ZC.POWERS[d.what]; ui.announce('POUVOIR DÉVELOPPÉ', pw.name + ' — ' + g.hero.def.name); ui.message(pw.name + ' est prêt : sélectionnez ' + g.hero.def.name + ' et appuyez sur ' + pw.key + (pw.target === 'self' ? '.' : ', puis cliquez sur la cible.'), '#ffd040'); }
+          break;
+        case 'power':
+          if (d.player === me) { A.play(d.what === 'stim' ? 'stim' : 'upgrade', 0); ui.message(d.hero.def.name + ' : ' + ZC.POWERS[d.what].name + ' !', '#ffd040'); }
+          else if (g.allied(d.player, me) === false && ZC.POWERS[d.what].target !== 'self') { ui.message(g.players[d.player].name + ' lance ' + ZC.POWERS[d.what].name + ' !', g.players[d.player].hex); }
+          break;
         case 'bunkerDestroyed': {
           if (d.player === me) { A.play('lost', 0); ui.message(d.hq ? 'Votre centre de commandement est détruit !' + (d.lastHQ ? ' Plus de dropships possibles.' : ' Vos autres centres prennent le relais.') : 'Votre bunker a été détruit ! La zone est perdue.', '#ff5050'); this.lastEvent = { x: d.zone.cx, y: d.zone.cy }; }
           else if (d.killer === me) { ui.message((d.hq ? 'Centre de commandement ennemi détruit ! +' : 'Bunker ennemi détruit ! +') + d.bounty + ' minerais. Envoyez un dropship pour prendre la zone.', '#ffd040'); }
@@ -242,7 +251,9 @@
         }
         case 'buy':
           if (d.player === me) {
-            if (d.what === 'dropship' || d.what === 'worker' || d.what === 'hero') { A.play('order', 0); ui.message((d.what === 'dropship' ? 'Dropship' : d.what === 'worker' ? ZC.UNITS[ZC.RACES[g.human.race].worker].name : 'Résurrection de ' + g.hero.def.name) + ' en production (' + Math.round(d.total) + ' s' + (d.queued > 1 ? ', ' + (d.queued - 1) + ' en attente' : '') + ').', '#9ad0ff'); }
+            if (d.what === 'addon') { A.play('build', 0); ui.message(ZC.UNITS[ZC.RACES[g.human.race].addon].name + ' en construction (' + Math.round(d.total) + ' s) : sélectionnez-la ensuite pour développer les pouvoirs de ' + ZC.HEROES[g.human.heroId].name + '.', '#9ad0ff'); }
+            else if (d.power) { A.play('order', 0); ui.message('Développement lancé : ' + ZC.POWERS[d.what].name + ' (' + Math.round(d.total) + ' s).', '#9ad0ff'); }
+            else if (d.what === 'dropship' || d.what === 'worker' || d.what === 'hero') { A.play('order', 0); ui.message((d.what === 'dropship' ? 'Dropship' : d.what === 'worker' ? ZC.UNITS[ZC.RACES[g.human.race].worker].name : 'Résurrection de ' + g.hero.def.name) + ' en production (' + Math.round(d.total) + ' s' + (d.queued > 1 ? ', ' + (d.queued - 1) + ' en attente' : '') + ').', '#9ad0ff'); }
             else { A.play('order', 0); ui.message('Recherche lancée : ' + ZC.UPGRADES[d.what].name + ' niveau ' + d.level + ' (' + Math.round(d.total) + ' s) sur le bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + '.', '#9ad0ff'); }
           }
           break;
@@ -297,7 +308,7 @@
           if (d.player === me) { A.play('upgrade', 0); ui.message(ZC.UPGRADES[d.what].name + ' niveau ' + d.level + ' terminé sur le bunker ' + (d.bunker.zone ? (d.bunker.zone.ix + 1) + '-' + (d.bunker.zone.iy + 1) : '') + '.', '#ffd040'); }
           break;
         case 'cancel':
-          if (d.player === me) ui.message((d.kind === 'research' ? 'Recherche annulée : ' + ZC.UPGRADES[d.what].name : 'Production annulée : ' + (d.what === 'worker' ? ZC.UNITS[ZC.RACES[g.human.race].worker].name : d.what === 'hero' ? 'résurrection du héros' : 'dropship')) + (d.refund ? ' (+' + d.refund + ' minerais remboursés)' : '') + '.', '#ffd040');
+          if (d.player === me) ui.message((d.kind === 'research' ? 'Recherche annulée : ' + (ZC.UPGRADES[d.what] || ZC.POWERS[d.what]).name : 'Production annulée : ' + (d.what === 'worker' ? ZC.UNITS[ZC.RACES[g.human.race].worker].name : d.what === 'hero' ? 'résurrection du héros' : 'dropship')) + (d.refund ? ' (+' + d.refund + ' minerais remboursés)' : '') + '.', '#ffd040');
           break;
         case 'queueFull':
           if (d.player === me) { A.play('error', 0); ui.message('File d\'attente pleine sur ce bunker.', '#ff5050'); }
@@ -359,12 +370,14 @@
           break;
         }
         case 'heroLevel':
+          if (d.player !== me) break;
           A.play('upgrade', 0); ui.message(d.unit.def.name + ' passe au niveau ' + d.level + ' !', '#ffd040'); ui.announce('NIVEAU ' + d.level, d.unit.def.name + ' gagne en puissance');
           break;
         case 'heroDown':
           A.play('lost', 0); ui.message(d.unit.def.name + ' est à terre. Ressuscitez-le au centre de commandement : F puis H (' + ZC.heroReviveCost(d.unit.heroLevel) + ' minerais, ' + ZC.HERO_RESPAWN + ' s).', '#ff5050');
           break;
         case 'heroBack':
+          if (d.player !== me) break;
           A.play('build', 0); ui.message(d.unit.def.name + ' est de retour au QG.', '#ffd040');
           break;
         case 'roundDefeat':

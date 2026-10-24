@@ -2,7 +2,7 @@
 //  config.js — Constantes, stats des unités, améliorations, difficultés
 // ============================================================
 window.ZC = window.ZC || {};
-window.ZC.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
+window.ZC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée sur l'écran titre)
 (function (ZC) {
   'use strict';
 
@@ -39,10 +39,10 @@ window.ZC.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée 
   // Quatre races, deux niveaux chacune : l'unité de niveau 1 est produite par les bunkers, l'Évolution
   // (armes, armure et portée au niveau 3) transforme les soldats d'un bunker en unité de niveau 2.
   ZC.RACES = {
-    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine',  worker: 'workerHuman',  tower: 'towerHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Soldats à distance polyvalents, robustes une fois en exo-armure.' },
-    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast',      worker: 'workerInsect', tower: 'towerInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'Nuées rapides de coureurs au corps à corps, puis bêtes chitineuses massives.' },
-    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', worker: 'workerEnergy', tower: 'towerEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Lames d\'énergie protégées par un bouclier, puis archontes mécaniques à frappes de zone.' },
-    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech',  worker: 'workerMecha',  tower: 'towerMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Robots éclaireurs véloces, puis mechs de siège à obus explosifs à longue portée.' },
+    human:  { name: 'Humains',               l1: 'marine',   l2: 'exomarine',  worker: 'workerHuman',  tower: 'towerHuman', addon: 'addonHuman',  extractor: 'Foreuse automatique', color: '#8ad88a', desc: 'Soldats à distance polyvalents, robustes une fois en exo-armure.' },
+    insect: { name: 'Essaim insectoïde',     l1: 'runner',   l2: 'beast',      worker: 'workerInsect', tower: 'towerInsect', addon: 'addonInsect', extractor: 'Ventouse de chitine', color: '#ff8a6a', desc: 'Nuées rapides de coureurs au corps à corps, puis bêtes chitineuses massives.' },
+    energy: { name: 'Guerriers d\'énergie',  l1: 'blade',    l2: 'archonmech', worker: 'workerEnergy', tower: 'towerEnergy', addon: 'addonEnergy', extractor: 'Prisme extracteur', color: '#7fd0ff', desc: 'Lames d\'énergie protégées par un bouclier, puis archontes mécaniques à frappes de zone.' },
+    mecha:  { name: 'Mécas cybernétiques',   l1: 'scoutbot', l2: 'siegemech',  worker: 'workerMecha',  tower: 'towerMecha', addon: 'addonMecha',  extractor: 'Drille autonome', color: '#c8d4e8', desc: 'Robots éclaireurs véloces, puis mechs de siège à obus explosifs à longue portée.' },
   };
   ZC.UNITS = {
     // --- Humains
@@ -75,9 +75,24 @@ window.ZC.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée 
     towerEnergy:  { name: 'Canon à photons',       supply: 0, race: 'energy', hp: 300, shield: 150, armor: 1, dmg: 18, hits: 1, dtype: 'normal', size: 'large', range: 224, cooldown: 1.4, speed: 0, radius: 14, sight: 256, spawn: 0, bounty: 40, antiAir: true,  structure: true, tower: true, fx: 'bolt',    deathFx: 'psi2' },
     towerMecha:   { name: 'Tourelle automatique',  supply: 0, race: 'mecha',  hp: 450, shield: 0,   armor: 2, dmg: 12, hits: 1, dtype: 'normal', size: 'large', range: 224, cooldown: 0.8, speed: 0, radius: 14, sight: 256, spawn: 0, bounty: 40, antiAir: true,  structure: true, tower: true, fx: 'tracer2', deathFx: 'explosion' },
     // --- Héros (mode aventure) : uniques, reviennent au QG après leur mort, montent de niveau
+    // Annexes des centres de commandement (une par centre) : on y développe les deux pouvoirs du héros
+    addonHuman:  { name: 'Laboratoire tactique',    supply: 0, race: 'human',  hp: 800, shield: 0,   armor: 2, dmg: 0, hits: 0, dtype: 'normal', size: 'large', range: 0, cooldown: 1, speed: 0, radius: 14, sight: 0, spawn: 0, bounty: 60, antiAir: false, structure: true, addon: true, capacity: 0, deathFx: 'explosion' },
+    addonInsect: { name: 'Chambre d\'évolution',    supply: 0, race: 'insect', hp: 800, shield: 0,   armor: 2, dmg: 0, hits: 0, dtype: 'normal', size: 'large', range: 0, cooldown: 1, speed: 0, radius: 14, sight: 0, spawn: 0, bounty: 60, antiAir: false, structure: true, addon: true, capacity: 0, deathFx: 'blood2' },
+    addonEnergy: { name: 'Sanctuaire des archives', supply: 0, race: 'energy', hp: 500, shield: 300, armor: 2, dmg: 0, hits: 0, dtype: 'normal', size: 'large', range: 0, cooldown: 1, speed: 0, radius: 14, sight: 0, spawn: 0, bounty: 60, antiAir: false, structure: true, addon: true, capacity: 0, deathFx: 'psi2' },
+    addonMecha:  { name: 'Atelier de recherche',    supply: 0, race: 'mecha',  hp: 800, shield: 0,   armor: 3, dmg: 0, hits: 0, dtype: 'normal', size: 'large', range: 0, cooldown: 1, speed: 0, radius: 14, sight: 0, spawn: 0, bounty: 60, antiAir: false, structure: true, addon: true, capacity: 0, deathFx: 'explosion' },
+    // Héros : trois par race (voir ZC.HEROES), sprite de leur unité de base
     heroKael:  { name: 'Sergent Kael',     supply: 0, race: 'human',  hp: 220, shield: 0,   armor: 2, dmg: 16, hits: 1, dtype: 'normal',    size: 'medium', range: 176, cooldown: 0.55, speed: 110, radius: 11, sight: 288, spawn: 0, bounty: 60, antiAir: true,  bio: true, hero: true, base: 'exomarine',  fx: 'tracer2',   deathFx: 'explosion' },
     heroVoss:  { name: 'Lieutenante Voss', supply: 0, race: 'energy', hp: 200, shield: 120, armor: 2, dmg: 26, hits: 1, dtype: 'normal',    size: 'large',  range: 72,  cooldown: 0.8,  speed: 105, radius: 13, sight: 256, spawn: 0, bounty: 60, antiAir: true,  hero: true, base: 'archonmech', splash: 36, fx: 'lightning', deathFx: 'psi2' },
     heroDax:   { name: 'Commandant Dax',   supply: 0, race: 'mecha',  hp: 360, shield: 0,   armor: 3, dmg: 44, hits: 1, dtype: 'explosive', size: 'large',  range: 224, cooldown: 1.5,  speed: 80,  radius: 15, sight: 320, spawn: 0, bounty: 80, antiAir: false, hero: true, base: 'siegemech', splash: 24, fx: 'shell',     deathFx: 'explosion' },
+    heroSato:  { name: 'Médecin Sato',     supply: 0, race: 'human',  hp: 190, shield: 0,   armor: 1, dmg: 9,  hits: 1, dtype: 'normal',    size: 'small',  range: 128, cooldown: 0.5,  speed: 115, radius: 9,  sight: 256, spawn: 0, bounty: 60, antiAir: true,  bio: true, hero: true, base: 'marine',     fx: 'tracer',    deathFx: 'explosion' },
+    heroBrax:  { name: 'Lieutenant Brax',  supply: 0, race: 'human',  hp: 300, shield: 0,   armor: 3, dmg: 20, hits: 1, dtype: 'explosive', size: 'medium', range: 144, cooldown: 0.8,  speed: 95,  radius: 11, sight: 288, spawn: 0, bounty: 70, antiAir: true,  bio: true, hero: true, base: 'exomarine',  fx: 'tracer2',   deathFx: 'explosion' },
+    heroVhyss: { name: 'Reine Vhyss',      supply: 0, race: 'insect', hp: 420, shield: 0,   armor: 2, dmg: 26, hits: 1, dtype: 'normal',    size: 'large',  range: 0,   cooldown: 0.7,  speed: 115, radius: 15, sight: 256, spawn: 0, bounty: 70, antiAir: false, bio: true, hero: true, base: 'beast',      fx: 'slash2',    deathFx: 'blood2' },
+    heroNex:   { name: 'Traqueur Nex',     supply: 0, race: 'insect', hp: 170, shield: 0,   armor: 1, dmg: 12, hits: 2, dtype: 'normal',    size: 'small',  range: 0,   cooldown: 0.45, speed: 185, radius: 8,  sight: 256, spawn: 0, bounty: 60, antiAir: false, bio: true, hero: true, base: 'runner',     fx: 'slash',     deathFx: 'blood' },
+    heroKurg:  { name: 'Broyeur Kurg',     supply: 0, race: 'insect', hp: 540, shield: 0,   armor: 4, dmg: 34, hits: 1, dtype: 'normal',    size: 'large',  range: 0,   cooldown: 0.9,  speed: 100, radius: 15, sight: 240, spawn: 0, bounty: 80, antiAir: false, bio: true, hero: true, base: 'beast',      fx: 'slash2',    deathFx: 'blood2' },
+    heroZar:   { name: 'Templier Zar',     supply: 0, race: 'energy', hp: 170, shield: 130, armor: 1, dmg: 14, hits: 2, dtype: 'normal',    size: 'small',  range: 0,   cooldown: 0.8,  speed: 120, radius: 9,  sight: 256, spawn: 0, bounty: 60, antiAir: false, hero: true, base: 'blade',      fx: 'psislash',  deathFx: 'psi' },
+    heroLyra:  { name: 'Oracle Lyra',      supply: 0, race: 'energy', hp: 160, shield: 170, armor: 1, dmg: 18, hits: 1, dtype: 'normal',    size: 'large',  range: 96,  cooldown: 1.0,  speed: 100, radius: 13, sight: 288, spawn: 0, bounty: 70, antiAir: true,  hero: true, base: 'archonmech', splash: 24, fx: 'lightning', deathFx: 'psi2' },
+    heroK7:    { name: 'Unité K-7',        supply: 0, race: 'mecha',  hp: 210, shield: 0,   armor: 2, dmg: 14, hits: 1, dtype: 'normal',    size: 'small',  range: 144, cooldown: 0.5,  speed: 150, radius: 8,  sight: 272, spawn: 0, bounty: 60, antiAir: true,  hero: true, base: 'scoutbot',   fx: 'tracer',    deathFx: 'explosion' },
+    heroVoxx:  { name: 'Ingénieure Voxx',  supply: 0, race: 'mecha',  hp: 250, shield: 0,   armor: 2, dmg: 11, hits: 1, dtype: 'normal',    size: 'small',  range: 128, cooldown: 0.6,  speed: 120, radius: 8,  sight: 256, spawn: 0, bounty: 60, antiAir: true,  hero: true, base: 'scoutbot',   fx: 'tracer',    deathFx: 'explosion' },
   };
   for (const key in ZC.UNITS) {
     const d = ZC.UNITS[key];
@@ -98,9 +113,8 @@ window.ZC.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée 
     armor:   { name: 'Armure',    hotkey: 'R', max: 3, cost: (lvl) => 100 + lvl * 75,  time: (lvl) => 30 + lvl * 15, desc: '+1 armure par niveau' },
     range:   { name: 'Portée',    hotkey: 'E', max: 3, cost: (lvl) => 125 + lvl * 75,  time: (lvl) => 35 + lvl * 15, desc: '+1 case de portée (unités à distance), +0,5 au corps à corps' },
     siege:   { name: 'Démolition', hotkey: 'X', max: 3, cost: (lvl) => 125 + lvl * 75, time: (lvl) => 35 + lvl * 15, desc: '+25 % de dégâts contre les bâtiments (bunkers, centres, tours, extracteurs) par niveau' },
-    stim:    { name: 'Stimpack',  hotkey: 'T', max: 1, cost: () => 200,                time: () => 45,              desc: 'Recherche : les unités biologiques peuvent se stimuler (T)' },
     evolve:  { name: 'Évolution', hotkey: 'V', max: 1, cost: () => 350,                time: () => 60,              desc: 'Transforme les soldats de ce bunker (présents et futurs) en unité de niveau 2. Requiert armes, armure et portée au niveau 3', requires: 3 },
-    fortify: { name: 'Centre de commandement', hotkey: 'Q', max: 1, cost: () => 400,   time: () => 75,              desc: 'Transforme ce bunker en centre de commandement : 6 places en garnison, 6000 PV, armure 8, et il produit dropships, travailleurs et héros comme votre QG' },
+    fortify: { name: 'Centre de commandement', hotkey: 'Q', max: 1, cost: (lvl, n) => 800 + 400 * (n || 0), time: () => 75, desc: 'Transforme ce bunker en centre de commandement : 6 places en garnison, 6000 PV, armure 8, et il produit dropships, travailleurs et héros comme votre QG. Le premier coûte 800 minerais, puis 400 de plus à chaque centre' },
   };
   ZC.RESEARCH_QUEUE_MAX = 3;  // recherches en attente par bunker
   ZC.MISSION_DEFAULTS = { startUnits: 8, startWorkers: 2 }; // départ des missions de l'aventure (leur équilibrage date d'avant le départ à 0 soldat)
@@ -170,6 +184,7 @@ window.ZC.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée 
     supplyPerBunker: 20,
     startUnits: 0,        // soldats de départ (aucun : les vagues des bunkers font l'armée)
     startWorkers: 5,      // travailleurs de départ (récoltent le gisement du QG)
+    hero: 'random',       // héros du joueur : 'random' (un des trois de sa race), 'none', ou l'identifiant d'un héros (voir ZC.HEROES)
     mineralZones: 0.4,    // part des zones (hors zones de départ, qui en ont toujours un) qui reçoivent un gisement de minerai
     superZoneMult: 2,     // la zone centrale produit x2
     selectionLimit: 0,    // 0 = illimité, 12 = comme SC1
@@ -183,4 +198,59 @@ window.ZC.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée 
     invasion: null,       // vagues d'envahisseurs sans base : { min, max, scale, name } (missions de survie) ; les vagues arrivent par les bords toutes les min..max s
     admin: false,         // mode admin (triche) pour le joueur humain : achats gratuits et instantanés, touches Alt+M/H/U/S/K
   };
+  // ------------------------------------------------------------ Héros : trois par race, deux pouvoirs uniques chacun
+  // Les pouvoirs se développent dans l'annexe d'un centre de commandement (A sur le centre), puis se lancent avec le héros (T, Y).
+  ZC.HEROES = {
+    kael:  { id: 'kael',  race: 'human',  unit: 'heroKael',  name: 'Sergent Kael',     title: 'Le Vétéran',    powers: ['stim', 'gas'],            desc: 'Exo-marine d\'élite au fusil gauss lourd. Se stimule et enfume les bunkers ennemis.' },
+    sato:  { id: 'sato',  race: 'human',  unit: 'heroSato',  name: 'Médecin Sato',     title: 'La Toubib',     powers: ['heal', 'shieldwall'],     desc: 'Médecin de combat : soigne les troupes autour d\'elle et déploie un bouclier qui les blinde.' },
+    brax:  { id: 'brax',  race: 'human',  unit: 'heroBrax',  name: 'Lieutenant Brax',  title: 'L\'Artilleur',  powers: ['barrage', 'charge'],      desc: 'Exo-marine lourd : appelle un barrage d\'artillerie et charge dans la mêlée.' },
+    vhyss: { id: 'vhyss', race: 'insect', unit: 'heroVhyss', name: 'Reine Vhyss',      title: 'La Couveuse',   powers: ['swarm', 'roar'],          desc: 'Bête-reine : pond une nuée de coureurs et terrorise l\'ennemi d\'un rugissement.' },
+    nex:   { id: 'nex',   race: 'insect', unit: 'heroNex',   name: 'Traqueur Nex',     title: 'Le Bondissant', powers: ['leap', 'venom'],          desc: 'Coureur alpha ultra-rapide : bondit sur sa proie et crache un venin qui ronge.' },
+    kurg:  { id: 'kurg',  race: 'insect', unit: 'heroKurg',  name: 'Broyeur Kurg',     title: 'Le Colosse',    powers: ['carapace', 'quake'],      desc: 'Bête colossale : durcit sa carapace et fait trembler le sol pour assommer tout autour.' },
+    voss:  { id: 'voss',  race: 'energy', unit: 'heroVoss',  name: 'Lieutenante Voss', title: 'L\'Archonte',   powers: ['nova', 'aegis'],          desc: 'Archonte mécanique : nova psionique dévastatrice et égide qui recharge les boucliers alliés.' },
+    zar:   { id: 'zar',   race: 'energy', unit: 'heroZar',   name: 'Templier Zar',     title: 'La Lame',       powers: ['lightblades', 'blink'],   desc: 'Guerrier à lames : double ses dégâts et se téléporte au cœur du combat.' },
+    lyra:  { id: 'lyra',  race: 'energy', unit: 'heroLyra',  name: 'Oracle Lyra',      title: 'La Voyante',    powers: ['stasis', 'regen'],        desc: 'Archonte de soutien : fige l\'ennemi dans une stase et régénère ses alliés.' },
+    dax:   { id: 'dax',   race: 'mecha',  unit: 'heroDax',   name: 'Commandant Dax',   title: 'Le Blindé',     powers: ['siegemode', 'piercing'],  desc: 'Mech de siège : se déploie en mode siège et perce les bâtiments d\'un obus.' },
+    k7:    { id: 'k7',    race: 'mecha',  unit: 'heroK7',    name: 'Unité K-7',        title: 'Le Prototype',  powers: ['overclock', 'emp'],       desc: 'Robot éclaireur prototype : se surcadence et émet une impulsion qui grille boucliers et circuits.' },
+    voxx:  { id: 'voxx',  race: 'mecha',  unit: 'heroVoxx',  name: 'Ingénieure Voxx',  title: 'La Mécano',     powers: ['repairfield', 'turret'],  desc: 'Ingénieure de combat : répare bâtiments et machines, déploie une tourelle temporaire.' },
+  };
+  ZC.heroesOf = (race) => Object.values(ZC.HEROES).filter(h => h.race === race);
+  // Pouvoirs : coût et durée de développement (dans l'annexe), temps de recharge, cible
+  //  target : 'self' (immédiat), 'point' (clic sur le sol, à portée range), 'structure' (clic sur un bâtiment ennemi)
+  ZC.POWERS = {
+    stim:        { name: 'Stimpack',             hero: 'kael',  key: 'T', icon: 'stim',    cost: 150, time: 40, cd: 20, target: 'self',                  desc: '+50 % de vitesse et de cadence pendant 10 s, coûte 10 PV' },
+    gas:         { name: 'Grenade lacrymogène',  hero: 'kael',  key: 'Y', icon: 'gas',     cost: 250, time: 60, cd: 30, target: 'structure', range: 160, desc: 'Fait sortir la garnison d\'un bunker ou d\'une tour ennemie ; personne n\'y rentre pendant 10 s' },
+    heal:        { name: 'Soins de combat',      hero: 'sato',  key: 'T', icon: 'heal',    cost: 150, time: 40, cd: 18, target: 'self',                  desc: 'Soigne de 80 PV les alliés dans un rayon de 3 cases' },
+    shieldwall:  { name: 'Bouclier déployable',  hero: 'sato',  key: 'Y', icon: 'shield',  cost: 250, time: 60, cd: 30, target: 'self',                  desc: 'Les alliés autour gagnent +4 d\'armure pendant 8 s' },
+    barrage:     { name: 'Barrage d\'artillerie', hero: 'brax', key: 'T', icon: 'blast',   cost: 200, time: 50, cd: 25, target: 'point', range: 224,     desc: 'Trois obus explosifs tombent sur le point visé après une seconde (35 dégâts de zone chacun)' },
+    charge:      { name: 'Charge',               hero: 'brax',  key: 'Y', icon: 'dash',    cost: 150, time: 40, cd: 15, target: 'point', range: 160,     desc: 'Fonce jusqu\'au point visé : 25 dégâts et 1 s d\'étourdissement aux ennemis à l\'arrivée' },
+    swarm:       { name: 'Essaim',               hero: 'vhyss', key: 'T', icon: 'swarm',   cost: 200, time: 50, cd: 30, target: 'self',                  desc: 'Pond 4 coureurs qui combattent 15 s' },
+    roar:        { name: 'Rugissement',          hero: 'vhyss', key: 'Y', icon: 'roar',    cost: 150, time: 40, cd: 20, target: 'self',                  desc: 'Les ennemis autour font moitié moins de dégâts et ralentissent pendant 6 s' },
+    leap:        { name: 'Bond',                 hero: 'nex',   key: 'T', icon: 'dash',    cost: 150, time: 40, cd: 12, target: 'point', range: 192,     desc: 'Bondit sur le point visé : 30 dégâts aux ennemis à l\'arrivée' },
+    venom:       { name: 'Venin',                hero: 'nex',   key: 'Y', icon: 'poison',  cost: 200, time: 50, cd: 20, target: 'self',                  desc: 'Les ennemis autour perdent 6 PV par seconde pendant 8 s, armure ignorée' },
+    carapace:    { name: 'Carapace',             hero: 'kurg',  key: 'T', icon: 'shield',  cost: 150, time: 40, cd: 20, target: 'self',                  desc: '+5 d\'armure pendant 8 s' },
+    quake:       { name: 'Séisme',               hero: 'kurg',  key: 'Y', icon: 'stun',    cost: 250, time: 60, cd: 25, target: 'self',                  desc: 'Assomme 3 s les ennemis au sol autour (et 15 dégâts)' },
+    nova:        { name: 'Nova psionique',       hero: 'voss',  key: 'T', icon: 'nova',    cost: 200, time: 50, cd: 20, target: 'point', range: 160,     desc: '60 dégâts à tous les ennemis dans 2 cases autour du point visé' },
+    aegis:       { name: 'Égide',                hero: 'voss',  key: 'Y', icon: 'shield',  cost: 200, time: 50, cd: 25, target: 'self',                  desc: 'Recharge les boucliers des alliés autour et leur donne +2 d\'armure pendant 6 s' },
+    lightblades: { name: 'Lames de lumière',     hero: 'zar',   key: 'T', icon: 'blades',  cost: 200, time: 50, cd: 22, target: 'self',                  desc: 'Dégâts doublés pendant 8 s' },
+    blink:       { name: 'Transfert',            hero: 'zar',   key: 'Y', icon: 'blink',   cost: 150, time: 40, cd: 12, target: 'point', range: 224,     desc: 'Se téléporte au point visé' },
+    stasis:      { name: 'Stase',                hero: 'lyra',  key: 'T', icon: 'slow',    cost: 200, time: 50, cd: 22, target: 'point', range: 160,     desc: 'Les ennemis dans 2,5 cases du point sont ralentis de 60 % et tirent 60 % moins vite pendant 6 s' },
+    regen:       { name: 'Régénération',         hero: 'lyra',  key: 'Y', icon: 'heal',    cost: 150, time: 40, cd: 18, target: 'self',                  desc: 'Soigne de 70 PV et recharge les boucliers des alliés autour' },
+    siegemode:   { name: 'Mode siège',           hero: 'dax',   key: 'T', icon: 'siege',   cost: 200, time: 50, cd: 25, target: 'self',                  desc: 'Immobile 10 s : +3 cases de portée et dégâts x1,5' },
+    piercing:    { name: 'Obus perforant',       hero: 'dax',   key: 'Y', icon: 'blast',   cost: 250, time: 60, cd: 20, target: 'structure', range: 224, desc: '400 dégâts à un bâtiment ennemi' },
+    overclock:   { name: 'Surcadence',           hero: 'k7',    key: 'T', icon: 'gear',    cost: 150, time: 40, cd: 20, target: 'self',                  desc: 'Cadence de tir doublée pendant 8 s' },
+    emp:         { name: 'Impulsion EM',         hero: 'k7',    key: 'Y', icon: 'emp',     cost: 250, time: 60, cd: 25, target: 'self',                  desc: 'Vide les boucliers et assomme 2 s les ennemis autour' },
+    repairfield: { name: 'Réparation d\'urgence', hero: 'voxx', key: 'T', icon: 'wrench',  cost: 150, time: 40, cd: 25, target: 'self',                  desc: 'Répare de 600 PV les bâtiments alliés proches et de 60 PV les machines' },
+    turret:      { name: 'Tourelle déployable',  hero: 'voxx',  key: 'Y', icon: 'tower',   cost: 250, time: 60, cd: 35, target: 'self',                  desc: 'Déploie une tourelle automatique qui tient 25 s' },
+  };
+  ZC.ADDON = { cost: 150, buildTime: 20 }; // annexe : coût et durée de construction (chantier)
+  ZC.GAS_DURATION = 10;
+  // Niveaux des héros : expérience par kill (prime de l'unité), vie et dégâts +8 % par niveau, armure +1 tous les 3 niveaux
+  ZC.HERO_MAX_LEVEL = 10;
+  ZC.HERO_RESPAWN = 20;                                 // secondes pour ressusciter le héros au centre de commandement
+  ZC.heroReviveCost = (lvl) => 100 + 25 * lvl;           // coût de la résurrection selon le niveau
+  ZC.heroXpFor = (lvl) => 50 * lvl * (lvl + 1);
+  ZC.heroLevel = (xp) => { let l = 0; while (l < ZC.HERO_MAX_LEVEL && xp >= ZC.heroXpFor(l + 1)) l++; return l; };
+  ZC.heroScale = (lvl) => ({ hp: 1 + 0.08 * lvl, dmg: 1 + 0.08 * lvl, armor: Math.floor(lvl / 3) });                     // secondes pendant lesquelles un bâtiment enfumé n'accueille personne
+  ZC.MISSION_DEFAULTS.hero = 'random';
 })(window.ZC);

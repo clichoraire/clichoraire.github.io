@@ -224,9 +224,19 @@
       for (let i = 0; i < ground.length; i++) {
         const u = ground[i];
         if (u.stimT > 0) { ctx.strokeStyle = 'rgba(255,80,60,' + (0.4 + 0.3 * Math.sin(t * 12)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(u.rx, u.ry + 3, u.radius + 2, (u.radius + 2) * 0.62, 0, 0, TAU); ctx.stroke(); }
+        else if (u.buff) { ctx.strokeStyle = 'rgba(255,220,100,' + (0.45 + 0.3 * Math.sin(t * 8)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(u.rx, u.ry + 3, u.radius + 3, (u.radius + 3) * 0.62, 0, 0, TAU); ctx.stroke(); } // pouvoir actif
+        if (u.debuff) { ctx.strokeStyle = 'rgba(200,160,255,' + (0.45 + 0.3 * Math.sin(t * 6)) + ')'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(u.rx, u.ry + 3, u.radius + 1, (u.radius + 1) * 0.62, 0, 0, TAU); ctx.stroke(); } // ralenti / affaibli
+        if (u.poison) { ctx.fillStyle = 'rgba(125,255,90,' + (0.5 + 0.4 * Math.sin(t * 10)) + ')'; for (let k = 0; k < 3; k++) ctx.fillRect(u.rx - 6 + k * 5, u.ry - u.radius - 4 - ((t * 20 + k * 7) % 10), 2, 2); }
       }
       // Sprites au sol
       for (let i = 0; i < ground.length; i++) this.drawUnit(ctx, ground[i], t, 0);
+      // Étoiles d'étourdissement
+      for (let i = 0; i < ground.length; i++) {
+        const u = ground[i];
+        if (u.stunT <= 0) continue;
+        ctx.fillStyle = '#ffd040';
+        for (let k = 0; k < 3; k++) { const a = t * 4 + k * 2.1, x = u.rx + Math.cos(a) * 9, y = u.ry - u.radius - 8 + Math.sin(a) * 3; ctx.beginPath(); for (let j = 0; j < 10; j++) { const r = j % 2 ? 1.2 : 3, b = j * Math.PI / 5; ctx.lineTo(x + Math.cos(b) * r, y + Math.sin(b) * r); } ctx.closePath(); ctx.fill(); }
+      }
       // Étiquette des héros
       for (let i = 0; i < ground.length; i++) {
         const u = ground[i];
@@ -271,7 +281,7 @@
           ctx.fillStyle = '#000'; ctx.fillRect(x - 1, y - 1, w + 2, 8);
           ctx.fillStyle = '#2a2a14'; ctx.fillRect(x, y, w, 6);
           ctx.fillStyle = '#ffd040'; ctx.fillRect(x, y, Math.round(w * Math.min(1, r.t / r.total)), 6);
-          ctx.fillStyle = '#fff'; ctx.fillText(ZC.UPGRADES[r.what].hotkey + (u.research.length > 1 ? ' x' + u.research.length : ''), x + w + 4, y + 6);
+          ctx.fillStyle = '#fff'; ctx.fillText((ZC.UPGRADES[r.what] ? ZC.UPGRADES[r.what].hotkey : ZC.POWERS[r.what].key) + (u.research.length > 1 ? ' x' + u.research.length : ''), x + w + 4, y + 6);
         }
       }
       this.drawEffects(ctx, vx, vy, vw, vh, t);
@@ -711,6 +721,26 @@
           case 'deposit': { // « +6 » qui monte au-dessus du dépôt
             ctx.font = 'bold 10px Verdana, sans-serif'; ctx.textAlign = 'center';
             ctx.fillStyle = 'rgba(57,255,20,' + inv + ')'; ctx.fillText('+' + e.amount, e.x, e.y - 6 - p * 18);
+            break;
+          }
+          case 'gas': { // nuage lacrymogène : volutes vert-jaune qui tournent lentement, s'estompe à la fin
+            const a = Math.min(1, inv * 3) * 0.55;
+            for (let k = 0; k < 6; k++) { const ang = t * 0.6 + k * 1.05, rr = e.r * (0.55 + 0.25 * Math.sin(t * 1.3 + k)); ctx.fillStyle = 'rgba(184,224,96,' + (a * (0.5 + 0.5 * Math.sin(t * 2 + k))).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(e.x + Math.cos(ang) * rr * 0.6, e.y + Math.sin(ang) * rr * 0.4 - 6, rr * 0.7, 0, TAU); ctx.fill(); }
+            break;
+          }
+          case 'heal': { // croix vertes qui montent
+            ctx.strokeStyle = 'rgba(125,255,90,' + inv + ')'; ctx.lineWidth = 2;
+            for (let k = 0; k < 3; k++) { const x = e.x + (k - 1) * 9, y = e.y - 6 - p * 26 - k * 4; ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y); ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 3); ctx.stroke(); }
+            break;
+          }
+          case 'aura': { // disque coloré qui s'étend
+            ctx.fillStyle = ZC.rgba(e.color, inv * 0.25); ctx.beginPath(); ctx.ellipse(e.x, e.y, e.r * (0.4 + 0.6 * p), e.r * (0.4 + 0.6 * p) * 0.65, 0, 0, TAU); ctx.fill();
+            ctx.strokeStyle = ZC.rgba(e.color, inv); ctx.lineWidth = 2; ctx.stroke();
+            break;
+          }
+          case 'shock': { // onde de choc : anneaux concentriques
+            ctx.lineWidth = 3;
+            for (let k = 0; k < 3; k++) { const q = Math.max(0, p - k * 0.15) / (1 - k * 0.15); if (q <= 0) continue; ctx.strokeStyle = ZC.rgba(e.color, (1 - q) * 0.9); ctx.beginPath(); ctx.ellipse(e.x, e.y, e.r * q, e.r * q * 0.6, 0, 0, TAU); ctx.stroke(); }
             break;
           }
           case 'marker': {

@@ -60,7 +60,7 @@
       if (bySeg[s.i]) for (const it of bySeg[s.i]) items.push(it);
       items.sort((a, b) => b.z - a.z);
       for (const it of items) {
-        const dz = it.z - camZ; if (dz < 0.6) continue;
+        const dz = it.z - camZ; if (dz < (it.kind === 'racer' ? 3 : 6.5)) continue; // rien de géant entre la caméra et le joueur
         const sc = f / dz, pct = SK.clamp((it.z - s.z) / SEG, 0, 1);
         const xw = p.cxw + (proj[n + 1] ? (proj[n + 1].cxw - p.cxw) * pct : 0);
         const gy = s.y1 + (s.y2 - s.y1) * pct;
@@ -143,6 +143,18 @@
     R.quad(ctx, p.x1 + p.w1, p.y1, p.x2 + p.w2, p.y2, p.x2 + p.w2 + bank * p.sc2, p.y2, p.x1 + p.w1 + bank * p.sc1, p.y1, mix(th.rumble[alt], th.fog, fog));
     // route
     R.quad(ctx, p.x1 - p.w1, p.y1, p.x2 - p.w2, p.y2, p.x2 + p.w2, p.y2, p.x1 + p.w1, p.y1, mix(roadCols[alt], th.fog, fog * 0.9));
+    // clôtures : deux rails qui suivent la piste, un poteau tous les 3 segments
+    if (!s.tunnel && !s.finish) {
+      const off = 1.3, railCol = mix('#ffab91', th.fog, fog), postCol = mix('#8d6e63', th.fog, fog);
+      for (const side of [-1, 1]) {
+        const xa = p.x1 + side * (p.w1 + off * p.sc1), xb = p.x2 + side * (p.w2 + off * p.sc2);
+        for (const hgt2 of [0.5, 0.95]) {
+          const ya = p.y1 - hgt2 * p.sc1, yb = p.y2 - hgt2 * p.sc2, ta = Math.max(1, 0.09 * p.sc1), tb = Math.max(1, 0.09 * p.sc2);
+          R.quad(ctx, xa, ya, xb, yb, xb, yb + tb, xa, ya + ta, railCol);
+        }
+        if (s.i % 3 === 0) { const ph = 1.15 * p.sc1, pw = Math.max(1, 0.2 * p.sc1); ctx.fillStyle = postCol; ctx.fillRect(xa - pw / 2, p.y1 - ph, pw, ph); }
+      }
+    }
     if (s.ramp) { ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.moveTo(p.x1 - p.w1, p.y1); ctx.lineTo(p.x2 - p.w2, p.y2); ctx.lineTo(p.x2 + p.w2, p.y2); ctx.lineTo(p.x1 + p.w1, p.y1); ctx.fill(); if (s.jump) { ctx.fillStyle = '#ff5252'; ctx.fillRect(p.x2 - p.w2, p.y2 - 1, p.w2 * 2, 2); } }
     if (th.centerLine && s.i % 4 < 2) R.quad(ctx, p.x1 - 0.15 * p.sc1, p.y1, p.x2 - 0.15 * p.sc2, p.y2, p.x2 + 0.15 * p.sc2, p.y2, p.x1 + 0.15 * p.sc1, p.y1, '#ffe082');
     if (s.surface === 'quick' && alt) { ctx.fillStyle = 'rgba(60,40,10,0.25)'; ctx.beginPath(); ctx.ellipse((p.x1 + p.x2) / 2, (p.y1 + p.y2) / 2, p.w1 * 0.5, hgt, 0, 0, TAU); ctx.fill(); }
@@ -234,7 +246,7 @@
   R.drawRacer = function (ctx, r, x, y, s, t, isMe) {
     const c = r.def.colors, h = r.h;
     // ombre
-    ctx.fillStyle = 'rgba(0,0,0,' + (0.25 / (1 + h * 0.5)) + ')'; ctx.beginPath(); ctx.ellipse(x, y, 1 * s / (1 + h * 0.15), 0.28 * s / (1 + h * 0.15), 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,' + (0.25 / (1 + h * 0.5)) + ')'; ctx.beginPath(); ctx.ellipse(x, y + 0.1 * s, 0.6 * s / (1 + h * 0.15), 0.3 * s / (1 + h * 0.15), 0, 0, TAU); ctx.fill();
     if (r.fx.fan > 0) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(1, 0.08 * s); for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x + k * 0.5 * s, y - 0.3 * s - h * s + Math.sin(t * 30 + k) * 0.1 * s); ctx.lineTo(x + k * 0.5 * s, y + 0.9 * s - h * s); ctx.stroke(); } }
     ctx.save(); ctx.translate(x, y - h * s);
     if (r.fx.invisible > 0) ctx.globalAlpha = isMe ? 0.45 : 0.25;
@@ -245,10 +257,25 @@
       ctx.rotate(Math.PI / 2 * 0.9); ctx.translate(0.3 * s, 0.6 * s); ctx.scale(0.9, 0.9);
       if (r.flat > 0) { ctx.rotate(-Math.PI / 2 * 0.9); ctx.translate(-0.3 * s, -0.6 * s); ctx.scale(1.5, 0.35); }
     } else if (r.state === 'air') ctx.rotate(-steer * 0.15 + (r.vy > 0 ? -0.08 : 0.08));
-    else if (r.state === 'ride') { ctx.rotate(steer * 0.22); ctx.scale(1, r.input && r.input.down ? 0.88 : 0.96); }
+    else if (r.state === 'ride') { ctx.rotate(steer * 0.22); ctx.scale(1, r.input && r.input.up ? 0.84 : r.input && r.input.down ? 0.98 : 0.94); }
     if (r.fx.snowman > 0) { circ(ctx, 0, -0.55 * s, 0.6 * s, '#fafafa'); circ(ctx, 0, -1.35 * s, 0.45 * s, '#fff'); circ(ctx, -0.15 * s, -1.45 * s, 0.05 * s, '#000'); circ(ctx, 0.15 * s, -1.45 * s, 0.05 * s, '#000'); tri(ctx, 0.25 * s, -1.33 * s, 0.12 * s, -0.35 * s, '#ff7043'); rect(ctx, -0.3 * s, -1.85 * s, 0.6 * s, 0.4 * s, '#212121'); ctx.restore(); return; }
-    // planche
-    ctx.fillStyle = c.board; rr(ctx, -0.8 * s, -0.12 * s, 1.6 * s, 0.22 * s, 0.11 * s); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(-0.6 * s, -0.1 * s, 1.2 * s, 0.05 * s);
+    // planche : hors course (menus, village) le personnage est vu de côté → planche à l'horizontale ;
+    // en course on est derrière lui → pointe vers l'avant (dans l'écran), queue vers la caméra, inclinée avec la direction
+    if (r.pose === 'side') {
+      ctx.save(); ctx.rotate(steer * 0.15);
+      ctx.fillStyle = c.board; rr(ctx, -0.85 * s, -0.14 * s, 1.7 * s, 0.26 * s, 0.13 * s); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(-0.65 * s, -0.11 * s, 1.3 * s, 0.06 * s);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-0.8 * s, 0.06 * s, 1.6 * s, 0.06 * s);
+      ctx.restore();
+    } else {
+    ctx.save(); ctx.rotate(steer * 0.25);
+    ctx.fillStyle = c.board; ctx.beginPath(); ctx.moveTo(-0.42 * s, 0.2 * s); ctx.quadraticCurveTo(-0.46 * s, 0.42 * s, 0, 0.46 * s); ctx.quadraticCurveTo(0.46 * s, 0.42 * s, 0.42 * s, 0.2 * s);
+    ctx.lineTo(0.26 * s, -1.0 * s); ctx.quadraticCurveTo(0, -1.25 * s, -0.26 * s, -1.0 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.moveTo(-0.26 * s, 0.24 * s); ctx.lineTo(0.26 * s, 0.24 * s); ctx.lineTo(0.16 * s, -0.95 * s); ctx.lineTo(-0.16 * s, -0.95 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.moveTo(-0.42 * s, 0.2 * s); ctx.quadraticCurveTo(-0.46 * s, 0.42 * s, 0, 0.46 * s); ctx.quadraticCurveTo(0.46 * s, 0.42 * s, 0.42 * s, 0.2 * s); ctx.lineTo(0.42 * s, 0.27 * s); ctx.quadraticCurveTo(0, 0.54 * s, -0.42 * s, 0.27 * s); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.translate(0, -0.12 * s); // le coureur se tient au milieu de la planche
+    }
     // jambes
     rect(ctx, -0.35 * s, -0.7 * s, 0.26 * s, 0.6 * s, c.pants); rect(ctx, 0.1 * s, -0.7 * s, 0.26 * s, 0.6 * s, c.pants);
     rect(ctx, -0.4 * s, -0.2 * s, 0.36 * s, 0.14 * s, '#263238'); rect(ctx, 0.05 * s, -0.2 * s, 0.36 * s, 0.14 * s, '#263238');
