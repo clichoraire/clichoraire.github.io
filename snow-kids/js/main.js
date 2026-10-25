@@ -84,7 +84,9 @@
     if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
     $('town-gold').innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold,false)}</b>`; $('town-char').textContent = SK.charById(save.advChar).name + ' · Niveau '+SK.Progression.info(save).level+' · planche ' + SK.boardById(save.advBoard).name;
     let badge=$('town-level-badge');if(!badge){badge=document.createElement('button');badge.id='town-level-badge';badge.className='level-badge';$('screen-town').appendChild(badge);badge.onclick=openGym;}
-    badge.hidden=!(save.trainingPoints>0);badge.textContent='⭐ ↑ Niveau '+SK.Progression.info(save).level+' · '+(save.trainingPoints||0)+' points au gym';
+    badge.hidden=!(save.trainingPoints>0);const townLevel=SK.Progression.info(save).level,points=save.trainingPoints||0;
+    badge.setAttribute('aria-label','Niveau '+townLevel+' : '+points+' points disponibles. Aller au gym');
+    badge.innerHTML='<span class="town-level-star" aria-hidden="true"><i>★</i><b>'+townLevel+'</b></span><span class="town-level-copy"><span class="town-level-title">NIVEAU '+townLevel+'</span><span class="town-level-points">💪 '+points+' POINT'+(points>1?'S':'')+'</span><span class="town-level-link">Au gym ! →</span></span><span class="town-level-sparkles" aria-hidden="true">✦</span>';
     SK.Town.open({
       canvas: $('town-canvas'), save, walkLevel:save.walkLevel||0, charId: save.advChar, boardId: save.advBoard, look: lookFor(save.advChar), labelEl: $('town-label'),
       onEnter: id => {

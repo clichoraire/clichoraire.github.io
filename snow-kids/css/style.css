@@ -992,3 +992,14 @@ table.results td.num { text-align: right; font-family: monospace; }
 @media(prefers-reduced-motion:reduce){.mission-level-option.gold-perfect,.card-sparkles i{animation:none}.card-sparkles i{opacity:.85}}
 
 .room-backdrop{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}.pan-room .room-viewport{z-index:1}
+
+#town-level-badge{display:flex;align-items:center;gap:10px;padding:8px 22px 8px 8px;border:3px solid #fff2b1;border-radius:24px;background:linear-gradient(135deg,#244f79,#102b4d);color:#fff;box-shadow:0 6px #092039,0 0 20px #ffdd5966;max-width:calc(100% - 24px);text-align:left;animation:town-badge-arrive .7s cubic-bezier(.2,1.6,.5,1) both}
+#town-level-badge[hidden]{display:none}
+.town-level-star{position:relative;display:grid;place-items:center;flex:none;width:94px;height:94px;filter:drop-shadow(0 4px 1px #8d591c)}
+.town-level-star i{position:absolute;font:110px/1 Arial;font-style:normal;color:#ffda40;-webkit-text-stroke:2px #fff1a3;paint-order:stroke fill}
+.town-level-star b{position:relative;font:36px 'Titan One',sans-serif;color:#70451b;margin-top:8px}
+.town-level-copy{display:flex;flex-direction:column;gap:3px}.town-level-title{font:22px 'Titan One',sans-serif;color:#ffdc57;text-shadow:0 2px #745216}.town-level-points{font:19px 'Titan One',sans-serif;color:#fff3bb}.town-level-link{font:700 14px 'Trebuchet MS',sans-serif;color:#b9eaff}
+.town-level-sparkles{position:absolute;right:8px;top:-12px;color:#fff1a1;font-size:26px;pointer-events:none;animation:perfect-star 2.8s ease-in-out infinite;text-shadow:0 0 10px #ffda4c}.town-level-sparkles::after{content:'✦';position:absolute;right:234px;top:85px;font-size:16px;animation:perfect-star 2.8s ease-in-out -1.4s infinite}
+@keyframes town-badge-arrive{from{opacity:0;scale:.3}to{opacity:1;scale:1}}
+@media(max-width:600px),(max-height:500px){#town-level-badge{top:16%;gap:7px;padding:5px 17px 5px 5px;border-radius:18px}.town-level-star{width:58px;height:62px}.town-level-star i{font-size:72px}.town-level-star b{font-size:26px;margin-top:6px}.town-level-title{font-size:16px}.town-level-points{font-size:14px}.town-level-link{font-size:12px}.town-level-sparkles::after{right:175px;top:59px}}
+@media(prefers-reduced-motion:reduce){#town-level-badge,.town-level-sparkles,.town-level-sparkles::after{animation:none}}

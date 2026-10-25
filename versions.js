@@ -1,1 +1,1 @@
-window.GAME_VERSIONS = { 'bunker-zone/': '3.1', 'hockey-boisjoli/': '1.7', 'snow-kids/': '1.32', 'frigo-snap/': '1.5', 'ballon-chasseur/': '1.3' };
+window.GAME_VERSIONS = { 'bunker-zone/': '3.1', 'hockey-boisjoli/': '1.7', 'snow-kids/': '1.33', 'frigo-snap/': '1.5', 'ballon-chasseur/': '1.3' };
