@@ -32,7 +32,7 @@
           [[8,10],[88,18],[5,38],[93,52],[8,75],[90,91],[34,3],[68,97]].forEach(([x,y],i)=>{const star=document.createElement('i');star.textContent='✦';star.style.cssText='left:'+x+'%;top:'+y+'%;--delay:'+(-i*.43)+'s;--size:'+(12+i%3*5)+'px';stars.append(star);});b.append(stars);
         }
         const badge=document.createElement('div');badge.className='slalom-best '+record.medal;
-        badge.innerHTML='<div class="record-run"><span>⏱ '+SK.fmtTime(record.time)+'</span><span title="Portes réussies pendant ce record">🚩 '+(Number.isFinite(record.gates)?record.gates:'—')+'</span></div>'+(record.goldPerfect?'<span class="record-perfect">✨ OR + PARFAIT ✨</span>':'');b.append(badge);
+        badge.innerHTML='<div class="record-run"><span>⏱ '+SK.fmtMedalTime(record.time)+'</span><span title="Portes réussies pendant ce record">🚩 '+(Number.isFinite(record.gates)?record.gates:'—')+'</span></div>'+(record.goldPerfect?'<span class="record-perfect">✨ OR + PARFAIT ✨</span>':'');b.append(badge);
       }
     }
 
@@ -93,6 +93,7 @@
    const seated=(r,x,y,scale,view)=>{
     c.save();c.translate(x,y);c.scale(scale,scale);const L=r.look||SK.lookOf(r.def,{}),coat=L.jacket||'#3e9bb0',pants=L.pants||'#3c4984';
     const side=view==='side';
+    const wiggle=Math.sin(t*2.1+x)*2;c.rotate(Math.sin(t*1.3+x)*.018);c.translate(0,wiggle);
     // Le bassin repose sur le banc : cuisses horizontales, genoux pliés.
     if(side){
      stroke([[-7,-2],[24,2],[28,43]],pants,14);stroke([[7,2],[38,10],[40,53]],pants,15);
@@ -128,6 +129,18 @@
    kids.slice(0,3).forEach((r,i)=>seated(r,920+i*73,604+i*9,.78,i===0?'side':'back'));
    bench(1100,752,240);
    kids.slice(3).forEach((r,i)=>seated(r,1156+i*112,751+i*12,.94,'back'));
+   // Une seule bulle à la fois, puis quelques secondes de calme entre les répliques.
+   const elapsed=(ms-start)/1000,turn=Math.floor(elapsed/9),phase=elapsed%9;
+   if(phase>2&&phase<7.5&&kids.length){
+    const speaker=turn%kids.length,r=kids[speaker],front=speaker<3,index=front?speaker:speaker-3;
+    const px=front?920+index*73:1156+index*112,py=front?604+index*9:751+index*12,scale=front?.78:.94;
+    const lines=r.def.id==='milo'?['Mes patins…','sont où mes patins ?']:(turn%2?['Je veux aller jouer !']:["C’est plate !"]);
+    c.save();c.font='bold 21px "Trebuchet MS",sans-serif';
+    const bw=Math.max(...lines.map(line=>c.measureText(line).width))+36,bh=lines.length*27+24,bx=SK.clamp(px-bw/2,870,1430-bw),by=py-151*scale-bh-12;
+    c.shadowColor='#0004';c.shadowBlur=7;c.shadowOffsetY=4;c.fillStyle='#fff9df';c.strokeStyle='#80613e';c.lineWidth=3;c.beginPath();c.roundRect(bx,by,bw,bh,17);c.fill();c.stroke();c.shadowColor='transparent';
+    c.beginPath();c.moveTo(px-9,by+bh-2);c.lineTo(px,by+bh+12);c.lineTo(px+10,by+bh-2);c.fill();
+    c.fillStyle='#254458';c.textAlign='center';lines.forEach((line,i)=>c.fillText(line,bx+bw/2,by+29+i*27));c.restore();
+   }
    // Refresh briefly as portrait assets finish loading; previews stay still.
    if(ms-start<2500)previews.forEach(draw=>draw());
   }

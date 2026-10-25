@@ -133,13 +133,33 @@
 
     // Slalom (École) : portes de 6 m alternant gauche / droite, drapeau rouge puis bleu
     const gates = [];
-    if (opts && opts.slalom) { let k = 0; for (let i = 24; i < nRace - 24; i += 14) { const s = segs[i]; if (s.ramp) continue; const x = (k % 2 ? 1 : -1) * s.w * 0.42, col = k % 2 ? '#1e88e5' : '#e53935'; s.gate = { x, w: 3.2, color: col, n: k }; s.props.push({ type: 'flag', x: x - 3.2, r: 0, decor: true, color: col }, { type: 'flag', x: x + 3.2, r: 0, decor: true, color: col }); gates.push(s); k++; } }
+    if (opts && opts.slalom) { let k = 0; for (let i = 24; i < nRace - 24; i += (opts.slalomLevel>=4?10:14)) { const s = segs[i]; if (s.ramp) continue; const x = (k % 2 ? 1 : -1) * s.w * 0.42, col = k % 2 ? '#1e88e5' : '#e53935'; s.gate = { x, w: 3.2, color: col, n: k }; s.props.push({ type: 'flag', x: x - 3.2, r: 0, decor: true, color: col }, { type: 'flag', x: x + 3.2, r: 0, decor: true, color: col }); gates.push(s); k++; } }
     if(opts?.deadForest){
       // Décor latéral uniquement : les portes et la largeur skiable restent intactes.
       for(let i=15;i<nRace-10;i+=9){const s=segs[i];for(const side of [-1,1]){
         s.props.push({type:'winterbare',x:side*(s.w+6+(i%3)*2),r:0,decor:true,v:(i%7)/7});
         if(i%2)s.props.push({type:'deadlog',x:side*(s.w+3.8),r:0,decor:true,v:(i%5)/5});
       }}
+    }
+    // Le slalom avancé garde les portes libres et annonce chaque tronc à sauter.
+    if(opts?.slalomLevel>=3){
+      const level=opts.slalomLevel;
+      if(level>=4)for(let i=12;i<nRace-12;i+=level===5?3:6){const s=segs[i];
+        for(const side of [-1,1]){
+          for(let row=0;row<(level===5?3:1);row++)s.props.push({type:row%2?'winterbare':'pine',x:side*(s.w+2+row*4+rng()*2),r:0,decor:true,v:rng()});
+          if(!s.ramp&&!segs.slice(Math.max(0,i-3),i+4).some(q=>q.gate)&&i%(level===5?9:18)===0)s.props.push({type:'pine',x:side*(s.w-1.5),r:1.1,decor:false,v:rng()});
+        }
+      }
+      let number=0;
+      for(let i=42;i<nRace-30;i+=level===5?30:level===4?36:44){
+        let index=i;
+        while(index<i+16&&(segs.slice(index-5,index+6).some(s=>s.ramp)||segs.slice(index-2,index+3).some(s=>s.gate)))index++;
+        if(index>=i+16)continue;
+        const s=segs[index],side=[-1,1,0][number++%3],span=side?s.w*.5:s.w+.3,x=side*s.w*.5;
+        for(let j=index-4;j<=index+4;j++){segs[j].props=segs[j].props.filter(p=>p.decor);segs[j].boxes=[];}
+        s.props.push({type:'fallenlog',x,r:span,span,decor:false,mandatory:true,clearance:.78,style:'wood'});
+        const warning=segs[index-7];for(const edge of [-1,1])warning.props.push({type:'trailwarning',x:edge*(warning.w+1),r:0,decor:true,action:'jump'});
+      }
     }
     const track = { course, theme, segs, walkers, nRace, L, length: segs.length, gateX, gateW, gateZ: L + 3 * SEG, wEnd: prevW, gates };
     track.segAt = z => segs[SK.clamp(Math.floor(z / SEG), 0, segs.length - 1)];
