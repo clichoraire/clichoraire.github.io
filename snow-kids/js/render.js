@@ -14,6 +14,7 @@
   // ------------------------------------------------------------------ vue d'un coureur
   R.drawView = function (ctx, race, me, vx, vy, vw, vh, t) {
     ctx.save(); ctx.beginPath(); ctx.rect(vx, vy, vw, vh); ctx.clip();
+    if(me.state==='stunned')ctx.filter='blur(1.2px)';
     const T = race.track, th = T.theme, segs = T.segs;
     if (me.state === 'lift') { R.drawLift(ctx, race, me, vx, vy, vw, vh, t); R.drawHud(ctx, race, me, vx, vy, vw, vh, t); ctx.restore(); return; }
     const focus = me.state === 'ride' ? (me.crouch || 0) : 0;
@@ -104,6 +105,8 @@
       }ctx.restore();
     }
     SK.LensSnow.draw(ctx,me,vx,vy,vw,vh);
+    ctx.filter='none';
+    if(me.state==='stunned'){ctx.fillStyle='rgba(12,18,35,'+(.13+.025*Math.sin(t*4))+')';ctx.fillRect(vx,vy,vw,vh);}
     if(!race.preview)R.drawHud(ctx, race, me, vx, vy, vw, vh, t);
     const incoming=race.shots.find(s=>s.target===me);
     if(incoming){ctx.save();const w=Math.min(vw*.65,520),x=vx+(vw-w)/2,y=vy+vh*.12;ctx.fillStyle=Math.sin(t*12)>0?'#b62237':'#e14d37';ctx.beginPath();ctx.roundRect(x,y,w,56,18);ctx.fill();ctx.fillStyle='#fff6cf';ctx.font='bold 25px sans-serif';ctx.textAlign='center';ctx.fillText('⚠ '+(SK.powerPresentation(incoming.from,'shot',incoming.kind).name)+' approche !',vx+vw/2,y+36);ctx.restore();}
@@ -352,6 +355,9 @@
   R.drawRacer = function (ctx, r, x, y, s, t, isMe) {
     s *= SK.characterScale(r.def.id);
     const L = lookOf(r), h = r.h || 0;
+    if(r.state==='stunned'){ctx.save();ctx.font='bold '+Math.max(12,s*.28)+'px Arial';ctx.textAlign='center';ctx.fillStyle='#ffdf4d';for(let i=0;i<5;i++){const a=t*3+i*TAU/5;ctx.fillText('★',x+Math.cos(a)*s*.55,y-s*2.7+Math.sin(a)*s*.14);}ctx.restore();}
+    if(r.fx?.wobble>0)x+=Math.sin(t*20)*s*.08;
+    if(r.fx?.pushPose>0)x+=(r.pushDirection||1)*s*.12;
     ctx.fillStyle = 'rgba(0,0,0,' + (0.22 / (1 + h * 0.5)) + ')'; ctx.beginPath(); ctx.ellipse(x + 0.1 * s, y + 0.12 * s, 0.62 * s / (1 + h * 0.15), 0.30 * s / (1 + h * 0.15), 0, 0, TAU); ctx.fill();
     if(r.state==='drop'){R.drawChair(ctx,r,x,y-h*s-s*.5,s,t);return;}
     if((r.fx?.fan>0||r.fx?.comboBoost>0)&&r.def.id==='alexie')R.drawStarBoost(ctx,x,y-h*s,s,t);
@@ -629,6 +635,7 @@
     if(me.gear.boussole){const future=race.track.segs.slice(Math.floor(me.z/SK.SEG)+4,Math.floor(me.z/SK.SEG)+45).find(s=>Math.abs(s.curve)>.4);ctx.textAlign='center';ctx.fillText(future?(future.curve>0?'Virage →':'← Virage')+' · '+Math.round(future.z-me.z)+' m':'↑ Tout droit',vx+vw*.5,vy+105*F);}
     if(me.gear.meteore&&me.meteorUntil>race.time){ctx.strokeStyle='#ffdc6390';ctx.lineWidth=7*F;ctx.beginPath();ctx.ellipse(vx+vw*.5,vy+vh*.77,vw*.15,vh*.05,0,0,Math.PI*2);ctx.stroke();}
     ctx.restore();
+    ctx.save();ctx.font='bold '+18*F+'px Arial';ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('N · Pousser '+(me.pushCooldown>0?Math.ceil(me.pushCooldown)+' s':'✊'),vx+20,vy+vh-95*F);ctx.restore();
     // tir et objet
     const slot = (x, y, kind, id, label, key) => {
       const def = id ? SK.powerPresentation(me,kind,id) : null;
@@ -673,7 +680,7 @@
       ctx.font = 'bold ' + 22 * F + 'px sans-serif'; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillText(dir + ' Remontée ' + dir, vx + vw / 2 + 2, vy + vh * 0.34 + 2); ctx.fillStyle = '#ffd600'; ctx.fillText(dir + ' Remontée ' + dir, vx + vw / 2, vy + vh * 0.34);
     }
     if (race.mission) { // objectif de la pratique
-      const m = race.mission, v = m.type === 'slalom' ? race.gatesPassed + ' / ' + m.goal + ' portes' : m.type === 'coins' ? me.trackCoins + ' / ' + m.goal + ' pièces' : m.type === 'tricks' ? me.tricksCoins + ' / ' + m.goal + ' G en figures' : m.type === 'hits' ? me.stats.hits + ' / ' + m.goal + ' touches' : m.type === 'edges' ? me.stats.edges + ' contact(s) avec le bord' : m.type === 'time' ? 'objectif ' + SK.fmtTime(m.goal) : me.stats.falls === 0 ? 'aucune chute ✓' : me.stats.falls + ' chute(s) ✗';
+      const m = race.mission, v = m.type === 'slalom' ? race.gatesPassed + ' / ' + m.goal + ' portes' : m.type === 'coins' ? me.trackCoins + ' / ' + m.goal + ' pièces' : m.type === 'tricks' ? me.tricksCoins + ' / ' + m.goal + ' G en figures' : m.type === 'pushes' ? me.stats.pushes + ' / ' + m.goal + ' poussées' : m.type === 'hits' ? me.stats.hits + ' / ' + m.goal + ' touches' : m.type === 'edges' ? me.stats.edges + ' contact(s) avec le bord' : m.type === 'time' ? 'objectif ' + SK.fmtTime(m.goal) : me.stats.falls === 0 ? 'aucune chute ✓' : me.stats.falls + ' chute(s) ✗';
       box(vx + vw / 2 - 170 * F, vy + 12, 340 * F, 44 * F); ctx.fillStyle = '#ffd600'; ctx.font = 'bold ' + 20 * F + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(m.name + ' · ' + v, vx + vw / 2, vy + 41 * F);
     }
     if (me.curTrick) { ctx.font = 'bold ' + 26 * F + 'px sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(me.curTrick.def.name + '…', vx + vw / 2, vy + vh * 0.3); }

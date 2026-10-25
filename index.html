@@ -119,7 +119,8 @@
       .section-title { flex-wrap: wrap; } h2 { white-space: nowrap; }
     }
       .ver { color: #7f8aa8; font-size: 12px; font-weight: 400; margin-left: 4px; }
-  </style>
+  .locked .cover img{filter:grayscale(1) brightness(.55)}.locked .cover{cursor:default}.game-lock{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(70px,8vw,110px);z-index:2;text-shadow:0 5px 20px #000}.locked .play{background:#59616b;cursor:not-allowed}
+</style>
 </head>
 <body>
   <header>
@@ -195,7 +196,7 @@
         desc: 'Descente en planche à neige façon Snowboard Kids sur Nintendo 64 : les neuf tableaux (Mont Débutant, Autoroute de nuit, Vallée des sables, Pays des Ninjas…), la remontée mécanique à chaque tour, les boîtes rouges pour tirer sur le coureur devant, les boîtes bleues pour les objets, des figures qui rapportent des pièces, une boutique de planches et un ninja caché à débloquer. Championnat, course libre, contre-la-montre et écran partagé à deux.',
       },
       {
-        title: 'Frigo Snap', path: 'frigo-snap/', cover: 'covers/frigo-snap.jpg', badge: 'Photo',
+        title: 'Frigo Snap', locked: true, path: 'frigo-snap/', cover: 'covers/frigo-snap.jpg', badge: 'Photo',
         tags: ['Safari photo sur rails', '4 virées', '15 créatures', 'Réactions en chaîne', 'Chef Fernand'],
         desc: 'Façon Pokémon Snap sur Nintendo 64, mais dans un frigo : un demi-avocat à roulettes suit les rails pendant que vous photographiez les restes qui prennent vie (Cornichons Ninjas, Ketchup-Rex, Yéti-Roquefort, Léviathan-Surgelé…). Croûton à l\'ail, Tabasco, clic piézo et flash déclenchent des réactions en chaîne ; à la fin, le Chef Fernand juge vos clichés depuis son grille-pain et remplit le Guide des Restes Oubliés.',
       },
@@ -208,8 +209,8 @@
     const el = document.getElementById('games');
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     el.innerHTML = GAMES.map(g => `
-      <article class="game">
-        <a class="cover" href="${g.path}" aria-label="Jouer à ${esc(g.title)}">
+      <article class="game ${g.locked ? 'locked' : ''}">
+        <a class="cover" ${g.locked ? 'aria-disabled="true"' : `href="${g.path}"`} aria-label="${g.locked ? 'Bientôt disponible : ' : 'Jouer à '}${esc(g.title)}">${g.locked ? '<span class="game-lock" aria-hidden="true">🔒</span>' : ''}
           <span class="badge ${g.badgeClass || ''}">${esc(g.badge)}</span>
           <img src="${g.cover}" alt="Capture d'écran de ${esc(g.title)}" loading="lazy">
         </a>
@@ -217,9 +218,9 @@
           <h3>${esc(g.title)} <small class="ver">${window.GAME_VERSIONS && GAME_VERSIONS[g.path] ? 'v' + esc(GAME_VERSIONS[g.path]) : ''}</small></h3>
           <div class="tags">${g.tags.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
           <p>${esc(g.desc)}</p>
-          <div class="actions">
+          <div class="actions">${g.locked ? '<span class="play" aria-disabled="true">🔒 En préparation</span>' : `
             <a class="play" href="${g.path}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2 L14 8 L3 14 Z" fill="currentColor"/></svg>Jouer</a>
-            <a class="ghost" href="${g.path}" target="_blank" rel="noopener">Ouvrir dans un nouvel onglet</a>
+            <a class="ghost" href="${g.path}" target="_blank" rel="noopener">Ouvrir dans un nouvel onglet</a>`}
           </div>
         </div>
       </article>`).join('') + `

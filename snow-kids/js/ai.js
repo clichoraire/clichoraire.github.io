@@ -21,6 +21,7 @@
       else if (d < -120 && !r.boss) f *= 1 - Math.min(D.rubber * 0.6, (-d - 120) / 1500);
     }
     if (race.mission && race.mission.type === 'hits') f = 0.55; // cibles lentes à l'École
+    if(race.mission?.type==='pushes'&&race.humans.length){const d=r.progress()-race.humans[0].progress();f=SK.clamp(.8-d/90,.5,1.05);}
     r.aiSpeed = f;
     if (r.state === 'lift' || r.state === 'done' || r.state === 'fall' || r.state === 'frozen') return;
     const T = race.track, i0 = SK.clamp(Math.floor(r.z / SEG), 0, T.segs.length - 1), s = T.segs[i0];

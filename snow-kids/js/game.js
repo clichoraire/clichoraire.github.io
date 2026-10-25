@@ -4,7 +4,7 @@
   'use strict';
   SK.itemDuration ||= (r,seconds)=>seconds;
   const SEG = SK.SEG;
-  const EMPTY = { steer: 0, up: false, down: false, jump: false, trick: false, shoot: false, item: false };
+  const EMPTY = { steer: 0, up: false, down: false, jump: false, trick: false, shoot: false, push: false, item: false };
 
   // Shared with the test cabin: cornering improves edge hold, not lateral speed.
   SK.applyHandlingStats=function(r,corner,acceleration){
@@ -26,6 +26,7 @@
     this.trickSpeed = 1;
     this.trickPay = 1;
     this.jumpPower = 3.7 + 0.32 * ((d.jump || 3) + (b.jump || 0)); // vitesse verticale d'un saut au bouton
+    this.strength = Math.min(10,(d.strength||3)+(opts.strengthLevel||0)); this.pushCooldown=0; this.pushVelocity=0;
     this.stunFactor = 1 - 0.08 * (d.weight - 3);
     this.gear = opts.gear || {}; this.powerLevels=opts.powerLevels||{};
     if (this.gear.casque) this.stunFactor *= 0.8;
@@ -38,7 +39,7 @@
     this.fx = { parachute: 0, fan: 0, invisible: 0, slow: 0, snowman: 0 };
     this.rank = idx; this.finishTime = null; this.lift = null; this.lapTimes = []; this.lapStart = 0;
     this.input = Object.assign({}, EMPTY); this.prev = Object.assign({}, EMPTY); this.ai = null;
-    this.stats = { shots: 0, items: 0, hits: 0, falls: 0, edges: 0 };
+    this.stats = { shots: 0, items: 0, hits: 0, falls: 0, edges: 0, pushes: 0 };
   }
   Racer.prototype.progress = function () { return this.lap * this.race.L + Math.min(this.z, this.race.L); };
   Racer.prototype.immune = function () { return this.state === 'lift' || this.state === 'drop' || this.state === 'done' || this.fx.invisible > 0; };
@@ -61,7 +62,7 @@
   const P = SK.Race.prototype;
   SK.missionOutcome = function(race,r){
     const m=race.mission;if(!m)return null;
-    const value=m.type==='slalom'?race.gatesPassed:m.type==='coins'?r.trackCoins:m.type==='tricks'?r.tricksCoins:m.type==='hits'?r.stats.hits:m.type==='time'?r.finishTime:m.type==='edges'?r.stats.edges:r.stats.falls;
+    const value=m.type==='slalom'?race.gatesPassed:m.type==='coins'?r.trackCoins:m.type==='tricks'?r.tricksCoins:m.type==='hits'?r.stats.hits:m.type==='pushes'?r.stats.pushes:m.type==='time'?r.finishTime:m.type==='edges'?r.stats.edges:r.stats.falls;
     return {value,ok:m.type==='time'?value!=null&&value<=m.goal:['nofall','edges'].includes(m.type)?value===0:value>=m.goal};
   };
   P.emit = function (e) { this.events.push(e); };
@@ -118,6 +119,7 @@
   // ------------------------------------------------------------------ un coureur
   P.updateRacer = function (r, dt) {
     const inp = r.input, prev = r.prev, T = this.track;
+    r.pushCooldown=Math.max(0,(r.pushCooldown||0)-dt);
     const edge = k => inp[k] && !prev[k];
     for (const k in r.fx) if (r.fx[k] > 0) r.fx[k] = Math.max(0, r.fx[k] - dt);
     if (r.flat > 0) r.flat -= dt;
@@ -134,7 +136,7 @@
       r.prev = Object.assign({}, inp); return;
     }
     const s = T.segAt(r.z), surf = SK.SURFACES[s.surface] || SK.SURFACES.snow;
-    const stunned = r.state === 'fall' || r.state === 'frozen';
+    const stunned = r.state === 'fall' || r.state === 'frozen' || r.state === 'stunned';
     if (stunned) {
       r.stun -= dt; r.speed = Math.max(0, r.speed - 20 * dt);
       if (r.state === 'frozen') r.speed = 0;
@@ -175,8 +177,12 @@
     }
     if (station && r.lap + 1 < this.laps) { r.speed = Math.max(6, Math.min(r.speed, 14) - 10 * dt); target = 0; }
     r.x -= centrifugal * (r.state === 'air' ? 0.6 : 1-(r.cornerHold||0)) * (SK.SURFACES[s.surface] && s.surface === 'ice' ? 1.25 : 1) * dt;
+    r.x += (r.pushVelocity||0)*dt;
+    r.pushVelocity *= Math.exp(-3*dt);
+    if(r.fx.wobble>0)r.speed=Math.max(0,r.speed-2*dt);
     const lim = s.w - 0.9;
     if (r.x > lim || r.x < -lim) {
+      if(r.pushImpactUntil>this.time&&Math.abs(r.pushVelocity)>2){this.daze(r,1.8);r.pushImpactUntil=0;r.pushVelocity=0;}
       if(!r.touchingEdge)r.stats.edges++;r.touchingEdge=true;
       r.x = SK.clamp(r.x, -lim, lim);
       if (r.wallT <= 0 && r.speed > 12 && !stunned) { this.emit({ type: 'wall', r }); r.wallT = 0.5; }
@@ -235,6 +241,7 @@
         const pz = sg.z + (p.dz == null ? SEG / 2 : p.dz);
         if (pz >= zPrev && pz < r.z && Math.abs(r.x - p.x) < p.r + 0.7 && (p.type==='lowarch'||r.h < (p.clearance ?? 1.1)) && r.state !== 'fall') { if(p.type==='lowarch'&&r.state==='ride'&&inp.up)continue;
           if(!p.trainingBarrier&&SK.GearEffects?.protect(r,p))continue;
+          if(p.type==='lowarch'){this.daze(r,1.8);continue;}
           if(p.type==='snowman'){r.speed*=.55;r.fx.slow=Math.max(r.fx.slow,1.4);SK.LensSnow.splash(r,24,true);this.emit({type:'snowimpact',r});continue;}
           this.fall(r, 1.3, false); this.emit({ type: 'obstacle', r, kind: p.type }); }
       }
@@ -255,6 +262,7 @@
       }
     }
     // ---- tirs et objets
+    if(edge('push')&&!stunned)this.pushRacer(r);
     if (edge('shoot') && r.shot && !stunned) this.fire(r);
     if (edge('item') && r.item && !stunned) this.useItem(r);
     // ---- fin de tour : remontée mécanique ou arrivée
@@ -291,6 +299,23 @@
   };
 
   // ------------------------------------------------------------------ effets
+  P.pushRacer = function(r){
+    if(r.state!=='ride'||r.pushCooldown>0)return false;
+    r.pushCooldown=3;r.fx.pushPose=.35;
+    const targets=this.racers.filter(o=>o!==r&&o.state==='ride'&&o.lap===r.lap&&Math.abs(o.z-r.z)<3.5&&Math.abs(o.x-r.x)<2.4&&!o.immune());
+    targets.sort((a,b)=>Math.hypot(a.z-r.z,a.x-r.x)-Math.hypot(b.z-r.z,b.x-r.x));
+    const o=targets[0];if(!o)return false;
+    const difference=r.strength-o.strength,dir=Math.sign(o.x-r.x)||Math.sign(r.input.steer)||1;
+    o.pushVelocity=dir*SK.clamp(7+difference*2.8,3,22);o.fx.wobble=.8;
+    o.pushImpactUntil=difference>=2?this.time+1.2:0;r.pushDirection=dir;
+    r.stats.pushes++;this.emit({type:'push',r,target:o});return true;
+  };
+  P.daze=function(r,duration){
+    r.state='stunned';r.stun=Math.max(r.stun,duration*r.stunFactor);r.speed*=.3;
+    r.curTrick=null;r.pending=null;r.tricksDone=[];r.jumpCharge=0;
+    this.emit({type:'dazed',r});
+  };
+
   P.fall = function (r, dur, flat) {
     if (r.state === 'air') { r.pending = flat ? 'poele' : 'bombe'; return; }
     r.state = 'fall'; r.stun = Math.max(r.stun, dur * r.stunFactor); r.speed *= 0.25; r.curTrick = null; r.tricksDone = []; if (flat) r.flat = dur;

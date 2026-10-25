@@ -23,6 +23,7 @@
   const UP_DEFS = [['speed', 'Vitesse', 'Ta planche équipée gagne +1 en vitesse de pointe.'], ['corner', 'Virage', 'Ta planche équipée accroche mieux : +1 en virage.'], ['acceleration', 'Accélération', 'Ta planche reprend sa vitesse plus rapidement : +1 en accélération.'], ['jump', 'Saut', 'Ta planche équipée saute plus haut : +1 en saut.']];
   const STATS = [['speed', 'Vitesse'], ['corner', 'Virage'], ['acceleration', 'Accélération'], ['jump', 'Saut']];
   const STAT_ICONS={
+    strength:'<path d="M5 15h4v-5h4V6h5v4h5v5h4v10l-6 5H10l-5-6z"/>',
     speed:'<path d="M19 3 7 18h8l-2 11 13-17h-9z"/>',
     corner:'<path d="m11 3-7 6 7 6v-4h7c8 0 8 9 0 9h-5v-4l-8 7 8 6v-4h6c13 0 13-19 0-19h-8z"/>',
     acceleration:'<path d="m5 7 10 10L5 27h7l10-10L12 7zM21 7h5v20h-5z"/>',

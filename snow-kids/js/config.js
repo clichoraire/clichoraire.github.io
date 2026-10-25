@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -557,6 +557,8 @@ window.SK.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   SK.MISSIONS.forEach(m=>m.level=m.id.endsWith('2')?2:1);
   SK.MISSIONS.splice(1,0,{id:'edges1',type:'edges',course:'rookie',goal:0,reward:80,level:1,name:'Ne pas toucher le bord !',desc:'Reste au centre : alterne gauche, droite et lignes droites sans toucher les bords.'});
   SK.MISSIONS.push({id:'edges2',type:'edges',course:'rookie',goal:0,reward:150,level:2,name:'Ne pas toucher le bord !',desc:'Des virages plus serrés sur une piste encore plus étroite. Zéro contact avec les bords !'});
+  SK.MISSIONS.push({id:'push1',type:'pushes',course:'rookie',goal:3,reward:100,level:1,name:'Place au passage !',desc:'Approche-toi des autres et appuie sur N pour réussir 3 poussées.'});
+  SK.CHARACTERS.forEach(c=>c.strength=({zach:5,eliott:3,alexie:3,adam:2,edison:2,milo:1,shinobin:5})[c.id]||3);
   SK.missionById = id => SK.MISSIONS.find(m => m.id === id);
 
   // ------------------------------------------------------------------ outils communs

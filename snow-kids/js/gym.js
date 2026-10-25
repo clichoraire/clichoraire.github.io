@@ -17,7 +17,9 @@
  G.walkOffer=save=>({stat:'walk',name:'Marche en ville +1',level:save.walkLevel||0,price:1,action:(save.walkLevel||0)>=5?'max':'buy',max:5});
  G.powerOffers=save=>['shot','item'].map(stat=>{const level=save.powerLevels?.[stat]||0,wins=Object.values(save.cups||{}).filter(x=>x.won).length,required=[1,4,8][level];return {stat,name:stat==='shot'?'Puissance des tirs':'Durée des objets',level,max:3,price:level+1,action:level>=3?'max':wins<required?'locked':'buy',lock:level<3&&wins<required?required+' tournois gagnés requis':null};});
  G.statOffers=save=>SK.Shop.trainingOffers(save).map(o=>({...o,price:o.level+1}));
+ G.strengthOffer=save=>({stat:'strength',name:'Force',level:save.strengthLevel||0,max:5,price:1+(save.strengthLevel||0),action:(save.strengthLevel||0)>=5?'max':'buy'});
  G.train=(save,stat)=>{
+  if(stat==='strength'){const o=G.strengthOffer(save);if(o.action!=='buy'||(save.trainingPoints||0)<o.price)return false;save.trainingPoints-=o.price;save.strengthLevel=o.level+1;return true;}
   if(['shot','item'].includes(stat)){const o=G.powerOffers(save).find(o=>o.stat===stat);if(o.action!=='buy'||(save.trainingPoints||0)<o.price)return false;save.trainingPoints-=o.price;(save.powerLevels||(save.powerLevels={}))[stat]=o.level+1;return true;}
 
   if(stat==='walk'){const it=G.walkOffer(save);if(it.action!=='buy'||(save.trainingPoints||0)<it.price)return false;save.trainingPoints-=it.price;save.walkLevel=it.level+1;return true;}
@@ -30,10 +32,10 @@
   panel.hidden=true;talk.hidden=false;talk.textContent='Parler à Jessica';
   const refresh=()=>{const progress=SK.Progression.info(save);document.getElementById('gym-gold').textContent='Niveau '+progress.level+' · '+progress.current+' / '+progress.needed+' XP · '+progress.points+' points';
    panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><h2>Jessica · On s’entraîne ?</h2><p>Chaque niveau gagné rapporte 2 points. Choisis ce que tu veux améliorer avec ta planche <b>'+SK.boardById(save.advBoard).name+'</b>.</p>';
-   for(const offer of [...G.statOffers(save),G.walkOffer(save),...G.powerOffers(save)]){
+   for(const offer of [...G.statOffers(save),G.strengthOffer(save),G.walkOffer(save),...G.powerOffers(save)]){
     const row=document.createElement('button');row.className='gym-training-row';row.disabled=offer.action!=='buy'||(save.trainingPoints||0)<offer.price;
     const ch=SK.charById(save.advChar||save.char),board=SK.effectiveBoard(save.advBoard,save);
-    const current=offer.stat==='walk'?Math.round(100*(1+.15*offer.level)):(ch[offer.stat]||0)+(board[offer.stat]||0);
+    const current=offer.stat==='walk'?Math.round(100*(1+.15*offer.level)):(ch[offer.stat]||0)+(offer.stat==='strength'?(save.strengthLevel||0):(board[offer.stat]||0));
     const next=offer.action==='max'?current:current+(offer.stat==='walk'?15:1);
     const preview=['shot','item'].includes(offer.stat)?'+'+(offer.level*10)+' % → +'+(Math.min(3,offer.level+1)*10)+' %':offer.stat==='walk'?current+' % → '+next+' % en ville':current+' → '+next+' '+(next>8?'(au-delà de 8)':'');
     row.innerHTML=`<span class="stat-icon stat-${offer.stat}"><svg viewBox="0 0 32 34">${SK.STAT_ICONS[offer.stat]||SK.STAT_ICONS.speed}</svg></span><span><b>${offer.name.split(' · ')[0]}</b><small>Niveau ${offer.level} / ${offer.max||SK.UPGRADE_MAX}</small><span class="gym-stat-preview">${preview}</span></span><strong>${offer.lock|| (offer.action==='max'?'Maximum':offer.price+' point'+(offer.price>1?'s':''))}</strong>`;
@@ -58,19 +60,36 @@
    c.fillStyle='#355751';c.fillRect(430,66,420,62);c.fillStyle='#fff0c0';c.textAlign='center';c.font='900 36px Arial';c.fillText('GYM DES SOMMETS',640,108);
    c.fillStyle='#58636a';c.fillRect(0,480,1280,240);c.strokeStyle='#6d7a81';c.lineWidth=2;for(let x=0;x<1280;x+=100){c.beginPath();c.moveTo(x,480);c.lineTo(x-100,720);c.stroke();}for(let y=480;y<720;y+=60){c.beginPath();c.moveTo(0,y);c.lineTo(1280,y);c.stroke();}
    // The family trains with their shared portraits: weights, squats and cycling.
-   const trainees=[['matthieu','Matthieu'],['jeremie','Jérémie'],['josue','Josué']];
-   for(let i=0;i<3;i++){
-    const x=200+i*235,bend=(Math.sin(t*(i+2))+1)*9,y=350+(i===1?bend:0);
-    c.fillStyle=['#446c93','#826099','#3d837b'][i];c.fillRect(x-65,464,130,12);
-    oval(x,460,48,9,'#243b4655');line([[x-10,y+35],[x-22-bend*.3,y+70],[x-25,454]],16,'#293c56');line([[x+10,y+35],[x+22+bend*.3,y+70],[x+28,454]],16,'#293c56');
-    line([[x-25,455],[x-10,455]],13,'#1e2b39');line([[x+26,455],[x+40,455]],13,'#1e2b39');
-    line([[x,y-16],[x,y+36]],48,['#d46c44','#7b60a3','#268d81'][i]);
-    const handY=i===0?y-35+Math.sin(t*2)*25:y+25;
-    line([[x-20,y-8],[x-43,y+14],[x-48,handY]],13,'#edc2a0');line([[x+20,y-8],[x+43,y+14],[x+48,handY]],13,'#edc2a0');
-    window.FamilyHeads?.draw(c,trainees[i][0],'front',x-44,y-111,88,82);
-    c.font='bold 16px Arial';c.fillStyle='#263e50';c.fillText(trainees[i][1],x,y-122);
-    if(i===0){weight(x-48,handY);weight(x+48,handY);}if(i===2){oval(x-42,447,25,25,'#273842');oval(x+44,447,25,25,'#273842');line([[x-42,447],[x,407],[x+44,447],[x-42,447]],5,'#aec4ca');line([[x+44,447],[x+49,374],[x+34,374]],6,'#aabfc4');}
+   // Two-segment limbs keep knees and elbows attached throughout the movement.
+   const joint=(hip,foot,length,side)=>{const dx=foot[0]-hip[0],dy=foot[1]-hip[1],d=Math.max(.01,Math.hypot(dx,dy)),h=Math.sqrt(Math.max(0,length*length-d*d/4));return [(hip[0]+foot[0])/2-side*dy/d*h,(hip[1]+foot[1])/2+side*dx/d*h];};
+   const torso=(x,y,color)=>{c.fillStyle=color;c.beginPath();c.moveTo(x-21,y);c.quadraticCurveTo(x,y-9,x+21,y);c.lineTo(x+27,y+18);c.lineTo(x+22,y+70);c.quadraticCurveTo(x,y+76,x-22,y+70);c.lineTo(x-27,y+18);c.closePath();c.fill();line([[x-20,y+66],[x+20,y+66]],4,'#ffffff44');};
+   for(let i=0;i<2;i++){
+    const x=200+i*235,drop=i===1?(1-Math.cos(t*1.8))*12:0,y=303+drop;
+    c.fillStyle=i?'#826099':'#446c93';c.fillRect(x-65,464,130,12);oval(x,460,48,9,'#243b4655');
+    for(const side of [-1,1]){const hip=[x+side*13,y+68],foot=[x+side*29,450],knee=joint(hip,foot,41,-side);line([hip,knee,foot],17,'#293c56');line([[foot[0]-6,453],[foot[0]+13,453]],13,'#1e2b39');}
+    torso(x,y,i?'#7b60a3':'#d46c44');
+    const handY=i?y+34:265+(1-Math.cos(t*1.8))*20;
+    for(const side of [-1,1]){const shoulder=[x+side*23,y+13],elbow=i?[x+side*43,y+35]:[x+side*44,y+27],hand=[x+side*(i?49:45),handY];line([shoulder,elbow,hand],12,'#edc2a0');line([shoulder,[(shoulder[0]+elbow[0])/2,(shoulder[1]+elbow[1])/2]],17,i?'#7b60a3':'#d46c44');if(!i)weight(hand[0],hand[1]);}
+    window.FamilyHeads?.draw(c,i?'jeremie':'matthieu','front',x-38,y-75,76,81);
+    c.font='bold 16px Arial';c.fillStyle='#263e50';c.fillText(i?'Jérémie':'Matthieu',x,207);
    }
+   // Josué rides in profile: feet are locked to opposite ends of the crank.
+   c.fillStyle='#3d837b';c.fillRect(585,464,175,12);
+   oval(670,460,88,8,'#243b4655');
+   const crank=[675,420],hip=[642,359],phase=t*3;
+   const pedal=a=>[crank[0]+22*Math.cos(a),crank[1]+22*Math.sin(a)];
+   const leg=(a,color)=>{const foot=pedal(a),knee=joint(hip,foot,47,-1);line([hip,knee,foot],15,color);line([[foot[0]-7,foot[1]],[foot[0]+12,foot[1]]],10,'#1e2b39');};
+   leg(phase+Math.PI,'#43546a');
+   oval(614,441,25,25,'#273842');oval(735,441,25,25,'#273842');oval(735,441,16,16,'#607e89');
+   line([[614,441],[642,369],[675,420],[735,441],[708,365],[675,420],[614,441]],5,'#aec4ca');
+   line([[642,369],[642,357]],6,'#aec4ca');line([[628,355],[654,355]],9,'#263842');
+   line([[708,365],[718,330],[731,330]],6,'#aec4ca');
+   line([pedal(phase),pedal(phase+Math.PI)],4,'#aebbc0');oval(...crank,7,7,'#263842');
+   leg(phase,'#293c56');
+   c.fillStyle='#268d81';c.beginPath();c.moveTo(651,286);c.quadraticCurveTo(673,280,685,301);c.lineTo(660,365);c.quadraticCurveTo(644,373,627,356);c.lineTo(637,310);c.closePath();c.fill();
+   line([[675,302],[693,326],[721,330]],12,'#edc2a0');line([[675,302],[684,314]],19,'#268d81');
+   window.FamilyHeads?.draw(c,'josue','side',645,222,79,82);
+   c.font='bold 16px Arial';c.fillStyle='#263e50';c.fillText('Josué',675,207);
    // Jessica at a human-sized desk, using the same portrait as in the village.
    c.save();c.translate(1035,480);c.scale(.78,.78);c.translate(-1035,-480);
    c.fillStyle='#a64f77';c.beginPath();c.roundRect(985,325,92,115,24);c.fill();
