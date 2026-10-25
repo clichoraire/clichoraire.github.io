@@ -307,29 +307,52 @@
   }
   // Surface réutilisée pour fondre les poses sans doubler leur opacité.
   const turnBlend=canvas(512,512);
-  // Poses aériennes articulées : pieds attachés à la planche, mains sur sa carre.
+  // Même caméra de dos qu'au sol. La planche vient à la main, jamais l'inverse.
   function aerialRider(c,r,L,s){
-    const trick=r.curTrick,pose=trick?.def.pose||'indy',p=trick?Math.min(1,trick.t/trick.def.dur):0;
-    const ease=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
-    const grip=trick?ease(p/.24)*ease((1-p)/.22):0,lean=(pose==='nose'?-.12:pose==='tail'?.12:pose==='method'?-.2:0)*grip;
-    const boardY=-.12-.52*grip,tilt=(pose==='nose'?-.23:pose==='tail'?.23:pose==='method'?-.42:.06)*grip;
-    const point=(x,y=0)=>[x*Math.cos(tilt)-y*Math.sin(tilt),boardY+x*Math.sin(tilt)+y*Math.cos(tilt)];
-    const drawLine=(pts,color,width)=>{c.strokeStyle=color;c.lineWidth=width*s;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x*s,y*s):c.moveTo(x*s,y*s));c.stroke();};
-    const hipY=-1.08-.08*grip;
-    SK.drawBoard(c,r.board,0,boardY*s, .43*s,2.15*s,Math.PI/2+tilt,r.input?.steer||0);
-    for(const side of [-1,1]){const foot=point(side*.43,-.08),hip=[lean+side*.14,hipY],dx=foot[0]-hip[0],dy=foot[1]-hip[1],d=Math.max(.01,Math.hypot(dx,dy)),bend=Math.sqrt(Math.max(0,.61*.61-d*d/4));
-      const knee=[(hip[0]+foot[0])/2+side*Math.min(.16,bend)*grip,(hip[1]+foot[1])/2-Math.min(.18,bend)*grip];drawLine([hip,knee,foot],L.pants,.21);
-      c.save();c.translate(foot[0]*s,foot[1]*s);c.rotate(tilt);if(L.springBoots||L.gripBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(c,-.17*s,-.23*s,.34*s,.29*s,side);else{c.fillStyle='#263b4d';c.beginPath();c.roundRect(-.17*s,-.23*s,.34*s,.29*s,.06*s);c.fill();}c.restore();
+    const trick=r.curTrick,pose=trick?.def.pose||'indy';
+    const ease=x=>{x=SK.clamp(x,0,1);return x*x*(3-2*x);};
+    const p=trick?SK.clamp(trick.t/trick.def.dur,0,1):0;
+    const g=trick?ease(p/.3)*ease((1-p)/.3):0;
+    const key=r.def.gender==='girl'?'girlWalk':'boyWalk',index=r.def.gender==='girl'?0:1;
+    if(!frames[key])return false;
+    const img=colored(frames[key][index],r,L,key+index),h=2.5*s,w=h*img.width/img.height;
+    const angles={indy:.42,nose:-.65,tail:.95,melon:-.45,method:-.9,double:.3};
+    const angle=(angles[pose]||0)*g,by=-.32-(pose==='tail'?.65:.44)*g;
+    const boardPoint=(across,along)=>[across*Math.cos(angle)-along*Math.sin(angle),by+across*Math.sin(angle)+along*Math.cos(angle)];
+    const hip=[-.06*g,-.96+.14*g];
+    const line=(pts,color,width)=>{c.strokeStyle=color;c.lineWidth=width*s;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x*s,y*s):c.moveTo(x*s,y*s));c.stroke();};
+    // Deux segments fixes : les mains ne peuvent pas dépasser la portée du bras.
+    const joint=(from,to,length,bend)=>{
+      let dx=to[0]-from[0],dy=to[1]-from[1],d=Math.max(.001,Math.hypot(dx,dy));
+      const reach=Math.min(d,length*1.98),end=[from[0]+dx/d*reach,from[1]+dy/d*reach];
+      const offset=Math.sqrt(Math.max(0,length*length-reach*reach/4));
+      return {end,middle:[(from[0]+end[0])/2-dy/d*offset*bend,(from[1]+end[1])/2+dx/d*offset*bend]};
+    };
+    SK.drawBoard(c,r.board,0,by*s,.65*s,1.48*s,angle,r.input?.steer||0);
+    for(const along of [-.25,.25]){
+      const foot=boardPoint(0,along),ankle=[foot[0],foot[1]-.10];
+      // Genoux rapprochés, fléchis dans le sens de la glisse.
+      const knee=[hip[0]+.08+.12*g,(hip[1]+ankle[1])/2-.08*g];
+      line([hip,knee,ankle],L.pants,along<0?.24:.28);
+      if(along<0)line([hip,knee,ankle],'#14203d25',.24);
+      c.save();c.translate(foot[0]*s,foot[1]*s);c.rotate(angle);
+      if(L.springBoots||L.gripBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(c,-.16*s,-.25*s,.39*s,.34*s,1);
+      else{c.fillStyle='#263b4d';c.beginPath();c.roundRect(-.16*s,-.23*s,.38*s,.29*s,.06*s);c.fill();}
+      c.restore();
     }
-    SK.drawJacket(c,L.jacket,lean*s,(hipY-.36)*s,.43*s,'front',true);
-    const key=r.def.gender==='girl'?'girlFront':'boyWalk',src=frames[key]?.[0];
-    if(src){const img=colored(src,r,L,key+'0'),hh=2.5*s,ww=hh*img.width/img.height;c.drawImage(img,0,0,img.width,img.height*.34,lean*s-ww/2,(hipY-1.50)*s,ww,hh*.34);}
+    // Découpe native de dos : ni tête de face, ni corps aplati ou étiré.
+    c.drawImage(img,0,0,img.width,img.height*.34,hip[0]*s-w/2,hip[1]*s-h*.61,w,h*.34);
+    c.drawImage(img,img.width*.22,img.height*.34,img.width*.56,img.height*.27,hip[0]*s-w*.28,hip[1]*s-h*.27,w*.56,h*.27);
     for(const side of [-1,1]){
-      const holds=pose==='double'||(pose==='nose'||pose==='melon'||pose==='method'?side===-1:side===1);
-      const reach=pose==='nose'?point(-1.0,-.03):pose==='tail'?point(1.0,-.03):pose==='double'?point(side*.85,-.03):point(pose==='method'?-.65:pose==='melon'?-.2:.12,.12);
-      const shoulder=[lean+side*.28,hipY-.62],rest=[lean+side*.67,hipY-.2],target=holds?reach:[lean+side*(.80+(trick?.def.tweak?.15:0)),hipY-.9];
-      const hand=[rest[0]+(target[0]-rest[0])*grip,rest[1]+(target[1]-rest[1])*grip],elbow=[(shoulder[0]+hand[0])/2+side*.15,(shoulder[1]+hand[1])/2-.08];
-      sleeve(c,L,shoulder[0]*s,shoulder[1]*s,elbow[0]*s,elbow[1]*s,hand[0]*s,hand[1]*s,s);c.fillStyle='#263b4d';c.beginPath();c.arc(hand[0]*s,hand[1]*s,.105*s,0,Math.PI*2);c.fill();
+      const shoulder=[hip[0]+side*w/s*.22,hip[1]-.6];
+      const rest=[shoulder[0]+side*.08,hip[1]+.12];
+      const holds=pose==='double'||side===(['nose','melon','method'].includes(pose)?-1:1);
+      const gripPoint=boardPoint(side*.28,pose==='nose'?-.58:pose==='tail'?.50:0);
+      const target=holds?gripPoint:[shoulder[0]+side*.43,hip[1]-.40];
+      const hand=[rest[0]+(target[0]-rest[0])*g,rest[1]+(target[1]-rest[1])*g];
+      const arm=joint(shoulder,hand,.43,-side);
+      sleeve(c,L,shoulder[0]*s,shoulder[1]*s,arm.middle[0]*s,arm.middle[1]*s,arm.end[0]*s,arm.end[1]*s,s);
+      c.fillStyle='#263b4d';c.beginPath();c.arc(arm.end[0]*s,arm.end[1]*s,.10*s,0,Math.PI*2);c.fill();
     }
     return true;
   }
@@ -371,7 +394,6 @@
   };
   S.face=function(ctx,r,L,x,y,rad) {
     if(r.def.hidden)return false;
-    if(r.state==='air')return aerialRider(ctx,r,L,s);
     const key=r.def.gender==='girl'?'girlWalk':'boyWalk',index=r.def.gender==='girl'?3:0;
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index);
