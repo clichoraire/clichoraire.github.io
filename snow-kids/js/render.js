@@ -423,6 +423,18 @@
     if(r.fx?.wobble>0)x+=Math.sin(t*20)*s*.08;
     if(r.fx?.pushPose>0)x+=(r.pushDirection||1)*s*.12;
     ctx.fillStyle = 'rgba(0,0,0,' + (0.22 / (1 + h * 0.5)) + ')'; ctx.beginPath(); ctx.ellipse(x + 0.1 * s, y + 0.12 * s, 0.62 * s / (1 + h * 0.15), 0.30 * s / (1 + h * 0.15), 0, 0, TAU); ctx.fill();
+    if(r.gear?.ressort&&r.state==='ride'&&(r.jumpCharge||0)>.08&&(r.race?.time||0)>=(r.springReadyAt||0)){
+      const q=Math.min(1,r.jumpCharge),radius=s*(.8+.20*q);
+      ctx.save();ctx.strokeStyle=q>=.95?'#ffe75b':'#84e9ff';ctx.lineWidth=Math.max(2,s*.045);
+      ctx.beginPath();ctx.ellipse(x,y,radius,radius*.34,0,0,TAU);ctx.stroke();
+      for(let i=0;i<5;i++){
+        const a=i*TAU/5+t*.7,px=x+Math.cos(a)*radius,py=y+Math.sin(a)*radius*.34;
+        const height=s*(.48-.28*q);ctx.beginPath();ctx.moveTo(px,py);
+        for(let j=0;j<=12;j++)ctx.lineTo(px+Math.sin(j*Math.PI/2)*s*.065,py-height*j/12);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     if(r.state==='drop'){R.drawChair(ctx,r,x,y-h*s-s*.5,s,t);return;}
     if((r.fx?.fan>0||r.fx?.comboBoost>0)&&r.def.id==='alexie')R.drawStarBoost(ctx,x,y-h*s,s,t);
     else if (r.fx && (r.fx.fan > 0 || r.fx.comboBoost > 0)) {

@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.45';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.46';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -406,6 +406,12 @@ window.SK.VERSION = '1.45';   // à augmenter à chaque mise en ligne (affichée
     else{c.strokeStyle='#172c4844';c.lineWidth=.06;for(const sign of [-1,1]){c.strokeRect(sign*.35-.16,.07,.32,.25);}}
     c.restore();
   };
+  SK.equippedGear=function(save,charId){
+    const gear=Object.fromEntries((save.gear||[]).map(id=>[id,true]));
+    const look=SK.lookOf(SK.charById(charId||save.advChar||save.char),save);
+    if(!look.springBoots)delete gear.ressort;if(!look.gripBoots)delete gear.bottes;
+    return gear;
+  };
   SK.lookOf = function (def, save) {
     const base = { jacket: def.colors.jacket, pants: def.colors.pants, hat: def.hat || 'cap', hatColor: def.colors.hat, hair: def.hairStyle || 'short', hairColor: def.colors.hair, skin: def.colors.skin, scarf: def.colors.scarf };
     const l = save && save.look && save.look[def.id];
@@ -413,8 +419,10 @@ window.SK.VERSION = '1.45';   // à augmenter à chaque mise en ligne (affichée
     look.goggles = l && Object.prototype.hasOwnProperty.call(l,'goggles') ? (save?.gear?.includes(l.goggles) ? l.goggles : null) : ['lunettesMiroir','lunettesTricolores','lunettesNeige','lunettesForet','lunettes'].find(id=>save?.gear?.includes(id)) || null;
     const ownedHelmets=(save?.gear||[]).filter(SK.isHelmet),selected=l?.helmet===true?'casque':l?.helmet;
     look.helmet=l?.helmet===false?false:ownedHelmets.includes(selected)?selected:ownedHelmets[0]||false;
-    look.springBoots=!!save?.gear?.includes('ressort');
-    look.gripBoots=!!save?.gear?.includes('bottes');
+    look.boots=l?.boots??(save?.gear?.includes('ressort')?'ressort':save?.gear?.includes('bottes')?'bottes':'normal');
+    if(look.boots!=='normal'&&!save?.gear?.includes(look.boots))look.boots='normal';
+    look.springBoots=look.boots==='ressort';
+    look.gripBoots=look.boots==='bottes';
     look.rocketPack = !!save?.gear?.includes('fusee') && l?.rocketPack !== false;
     return look;
   };

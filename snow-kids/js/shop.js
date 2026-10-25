@@ -244,7 +244,7 @@
         if (it.kind === 'board') { save.boards.push(it.id); save.advBoard = it.id; save.board = it.id; opts.toast(it.name + (it.secret?' reçue et équipée !':' achetée et équipée !')); }
         else if (it.kind === 'up') { save.upgrades[it.boardId][it.stat] = it.level + 1; opts.toast(it.name + ' : fait !'); }
         else if (it.kind === 'wardrobe') { (save.wardrobe = save.wardrobe || []).push(it.id); wear(it); opts.toast(it.name + ' : acheté et porté !'); }
-        else { save.gear.push(it.id);if(SK.isGoggles(it.id)||SK.isHelmet(it.id)){save.look=save.look||{};(save.look[save.advChar]=save.look[save.advChar]||{})[SK.isHelmet(it.id)?'helmet':'goggles']=it.id;} if (it.id === 'masque') save.shinobin = true; opts.toast(it.name + ' : acheté !'); }
+        else { save.gear.push(it.id);if(['bottes','ressort'].includes(it.id))wear({slot:'boots',value:it.id});if(SK.isGoggles(it.id)||SK.isHelmet(it.id)){save.look=save.look||{};(save.look[save.advChar]=save.look[save.advChar]||{})[SK.isHelmet(it.id)?'helmet':'goggles']=it.id;} if (it.id === 'masque') save.shinobin = true; opts.toast(it.name + ' : acheté !'); }
         opts.store(); SK.Audio.sfx('buy'); refresh(); populate();
       } else if(it.action==='equip'&&it.kind==='gear'&&(SK.isGoggles(it.id)||SK.isHelmet(it.id))){save.look=save.look||{};(save.look[save.advChar]=save.look[save.advChar]||{})[SK.isHelmet(it.id)?'helmet':'goggles']=it.id;opts.store();SK.Audio.sfx('box');refresh();}
       else if (it.action === 'equip' && it.kind === 'wardrobe') { wear(it); opts.store(); SK.Audio.sfx('box'); opts.toast(it.name + ' : porté'); refresh(); }
@@ -583,6 +583,7 @@
       }
       case 'casque': case 'casqueForet': case 'casqueCorail': case 'casqueNoir': { SK.drawSnowHelmet(c,it.id,0,-s*.8,s*1.9,s*1.12,'side');break; }
       case 'gants': { c.fillStyle = tint; rr2(-s * 0.9, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); rr2(s * 0.1, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(-s * 0.9, s * 0.5, s * 0.8, s * 0.3); c.fillRect(s * 0.1, s * 0.5, s * 0.8, s * 0.3); c.fillStyle = tint; rr2(-s * 1.1, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); rr2(s * 0.75, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = s * 0.06; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * 0.75 + k * s * 0.25, -s * 0.5); c.lineTo(-s * 0.75 + k * s * 0.25, s * 0.1); c.moveTo(s * 0.25 + k * s * 0.25, -s * 0.5); c.lineTo(s * 0.25 + k * s * 0.25, s * 0.1); c.stroke(); } break; }
+      case 'boots-normal': {c.fillStyle='#263b4d';for(const side of [-1,1]){c.save();c.scale(side,1);c.beginPath();c.roundRect(s*.12,-s*.85,s*.58,s*1.25,s*.12);c.roundRect(s*.12,s*.24,s*.85,s*.35,s*.12);c.fill();c.restore();}break;}
       case 'bottes': { SK.drawGripBoot(c,-s*.95,-s*.85,s*.87,s*1.65,-1);SK.drawGripBoot(c,s*.08,-s*.85,s*.87,s*1.65,1);break; }
       case 'lunettesForet': case 'lunettesTricolores': case 'lunettesNeige': case 'lunettesMiroir': case 'lunettes': SK.drawGoggles(c,it.id,0,0,s);break;
 

@@ -21,7 +21,7 @@
   const fakeRacer = SK.fakeRacer;
   const effectiveBoard = id => SK.effectiveBoard(id, save);
   const gold = n => `<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="">${SK.fmtGold(n,false)}</span>`;
-  const gearObj = () => { const o = {}; for (const g of save.gear || []) o[g] = true; return o; };
+  const gearObj = charId => SK.equippedGear(save,charId);
   const lookFor = charId => SK.lookOf(SK.charById(charId) || SK.CHARACTERS[0], save);
 
   // ---- menu
@@ -324,7 +324,7 @@
     if(!confirmed&&!flow.cup&&!flow.debug&&!new URLSearchParams(location.search).has('demo')&&!new URLSearchParams(location.search).has('mission')){chooseBoard(()=>startRace(true),false);return;}
     show('race'); A.init(); A.music('start');
     canvas = $('game'); ctx = canvas.getContext('2d');
-    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), gear: gearObj(), powerLevels:save.powerLevels, strengthLevel:save.strengthLevel, look: lookFor(p.charId), ctrl: 'human', player: i }));
+    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), gear: gearObj(p.charId), powerLevels:save.powerLevels, strengthLevel:save.strengthLevel, look: lookFor(p.charId), ctrl: 'human', player: i }));
     if(flow.finalBoss){racers.push({charId:'shinobin',def:{...SK.charById('shinobin'),id:'matthieuboss',name:'Matthieu',hat:'crown',colors:{jacket:'#101018',pants:'#0b0b13',hat:'#8f7132',hair:'#07070d',skin:'#07070d',board:'#382e43'}},boardId:'pro',ctrl:'cpu',boss:true});}
     else if (flow.mode === 'practice') { if (['hits','pushes'].includes(flow.mission.type)) racers.push(...pickAI(3, racers.map(r => r.charId), false)); }
     else if (flow.mode !== 'time') {

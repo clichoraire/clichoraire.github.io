@@ -408,6 +408,22 @@
     if(progress>0){for(let i=0;i<9;i++){const a=i*2.4,phase=(progress*3+i/9)%1;oval(c,Math.cos(a)*phase*65,-18-Math.sin(phase*Math.PI)*65,3+i%3,3,'#ffffff');}c.strokeStyle='#efbf45';c.lineWidth=5;c.beginPath();c.arc(0,-64,12,-Math.PI/2,-Math.PI/2+TAU*progress);c.stroke();}
     c.restore();
   }
+  T.collectSquirrel=function(save,squirrel){
+    if(!squirrel||squirrel.collected)return 0;
+    squirrel.collected=true;const amount=Math.min(squirrel.coins,9999999-(save.gold||0));
+    save.gold=(save.gold||0)+amount;return amount;
+  };
+  T.drawSquirrel=function(c,a,t){
+    c.save();c.translate(a.x,604-Math.abs(Math.sin(t*11))*5);c.scale(a.dir,1);
+    c.fillStyle='#985226';c.strokeStyle='#683b23';c.lineWidth=3;
+    c.beginPath();c.moveTo(-12,-10);c.bezierCurveTo(-68,-14,-58,-83,-30,-69);c.bezierCurveTo(-8,-57,-44,-39,-14,-26);c.fill();c.stroke();
+    oval(c,-6,-15,21,15,'#b66c33');oval(c,5,-12,10,10,'#edbd7f');
+    oval(c,14,-31,14,14,'#b66c33');
+    c.fillStyle='#985226';c.beginPath();c.moveTo(6,-41);c.lineTo(8,-57);c.lineTo(18,-41);c.fill();
+    oval(c,21,-34,3,4,'#17242b');oval(c,27,-27,4,3,'#3c2920');
+    oval(c,-15,0,9,4,'#683b23');oval(c,12,0,10,4,'#683b23');
+    c.restore();
+  };
   // opts : { canvas, charId, boardId, look, labelEl, onEnter(houseId), onBack }
   T.open = function(opts) {
     stop();canvas=opts.canvas;const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
@@ -423,6 +439,8 @@
     const richardChat={remaining:0,cooldown:0,near:new Set()};
     const held=new Set(),door=T.streetDoor;
     let pendingDig=null,digProgress=0,hoverSnow=null;
+    let squirrel=null,squirrelWait=6;
+    const catchSquirrel=()=>{const amount=T.collectSquirrel(opts.save,squirrel);if(amount){opts.onDig?.(amount);T.showGoldReward(bubble,amount);bubbleUntil=performance.now()+3500;SK.Audio.sfx('coin');}};
     const dug=b=>opts.save?.snowDig?.day===T.snowDay()&&Object.hasOwn(opts.save.snowDig.found,b.id);
     const snowHit=(mx,my)=>T.SNOWBANKS.find(b=>Math.abs(mx-b.x)<65&&my>b.y-55&&my<b.y+17);
     const snowMove=e=>{const box=canvas.getBoundingClientRect();hoverSnow=snowHit((e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height);canvas.style.cursor=hoverSnow&&!dug(hoverSnow)?'pointer':'default';};
@@ -456,6 +474,7 @@
     keyUpHandler=e=>held.delete(e.code);blurHandler=()=>{held.clear();target=null;};
     window.addEventListener('keydown',keyHandler);window.addEventListener('keyup',keyUpHandler);window.addEventListener('blur',blurHandler);
     clickHandler=e=>{if(!chat.hidden)return;const bounds=canvas.getBoundingClientRect(),mx=(e.clientX-bounds.left)*1280/bounds.width+camera,my=(e.clientY-bounds.top)*720/bounds.height;
+      if(squirrel&&!squirrel.collected&&Math.abs(mx-squirrel.x)<55&&my>535&&my<625){catchSquirrel();return;}
       const bank=snowHit(mx,my);if(bank){if(!dug(bank)&&!pendingDig){pendingDig=bank;digProgress=0;target=bank.x;held.clear();}return;}
       pendingDig=null;digProgress=0;
       if(mx<195&&my>255){target=100;return;}
@@ -465,6 +484,11 @@
     const frame=()=>{raf=requestAnimationFrame(frame);const now=performance.now(),dt=Math.min(.05,(now-last)/1000),t=now/1000;last=now;
       let direction=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);const touch=SK.Touch?.held||{};if(touch.left||touch.right){target=null;direction=(touch.right?1:0)-(touch.left?1:0);}
       if(target!==null)direction=Math.sign(target-x);
+      if(chat.hidden&&!document.hidden){
+        squirrelWait-=dt;
+        if(!squirrel&&squirrelWait<=0){const dir=Math.random()<.5?-1:1;squirrel={x:clamp(x-dir*350),dir,life:12,coins:3+Math.floor(Math.random()*5),collected:false};}
+        if(squirrel){squirrel.x+=squirrel.dir*85*dt;squirrel.life-=dt;if(Math.abs(x-squirrel.x)<30)catchSquirrel();if(squirrel.collected||squirrel.life<=0){squirrel=null;squirrelWait=20+Math.random()*20;}}
+      }
       const before=x,step=SK.townWalkSpeed(opts.walkLevel)*dt;
       if(target!==null&&Math.abs(target-x)<=step){x=target;target=null;}else x=clamp(x+direction*step);
       if(x<=102&&direction<0){T._streetX=300;opts.onEnter('lift');return;}
@@ -501,6 +525,7 @@
       bubble.style.left=(SK.clamp(x-camera,145,1135)/12.8)+'%';bubble.style.top=((opts.charId==='milo'?475:opts.charId==='adam'||opts.charId==='edison'?440:410)/7.2)+'%';
       if(opts.labelEl)opts.labelEl.style.setProperty('--player-x',(SK.clamp(x-camera,150,1130)/12.8)+'%');
       const r=SK.fakeRacer(opts.charId,opts.boardId,'ride',opts.look);R.drawWalker(ctx,r,x,610+(digProgress?Math.sin(digProgress*Math.PI*4)**2*13:0),65,walkTime,facing,moving);
+      if(squirrel&&!squirrel.collected)T.drawSquirrel(ctx,squirrel,t);
       for(const local of locals)T.drawParentGreeting(ctx,local,opts.charId,camera);
       T.drawRichardChat(ctx,richardChat,camera);
       ctx.restore();
