@@ -134,6 +134,13 @@
     // Slalom (École) : portes de 6 m alternant gauche / droite, drapeau rouge puis bleu
     const gates = [];
     if (opts && opts.slalom) { let k = 0; for (let i = 24; i < nRace - 24; i += 14) { const s = segs[i]; if (s.ramp) continue; const x = (k % 2 ? 1 : -1) * s.w * 0.42, col = k % 2 ? '#1e88e5' : '#e53935'; s.gate = { x, w: 3.2, color: col, n: k }; s.props.push({ type: 'flag', x: x - 3.2, r: 0, decor: true, color: col }, { type: 'flag', x: x + 3.2, r: 0, decor: true, color: col }); gates.push(s); k++; } }
+    if(opts?.deadForest){
+      // Décor latéral uniquement : les portes et la largeur skiable restent intactes.
+      for(let i=15;i<nRace-10;i+=9){const s=segs[i];for(const side of [-1,1]){
+        s.props.push({type:'winterbare',x:side*(s.w+6+(i%3)*2),r:0,decor:true,v:(i%7)/7});
+        if(i%2)s.props.push({type:'deadlog',x:side*(s.w+3.8),r:0,decor:true,v:(i%5)/5});
+      }}
+    }
     const track = { course, theme, segs, walkers, nRace, L, length: segs.length, gateX, gateW, gateZ: L + 3 * SEG, wEnd: prevW, gates };
     track.segAt = z => segs[SK.clamp(Math.floor(z / SEG), 0, segs.length - 1)];
     track.groundY = z => { const s = track.segAt(z); const p = SK.clamp((z - s.z) / SEG, 0, 1); return s.y1 + (s.y2 - s.y1) * p; };

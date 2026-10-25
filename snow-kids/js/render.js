@@ -238,6 +238,16 @@
     switch (type) {
       case 'pine': case 'fir': { const h = (type === 'fir' ? 7 : 5.5) * (0.8 + v * 0.5) * s; ctx.beginPath(); ctx.ellipse(x, y, s * 1.4, s * 0.4, 0, 0, TAU); ctx.fill(); rect(ctx, x - s * 0.25, y - s * 1.2, s * 0.5, s * 1.2, '#5d4037'); tri(ctx, x, y - s * 0.8, h * 0.6, h * 0.45, '#2e7d32'); tri(ctx, x, y - h * 0.4, h * 0.5, h * 0.4, '#388e3c'); tri(ctx, x, y - h * 0.65, h * 0.38, h * 0.35, '#43a047'); if (type === 'fir' || v > 0.5) { tri(ctx, x, y - h * 0.42, h * 0.45, h * 0.2, '#f5f5f5'); tri(ctx, x, y - h * 0.68, h * 0.3, h * 0.15, '#ffffff'); } break; }
       case 'tree': case 'cherry': { const h = 5 * (0.8 + v * 0.4) * s; ctx.beginPath(); ctx.ellipse(x, y, s * 1.5, s * 0.4, 0, 0, TAU); ctx.fill(); rect(ctx, x - s * 0.3, y - h * 0.5, s * 0.6, h * 0.5, '#6d4c41'); circ(ctx, x, y - h * 0.65, h * 0.4, type === 'cherry' ? '#f48fb1' : '#43a047'); circ(ctx, x - h * 0.25, y - h * 0.5, h * 0.3, type === 'cherry' ? '#f8bbd0' : '#4caf50'); circ(ctx, x + h * 0.25, y - h * 0.5, h * 0.3, type === 'cherry' ? '#f06292' : '#388e3c'); break; }
+      case 'winterbare': {
+        const h=s*(7+v*2);ctx.save();ctx.translate(x,y);ctx.lineCap='round';ctx.lineJoin='round';
+        ctx.fillStyle='#0002';ctx.beginPath();ctx.ellipse(0,0,s*1.8,s*.38,0,0,TAU);ctx.fill();
+        ctx.fillStyle='#55443e';ctx.beginPath();ctx.moveTo(-s*.5,0);ctx.lineTo(-s*.18,-h*.73);ctx.lineTo(s*.16,-h);ctx.lineTo(s*.28,-h*.32);ctx.lineTo(s*.6,0);ctx.fill();
+        for(let j=0;j<5;j++){const sign=j%2?1:-1,yy=-h*(.35+j*.11),endX=sign*s*(1.4+(j%3)*.45),endY=yy-h*.19;ctx.strokeStyle='#58473e';ctx.lineWidth=s*(.26-j*.025);ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(endX*.55,yy-h*.07);ctx.lineTo(endX,endY);ctx.stroke();ctx.lineWidth=s*.09;ctx.beginPath();ctx.moveTo(endX*.60,yy-h*.09);ctx.lineTo(endX*.56,yy-h*.24);ctx.moveTo(endX*.85,endY+h*.05);ctx.lineTo(endX*1.27,endY-h*.04);ctx.stroke();}
+        ctx.strokeStyle='#b39b7c';ctx.lineWidth=s*.08;ctx.beginPath();ctx.moveTo(-s*.15,-s*.4);ctx.lineTo(-s*.06,-h*.62);ctx.stroke();ctx.fillStyle='#eef7fc';ctx.beginPath();ctx.ellipse(0,-s*.02,s*.75,s*.15,0,0,TAU);ctx.fill();ctx.restore();break;
+      }
+      case 'deadlog': {
+        ctx.save();ctx.translate(x,y-s*.4);ctx.rotate((v-.5)*.24);ctx.lineCap='round';ctx.strokeStyle='#4c3528';ctx.lineWidth=s*.85;ctx.beginPath();ctx.moveTo(-s*1.6,0);ctx.lineTo(s*1.6,-s*.25);ctx.stroke();ctx.strokeStyle='#97714e';ctx.lineWidth=s*.12;ctx.beginPath();ctx.moveTo(-s*1.4,-s*.15);ctx.lineTo(s*1.5,-s*.36);ctx.stroke();ctx.fillStyle='#c9a373';ctx.beginPath();ctx.ellipse(s*1.6,-s*.25,s*.24,s*.43,-.12,0,TAU);ctx.fill();ctx.strokeStyle='#805936';ctx.lineWidth=s*.05;ctx.beginPath();ctx.ellipse(s*1.6,-s*.25,s*.12,s*.28,-.12,0,TAU);ctx.stroke();ctx.strokeStyle='#573e2e';ctx.lineWidth=s*.20;ctx.beginPath();ctx.moveTo(-s*.3,-s*.2);ctx.lineTo(-s*.6,-s*1.05);ctx.stroke();ctx.restore();break;
+      }
       case 'deadtree': { const h = 4 * s; rect(ctx, x - s * 0.25, y - h, s * 0.5, h, '#4e342e'); ctx.strokeStyle = '#4e342e'; ctx.lineWidth = s * 0.3; ctx.beginPath(); ctx.moveTo(x, y - h * 0.6); ctx.lineTo(x - h * 0.4, y - h * 0.95); ctx.moveTo(x, y - h * 0.75); ctx.lineTo(x + h * 0.35, y - h * 1.05); ctx.stroke(); break; }
       case 'bush': { circ(ctx, x, y - s * 0.6, s * 1.1, '#388e3c'); circ(ctx, x - s * 0.8, y - s * 0.4, s * 0.8, '#43a047'); circ(ctx, x + s * 0.8, y - s * 0.4, s * 0.8, '#2e7d32'); break; }
       case 'flower': { rect(ctx, x - s * 0.06, y - s * 0.8, s * 0.12, s * 0.8, '#2e7d32'); circ(ctx, x, y - s * 0.9, s * 0.3, ['#ff5252', '#ffeb3b', '#e040fb', '#ffffff'][Math.floor(v * 4)]); circ(ctx, x, y - s * 0.9, s * 0.1, '#ff8f00'); break; }
@@ -667,8 +677,9 @@
 
   // ------------------------------------------------------------------ HUD
   R.finishMessage=rank=>rank===0?{title:'VICTOIRE !!!',subtitle:'1re place !',color:'#ffd43b'}:rank===1?{title:'SUPER, 2e !',subtitle:'Une superbe deuxième place !',color:'#d5edff'}:rank===2?{title:'BRAVO, 3e !',subtitle:'Une place sur le podium !',color:'#ffb475'}:{title:'COURSE TERMINÉE !',subtitle:(rank+1)+'e place · Bien joué !',color:'#87e9ff'};
-  R.drawFinishBanner=function(ctx,r,x,y,w,t){
-    const msg=R.finishMessage(r.rank),size=Math.min(66,w*.09),pulse=1+Math.sin(t*3)*.018;
+  R.finishBounce=age=>{const u=SK.clamp(age/1.05,0,1);return u===0?.035:u===1?1:Math.max(.035,1-Math.pow(2,-9*u)*Math.cos(u*Math.PI*5));};
+  R.drawFinishBanner=function(ctx,r,x,y,w,t,message=null){
+    const msg=message||R.finishMessage(r.rank),size=Math.min(66,w*.09);r.finishBannerAt??=t;const pulse=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches?1:R.finishBounce(t-r.finishBannerAt);
     ctx.save();ctx.translate(x,y);ctx.scale(pulse,pulse);ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
     ctx.font=size+'px "Titan One","Arial Black",sans-serif';
     const fit=Math.min(1,(w*.92)/Math.max(1,ctx.measureText(msg.title).width));ctx.scale(fit,fit);
@@ -775,7 +786,8 @@
       ctx.fillText('pour repartir plus vite !',x,y+56*F,w-16*F);
       ctx.restore();
     }
-    if(me.state==='done'){if(race.mission){box(vx+vw/2-160*F,vy+vh/2-50*F,320*F,100*F);ctx.font='bold '+32*F+'px sans-serif';ctx.fillStyle='#ffd600';ctx.fillText(SK.missionOutcome(race,me).perfect&&SK.missionOutcome(race,me).medal==='gold'?'🏆 OR + PARFAIT !':SK.missionOutcome(race,me).perfect?'🌟 PARFAIT !':SK.missionOutcome(race,me).ok?'Mission réussie !':'Mission échouée',vx+vw/2,vy+vh/2);}else R.drawFinishBanner(ctx,me,vx+vw*.5,vy+vh*.25,vw*.88,t);}
+    if(me.state==='done'){if(race.mission){const result=SK.missionOutcome(race,me),title=result.perfect&&result.medal==='gold'?'OR + PARFAIT !':result.perfect?'PARFAIT !':result.ok?'MISSION RÉUSSIE !':'MISSION TERMINÉE';R.drawFinishBanner(ctx,me,vx+vw*.5,vy+vh*.40,vw*.80,t,{title,subtitle:result.ok?'Bravo !': 'On réessaie ?',color:result.ok?'#ffd43b':'#87e9ff'});}else R.drawFinishBanner(ctx,me,vx+vw*.5,vy+vh*.25,vw*.88,t);}
+
   };
   R.notify = function (r, text, color, big, dur) { r.hud = r.hud || []; r.hud.push({ text, color, big, until: r.race.time + (dur || 2) }); if (r.hud.length > 3) r.hud.shift(); };
 })(window.SK);

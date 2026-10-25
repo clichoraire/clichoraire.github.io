@@ -953,3 +953,7 @@ table.results td.num { text-align: right; font-family: monospace; }
 @keyframes level-star-flight{0%{opacity:0;transform:translate3d(0,0,0) rotate(55deg)}8%,85%{opacity:1}100%{opacity:0;transform:translate3d(70vw,calc(100dvh + 220px),0) rotate(55deg)}}
 @keyframes level-rain{0%{opacity:0;transform:translate3d(0,0,0) rotate(0)}8%,90%{opacity:1}100%{opacity:0;transform:translate3d(var(--drift),calc(100dvh + 80px),0) rotate(var(--turn))}}
 @media(prefers-reduced-motion:reduce){.level-up-sky{display:none}}
+
+#screen-result:not(.hidden) #result-title{font-family:'Titan One','Arial Black',sans-serif;transform-origin:center;animation:finish-title-bounce 1.05s both}
+@keyframes finish-title-bounce{0%{transform:scale(.035);opacity:0}10%{opacity:1}40%{transform:scale(1.16,.96)}58%{transform:scale(.91,1.06)}74%{transform:scale(1.05,.98)}88%{transform:scale(.985,1.015)}100%{transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){#screen-result:not(.hidden) #result-title{animation:none}}

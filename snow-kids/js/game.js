@@ -60,7 +60,7 @@
     return {strength,force:direction*2.7*strength,direction,warning};
   };
   SK.Race = function (opts) {
-    this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; this.track = SK.buildTrack(this.course, this.seed, { slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
+    this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; this.track = SK.buildTrack(this.course, this.seed, { deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
     this.boostOnly = !!this.mission && this.mission.type !== 'hits';
     if(this.boostOnly)for(const segment of this.track.segs)for(const box of segment.boxes)box.kind='blue';
     this.gatesPassed = 0; this.gatesTotal = this.track.gates.length;
