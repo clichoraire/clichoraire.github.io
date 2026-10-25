@@ -1,4 +1,4 @@
-// Menus, sélection des équipes, boucle du match, résultats et Coupe Boisjoli.
+// Menus, sélection des équipes, boucle du match, résultats et Coupe des familles.
 (async function (BC) {
   'use strict';
   await window.FamilyHeads.ready;
@@ -104,7 +104,7 @@
   }
   function updateSelTitle() {
     const t = $('#sel-title');
-    if (pick.step === 1) t.innerHTML = app.mode === 'cup' ? '<span class="j1">Coupe Boisjoli</span> — choisis ta famille' : '<span class="j1">Joueur 1</span>, choisis ta famille';
+    if (pick.step === 1) t.innerHTML = app.mode === 'cup' ? '<span class="j1">Coupe des familles</span> — choisis ta famille' : '<span class="j1">Joueur 1</span>, choisis ta famille';
     else t.innerHTML = app.mode === 'duo' ? '<span class="j2">Joueur 2</span>, choisis ta famille' : 'Choisis la famille <span class="cpu">adverse</span> (ordi) — le match se joue chez elle';
     document.querySelectorAll('.card').forEach(c => c.classList.toggle('taken', pick.a === c.dataset.id));
   }
@@ -194,7 +194,7 @@
     const cup = app.cup; let cupText = '';
     if (cup) {
       cup.results[cup.index] = { opp: cup.opponents[cup.index], won };
-      if (won) { cup.index++; if (cup.index >= cup.opponents.length) { cupText = '🏆 CHAMPIONS DE LA COUPE BOISJOLI ! 🏆'; const c = cupSaved(); c[cup.team] = Date.now(); try { localStorage.setItem('bc.cups', JSON.stringify(c)); } catch (e) { } } else cupText = `Victoire ! Prochain match chez ${BC.teamById(cup.opponents[cup.index]).name}`; }
+      if (won) { cup.index++; if (cup.index >= cup.opponents.length) { cupText = '🏆 CHAMPIONS DE LA COUPE DES FAMILLES ! 🏆'; const c = cupSaved(); c[cup.team] = Date.now(); try { localStorage.setItem('bc.cups', JSON.stringify(c)); } catch (e) { } } else cupText = `Victoire ! Prochain match chez ${BC.teamById(cup.opponents[cup.index]).name}`; }
       else cupText = 'Défaite… Tu peux réessayer ce match.';
     }
     const winner = g.teams[g.winner];

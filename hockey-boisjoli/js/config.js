@@ -1,7 +1,7 @@
-// Hockey Boisjoli — constantes, équipes, personnages et pouvoirs.
+// Hockey Slapshot — constantes, équipes, personnages et pouvoirs.
 // Tout est dans l'espace de noms HK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.HK = window.HK || {};
-window.HK.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.HK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (HK) {
   'use strict';
   HK.W = 1280; HK.H = 720;              // canevas logique

@@ -1,9 +1,9 @@
-# Ballon Chasseur Boisjoli
+# Ballon chasseur
 
 Jeu de ballon chasseur façon *Super Dodge Ball* (NES), où les équipes sont les familles Boisjoli : les mêmes visages que
-dans Hockey Boisjoli et Snow Kids. Trois joueurs à l'intérieur du terrain (ceux qu'on peut toucher) et trois à l'extérieur
+dans Hockey Slapshot et Snow Kids. Trois joueurs à l'intérieur du terrain (ceux qu'on peut toucher) et trois à l'extérieur
 (en haut, en bas et au fond du camp adverse, qui relancent la balle). Seul contre l'ordi, à deux sur le même clavier ou à
-la manette, ou en Coupe Boisjoli (battre les trois autres familles, chacune chez elle).
+la manette, ou en Coupe des familles (battre les trois autres familles, chacune chez elle).
 
 Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en JavaScript et canvas.
 
@@ -13,7 +13,7 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
 index.html                 écrans (menu, sélection, match, résultat) et chargement des scripts
 css/style.css
 js/config.js               constantes, terrain, PERSONNAGES (stats, apparence, lancer spécial), SUPERS, ÉQUIPES, TERRAINS, BC.squads
-js/family-head-sources.js  les portraits de famille (les mêmes fichiers que Hockey Boisjoli et Snow Kids)
+js/family-head-sources.js  les portraits de famille (les mêmes fichiers que Hockey Slapshot et Snow Kids)
 js/family-heads.js         découpe des portraits en trois vues (face, côté, dos)
 js/sprites.js              personnages en tenue de ballon chasseur (poses : lancer, attraper, touché, au sol, saut, ange), balle, logos
 js/game.js                 simulation : déplacements, course, saut, lancers, passes, attrapés, dégâts, K.-O., lancers spéciaux

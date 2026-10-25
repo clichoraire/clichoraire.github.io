@@ -1,7 +1,7 @@
-// Ballon Chasseur Boisjoli — constantes, personnages, équipes, lancers spéciaux et terrains.
+// Ballon chasseur — constantes, personnages, équipes, lancers spéciaux et terrains.
 // Tout est dans l'espace de noms BC. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BC = window.BC || {};
-window.BC.VERSION = '1.1';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BC.VERSION = '1.2';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BC) {
   'use strict';
   BC.W = 1280; BC.H = 720;              // canevas logique

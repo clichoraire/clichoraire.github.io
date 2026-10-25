@@ -1,8 +1,8 @@
-# Hockey Boisjoli
+# Hockey Slapshot
 
 Jeu de hockey façon *Ice Hockey* (NES) avec pouvoirs spéciaux, où les équipes sont les familles Boisjoli… et Les Boys.
 3 contre 3 sur la glace (plus un gardien automatique par équipe), au clavier ou à la manette, seul contre l'ordi,
-à deux sur le même clavier, en Coupe Boisjoli (enchaîner les quatre autres équipes) ou en Pratique (exercices).
+à deux sur le même clavier, en Coupe Slapshot (enchaîner les quatre autres équipes) ou en Pratique (exercices).
 
 Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en JavaScript et canvas, les personnages
 sont dessinés procéduralement (pas d'images).

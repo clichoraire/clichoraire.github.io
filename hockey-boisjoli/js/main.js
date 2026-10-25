@@ -1,4 +1,4 @@
-// Menus, sélection des équipes, boucle du match, résultats et Coupe Boisjoli.
+// Menus, sélection des équipes, boucle du match, résultats et Coupe Slapshot.
 (async function (HK) {
   'use strict';
   await window.FamilyHeads.ready;
@@ -121,7 +121,7 @@
   }
   function updateSelTitle() {
     const t = $('#sel-title');
-    if (pick.step === 1) t.innerHTML = app.mode === 'cup' ? '<span class="j1">Coupe Boisjoli</span> — choisis ton équipe' : app.mode === 'practice' ? '<span class="j1">Pratique</span> — choisis ton équipe' : '<span class="j1">Joueur 1</span>, choisis ton équipe';
+    if (pick.step === 1) t.innerHTML = app.mode === 'cup' ? '<span class="j1">Coupe Slapshot</span> — choisis ton équipe' : app.mode === 'practice' ? '<span class="j1">Pratique</span> — choisis ton équipe' : '<span class="j1">Joueur 1</span>, choisis ton équipe';
     else t.innerHTML = app.mode === 'duo' ? '<span class="j2">Joueur 2</span>, choisis ton équipe' : app.mode === 'practice' ? 'Choisis le <span class="cpu">gardien adverse</span> (son équipe)' : 'Choisis l\'équipe <span class="cpu">adverse</span> (ordi)';
     document.querySelectorAll('.card').forEach(c => c.classList.toggle('taken', pick.a === c.dataset.id));
   }
@@ -348,7 +348,7 @@
     if (cup) {
       const myIdx = 0, won = g.winner === myIdx;
       cup.results[cup.index] = { opp: cup.opponents[cup.index], won, score: [A.score, B.score] };
-      if (won) { cup.index++; cupText = cup.index >= cup.opponents.length ? '🏆 CHAMPION DE LA COUPE BOISJOLI ! 🏆' : `Victoire ! Prochain adversaire : ${HK.teamById(cup.opponents[cup.index]).name}`; }
+      if (won) { cup.index++; cupText = cup.index >= cup.opponents.length ? '🏆 CHAMPION DE LA COUPE SLAPSHOT ! 🏆' : `Victoire ! Prochain adversaire : ${HK.teamById(cup.opponents[cup.index]).name}`; }
       else cupText = 'Défaite… Tu peux réessayer ce match.';
     }
     html += `<div class="final"><span style="color:${A.def.color}">${A.def.name}</span> <b>${A.score} — ${B.score}</b> <span style="color:${B.def.color}">${B.def.name}</span>${g.ot ? ' <small>(prolongation)</small>' : ''}</div>`;

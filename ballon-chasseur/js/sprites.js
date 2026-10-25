@@ -1,5 +1,5 @@
 // Dessin procédural des personnages en tenue de ballon chasseur (vue 3/4 façon NES), de la balle et des logos.
-// Les têtes viennent des portraits de famille (FamilyHeads) partagés avec Hockey Boisjoli et Snow Kids.
+// Les têtes viennent des portraits de famille (FamilyHeads) partagés avec Hockey Slapshot et Snow Kids.
 (function (BC) {
   'use strict';
   const S = BC.sprites = {};
@@ -247,7 +247,7 @@
   };
 
 
-  // Logo d'équipe : écusson avec l'initiale (le même que dans Hockey Boisjoli).
+  // Logo d'équipe : écusson avec l'initiale (le même que dans Hockey Slapshot).
   S.drawLogo = function (ctx, x, y, team, size) {
     ctx.save(); ctx.translate(x, y);
     const w = size, h = size * 1.1;
