@@ -262,7 +262,8 @@
       for (const p of sg.props) {
         if (p.decor) continue;
         const pz = sg.z + (p.dz == null ? SEG / 2 : p.dz);
-        if (pz >= zPrev && pz < r.z && Math.abs(r.x - p.x) < p.r + 0.7 && (p.type==='lowarch'||r.h < (p.clearance ?? 1.1)) && r.state !== 'fall') { if(p.type==='lowarch'&&r.state==='ride'&&inp.up)continue;
+        if (pz >= zPrev && pz < r.z && Math.abs(r.x - p.x) < p.r + 0.7 && (p.type==='lowarch'||r.h < (p.clearance ?? 1.1)) && r.state !== 'fall') { // Les deux commandes plient les genoux : accélérer ou préparer le saut.
+          if(p.type==='lowarch'&&r.state==='ride'&&(inp.up||inp.jump))continue;
           if(!p.trainingBarrier&&!p.mandatory&&SK.GearEffects?.protect(r,p))continue;
           if(p.type==='lowarch'){this.daze(r,1.8);continue;}
           if(p.type==='snowman'){r.speed*=.55;r.fx.slow=Math.max(r.fx.slow,1.4);SK.LensSnow.splash(r,24,true);this.emit({type:'snowimpact',r});continue;}
