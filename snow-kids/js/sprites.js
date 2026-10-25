@@ -313,6 +313,8 @@
     const ease=x=>{x=SK.clamp(x,0,1);return x*x*(3-2*x);};
     const p=trick?SK.clamp(trick.t/trick.def.dur,0,1):0;
     const g=trick?ease(p/.3)*ease((1-p)/.3):0;
+    // Un saut simple conserve les manches et les mains de la pose de glisse.
+    if(g<=.001){turningBoard(c,r,L,s,0);return straightRider(c,r,L,s);}
     const key=r.def.gender==='girl'?'girlWalk':'boyWalk',index=r.def.gender==='girl'?0:1;
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index),h=2.5*s,w=h*img.width/img.height;
