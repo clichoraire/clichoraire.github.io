@@ -1,0 +1,15 @@
+
+/* Le terrain garde toujours son rapport 16:9; les commandes occupent leur propre espace. */
+#touch-controls[hidden]{display:none!important}
+#touch-controls{position:absolute;inset:auto 0 0;height:160px;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;box-sizing:border-box;background:#102b44;touch-action:none;user-select:none;-webkit-user-select:none;z-index:20}
+#touch-controls button,.touch-stick{color:white;background:#266c96;border:2px solid #9fddf5;border-radius:18px;font-family:'Trebuchet MS',sans-serif;font-weight:900;box-shadow:0 4px #071726;touch-action:none}
+.touch-stick{width:124px;height:124px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;text-align:center;font-size:24px;line-height:1.45}
+.touch-actions{display:grid;grid-template-columns:repeat(2, minmax(64px,90px));gap:9px}
+#touch-controls button{min-height:54px;padding:6px;font-size:13px;line-height:1.2;margin:0}
+#touch-controls .held{background:#eab43b;color:#142338;transform:translateY(2px);box-shadow:0 2px #071726}
+#touch-controls .touch-pause{position:absolute;right:8px;top:-42px;min-height:34px;width:40px;padding:3px;font-size:22px}
+.touch-match .canvas-wrap{height:calc(100dvh - 170px)}
+.touch-match #pause{position:fixed;z-index:30}
+.touch-match #game{width:100%;height:100%;object-fit:contain}
+@media(min-width:600px) and (min-height:501px){#touch-controls{height:200px;padding:14px 30px}.touch-stick{width:160px;height:160px;font-size:30px}.touch-actions{grid-template-columns:repeat(2,120px);gap:12px}#touch-controls button{min-height:72px;font-size:18px}.touch-match .canvas-wrap{height:calc(100dvh - 210px)}}
+@media(orientation:landscape) and (max-height:500px){#touch-controls{height:100%;background:transparent;padding:4px;pointer-events:none}.touch-stick{width:112px;height:112px;font-size:23px;pointer-events:auto}.touch-actions{width:116px;grid-template-columns:repeat(2,54px);gap:6px;pointer-events:auto}#touch-controls button{font-size:11px;min-height:55px;border-radius:13px}#touch-controls .touch-pause{top:8px;right:40px;pointer-events:auto;min-height:30px}.touch-match .canvas-wrap{height:100dvh}.touch-match .pause-box{max-height:85dvh;overflow:auto;padding:10px 20px}}

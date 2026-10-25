@@ -156,6 +156,12 @@
       r.prev = Object.assign({}, inp); return;
     }
     const s = T.segAt(r.z), surf = SK.SURFACES[s.surface] || SK.SURFACES.snow;
+    if(r.speed>=70/3.6)r.recovering=false;
+    if(r.recovering && edge('up')) {
+      if(r.state==='fall'){r.stun=Math.max(0,r.stun-.22);r.flat=Math.min(r.flat,r.stun);}
+      else if(r.state==='ride'){r.speed=Math.min(70/3.6, r.speed+8/3.6);r.fx.pump=.25;}
+    }
+    if(r.speed>=70/3.6)r.recovering=false;
     const stunned = r.state === 'fall' || r.state === 'frozen' || r.state === 'stunned';
     if (stunned) {
       r.stun -= dt; r.speed = Math.max(0, r.speed - 20 * dt);
@@ -347,6 +353,7 @@
 
   P.fall = function (r, dur, flat) {
     if (r.state === 'air') { r.pending = flat ? 'poele' : 'bombe'; return; }
+    r.recovering=true;
     r.state = 'fall'; r.stun = Math.max(r.stun, dur * r.stunFactor); r.speed *= 0.25; r.curTrick = null; r.tricksDone = []; if (flat) r.flat = dur;
     r.stats.falls++; this.emit({ type: 'fall', r });
   };

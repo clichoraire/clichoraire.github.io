@@ -858,3 +858,8 @@ table.results td.num { text-align: right; font-family: monospace; }
 #screen-wardrobe .closet-panel{padding-top:112px}
 #screen-shop .shop-wall .stack-price{font-size:14px;padding:3px 7px;z-index:3}
 #screen-shop .shop-wall .stack-price img{width:16px;height:16px}
+
+#result-buttons.cup-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+#result-buttons.cup-actions::before{content:"";width:100%;order:1}
+#result-buttons.cup-actions .continue-cup{order:0;margin:0 calc(50% - 110px);min-width:220px}
+#result-buttons.cup-actions button:not(.continue-cup){order:2}
