@@ -227,10 +227,17 @@
     // Enlever l'ancienne visière de Zach sous le casque.
     if(!frame){const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;for(let y=0;y<c.height*.24;y++)for(let x=0;x<c.width;x++){const j=(y*c.width+x)*4;if(d[j+2]>d[j]*1.2&&d[j+2]>d[j+1])d[j+3]=0;}ctx.putImageData(im,0,0);}
     const actualH=frame?Math.min(hh,hh*1.18*frame.height/frame.width):hh;
-    // Retirer cheveux et ancienne casquette sous la coque, pas seulement la pointe du crâne.
-    ctx.clearRect(0,0,c.width,top+actualH*.40);
+    // Le portrait inclut les cheveux : calibrer le crâne indépendamment de leur volume.
+    // Les repères restent identiques pour toutes les couleurs de casque.
+    const skullWidths={zach:.77,eliott:.87,alexie:.73,adam:.89,milo:.90,edison:.84};
+    const skullWidth=hw*(skullWidths[r.def.id]||.86);
+    const shellW=skullWidth*(view==='side'?1.13:1.12);
+    const shellH=shellW*(view==='back'?.68:view==='side'?.67:.66);
+    const brimY=actualH*(view==='back'?.68:view==='side'?.44:.43);
+    const shellTop=Math.max(-top,brimY-shellH*(view==='side'?.78:.79));
+    ctx.clearRect(0,0,c.width,top+Math.min(brimY,actualH*.43));
     ctx.save();ctx.translate(c.width/2,top);if(mirror)ctx.scale(-1,1);
-    SK.drawSnowHelmet(ctx,id===true?'casque':id,0,-actualH*.02,hw*1.07,actualH*(view==='back'?.76:view==='side'?.58:.48),view,true);
+    SK.drawSnowHelmet(ctx,id===true?'casque':id,0,shellTop,shellW,shellH,view,true,{chinY:actualH*.97-shellTop});
     ctx.restore();
   }
   // Descente en ligne droite : planche dans l'axe et jambes articulées.
