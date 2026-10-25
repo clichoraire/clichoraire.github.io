@@ -10,6 +10,12 @@
     {code:'GARDE ROBE',label:'Recevoir tous les vêtements',apply:s=>{s.wardrobe=[...new Set([...(s.wardrobe||[]),...SK.WARDROBE.filter(x=>x.cat==='linge').map(x=>x.id)])];}},
     {code:'ECOLE64',label:'Débloquer toutes les missions de l’école',apply:s=>{s.allMissionsUnlocked=true;}},
     {code:'TOURNOIS64',label:'Débloquer toutes les coupes et les pistes',apply:s=>{s.allCupsUnlocked=true;s.unlocked=SK.COURSES.length;}},
+    {code:'CHAMPION64',label:'Remporter tous les tournois et toutes les pistes',apply:s=>{
+      s.allCupsUnlocked=true;s.unlocked=SK.COURSES.length;
+      s.cups=s.cups||{};s.won=s.won||{};
+      for(const cup of SK.CUPS){const old=s.cups[cup.id]||{};s.cups[cup.id]={...old,won:true,bestRank:1,bestPoints:old.bestPoints||0,bestTime:old.bestTime||null};}
+      for(const course of SK.COURSES)s.won[course.id]=true;
+    }},
     {code:'PLANCHES64',label:'Recevoir toutes les planches',apply:s=>{s.boards=SK.BOARDS.map(x=>x.id);}}
   ];
   const normalize=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
