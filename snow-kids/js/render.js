@@ -413,7 +413,7 @@
   // ------------------------------------------------------------------ coureur (vectoriel). x,y = pieds au sol ; s = px/m
   // Même silhouette de trois quarts en course et dans les menus, le village et la boutique.
   // La vue de face est réservée aux vrilles et aux chutes. Apparence = personnage + garde-robe (r.look).
-  const lookOf = r => { const d = r.def, c = d.colors, l = r.look || {}; return { gripBoots:l.gripBoots??!!r.gear?.bottes, rocketPack: l.rocketPack ?? !!r.gear?.fusee, goggles:Object.prototype.hasOwnProperty.call(l,'goggles')?l.goggles:['lunettesMiroir','lunettesTricolores','lunettesNeige','lunettesForet','lunettes'].find(id=>r.gear?.[id])||null, helmet: Object.prototype.hasOwnProperty.call(l,'helmet')?l.helmet:Object.keys(r.gear||{}).find(SK.isHelmet)||false, jacket: l.jacket || c.jacket, pants: l.pants || c.pants, hat: l.hat || d.hat || 'cap', hatColor: l.hatColor || c.hat, hair: l.hair || d.hairStyle || 'short', hairColor: l.hairColor || c.hair, skin: l.skin || c.skin, scarf: c.scarf, board: r.board?.color || c.board }; };
+  const lookOf = r => { const d = r.def, c = d.colors, l = r.look || {}; return { springBoots:l.springBoots??!!r.gear?.ressort, gripBoots:l.gripBoots??!!r.gear?.bottes, rocketPack: l.rocketPack ?? !!r.gear?.fusee, goggles:Object.prototype.hasOwnProperty.call(l,'goggles')?l.goggles:['lunettesMiroir','lunettesTricolores','lunettesNeige','lunettesForet','lunettes'].find(id=>r.gear?.[id])||null, helmet: Object.prototype.hasOwnProperty.call(l,'helmet')?l.helmet:Object.keys(r.gear||{}).find(SK.isHelmet)||false, jacket: l.jacket || c.jacket, pants: l.pants || c.pants, hat: l.hat || d.hat || 'cap', hatColor: l.hatColor || c.hat, hair: l.hair || d.hairStyle || 'short', hairColor: l.hairColor || c.hair, skin: l.skin || c.skin, scarf: c.scarf, board: r.board?.color || c.board }; };
   const shade = (hex, k) => { const A = parse(hex.length === 7 ? hex : '#888888'); return 'rgb(' + Math.round(A[0] * k) + ',' + Math.round(A[1] * k) + ',' + Math.round(A[2] * k) + ')'; };
   const line = (ctx, pts, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke(); };
   R.drawRacer = function (ctx, r, x, y, s, t, isMe) {
@@ -494,7 +494,8 @@
   R.drawWalker = function(ctx,r,x,y,s,t,direction,moving) {
     s *= SK.characterScale(r.def.id);
     ctx.fillStyle='rgba(40,65,80,0.18)';ctx.beginPath();ctx.ellipse(x,y+2,s*.42,s*.13,0,0,TAU);ctx.fill();
-    if(SK.Sprites) SK.Sprites.walk(ctx,r,lookOf(r),x,y,s,t,direction,moving);
+    const look=lookOf(r);if(look.springBoots){const bounce=Math.abs(Math.sin(t*(moving?9:4)));y-=s*(moving?.16:.055)*bounce;}
+    if(SK.Sprites) SK.Sprites.walk(ctx,r,look,x,y,s,t,direction,moving);
   };
   // Silhouette tracée dans les coordonnées de la référence (538 × 716).
   // Canvas : l'ordre des couches tient lieu de z-index. Les tracés sont mis en cache.
@@ -757,6 +758,7 @@
     }
     // le rocher qu'on vient de lâcher : il part de la main et tombe derrière nous (vers la caméra)
     if (me.rockAnim != null && race.time - me.rockAnim < 0.7 && me.screen) { const q = (race.time - me.rockAnim) / 0.7, sc = me.screen.sc * (0.8 + 2.2 * q); const rx = me.screen.sx + 0.6 * me.screen.sc + (vx + vw * 0.5 - me.screen.sx) * q, ry = me.screen.sy - 1.5 * me.screen.sc - Math.sin(q * Math.PI) * 60 * F + (vy + vh + 40 - me.screen.sy) * q; R.drawProp(ctx, me.trapType||'rock', rx, ry, sc * 0.5, 0.5, t, {}); }
+    if(me.gear?.ressort){const remaining=Math.max(0,Math.ceil((me.springReadyAt||0)-race.time));ctx.save();const bw=215*F,bh=32*F,x=vx+vw-bw-12,y=vy+vh-105*F;box(x,y,bw,bh);ctx.textAlign='center';ctx.font='bold '+15*F+'px sans-serif';ctx.fillStyle=remaining?'#d5e8f4':'#a9ff87';ctx.fillText(remaining?'Ressorts · '+remaining+' s':'⇧ Super saut · charge à fond !',x+bw/2,y+22*F,bw-12);ctx.restore();}
     // messages centraux
     ctx.textAlign = 'center';
     if (race.phase === 'count') { const n = Math.min(3, Math.ceil(-race.time)); ctx.font = 'bold ' + 120 * F + 'px sans-serif'; ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(n > 0 ? String(n) : 'GO !', vx + vw / 2 + 4, vy + vh / 2 + 4); ctx.fillStyle = n > 1 ? '#ffd600' : '#69f0ae'; ctx.fillText(n > 0 ? String(n) : 'GO !', vx + vw / 2, vy + vh / 2); }

@@ -346,8 +346,7 @@
       for(let i=0;i<8;i++){c.save();c.rotate(i*TAU/8);path([[0,-.40],[.065,0],[0,.08],[-.065,0]],i%2?'#c0a46a':'#806739','#b89b61');c.restore();}
       c.save();c.rotate(.65);path([[0,-.58],[.105,0],[0,.10]],'#c43d32','#8b372b');path([[0,.58],[-.105,0],[0,-.1]],'#277381','#225464');c.restore();disk(0,0,.075,'#fff0bb');disk(0,0,.035,'#947a3b');
     }else if(id==='ressort'){
-      for(const x of [-.55,.45]){path([[x-.25,-.7],[x+.2,-.7],[x+.2,-.15],[x+.4,-.05],[x+.4,.17],[x-.25,.17]],'#407bb5');
-        c.strokeStyle='#c4d4df';c.beginPath();for(let k=0;k<6;k++)c.lineTo(x+(k%2?.25:-.2),.25+k*.07);c.stroke();rect(x-.3,.68,.75,.1,'#25384b');}
+      SK.drawSpringBoot(c,-.95,-.85,.87,1.65,-1);SK.drawSpringBoot(c,.08,-.85,.87,1.65,1);
     }else if(id==='sifflet'){
       c.strokeStyle='#7ab5ce';c.beginPath();c.arc(-.55,-.25,.35,0,TAU);c.stroke();
       path([[-.6,-.05],[.75,-.05],[.75,.2],[.15,.2],[.15,.55],[-.6,.55]],'#efbd3e');rect(.32,-.06,.23,.15,'#4c3825');disk(-.3,.24,.17,'#ffe994');

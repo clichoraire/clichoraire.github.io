@@ -41,6 +41,7 @@
     if (this.gear.gants) this.trickSpeed *= 1.1;
     SK.GearEffects?.init(this);
     this.x = 0; this.z = 0; this.lap = 0; this.yAbs = 0; this.h = 0; this.vy = 0; this.lastVy = 0; this.speed = 0; this.steer = 0;
+    this.springReadyAt=0;
     this.state = 'ride'; this.stun = 0; this.flat = 0; this.wallT = 0;
     this.shot = null; this.item = null; this.coins = 0; this.coinsTotal = 0; this.trackCoins = 0; this.tricksCoins = 0; this.tricksCount = 0;
     this.curTrick = null; this.tricksDone = []; this.airT = 0; this.pending = null;
@@ -87,6 +88,10 @@
     const clean=(r.stats.falls||0)===0&&(r.stats.edges||0)===0;
     const perfect=ok&&clean&&(m.type==='slalom'?race.gatesTotal>0&&value===race.gatesTotal:m.type==='time'?value<=m.goal*.9:['nofall','edges'].includes(m.type)?true:value>=Math.ceil(m.goal*1.25));
     return {value,ok,perfect,medal,time};
+  };
+  P.springJump=function(r,charge){
+    if(!r.gear.ressort||charge<.95||this.time<(r.springReadyAt||0))return false;
+    r.vy=Math.max(r.vy,r.jumpPower*1.8);r.springReadyAt=this.time+30;this.emit({type:'springjump',r});return true;
   };
   P.emit = function (e) { this.events.push(e); };
   P.takeEvents = function () { const e = this.events; this.events = []; return e; };
@@ -235,10 +240,10 @@
     const gy = T.groundY(r.z);
     if (r.state === 'ride' || (stunned && r.h <= 0)) {
       if (gy < r.yAbs - 1.0 && r.speed > 5 && !stunned) { // le sol se dérobe d'un coup (falaise) : envol
-        r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * .6 * (r.jumpCharge||0) : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; this.emit({ type: 'jump', r, big: true });
+        r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * .6 * (r.jumpCharge||0) : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; if(inp.jump)this.springJump(r,r.jumpCharge||0);this.emit({ type: 'jump', r, big: true });
       } else {
         r.lastVy = dt > 0 ? (gy - r.yAbs) / dt : 0; r.yAbs = gy; r.h = 0;
-        if (!stunned && releasedJump && (r.jumpCharge||0)>0) { r.state = 'air'; r.vy = r.jumpPower * (.4+.6*r.jumpCharge) + Math.max(0, r.lastVy); r.jumpCharge=0; r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: false }); }
+        if (!stunned && releasedJump && (r.jumpCharge||0)>0) { r.state = 'air'; r.vy = r.jumpPower * (.4+.6*r.jumpCharge) + Math.max(0, r.lastVy); const superJump=this.springJump(r,r.jumpCharge);r.jumpCharge=0; r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: superJump }); }
       }
     }
     if(releasedJump||r.state!=='ride')r.jumpCharge=0;

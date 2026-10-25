@@ -5,7 +5,7 @@
  ['portefeuilleOr','Portefeuille en or',1500,2,'Capacité de 150 pièces par course.','👛'],
  ['portefeuilleRoyal','Portefeuille royal',3500,3,'Capacité de 500 pièces par course.','👛'],
  ['boussole','Boussole de montagne',450,1,'Indique la direction du prochain virage et la distance avant celui-ci.','🧭'],
- ['ressort','Bottes à ressort',800,2,'+1 en saut pour franchir les obstacles bas.','🦘'],
+ ['ressort','Bottes à ressort',800,2,'Bottes rebondissantes ! +1 en saut. Charge ton saut à fond pour bondir super haut : recharge en 30 secondes.','🦘'],
  ['sifflet','Sifflet de secours',900,2,'Évite le premier choc contre un sapin, un drapeau ou un cône. Une charge par course.','📣'],
  ['casqueAero','Casque aérodynamique',1800,3,'+10 % de vitesse maximale en ligne droite.','⛑'],
  ['thermos','Thermos de chocolat chaud',1600,3,'Un saut réussi remplit le turbo deux fois plus vite : 2 sauts au lieu de 4.','☕'],
