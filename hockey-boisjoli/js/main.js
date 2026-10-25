@@ -1,6 +1,7 @@
 // Menus, sélection des équipes, boucle du match, résultats et Coupe Boisjoli.
-(function (HK) {
+(async function (HK) {
   'use strict';
+  await window.FamilyHeads.ready;
   const $ = s => document.querySelector(s), S = HK.sprites;
   const app = HK.app = { screen: 'menu', settings: { periodLen: 120, difficulty: 1, sound: true }, game: null, cup: null, mode: 'solo' };
   const P_COLORS = ['#ffd166', '#5fe3ff'];
@@ -22,7 +23,7 @@
       card.dataset.id = d.name; card.style.setProperty('--c', team.accent || team.color);
       card.innerHTML = `<canvas width="150" height="170"></canvas><div class="hc-info"><h3>${d.name}${d.birth && HK.isBirthday(d.birth) ? ' 🎂' : ''}</h3>
         <div class="hc-role">${roleOf(d)} · ${team.name}${goalie ? ' (gardien)' : ''}</div>
-        <div class="hc-birth">${d.birth ? birthText(d) + ' · ' : ''}${d.age} an${d.age > 1 ? 's' : ''}${d.birth && HK.isBirthday(d.birth) ? ' · Bonne fête !' : ''}</div>
+        <div class="hc-birth">${d.birth ? birthText(d) + ' · ' : ''}${d.custom ? 'Personnage de famille' : d.age + (d.age > 1 ? ' ans' : ' an')}${d.birth && HK.isBirthday(d.birth) ? ' · Bonne fête !' : ''}</div>
         ${P ? `<div class="hc-power"><b>${P.icon} ${P.name}</b><span>${P.desc}</span></div>` : '<div class="hc-power"><b>🥅 Gardien</b><span>Il garde le filet, c\'est déjà beaucoup.</span></div>'}
         ${d.stats && d.stats.speed ? `<div class="stats">${statBar(d.stats.speed, 'Vitesse')}${statBar(d.stats.shot, 'Tir')}${statBar(d.stats.force, 'Force')}${statBar(d.stats.control, 'Contrôle')}</div>` : ''}</div>`;
     }
@@ -57,29 +58,40 @@
     $('#stars-total').textContent = HK.drillStars.total() + ' / ' + HK.DRILLS.length * 3;
     $('#btn-help').onclick = () => { $('#howto').scrollIntoView({ behavior: 'smooth' }); };
     buildHowto();
-    // petite animation : les joueurs patinent sous le titre
-    const c = $('#menu-anim'), ctx = c.getContext('2d'); const all = Object.keys(HK.PLAYERS);
-    const skaters = all.map((id, i) => ({ d: HK.PLAYERS[id], team: HK.TEAMS.find(t => t.players.includes(id) || t.goalie === id), goalie: HK.TEAMS.some(t => t.goalie === id), x: Math.random() * c.width, y: 50 + (i % 3) * 30, v: 40 + Math.random() * 50, dir: Math.random() < 0.5 ? 1 : -1, f: Math.random() * 6 })).filter(s => s.team);
-    let last = performance.now(), hovered = null, mouse = null;
-    c.addEventListener('mousemove', e => { const r = c.getBoundingClientRect(); mouse = { x: (e.clientX - r.left) * c.width / r.width, y: (e.clientY - r.top) * c.height / r.height, cx: e.clientX, cy: e.clientY }; });
-    c.addEventListener('mouseleave', () => { mouse = null; hovered = null; hideCard(); });
-    (function loop(now) {
-      if (app.screen !== 'menu') { requestAnimationFrame(loop); return; }
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      ctx.clearRect(0, 0, c.width, c.height);
-      skaters.sort((a, b) => a.y - b.y);
-      let hit = null;
-      if (mouse) for (const s of skaters) { const H = 60 * s.d.size * 1.1 + 10; if (Math.abs(mouse.x - s.x) < 22 && mouse.y < s.y + 44 && mouse.y > s.y + 40 - H) hit = s; }
-      if (hit !== hovered) { hovered = hit; if (hit) showCard(hit.d, hit.team, mouse.cx, mouse.cy, hit.goalie); else hideCard(); }
-      c.style.cursor = hovered ? 'pointer' : 'default';
-      for (const s of skaters) {
-        const wave = s === hovered;
-        if (!wave) { s.x += s.v * s.dir * dt; s.f += dt * 7; }
-        if (s.x > c.width + 40) s.dir = -1; if (s.x < -40) s.dir = 1;
-        S.drawPerson(ctx, s.x, s.y + 40, s.d, s.team, { dir: s.dir, frame: s.f, moving: !wave, scale: 1.1, goalie: s.goalie, wave, smile: wave });
+    // Every player has a practice station, a wind-up and a visible puck travelling to the net.
+    const c = $('#menu-anim'), ctx = c.getContext('2d');
+    const skaters = Object.entries(HK.PLAYERS).map(([id,d],i)=>({
+      d, team:HK.TEAMS.find(t=>t.players.includes(id)||t.goalie===id),
+      x: i%2 ? 790+(Math.floor(i/2)%3)*100 : 490-(Math.floor(i/2)%3)*100,
+      y: 260+Math.floor(i/6)*100, dir:i%2?1:-1, phase:i*0.73
+    })).filter(s=>s.team);
+    let hovered=null,mouse=null;
+    c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();mouse={x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,cx:e.clientX,cy:e.clientY};});
+    c.addEventListener('mouseleave',()=>{mouse=null;hovered=null;hideCard();});
+    (function loop(now){
+      if(app.screen==='menu'){
+        HK.drawPracticeRink(ctx);
+        ctx.fillStyle='#ffd166';ctx.font='bold 30px Arial';ctx.textAlign='center';
+        ctx.fillText('La famille s’entraîne !',640,66);
+        ctx.fillStyle='#bfcedd';ctx.font='18px Arial';ctx.fillText('Survole un joueur pour le rencontrer',640,95);
+        let hit=null;
+        for(const s of skaters)if(mouse&&Math.abs(mouse.x-s.x)<26&&mouse.y<s.y+8&&mouse.y>s.y-80)hit=s;
+        if(hit!==hovered){hovered=hit;if(hit)showCard(hit.d,hit.team,mouse.cx,mouse.cy,false);else hideCard();}
+        c.style.cursor=hit?'pointer':'default';
+        for(const s of [...skaters].sort((a,b)=>a.y-b.y)){
+          const t=(now/1000+s.phase)%4.6, charge=t<1.25?t/1.25:t<1.5?1-(t-1.25)/0.25:0;
+          S.drawPerson(ctx,s.x,s.y,s.d,s.team,{dir:s.dir,scale:1.3,frame:now/180+s.phase,moving:false,charge,wave:s===hovered});
+          const k=Math.max(0,Math.min(1,(t-1.5)/0.75)), sx=s.x+s.dir*43;
+          const gx=HK.goalX(s.dir),gy=HK.CY+Math.sin(s.phase)*22;
+          if(t<2.45){
+            const x=sx+(gx-sx)*k,y=s.y+(gy-s.y)*k;
+            if(k>0&&k<1){ctx.strokeStyle='rgba(60,100,140,.3)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x-(gx-sx)*.09,y-(gy-s.y)*.09);ctx.lineTo(x,y);ctx.stroke();}
+            ctx.fillStyle='#17212c';ctx.beginPath();ctx.ellipse(x,y,5,3,0,0,Math.PI*2);ctx.fill();
+          }
+        }
       }
       requestAnimationFrame(loop);
-    })(last);
+    })(performance.now());
   }
 
   // ----- Comment jouer (cartes pour les enfants) -----
@@ -126,7 +138,7 @@
         const d = HK.PLAYERS[pid], P = HK.POWERS[d.power];
         const row = document.createElement('div'); row.className = 'pl' + (k >= HK.ON_ICE ? ' bench' : '');
         row.appendChild(S.portrait(d, t, 64, 78, 1.15));
-        row.insertAdjacentHTML('beforeend', `<div class="pl-info"><b>${d.name}${d.birth && HK.isBirthday(d.birth) ? ' 🎂' : ''}</b> <em>${roleOf(d)} · ${d.age} an${d.age > 1 ? 's' : ''}${d.birth && HK.isBirthday(d.birth) ? ' · Bonne fête !' : ''}</em>
+        row.insertAdjacentHTML('beforeend', `<div class="pl-info"><b>${d.name}${d.birth && HK.isBirthday(d.birth) ? ' 🎂' : ''}</b> <em>${roleOf(d)} · ${d.custom ? 'Personnage de famille' : d.age + (d.age > 1 ? ' ans' : ' an')}${d.birth && HK.isBirthday(d.birth) ? ' · Bonne fête !' : ''}</em>
           <div class="stats">${statBar(d.stats.speed, 'Vitesse')}${statBar(d.stats.shot, 'Tir')}${statBar(d.stats.force, 'Force')}${statBar(d.stats.control, 'Contrôle')}</div>
           <div class="power" title="${P.desc}">${P.icon} ${P.name}</div></div>`);
         row.addEventListener('mouseenter', e => showCard(d, t, e.clientX, e.clientY));

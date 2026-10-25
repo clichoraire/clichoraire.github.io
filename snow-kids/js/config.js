@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.7';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -20,28 +20,28 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
   SK.LAPS_CHOICES = [1, 2, 3, 5];
   SK.DEFAULT_LAPS = 3;
 
-  // ------------------------------------------------------------------ personnages (vitesse / virage / accélération sur 5)
+  // ------------------------------------------------------------------ personnages (vitesse / virage / accélération / saut / force, 15 points de base par enfant)
   SK.CHARACTERS = [
     // Apparences et dates reprises de HockeyBoisjoli/js/config.js (familles Jo, Bibi et Jay).
-    { id: 'zach', gender: 'boy', name: 'Zach', birth: '2007-08-02', family: 'Jo', size: 1.05, speed: 5, corner: 2, acceleration: 3, jump: 3, hairStyle: 'fringe', hat: 'none', weight: 3, earbuds: true,
+    { id: 'zach', gender: 'boy', name: 'Zach', birth: '2007-08-02', family: 'Jo', size: 1.05, speed: 3, corner: 2, acceleration: 2, jump: 3, strength: 5, hairStyle: 'fringe', hat: 'none', weight: 3, earbuds: true,
       colors: { jacket: '#d83d36', pants: '#263981', hat: '#2c66b3', hair: '#1b1b1b', skin: '#f0c8a0', board: '#ffb323' },
       desc: 'Famille Jo — Le grand de la bande, rapide sur les longues descentes.' },
-    { id: 'eliott', gender: 'boy', name: 'Eliott', birth: '2016-10-06', family: 'Jo', size: 0.78, speed: 3, corner: 4, acceleration: 3, jump: 3, hairStyle: 'short', hat: 'none', weight: 2, cheeks: true, freckles: true,
+    { id: 'eliott', gender: 'boy', name: 'Eliott', birth: '2016-10-06', family: 'Jo', size: 0.78, speed: 3, corner: 3, acceleration: 3, jump: 3, strength: 3, hairStyle: 'short', hat: 'none', weight: 2, cheeks: true, freckles: true,
       colors: { jacket: '#43a047', pants: '#1e3a8a', hat: '#1565c0', hair: '#3b2a1a', skin: '#f0c8a0', board: '#00acc1' },
       desc: 'Famille Jo — Discret comme un fantôme, il se faufile dans les virages.' },
-    { id: 'alexie', gender: 'girl', name: 'Alexie', birth: '2014-11-01', family: 'Jo', size: 0.82, speed: 3, corner: 3, acceleration: 5, jump: 4, hairStyle: 'ponytail', hat: 'none', weight: 2, cheeks: true, freckles: true,
+    { id: 'alexie', gender: 'girl', name: 'Alexie', birth: '2014-11-01', family: 'Jo', size: 0.82, speed: 3, corner: 4, acceleration: 3, jump: 3, strength: 2, hairStyle: 'ponytail', hat: 'none', weight: 2, cheeks: true, freckles: true,
       colors: { jacket: '#ec407a', pants: '#8e24aa', hat: '#f8bbd0', hair: '#5a3a22', skin: '#f6d6bd', board: '#ab47bc' },
       desc: 'Famille Jo — Un flash de style et des figures plein les airs !' },
-    { id: 'adam', gender: 'boy', name: 'Adam', birth: '2021-09-11', family: 'Bibi', size: 0.6, speed: 4, corner: 4, acceleration: 2, jump: 2, hairStyle: 'spiky', hat: 'none', weight: 2, cheeks: true,
+    { id: 'adam', gender: 'boy', name: 'Adam', birth: '2021-09-11', family: 'Bibi', size: 0.6, speed: 5, corner: 4, acceleration: 2, jump: 2, strength: 2, hairStyle: 'spiky', hat: 'none', weight: 2, cheeks: true,
       colors: { jacket: '#fb8c00', pants: '#3949ab', hat: '#1565c0', hair: '#4a2f1b', skin: '#f6d6bd', board: '#e53935' },
       desc: 'Famille Bibi — Zoom-zoom ! Toujours prêt à repartir à toute vitesse.' },
-    { id: 'milo', gender: 'boy', name: 'Milo', birth: '2024-03-12', family: 'Bibi', size: 0.45, speed: 2, corner: 5, acceleration: 4, jump: 4, hairStyle: 'short', hat: 'none', weight: 1, pacifier: true, cheeks: true,
+    { id: 'milo', gender: 'boy', name: 'Milo', birth: '2024-03-12', family: 'Bibi', size: 0.45, speed: 5, corner: 2, acceleration: 4, jump: 3, strength: 1, hairStyle: 'short', hat: 'none', weight: 1, pacifier: true, cheeks: true,
       colors: { jacket: '#26a69a', pants: '#3949ab', hat: '#ff6b6b', hair: '#6b4a2b', skin: '#f6d6bd', board: '#ffee58' },
       desc: 'Famille Bibi — Le petit dernier, avec sa petite mèche, fait déjà de grandes figures.' },
-    { id: 'edison', gender: 'boy', name: 'Edison', birth: '2023-02-08', family: 'Jay', size: 0.5, speed: 4, corner: 1, acceleration: 2, jump: 2, hairStyle: 'curly', hat: 'none', weight: 1, pacifier: true, cheeks: true,
+    { id: 'edison', gender: 'boy', name: 'Edison', birth: '2023-02-08', family: 'Jay', size: 0.5, speed: 2, corner: 4, acceleration: 4, jump: 3, strength: 2, hairStyle: 'curly', hat: 'none', weight: 1, pacifier: true, cheeks: true,
       colors: { jacket: '#1e88e5', pants: '#1e3a8a', hat: '#1565c0', hair: '#2b1d12', skin: '#eec49b', board: '#ffb323' },
       desc: 'Famille Jay — Le champion de la glissade, avec sa chevelure blonde et son grand sourire.' },
-    { id: 'shinobin', gender: 'boy', name: 'Shinobin', speed: 5, corner: 5, acceleration: 5, jump: 5, hairStyle: 'short', hat: 'hood', weight: 3, age: '?', hidden: true,
+    { id: 'shinobin', gender: 'boy', name: 'Shinobin', speed: 5, corner: 5, acceleration: 5, jump: 5, strength: 5, hairStyle: 'short', hat: 'hood', weight: 3, age: '?', hidden: true,
       colors: { jacket: '#212121', pants: '#212121', hat: '#212121', hair: '#212121', skin: '#f3c9a3', board: '#b71c1c', scarf: '#d32f2f' },
       desc: 'Le ninja mystérieux qui hante le Pays des Ninjas. Parfait partout. Il faut le battre pour le débloquer.' },
   ];
@@ -62,6 +62,7 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
     ['jessica','Jessica','girl','#b68b47'],['josue','Josué','boy','#b8463d'],
     ['emily','Émily','girl','#754c94']
   ].map(([id,name,gender,jacket])=>({id,name,gender,adult:true,hat:'none',hairStyle:'short',colors:{jacket,pants:'#344153',hat:'#283449',hair:'#493629',skin:'#f0c8a0',board:'#455a64'}}));
+  SK.WORKPLACES = {emily:'shop',marie:'wardrobe',richard:'school',josue:'museum',jeremie:'motifs'};
   SK.PARENTS = {
     zach:['emily','josue'], eliott:['emily','josue'], alexie:['emily','josue'],
     adam:['marie','mickael'], milo:['marie','mickael'], edison:['jeremie','jessica']
@@ -80,22 +81,59 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
     { id: 'comete', name: 'Comète', price: 800, speed: 2, corner: 0, acceleration: 0, jump: 1, color: '#5e35b1', pattern: 'galaxy', desc: 'Vite et haut.', unlock: { wins: 1 } },
     { id: 'tornade', name: 'Tornade', price: 800, speed: 0, corner: 1, acceleration: 2, jump: 0, color: '#26a69a', pattern: 'waves', desc: 'Une reprise vive à la sortie des virages.', unlock: { wins: 2 } },
     { id: 'eclair', name: 'Éclair', price: 900, speed: 3, corner: -1, acceleration: -1, jump: 0, color: '#fdd835', pattern: 'lightning', desc: 'Une flèche. Freine avant les virages !', unlock: { wins: 2 } },
-    { id: 'cactus', name: 'Cactus', price: 850, speed: 0, corner: 2, acceleration: 0, jump: 1, color: '#7cb342', pattern: 'spikes', desc: 'Accroche et saute : parfaite dans le désert.', unlock: { wins: 2 } },
-    { id: 'alpine', name: 'Alpine', price: 1200, speed: 3, corner: -2, acceleration: -1, jump: 0, color: '#546e7a', pattern: 'twotone', desc: 'Une fusée. Pour ceux qui savent freiner.', unlock: { wins: 3 } },
+    { id: 'cactus', name: 'Pikachu', price: 850, speed: 0, corner: 2, acceleration: 0, jump: 1, color: '#2459a6', pattern: 'pikachu', desc: 'Pikachu accompagne tes virages et tes sauts.', unlock: { wins: 2 } },
+    { id: 'alpine', name: 'Canadiens', price: 1200, speed: 3, corner: -2, acceleration: -1, jump: 0, color: '#af1934', pattern: 'canadiens', desc: 'Une fusée. Pour ceux qui savent freiner.', unlock: { wins: 3 } },
     { id: 'panda', name: 'Panda', price: 1100, speed: 1, corner: 1, acceleration: 1, jump: 1, color: '#eceff1', pattern: 'panda', desc: 'Un peu de tout, en noir et blanc.', unlock: { wins: 3 } },
-    { id: 'lave', name: 'Lave', price: 1300, speed: 3, corner: 0, acceleration: 0, jump: 1, color: '#d84315', pattern: 'lava', desc: 'Brûlante en ligne droite.', unlock: { wins: 3 } },
+    { id: 'lave', name: 'Chevaux', price: 1300, speed: 3, corner: 0, acceleration: 0, jump: 1, color: '#87c8bb', pattern: 'horses', desc: 'Des chevaux au galop pour dévaler les pistes.', unlock: { wins: 3 } },
     { id: 'ninja', name: 'Ninja', price: 1500, speed: 1, corner: 3, acceleration: 1, jump: 0, color: '#212121', pattern: 'shuriken', desc: 'Précise comme un shuriken.', unlock: { wins: 4 } },
-    { id: 'arcenciel', name: 'Arc-en-ciel', price: 1600, speed: 0, corner: 0, acceleration: 3, jump: 2, color: '#ec407a', pattern: 'rainbow', desc: 'Faite pour voler et tourner.', unlock: { wins: 4 } },
+    { id: 'arcenciel', name: 'Squelettes', price: 1600, speed: 0, corner: 0, acceleration: 3, jump: 2, color: '#22283d', pattern: 'skulls', desc: 'Faite pour voler et tourner.', unlock: { wins: 4 } },
     { id: 'requin', name: 'Requin', price: 1700, speed: 3, corner: 2, acceleration: -1, jump: 0, color: '#1565c0', pattern: 'teeth', desc: 'Rapide et mordante dans les virages.', unlock: { wins: 4 } },
-    { id: 'pro', name: 'Pro', price: 2000, speed: 1, corner: 1, acceleration: 1, jump: 1, color: '#8e24aa', pattern: 'diagonal', desc: 'Meilleure que la Freestyle en tout.', unlock: { wins: 5 } },
-    { id: 'fusee2', name: 'Fusée II', price: 2200, speed: 4, corner: -1, acceleration: 0, jump: 1, color: '#b71c1c', pattern: 'flames', desc: 'La Fusée, en plus fou.', unlock: { wins: 5 } },
-    { id: 'phenix', name: 'Phénix', price: 2800, speed: 2, corner: 2, acceleration: 2, jump: 1, color: '#ff7043', pattern: 'feathers', desc: 'Renaît de ses cendres à chaque virage.', unlock: { wins: 6 } },
+    { id: 'pro', name: 'Emojis', price: 2000, speed: 1, corner: 1, acceleration: 1, jump: 1, color: '#743cd3', pattern: 'emojis', desc: 'Meilleure que la Freestyle en tout.', unlock: { wins: 5 } },
+    { id: 'fusee2', name: 'Fusée II', price: 2200, speed: 4, corner: -1, acceleration: 0, jump: 1, color: '#461927', pattern: 'animated-flames', desc: 'Des flammes vivantes et une vitesse de feu.', unlock: { wins: 5 } },
+    { id: 'phenix', name: 'Rorschach', price: 2800, speed: 2, corner: 2, acceleration: 2, jump: 1, color: '#eee9dc', pattern: 'animated-ink', desc: 'Des taches d’encre symétriques qui se métamorphosent sans fin.', unlock: { wins: 6 } },
     { id: 'cristal', name: 'Cristal', price: 3200, speed: 2, corner: 3, acceleration: 1, jump: 2, color: '#b3e5fc', pattern: 'crystal', desc: 'Légère et tranchante.', unlock: { wins: 6 } },
     { id: 'dragon', name: 'Dragon', price: 4000, speed: 3, corner: 2, acceleration: 2, jump: 2, color: '#2e7d32', pattern: 'scales', desc: 'La planche des légendes.', unlock: { wins: 7 } },
     { id: 'doree', name: 'Dorée', price: 5000, speed: 3, corner: 3, acceleration: 3, jump: 3, color: '#ffd600', pattern: 'gold', desc: 'La planche des champions. Hors de prix.', unlock: { wins: 8 } },
+    { id: 'trophee-bronze', name: 'Bronze', secret: true, price: 0, speed: 4, corner: 3, acceleration: 3, jump: 3, color: '#b97842', pattern: 'medal', desc: 'La récompense des podiums de tous les tournois.', unlock: { cupRank: 3 } },
+    { id: 'trophee-argent', name: 'Argent', secret: true, price: 0, speed: 4, corner: 4, acceleration: 3, jump: 4, color: '#b9d0df', pattern: 'medal', desc: 'Une lame d’argent pour les grands champions.', unlock: { cupRank: 2 } },
+    { id: 'trophee-or', name: 'Or', secret: true, price: 0, speed: 5, corner: 4, acceleration: 4, jump: 4, color: '#ffd044', pattern: 'medal', desc: 'La couronne des vainqueurs de tous les tournois.', unlock: { cupRank: 1 } },
+    { id: 'trophee-diamant', name: 'Diamant', secret: true, price: 0, speed: 5, corner: 5, acceleration: 5, jump: 5, color: '#a2efff', pattern: 'diamond', desc: 'Le trésor ultime du vainqueur du boss final.', unlock: { finalBoss: true } },
   ];
 
   SK.boardById = id => SK.BOARDS.find(b => b.id === id) || SK.BOARDS[0];
+  SK.BOARD_SKIN_PRICE = 50;
+  SK.BOARD_MOTIFS = [
+    ['electric','Énergie électrique','#10172d',true,'Des arcs bleu fluo qui crépitent sur un fond sombre.'],
+    ['molten','Lave en fusion','#19191c',true,'Des fissures de lave incandescente qui pulsent doucement.'],
+    ['synthwave','Néon synthwave','#180c36',true,'Une grille rose et turquoise qui défile sans fin.'],
+    ['cosmic','Galaxie','#120f30',true,'Des étoiles scintillantes et une comète de passage.'],
+    ['snow-shark','Requin des neiges','#91d9e8',false,'Une grande gueule de requin et des yeux qui suivent tes virages.'],
+    ['reptile','Dragon','#255143',false,'Des écailles et deux yeux de reptile lumineux.'],
+    ['fossil','Fossile de T-Rex','#493b35',false,'Un squelette de dinosaure incrusté dans la roche.'],
+    ['claws','Griffes de bête','#99643e',false,'De grandes griffures traversent le bois.'],
+    ['polar','Glace polaire','#7dcde3',false,'Une glace bleutée aux bulles d’air emprisonnées.'],
+    ['timber','Bois rustique','#cca46a',false,'Écorce de bouleau et nœuds de bois.'],
+    ['circuit','Circuit robot','#102b25',true,'Des pistes dorées et des LED qui clignotent.'],
+    ['carbon','Carbone et métal','#303942',false,'Fibre de carbone et métal brossé, esprit course.']
+  ].map(([id,name,color,animated,desc])=>({id:'motif-'+id,name,color,pattern:'custom-'+id,animated,price:animated?350:200,desc}));
+  SK.skinById=id=>SK.BOARD_MOTIFS.find(b=>b.id===id)||SK.BOARDS.find(b=>b.id===id);
+  SK.ownsBoardSkin=(save,id)=>SK.BOARDS.some(b=>b.id===id)?!!save.boards?.includes(id):SK.BOARD_MOTIFS.some(b=>b.id===id)&&!!save.ownedSkins?.includes(id);
+  SK.availableBoardSkins=save=>[...SK.BOARDS,...SK.BOARD_MOTIFS].filter(b=>SK.ownsBoardSkin(save,b.id));
+  SK.buyBoardMotif=function(save,id){
+    const motif=SK.BOARD_MOTIFS.find(m=>m.id===id);if(!motif)return 'invalid';
+    if(SK.ownsBoardSkin(save,id))return 'owned';if(!(save.gold>=motif.price))return 'poor';
+    save.gold-=motif.price;(save.ownedSkins ||= []).push(id);return 'bought';
+  };
+  SK.boardSkin = function(id,save){
+    const skin=save?.boardSkins?.[id];
+    return skin && save.boards?.includes(id) && SK.ownsBoardSkin(save,skin) ? SK.skinById(skin) : SK.boardById(id);
+  };
+  SK.changeBoardSkin = function(save,id,skinId){
+    if(!SK.BOARDS.some(b=>b.id===id)||!save.boards?.includes(id)||!SK.ownsBoardSkin(save,skinId))return 'locked';
+    if(SK.boardSkin(id,save).id===skinId)return 'unchanged';
+    if(!(save.gold>=SK.BOARD_SKIN_PRICE))return 'poor';
+    save.gold-=SK.BOARD_SKIN_PRICE;(save.boardSkins ||= {})[id]=skinId;return 'changed';
+  };
   // Articles de la boutique autres que les planches (achat unique, effet permanent en course)
   SK.isGoggles=id=>['lunettesNeige','lunettesForet','lunettesMiroir','lunettesTricolores','lunettes'].includes(id);
   SK.drawGoggles=function(c,id,x,y,s,view='front'){
@@ -122,8 +160,8 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
   SK.GEAR = [
     {id:'lunettesNeige',cat:'equip',name:'Lunettes bleutées',price:250,desc:'Verres bleutés : la neige glisse immédiatement de la caméra lorsque tu les portes.'},
     {id:'lunettesForet',cat:'equip',name:'Lunettes forêt',price:250,desc:'Verres vert forêt : la neige glisse immédiatement de la caméra lorsque tu les portes.'},
-    {id:'lunettesMiroir',cat:'equip',name:'Lunettes miroir intégrales',price:950,desc:'Verres jaune-orange-rose : bloquent toute la neige sur la caméra, même les grosses projections des adversaires, lorsque tu les portes.'},
-    {id:'lunettesTricolores',cat:'equip',name:'Lunettes tricolores intégrales',price:950,desc:'Bleu, blanc et rouge : bloquent toute la neige sur la caméra, même les grosses projections des adversaires, lorsque tu les portes.'},
+    {id:'lunettesMiroir',cat:'equip',name:'Lunettes miroir intégrales',price:950,unlock:{wins:3},desc:'Verres jaune-orange-rose : bloquent toute la neige sur la caméra, même les grosses projections des adversaires, lorsque tu les portes.'},
+    {id:'lunettesTricolores',cat:'equip',name:'Lunettes tricolores intégrales',price:950,unlock:{wins:3},desc:'Bleu, blanc et rouge : bloquent toute la neige sur la caméra, même les grosses projections des adversaires, lorsque tu les portes.'},
     { id: 'casque', cat: 'equip', name: 'Casque', price: 300, desc: 'Tu te relèves 20 % plus vite après une chute.' },
     { id: 'gants', cat: 'equip', name: 'Gants de pro', price: 400, unlock: { wins: 1 }, desc: 'Les figures s\'exécutent 10 % plus vite : plus de pièces par saut.' },
     { id: 'bottes', cat: 'equip', name: 'Bottes à crampons', price: 500, unlock: { wins: 2 }, desc: 'Plus d\'accroche : +10 % en virage, même sur la glace.' },
@@ -369,6 +407,11 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
   // Pourquoi un article est encore verrouillé (null = disponible). unlock: { wins: n } ou { course: id }
   SK.lockReason = function (unlock, save) {
     if (!unlock) return null;
+    if (unlock.cupRank) {
+      const cups = SK.CUPS || [], count = cups.filter(c => { const result = save.cups?.[c.id]; const rank = result?.won ? 1 : result?.bestRank; return Number.isInteger(rank) && rank >= 1 && rank <= unlock.cupRank; }).length;
+      if (!cups.length || count < cups.length) return `Obtiens ${['', 'l’or', 'l’argent ou mieux', 'le bronze ou mieux'][unlock.cupRank]} dans tous les tournois (${count} / ${cups.length})`;
+    }
+    if (unlock.finalBoss && !save.trophies?.shadowKing) return 'Bats le boss final dans la salle du trône';
     const wins = Object.keys(save.won || {}).length;
     if (unlock.wins != null && wins < unlock.wins) return `Gagne ${unlock.wins} piste${unlock.wins > 1 ? 's' : ''} dans l'aventure (${wins} / ${unlock.wins})`;
     if (unlock.course && !(save.won || {})[unlock.course]) { const c = SK.courseById(unlock.course); return 'Gagne la course « ' + c.name + ' »' + (c.boss ? ' en battant Shinobin' : ''); }
@@ -377,22 +420,22 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
   SK.townWalkSpeed=level=>255*(1+Math.max(0,Math.min(5,level||0))*.15);
   SK.UPGRADE_MAX = 2; SK.upgradeCost = lvl => 400 * (lvl + 1);
   // Planche avec ses améliorations achetées (save.upgrades[boardId] = { speed, corner, acceleration })
-  SK.effectiveBoard = function (id, save) { const b = SK.boardById(id), u = (save && save.upgrades && save.upgrades[b.id]) || {}; return Object.assign({}, b, { speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), acceleration: b.acceleration + (u.acceleration ?? u.trick ?? 0), jump: (b.jump || 0) + (u.jump || 0), base: b }); };
+  SK.effectiveBoard = function (id, save) { const b = SK.boardById(id), u = (save && save.upgrades && save.upgrades[b.id]) || {}; return Object.assign({}, b, { color: SK.boardSkin(id,save).color, pattern: SK.boardSkin(id,save).pattern, skinId: SK.boardSkin(id,save).id, speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), acceleration: b.acceleration + (u.acceleration ?? u.trick ?? 0), jump: (b.jump || 0) + (u.jump || 0), base: b }); };
 
   // ------------------------------------------------------------------ tirs (boîtes rouges) et objets (boîtes bleues)
   SK.SHOTS = {
     bombe:     { name: 'Bombe',       icon: '💣', desc: 'Vole vers le coureur devant toi et le fait tomber.' },
     parachute: { name: 'Parachute',   icon: '🪂', desc: 'Accroche un parachute au coureur devant : il est ralenti 5 secondes.' },
     gel:       { name: 'Rayon de gel', icon: '🧊', desc: 'Gèle le coureur devant dans un bloc de glace pendant 2 secondes.' },
-    poele:     { name: 'Poêle',       icon: '🍳', desc: 'Un coup de poêle sur la tête de TOUS les autres coureurs.' },
+    poele:     { name: 'Poêle',       icon: '🍳', desc: 'Un coup de poêle sur la tête de tous les adversaires devant toi.' },
     bonhomme:  { name: 'Bonhomme',    icon: '⛄', desc: 'Transforme le coureur devant en bonhomme de neige : lent et impossible à diriger.' },
   };
   SK.ITEMS = {
-    rocher:    { name: 'Rocher',      icon: '🪨', desc: 'Dépose un rocher derrière toi. Celui qui le touche tombe.' },
+    rocher:    { name: 'Piège surprise', icon: '🎲', desc: 'Dépose au hasard une roche, un cône, un bonhomme de neige ou une banane derrière toi.' },
     ventilo:   { name: 'Ventilateur', icon: '🌀', desc: 'Turbo : grosse accélération pendant 3 secondes.' },
     invisible: { name: 'Invisible',   icon: '👻', desc: 'Invisible 6 secondes : aucun tir ne peut t\'atteindre.' },
     fantome:   { name: 'Fantôme',     icon: '🎭', desc: 'Vole le tir ou l\'objet du coureur devant toi.' },
-    nuage:     { name: 'Nuage',       icon: '🌧️', desc: 'Une averse ralentit tous les autres coureurs 4 secondes.' },
+    nuage:     { name: 'Nuage',       icon: '🌧️', desc: 'Une averse ralentit les adversaires devant toi pendant 4 secondes.' },
   };
   // Presentation only: keep the original IDs, probabilities and gameplay rules.
   SK.POWER_STYLES = {
@@ -406,6 +449,13 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
     return SK.POWER_STYLES[charId]?.[id] || (kind === 'shot' ? SK.SHOTS[id] : SK.ITEMS[id]);
   };
   SK.SHOT_IDS = Object.keys(SK.SHOTS); SK.ITEM_IDS = Object.keys(SK.ITEMS);
+  // Le piège occupe aussi le bouton de tir quand on mène la course.
+  SK.SHOTS.rocher = SK.ITEMS.rocher;
+  SK.TRAPS = {
+    rock:{name:'Roche',icon:'🪨'}, cone:{name:'Cône orange',icon:'🚧'},
+    snowman:{name:'Bonhomme de neige',icon:'⛄'}, banana:{name:'Peau de banane',icon:'🍌'}
+  };
+  SK.TRAP_IDS = Object.keys(SK.TRAPS);
 
   // ------------------------------------------------------------------ figures (en l'air) : durée de base et pièces
   SK.TRICKS = {
@@ -558,7 +608,30 @@ window.SK.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée 
   SK.MISSIONS.splice(1,0,{id:'edges1',type:'edges',course:'rookie',goal:0,reward:80,level:1,name:'Ne pas toucher le bord !',desc:'Reste au centre : alterne gauche, droite et lignes droites sans toucher les bords.'});
   SK.MISSIONS.push({id:'edges2',type:'edges',course:'rookie',goal:0,reward:150,level:2,name:'Ne pas toucher le bord !',desc:'Des virages plus serrés sur une piste encore plus étroite. Zéro contact avec les bords !'});
   SK.MISSIONS.push({id:'push1',type:'pushes',course:'rookie',goal:3,reward:100,level:1,name:'Place au passage !',desc:'Approche-toi des autres et appuie sur N pour réussir 3 poussées.'});
-  SK.CHARACTERS.forEach(c=>c.strength=({zach:5,eliott:3,alexie:3,adam:2,edison:2,milo:1,shinobin:5})[c.id]||3);
+  // Cinq niveaux par discipline ; conserver les anciens identifiants sauvegardés.
+  const lessonPlans={
+    slalom:{prefix:'slalom',courses:['rookie','silver','silver','ninja','ninja'],goals:[12,18,22,25,27]},
+    coins:{prefix:'coins',courses:['grass','rookie','highway','silver','dizzy'],goals:[12,14,16,18,22]},
+    tricks:{prefix:'tricks',courses:['rookie','dizzy','dizzy','dizzy','dizzy'],goals:[12,35,50,65,80]},
+    hits:{prefix:'shots',courses:['highway','ninja','ninja','ninja','ninja'],goals:[3,6,8,10,12]},
+    time:{prefix:'time',courses:['rookie','rookie','rookie','rookie','rookie'],goals:[120,110,100,90,80]},
+    nofall:{prefix:'nofall',courses:['sunset','sunset','sunset','sunset','sunset'],goals:[0,0,0,0,0]},
+    edges:{prefix:'edges',courses:['rookie','rookie','rookie','rookie','rookie'],goals:[0,0,0,0,0]},
+    pushes:{prefix:'push',courses:['rookie','rookie','rookie','rookie','rookie'],goals:[3,5,7,9,12]}
+  };
+  const originals=SK.MISSIONS;
+  SK.MISSIONS=Object.entries(lessonPlans).flatMap(([type,plan])=>plan.goals.map((goal,i)=>{
+    const level=i+1,base=originals.find(m=>m.type===type),old=originals.find(m=>m.id===plan.prefix+level);
+    const desc=type==='slalom'?`Passe au moins ${goal} portes de slalom.`:type==='coins'?`Ramasse ${goal} pièces sur la piste en un tour.`:type==='tricks'?`Gagne ${goal} pièces avec tes figures. Saute avec X, puis C + une flèche.`:type==='hits'?`Touche les adversaires ${goal} fois avec tes tirs.`:type==='time'?`Termine en ${Math.floor(goal/60)} min ${String(goal%60).padStart(2,'0')} s maximum.`:type==='pushes'?`Réussis ${goal} poussées : approche-toi, puis N + gauche ou droite.`:type==='edges'?`Aucun contact avec les bords. Virages de difficulté ${level}/5.`:`Aucune chute ! Saute les barrages de difficulté ${level}/5.`;
+    return {...base,...old,id:plan.prefix+level,type,level,course:plan.courses[i],goal,reward:base.reward+i*40,desc};
+  }));
+  SK.missionUnlocked=(m,save)=>!!save.allMissionsUnlocked||m.level===1||save.missions?.[m.id]!=null||SK.MISSIONS.some(prev=>prev.type===m.type&&prev.level===m.level-1&&save.missions?.[prev.id]!=null);
+  SK.recordMission=(save,m,value)=>{
+    const next=SK.MISSIONS.find(n=>n.type===m.type&&n.level===m.level+1),wasUnlocked=next&&SK.missionUnlocked(next,save);
+    save.missions??={};const prev=save.missions[m.id],first=prev==null;
+    if(first||(['time','edges','nofall'].includes(m.type)?value<prev:value>prev))save.missions[m.id]=value;
+    return {reward:first?m.reward:0,unlocked:next&&!wasUnlocked?next:null};
+  };
   SK.missionById = id => SK.MISSIONS.find(m => m.id === id);
 
   // ------------------------------------------------------------------ outils communs

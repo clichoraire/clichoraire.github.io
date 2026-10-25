@@ -10,7 +10,7 @@
     const flakes=r.lensSnow||(r.lensSnow=[]),protectedLens=L.protected(r);
     // Keep room for a fresh impact even when the lens is already covered.
     while(flakes.length+count+(heavy?1:0)>72)flakes.shift();
-    const life=()=>protectedLens?.65:28+Math.random()*6;
+    const life=()=>(protectedLens?.65:28+Math.random()*6)*(heavy?.5:1);
     if(heavy)flakes.push({x:.38+Math.random()*.24,y:.40+Math.random()*.20,size:.32,heavy:true,age:0,life:life(),slide:protectedLens,seed:Math.random()*6.28});
     for(let i=0;i<count;i++)flakes.push({x:.08+Math.random()*.84,y:.18+Math.random()*.64,size:.035+Math.random()*.045,age:0,life:life(),slide:protectedLens,seed:Math.random()*6.28});
   };

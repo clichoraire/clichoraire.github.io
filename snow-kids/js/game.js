@@ -12,10 +12,18 @@
     r.cornerHold=SK.clamp(corner/16,0,1)*.82;
     r.accelerationSeconds=15-7*SK.clamp(acceleration/16,0,1);
   };
+  SK.coinSpeedBonus=r=>Math.max(0,Math.min(r.coinCapacity||20,r.coins||0));
+  SK.raceTopSpeed=r=>r.maxSpeed+SK.coinSpeedBonus(r)/3.6;
   SK.accelerationStep=function(speed,target,seconds,dt){
-    // Integrate a declining acceleration exactly, reaching the cap in `seconds`.
-    const k=Math.log(1/.15)/seconds;
-    return Math.min(target,(target/.85)-(target/.85-speed)*Math.exp(-k*dt));
+    // 90 % en `seconds`, 99 % en deux fois ce temps : la fin demande de l’élan.
+    if(dt<=0||speed>=target)return speed;
+    const k=Math.log(10)/Math.max(.1,seconds);
+    return target-(target-speed)*Math.exp(-k*dt);
+  };
+  // Une flexion complète puis un relâchement : une poussée, jamais un turbo continu.
+  SK.pumpKick=function(r){
+    if(r.state!=='ride'||(r.jumpCharge||0)<.95||r.speed>=70/3.6)return false;
+    r.speed=Math.min(70/3.6,r.speed+2.5);r.fx.pump=.35;return true;
   };
   function Racer(race, opts, idx) {
     this.race = race; this.idx = idx; this.def = opts.def || SK.charById(opts.charId) || SK.CHARACTERS[0]; this.board = opts.board || SK.boardById(opts.boardId);
@@ -44,8 +52,15 @@
   Racer.prototype.progress = function () { return this.lap * this.race.L + Math.min(this.z, this.race.L); };
   Racer.prototype.immune = function () { return this.state === 'lift' || this.state === 'drop' || this.state === 'done' || this.fx.invisible > 0; };
 
+  // Shared deterministic weather: the warning cloud and lateral force use the same clock.
+  SK.stormAt=function(course,time,seed=1){
+    if(!course.blizzard||time<6)return {strength:0,force:0,direction:0,warning:false};
+    const elapsed=time-6,cycle=Math.floor(elapsed/12),phase=elapsed%12,direction=(cycle+(seed%2))%2?1:-1;
+    const warning=phase<1.4,strength=phase>=1.4&&phase<5.2?Math.sin((phase-1.4)/3.8*Math.PI):0;
+    return {strength,force:direction*2.7*strength,direction,warning};
+  };
   SK.Race = function (opts) {
-    this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; this.track = SK.buildTrack(this.course, this.seed, { slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall', edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
+    this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; this.track = SK.buildTrack(this.course, this.seed, { slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
     this.boostOnly = !!this.mission && this.mission.type !== 'hits';
     if(this.boostOnly)for(const segment of this.track.segs)for(const box of segment.boxes)box.kind='blue';
     this.gatesPassed = 0; this.gatesTotal = this.track.gates.length;
@@ -56,7 +71,9 @@
     const w0 = this.track.segs[0].w, n = this.racers.length;
     this.racers.forEach((r, i) => { r.x = n === 1 ? 0 : (-0.6 + 1.2 * i / (n - 1)) * w0; r.startX = r.x; r.z = 2 + i * 0.5; r.yAbs = this.track.groundY(r.z);
 
-      if (r.gear.sac && this.mode !== 'time') r.item = this.boostOnly ? 'ventilo' : this.rng.pick(SK.ITEM_IDS); });
+    });
+    this.rankAll();
+    for(const r of this.racers)if(r.gear.sac&&this.mode!=='time')r.item=this.rollPower(r,'blue');
     this.humans = this.racers.filter(r => r.ctrl === 'human');
   };
   const P = SK.Race.prototype;
@@ -86,7 +103,9 @@
       cow.walkTime=this.time;
     }
     for (const r of this.racers) if (r.ctrl === 'cpu' && SK.AI) SK.AI.drive(this, r, dt);
-    for (const r of this.racers) this.updateRacer(r, dt);
+    for (const r of this.racers){r.snowPrevious={x:r.x,z:r.z};this.updateRacer(r, dt);}
+    this.updateSnowGuards(dt);
+    this.updatePolarBears(dt);
     SK.LensSnow.update(this,dt);
     this.collideRacers();
     this.updateShots(dt);
@@ -97,7 +116,7 @@
     else if (this.humans.length && this.humans.every(r => r.state === 'done') && this.time > this.lastFinish + 6) {
       for (const r of this.racers) if (r.state !== 'done') {
         const remaining = this.laps * this.L - r.progress(), liftsLeft = this.laps - 1 - r.lap - (r.state === 'lift' ? 0 : 0);
-        r.finishTime = this.time + remaining / (r.maxSpeed * 0.85) + Math.max(0, liftsLeft) * (SK.LIFT_RIDE + 1) + (r.state === 'lift' ? r.lift.end - this.time : 0);
+        r.finishTime = this.time + remaining / (SK.raceTopSpeed(r) * 0.85) + Math.max(0, liftsLeft) * (SK.LIFT_RIDE + 1) + (r.state === 'lift' ? r.lift.end - this.time : 0);
         r.state = 'done'; r.estimated = true;
       }
       this.finish();
@@ -122,11 +141,12 @@
     r.pushCooldown=Math.max(0,(r.pushCooldown||0)-dt);
     const edge = k => inp[k] && !prev[k];
     for (const k in r.fx) if (r.fx[k] > 0) r.fx[k] = Math.max(0, r.fx[k] - dt);
+    r.pumpPose=Math.max(0,(r.pumpPose||0)-dt*4);
     if (r.flat > 0) r.flat -= dt;
     if (r.state === 'done') { r.prev = Object.assign({}, inp); return; }
     if (r.state === 'lift') {
       if (this.time >= r.lift.end) { // la chaise arrive en haut : on voit le coureur descendre du siège sur la piste
-        r.lap++; if(r.gear.sac&&this.mode!=='time'&&!r.item)r.item=this.rng.pick(SK.ITEM_IDS); r.z = 2; r.x = r.startX; r.yAbs = T.groundY(r.z) + 4; r.h = 4; r.speed = 5; r.state = 'drop'; r.lift = null; r.lapStart = this.time; r.steer = 0;
+        r.lap++; if(r.gear.sac&&this.mode!=='time'&&!r.item)r.item=this.rollPower(r,'blue'); r.z = 2; r.x = r.startX; r.yAbs = T.groundY(r.z) + 4; r.h = 4; r.speed = 5; r.state = 'drop'; r.lift = null; r.lapStart = this.time; r.steer = 0;
       }
       r.prev = Object.assign({}, inp); return;
     }
@@ -153,7 +173,7 @@
       if(r.state==='ride')f*=1-.12*Math.pow(Math.abs(r.visualTurn||0),1.4);
       if(r.gear.casqueAero&&Math.abs(r.steer)<.15&&Math.abs(s.curve)<.3)f*=1.1;
       if(r.gear.fart&&s.surface==='snow'&&!inp.up&&!inp.down)f*=1.02;
-      target = r.maxSpeed * f;
+      target = SK.raceTopSpeed(r) * f;
     }
     if (r.state === 'air') { /* en l'air : la vitesse se conserve (légère perte) */ r.speed = Math.max(0, r.speed - 0.6 * dt); }
     else if (!stunned) {
@@ -177,6 +197,7 @@
     }
     if (station && r.lap + 1 < this.laps) { r.speed = Math.max(6, Math.min(r.speed, 14) - 10 * dt); target = 0; }
     r.x -= centrifugal * (r.state === 'air' ? 0.6 : 1-(r.cornerHold||0)) * (SK.SURFACES[s.surface] && s.surface === 'ice' ? 1.25 : 1) * dt;
+    if(this.course.blizzard&&!station&&(r.state==='ride'||r.state==='air')&&r.speed>1){const gust=SK.stormAt(this.course,this.time,this.seed);r.x+=gust.force*(r.state==='air'?1.15:1)*dt;}
     r.x += (r.pushVelocity||0)*dt;
     r.pushVelocity *= Math.exp(-3*dt);
     if(r.fx.wobble>0)r.speed=Math.max(0,r.speed-2*dt);
@@ -193,10 +214,12 @@
     if (r.wallT > 0) r.wallT -= dt;
     // ---- avance
     const zPrev = r.z; r.z += r.speed * dt;
-    // X charge au sol pendant 0,9 s, puis le relâchement déclenche le saut.
+    // X plie les genoux ; seul le relâchement déclenche le saut chargé.
     const releasedJump=prev.jump&&!inp.jump;
-    if(r.state==='ride'&&!stunned&&inp.jump)r.jumpCharge=Math.min(1,(r.jumpCharge||0)+dt/.9);
+    if(r.state==='ride'&&!stunned&&inp.jump){r.jumpCharge=Math.min(1,(r.jumpCharge||0)+dt/.9);r.pumpPose=r.jumpCharge;}
     else if(r.state!=='ride'||stunned)r.jumpCharge=0;
+    if(releasedJump&&!stunned&&SK.pumpKick(r))this.emit({type:'pump',r});
+
     // ---- relief, sauts, figures
     const gy = T.groundY(r.z);
     if (r.state === 'ride' || (stunned && r.h <= 0)) {
@@ -204,7 +227,7 @@
         r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * .6 * (r.jumpCharge||0) : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; this.emit({ type: 'jump', r, big: true });
       } else {
         r.lastVy = dt > 0 ? (gy - r.yAbs) / dt : 0; r.yAbs = gy; r.h = 0;
-        if (!stunned && releasedJump && (r.jumpCharge||0)>0 && r.speed > 3) { r.state = 'air'; r.vy = r.jumpPower * (.4+.6*r.jumpCharge) + Math.max(0, r.lastVy); r.jumpCharge=0; r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: false }); }
+        if (!stunned && releasedJump && (r.jumpCharge||0)>0) { r.state = 'air'; r.vy = r.jumpPower * (.4+.6*r.jumpCharge) + Math.max(0, r.lastVy); r.jumpCharge=0; r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: false }); }
       }
     }
     if(releasedJump||r.state!=='ride')r.jumpCharge=0;
@@ -240,7 +263,7 @@
         if (p.decor) continue;
         const pz = sg.z + (p.dz == null ? SEG / 2 : p.dz);
         if (pz >= zPrev && pz < r.z && Math.abs(r.x - p.x) < p.r + 0.7 && (p.type==='lowarch'||r.h < (p.clearance ?? 1.1)) && r.state !== 'fall') { if(p.type==='lowarch'&&r.state==='ride'&&inp.up)continue;
-          if(!p.trainingBarrier&&SK.GearEffects?.protect(r,p))continue;
+          if(!p.trainingBarrier&&!p.mandatory&&SK.GearEffects?.protect(r,p))continue;
           if(p.type==='lowarch'){this.daze(r,1.8);continue;}
           if(p.type==='snowman'){r.speed*=.55;r.fx.slow=Math.max(r.fx.slow,1.4);SK.LensSnow.splash(r,24,true);this.emit({type:'snowimpact',r});continue;}
           this.fall(r, 1.3, false); this.emit({ type: 'obstacle', r, kind: p.type }); }
@@ -257,8 +280,8 @@
       }
     }
     for (const k of this.rocks) {
-      if (this.time >= (k.landed || 0) && k.z >= zPrev && k.z < r.z && Math.abs(r.x - k.x) < 1.7 && r.h < 1.2 && !(k.owner === r && this.time - k.t0 < 1.5) && r.state !== 'fall') {
-        k.until = 0; this.fall(r, 1.4, false); this.emit({ type: 'rockhit', r, by: k.owner }); if (k.owner && k.owner !== r) k.owner.stats.hits++;
+      if (k.until>this.time && k.lap===r.lap && !r.immune() && this.time >= (k.landed || 0) && k.z >= zPrev && k.z < r.z && Math.abs(r.x - k.x) < 1.7 && r.h < 1.2 && !(k.owner === r && this.time - k.t0 < 1.5) && r.state !== 'fall') {
+        k.until = 0; this.fall(r, 1.4, false); if(k.type==='banana'){r.fx.slip=1.4;r.pushVelocity=(r.input.steer<0?-1:1)*6;} this.emit({ type: 'rockhit', r, by: k.owner, trapType:k.type||'rock' }); if (k.owner && k.owner !== r) k.owner.stats.hits++;
       }
     }
     // ---- tirs et objets
@@ -301,12 +324,17 @@
   // ------------------------------------------------------------------ effets
   P.pushRacer = function(r){
     if(r.state!=='ride'||r.pushCooldown>0)return false;
-    r.pushCooldown=3;r.fx.pushPose=.35;
-    const targets=this.racers.filter(o=>o!==r&&o.state==='ride'&&o.lap===r.lap&&Math.abs(o.z-r.z)<3.5&&Math.abs(o.x-r.x)<2.4&&!o.immune());
+    r.pushCooldown=.55;r.fx.pushPose=.55;
+    const aim=Math.abs(r.input.steer)>.15?Math.sign(r.input.steer):0;
+    r.pushDirection=aim||r.pushDirection||1;
+    const targets=this.racers.filter(o=>o!==r&&o.state==='ride'&&o.lap===r.lap&&Math.abs(o.z-r.z)<4.5&&Math.abs(o.x-r.x)<3.2&&(!aim||(o.x-r.x)*aim>0)&&!o.immune());
     targets.sort((a,b)=>Math.hypot(a.z-r.z,a.x-r.x)-Math.hypot(b.z-r.z,b.x-r.x));
     const o=targets[0];if(!o)return false;
-    const difference=r.strength-o.strength,dir=Math.sign(o.x-r.x)||Math.sign(r.input.steer)||1;
-    o.pushVelocity=dir*SK.clamp(7+difference*2.8,3,22);o.fx.wobble=.8;
+    const difference=r.strength-o.strength,dir=aim||Math.sign(o.x-r.x)||r.pushDirection;
+    // Déplacement net même contre un personnage plus fort, puis retour au contrôle.
+    o.pushVelocity=dir*SK.clamp(10+difference*2.8,7,22);o.fx.wobble=1.1;
+    o.fx.pushHit=.65;o.pushHitDirection=dir;
+    r.speed*=.92;o.speed*=.90;r.pushCooldown=3;
     o.pushImpactUntil=difference>=2?this.time+1.2:0;r.pushDirection=dir;
     r.stats.pushes++;this.emit({type:'push',r,target:o});return true;
   };
@@ -325,21 +353,33 @@
     if (r.state === 'air') { r.pending = 'gel'; return; }
     r.state = 'frozen'; r.stun = Math.max(r.stun, dur); r.speed = 0; r.curTrick = null; r.tricksDone = []; this.emit({ type: 'frozen', r });
   };
+  P.rollPower = function(r,kind){
+    if(this.boostOnly)return 'ventilo';
+    this.rankAll();
+    if(r.rank===0)return kind==='red'?'rocher':this.rng.pick(['rocher','rocher','ventilo','invisible']);
+    return this.rng.pick(kind==='red'?SK.SHOT_IDS:SK.ITEM_IDS);
+  };
+  P.dropTrap = function(r){
+    const type=this.rng.pick(SK.TRAP_IDS);
+    this.rocks.push({type,z:Math.max(0,r.z-2.5),x:r.x,lap:r.lap,until:this.time+SK.itemDuration(r,30),owner:r,t0:this.time,landed:this.time+.7});
+    r.rockAnim=this.time;r.trapType=type;
+  };
   P.takeBox = function (r, b) {
     if (this.mode === 'time') return;
     if (b.kind === 'red') {
       if (r.shot) { this.emit({ type: 'boxfull', r, kind: 'red' }); return; }
-      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.shot = this.rng.pick(SK.SHOT_IDS); b.taken = this.time + SK.BOX_RESPAWN; r.boxBurst={at:this.time,kind:b.kind}; this.emit({ type: 'box', r, kind: 'red', got: r.shot });
+      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.shot = this.rollPower(r,'red'); b.taken = this.time + SK.BOX_RESPAWN; r.boxBurst={at:this.time,kind:b.kind}; this.emit({ type: 'box', r, kind: 'red', got: r.shot });
     } else {
       if (r.item) { this.emit({ type: 'boxfull', r, kind: 'blue' }); return; }
-      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.item = this.boostOnly ? 'ventilo' : this.rng.pick(SK.ITEM_IDS); b.taken = this.time + SK.BOX_RESPAWN; r.boxBurst={at:this.time,kind:b.kind}; this.emit({ type: 'box', r, kind: 'blue', got: r.item });
+      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.item = this.rollPower(r,'blue'); b.taken = this.time + SK.BOX_RESPAWN; r.boxBurst={at:this.time,kind:b.kind}; this.emit({ type: 'box', r, kind: 'blue', got: r.item });
     }
   };
   P.fire = function (r) {
     const kind = r.shot; r.shot = null; r.stats.shots++;
     this.emit({ type: 'shoot', r, kind });
+    if(kind==='rocher'){this.dropTrap(r);return;}
     if (kind === 'poele') {
-      for (const o of this.racers) if (o !== r && !o.immune()) this.shots.push({ kind, from: r, target: o, drop: 1.5, h: 12 });
+      for (const o of this.racers) if (o !== r && o.progress()>r.progress() && !o.immune()) this.shots.push({ kind, from: r, target: o, drop: 1.5, h: 12 });
       return;
     }
     const target = this.racerAhead(r);
@@ -352,10 +392,10 @@
   P.useItem = function (r) {
     const kind = r.item; r.item = null; r.stats.items++;
     this.emit({ type: 'item', r, kind });
-    if (kind === 'rocher') { this.rocks.push({ z: r.z - 2.5, x: r.x, lap: r.lap, until: this.time + SK.itemDuration(r,30), owner: r, t0: this.time, landed: this.time + 0.7 }); r.rockAnim = this.time; }
+    if (kind === 'rocher') this.dropTrap(r);
     else if (kind === 'ventilo') {if(SK.GearEffects)SK.GearEffects.boost(r,3);else r.fx.fan=3;}
     else if (kind === 'invisible') r.fx.invisible = SK.itemDuration(r,6);
-    else if (kind === 'nuage') { for (const o of this.racers) if (o !== r && !o.immune()) o.fx.slow = SK.itemDuration(r,o.gear.lunettes ? 2 : 4); }
+    else if (kind === 'nuage') { for (const o of this.racers) if (o !== r && o.progress()>r.progress() && !o.immune()) o.fx.slow = SK.itemDuration(r,o.gear.lunettes ? 2 : 4); }
     else if (kind === 'fantome') {
       const t = this.racerAhead(r);
       if (t && !t.immune() && (t.shot || t.item)) { if (t.shot) { r.shot = t.shot; t.shot = null; } else { r.item = t.item; t.item = null; } this.emit({ type: 'steal', r, from: t }); r.stats.hits++; }
@@ -373,10 +413,50 @@
     this.emit({ type: 'hit', r, kind, from });
     return true;
   };
+  P.updatePolarBears=function(dt){
+    for(const b of this.track.polarBears||[]){
+      const oldX=b.x;b.timer=Math.max(0,b.timer-dt);
+      if(b.phase==='patrol'){
+        b.x+=b.dir*2.2*dt;if(Math.abs(b.x)>b.limit){b.x=SK.clamp(b.x,-b.limit,b.limit);b.dir*=-1;}
+        const r=this.racers.find(r=>r.state==='ride'&&!r.immune()&&b.z-r.z>12&&b.z-r.z<60);
+        if(r){b.phase='warning';b.timer=.9;b.targetX=r.x;b.lap=r.lap;}
+      }else if(b.phase==='warning'&&b.timer===0){b.phase='charge';b.timer=.8;b.dir=Math.sign(b.targetX-b.x)||b.dir;}
+      else if(b.phase==='charge'){b.x=SK.clamp(b.x+b.dir*11*dt,-b.limit,b.limit);if(b.timer===0){b.phase='rest';b.timer=2.5;}}
+      else if(b.phase==='rest'&&b.timer===0)b.phase='patrol';
+      for(const r of this.racers){if(r.immune()||!['ride','air'].includes(r.state)||r.h>2.2||r.fx.bearSafe>0)continue;
+        const prev=r.snowPrevious||r,ax=prev.x-oldX,az=prev.z-b.z,dx=(r.x-b.x)-ax,dz=r.z-prev.z;
+        const q=SK.clamp(-(ax*dx+az*dz)/(dx*dx+dz*dz||1),0,1);
+        if(Math.hypot(ax+q*dx,az+q*dz)<2.1){this.fall(r,1.1,false);r.fx.bearSafe=2.5;this.emit({type:'bearhit',r});}
+      }
+    }
+  };
+  P.updateSnowGuards=function(dt){
+    for(const g of this.track.snowGuards||[]){
+      g.cooldown=Math.max(0,g.cooldown-dt);
+      if(g.windup>0){g.windup=Math.max(0,g.windup-dt);if(g.windup===0){
+        const dx=g.aimX-g.x,dz=g.aimZ-g.z,length=Math.hypot(dx,dz)||1;
+        this.shots.push({kind:'wildsnow',x:g.x,z:g.z,vx:dx/length*26,vz:dz/length*26,h:1,lap:g.lap,life:4});g.cooldown=3.5;
+      }continue;}
+      if(g.cooldown>0)continue;
+      const r=this.racers.filter(r=>r.state==='ride'&&!r.immune()&&g.z-r.z>15&&g.z-r.z<85).sort((a,b)=>b.z-a.z)[0];
+      if(r){g.windup=1;g.aimX=r.x;g.aimZ=Math.min(g.z-5,r.z+r.speed*1.4);g.lap=r.lap;}
+    }
+  };
   P.updateShots = function (dt) {
     const keep = [];
     for (const s of this.shots) {
-      if (s.drop != null) { s.drop -= dt; s.h = Math.max(0, s.drop * 14); if (s.drop <= 0) { this.applyHit(s.target, s.kind, s.from); continue; } keep.push(s); continue; }
+      if(s.kind==='wildsnow'){
+        const ox=s.x,oz=s.z;s.x+=s.vx*dt;s.z+=s.vz*dt;s.life-=dt;
+        let hit=false;
+        for(const r of this.racers){if(r.lap!==s.lap||r.immune()||!['ride','air'].includes(r.state)||r.h>1.8)continue;
+          const prev=r.snowPrevious||r,ax=ox-prev.x,az=oz-prev.z,dx=(s.x-r.x)-ax,dz=(s.z-r.z)-az;
+          const q=SK.clamp(-(ax*dx+az*dz)/(dx*dx+dz*dz||1),0,1);
+          if(Math.hypot(ax+q*dx,az+q*dz)<1.25){r.speed*=.72;r.fx.wobble=.8;this.emit({type:'snowimpact',r});hit=true;break;}
+        }
+        if(!hit&&s.life>0&&s.z>0&&s.z<this.L&&Math.abs(s.x)<this.track.widthAt(s.z)+5)keep.push(s);
+        continue;
+      }
+      if (s.drop != null) { s.drop -= dt; s.h = Math.max(0, s.drop * 14); if (s.drop <= 0) { if(s.target.progress()>s.from.progress())this.applyHit(s.target, s.kind, s.from); continue; } keep.push(s); continue; }
       s.life -= dt; if (s.life <= 0) { this.emit({ type: 'fizzle', s }); continue; }
       const spd = 95 + (s.target ? s.target.speed : 0);
       const previous=s.prog;s.prog += spd * dt;

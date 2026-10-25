@@ -20,14 +20,39 @@
     cup('vertige','Vertige au sommet','expert',['ninja','dizzy'],3),
     cup('legendes','La coupe des légendes','expert',['dizzy','ninja'],5),
   ];
+  const ROUTES=[
+    ['Première glisse','Les premiers obstacles','La grande tempête'],
+    ['À l’orée du bois','La forêt profonde','Les sentiers des sapins'],
+    ['Les guetteurs de neige','La traversée des ours','L’embuscade polaire'],
+    ['Le canyon orange','Les prés du soir','Le dernier rayon'],
+    ['La prairie bondissante','Les branches givrées','Le slalom des rochers'],
+    ['Les reflets du couchant','Les lacets enneigés','Le passage des glaces'],
+    ['Les géants de neige','Les prairies du nord','La descente des étoiles'],
+    ['La voie rapide','Les virages de la prairie','Le sable brûlant','La ligne des glaciers'],
+    ['Les dunes ondulées','La clairière de l’oasis','Les murs du canyon','La sortie gelée'],
+    ['Les lumières de minuit','Le couloir argenté','Les arches du désert','Le dernier tunnel'],
+    ['Les portes de glace','Le ravin blanc','Les traversées nocturnes','Les prés givrés'],
+    ['La montée des dunes','Les chicanes rapides','La crête des glaciers','Le dernier pré'],
+    ['Les lames de glace','Le bois des ninjas'],
+    ['Les branches du vertige','Les sauts du sommet'],
+    ['L’épreuve des légendes','Le dernier défi ninja']
+  ];
   SK.cupCourse=(cup,stage)=>{
-    const source={...SK.courseById(cup.tracks[stage]),puzzleId:cup.id+':course:'+stage};if(!['flocons','sapins','boules'].includes(cup.id))return source;
-    const c=JSON.parse(JSON.stringify(source));c.theme='rookie';c.surface='snow';c.forest=cup.id==='sapins';c.lowPassages=cup.id==='boules';
-    c.name=['flocons','sapins','boules'].includes(cup.id)?cup.name+' · versant '+(stage+1):c.name;
-    c.sections=c.sections.filter(s=>s.t!=='x').map((s,i)=>({...s,w:Math.max(8,Math.min(17,(s.w||12)+[0,-3,3][(i+stage)%3]))}));return c;
+    const order=SK.CUPS.indexOf(cup),level=order+(stage/(cup.tracks.length));
+    const c=JSON.parse(JSON.stringify(SK.courseById(cup.tracks[stage])));
+    Object.assign(c,{puzzleId:cup.id+':course:'+stage,recordId:'cup:'+cup.id+':'+stage+':laps:'+cup.laps,name:ROUTES[order][stage],difficulty:level});
+    if(order<3){c.theme='rookie';c.surface='snow';c.sections=c.sections.filter(s=>s.t!=='x');}
+    c.forest=cup.id==='sapins';c.forestLevel=c.forest?stage+1:0;
+    c.snowGuards=(c.forest&&stage>=1)||cup.id==='boules';c.guardSpacing=cup.id==='boules'?38:0;c.polarBears=cup.id==='boules';
+    c.blizzard=cup.id==='flocons'&&stage===2;
+    // Difficulté croissante : virages, largeur, puis enchaînements saut/flexion.
+    c.sections=c.sections.map((s,i)=>({...s,...(s.w?{w:Math.max(6.5,s.w*(1-.012*level)-(stage*.25))}:{}),...(s.c?{c:s.c*(1+.018*level)*(stage%2?-1:1)}:{})}));
+    c.challenges={spacing:Math.round(100-level*3.1),warning:Math.round(23-level*.65),first:order===0&&stage===0?95:55,stage,style:['highway'].includes(c.theme)?'metal':c.theme==='ninja'?'bamboo':'wood'};
+    c.desc=cup.name+' — '+c.name+'. '+(order<3?'Apprends à anticiper les obstacles.':order<7?'Alterne sauts et passages baissés.':order<12?'Virages resserrés et obstacles plus rapprochés.':'Enchaînements experts : garde le rythme !');
+    return c;
   };
   SK.cupById=id=>SK.CUPS.find(c=>c.id===id);
-  SK.cupUnlocked=(cup,save)=>{const i=SK.CUPS.indexOf(cup);return i===0||!!(save.cups&&save.cups[SK.CUPS[i-1].id]?.won)||!!save.cups?.[cup.id]?.won;};
+  SK.cupUnlocked=(cup,save)=>{const i=SK.CUPS.indexOf(cup);return !!save.allCupsUnlocked||i===0||!!(save.cups&&save.cups[SK.CUPS[i-1].id]?.won)||!!save.cups?.[cup.id]?.won;};
   SK.CUP_POINTS=[10,7,4,1,0];
   SK.newCupRun=(cup,opponents)=>({id:cup.id,stage:0,opponents,scores:{},creditedStages:[],finished:false});
   SK.scoreCupRace=function(run,results){
@@ -39,6 +64,6 @@
   SK.recordCup=function(save,run){
     if(!run.finished)return {won:false,firstWin:false};
     save.cups=save.cups||{};const rows=SK.cupStandings(run),me=rows.find(r=>r.human),won=!!rows[0]?.human,old=save.cups[run.id]||{},firstWin=won&&!old.won;
-    save.cups[run.id]={won:won||!!old.won,bestPoints:Math.max(old.bestPoints||0,me?.points||0),bestTime:me&&!me.estimated?Math.min(old.bestTime||Infinity,me.time):old.bestTime||null};return {won,firstWin};
+    save.cups[run.id]={bestRank:Math.min(old.won?1:old.bestRank||Infinity,me?rows.indexOf(me)+1:Infinity),won:won||!!old.won,bestPoints:Math.max(old.bestPoints||0,me?.points||0),bestTime:me&&!me.estimated?Math.min(old.bestTime||Infinity,me.time):old.bestTime||null};return {won,firstWin};
   };
 })(window.SK);

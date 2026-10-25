@@ -65,6 +65,10 @@
       else for (const p of s.props.concat(next.props)) if (!p.decor && p.type!=='lowarch' && Math.abs(r.x - p.x) < p.r + 0.9) { const pz = (p.sg || s).z; if (r.speed > 10 && race.rng() < 0.8) inp.jump = !wasJump; }
     }
     if(r.state==='ride'&&T.segs.slice(i0,i0+8).some(s=>s.props.some(p=>p.type==='lowarch'))){inp.up=true;inp.down=false;inp.jump=false;}
+    if(r.state==='ride'){
+      const log=T.segs.slice(i0,i0+18).find(s=>s.props.some(p=>p.type==='fallenlog'));
+      if(log){const arrival=(log.z+SEG/2-r.z)/Math.max(8,r.speed);if(arrival<1.3&&arrival>.28){inp.jump=true;inp.trick=false;}else if(arrival<=.28){inp.jump=false;inp.trick=false;}}
+    }
     // ---- figures en l'air
     if (r.state === 'air' && !r.curTrick) {
       const g = SK.GRAVITY, vy = r.vy, h = r.h;
@@ -88,7 +92,8 @@
       ai.shootT -= dt;
       const t = race.racerAhead(r);
       if (ai.shootT <= 0) {
-        if (r.shot === 'poele') { if (race.racers.some(o => o !== r && !o.immune() && Math.abs(o.progress() - r.progress()) < 90)) { inp.shoot = true; ai.shootT = 1; } }
+        if(r.shot==='rocher'){const behind=race.racers.some(o=>o!==r&&o.lap===r.lap&&r.z-o.z>3&&r.z-o.z<30);if(behind||ai.shootT < -12){inp.shoot=true;ai.shootT=1;}}
+        else if (r.shot === 'poele') { if (race.racers.some(o => o !== r && !o.immune() && Math.abs(o.progress() - r.progress()) < 90)) { inp.shoot = true; ai.shootT = 1; } }
         else if (t && !t.immune() && t.progress() - r.progress() < 230) { inp.shoot = true; ai.shootT = 0.8 + race.rng(); }
         else if (!t && race.rng() < 0.002) inp.shoot = true;
       }

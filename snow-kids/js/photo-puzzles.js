@@ -33,7 +33,7 @@
  };
  P.mount=(screen,save)=>{
   document.querySelectorAll('.room-memories').forEach(el=>el.remove());
-  const names=['advselect','gym','museum','wardrobe','school','records'];if(!names.includes(screen))return;
+  const names=['advselect','gym','museum','wardrobe','school','records'];if(screen==='museum'||!names.includes(screen))return;
   const host=document.getElementById('screen-'+screen),group=document.createElement('div');group.className='room-memories';
   const offset=names.indexOf(screen)%5;
   for(let i=0;i<2;i++){const n=(offset+i)%5,b=document.createElement('button'),c=document.createElement('canvas');b.title=P.photos[n].name;b.setAttribute('aria-label',P.photos[n].name+' — casse-tête');c.width=120;c.height=84;b.append(c);b.onclick=()=>P.open(save,n);group.append(b);const paint=()=>P.draw(c.getContext('2d'),save,n,6,6,108,72);paint();img(P.photos[n]).addEventListener('load',paint,{once:true});}

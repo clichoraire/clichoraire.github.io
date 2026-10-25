@@ -73,9 +73,9 @@
       <header class="museum-header"><h2>Musée de Snow Kids</h2><span id="museum-summary"></span></header>
       <label class="museum-collection">Galerie <select id="museum-collection"><option value="tracks">Trophées des pistes</option><option value="cups">Coupes du circuit</option></select></label>
       <div id="museum-detail" role="status" hidden></div>
-      <button id="museum-left" class="museum-arrow" aria-label="Marcher vers la gauche">◀</button><button id="museum-right" class="museum-arrow" aria-label="Marcher vers la droite">▶</button>
+      <aside class="museum-tournaments" aria-label="Liste des tournois"><div id="museum-beginner" class="museum-board"></div><div id="museum-advanced" class="museum-board"></div></aside>
       <button id="museum-back" class="n64-btn btn-retour">Retour au village</button>
-      <p class="museum-help">← → ou A / D pour marcher · Clique sur un trophée pour le visiter</p>
+
     </div></div>
   </section>
 
@@ -167,7 +167,7 @@
             <div><kbd>←</kbd><kbd>→</kbd><strong>Tourner</strong></div>
             <div><kbd>↑</kbd><strong>Accélérer / se baisser</strong></div>
             <div><kbd>↓</kbd><strong>Freiner</strong></div>
-            <div><kbd>X</kbd><strong>Maintiens, puis relâche pour sauter</strong></div>
+            <div><kbd>X</kbd><strong>Maintiens pour plier, relâche pour sauter</strong></div>
             <div><kbd>V</kbd><strong>Lancer ton tir</strong></div>
             <div><kbd>N</kbd><strong>Pousser · recharge 3 s</strong></div>
             <div><kbd>B</kbd><strong>Utiliser ton objet</strong></div>
@@ -204,12 +204,15 @@
 <script src="js/sprite-sources.js"></script>
 <script src="js/family-head-sources.js"></script>
 <script src="js/family-heads.js"></script>
+<script src="../config.js"></script>
+<script src="js/family-online.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/render.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/input.js"></script>
 <script src="js/town.js"></script>
 <script src="js/shop.js"></script>
+<script src="js/board-motifs.js"></script>
 <script src="js/museum.js"></script>
 <script src="js/titles.js"></script>
 <script src="js/home.js"></script>

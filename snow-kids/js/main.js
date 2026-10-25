@@ -3,7 +3,7 @@
   'use strict';
   const $ = id => document.getElementById(id), A = SK.Audio, R = SK.Render, I = SK.Input;
   const SAVE_KEY = 'snowkids.save';
-  const DEFAULT_SAVE = { xp:0, trainingPoints:0, gold: 0, boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'zach', board: 'freestyle', char2: 'eliott', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {}, gear: [], wardrobe: [], look: {}, trophies: {}, missions: {} };
+  const DEFAULT_SAVE = { xp:0, trainingPoints:0, gold: 0, boardSkins: {}, ownedSkins: [], boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'zach', board: 'freestyle', char2: 'eliott', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {}, gear: [], wardrobe: [], look: {}, trophies: {}, missions: {} };
   let save = loadSave();
   function loadSave() { try { const text=localStorage.getItem(SAVE_KEY),raw=JSON.parse(text||'{}');
     if(text&&!raw.profileVersion&&!localStorage.getItem(SAVE_KEY+'.before-profiles'))localStorage.setItem(SAVE_KEY+'.before-profiles',text);
@@ -20,7 +20,7 @@
 
   const fakeRacer = SK.fakeRacer;
   const effectiveBoard = id => SK.effectiveBoard(id, save);
-  const gold = n => `<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="">${SK.fmtGold(n)}</span>`;
+  const gold = n => `<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="">${SK.fmtGold(n,false)}</span>`;
   const gearObj = () => { const o = {}; for (const g of save.gear || []) o[g] = true; return o; };
   const lookFor = charId => SK.lookOf(SK.charById(charId) || SK.CHARACTERS[0], save);
 
@@ -43,7 +43,7 @@
     $('btn-reset').onclick = () => { if (confirm('Effacer toute la progression (pièces, planches, pistes débloquées, Shinobin) ?')) { save = SK.Profiles.init({}, DEFAULT_SAVE); SK.Town._streetX = undefined; A.setEnabled(save.sound); A.setMusic(save.music); store(); refreshMenu(); toast('Sauvegarde effacée'); } };
     $('howto-grid').innerHTML = `
       <div><h3>Le but</h3><p>Descends la piste plus vite que les autres. Au bas de la piste, la <b>remontée mécanique</b> te ramène au sommet pour le tour suivant : une chaise part toutes les ${SK.LIFT_INTERVAL} secondes, une place par chaise. Au dernier tour, la ligne d'arrivée remplace la remontée.</p>
-      <h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↑</kbd> se pencher en avant (un peu plus de vitesse) · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> maintenir pour charger le saut (genoux fléchis), puis relâcher pour sauter. Charge maximale en 0,9 seconde.</li><li>En l'air, <kbd>C</kbd> + direction : Grab (seul), <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille 360</li><li>En l'air, <kbd>X</kbd> + direction : Method (seul), <kbd>↑</kbd> Rodéo, <kbd>↓</kbd> Tornade, <kbd>←</kbd>/<kbd>→</kbd> vrille 720 — plus longues, mieux payées</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
+      <h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↑</kbd> se pencher en avant (un peu plus de vitesse) · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> maintenir pour charger le saut (genoux fléchis), puis relâcher pour sauter. Charge maximale en 0,9 seconde.</li><li>Plus les genoux sont pliés au relâchement, plus le saut est haut. Une flexion complète ajoute aussi une petite poussée sous 70 km/h.</li><li>En l'air, <kbd>C</kbd> + direction : Grab (seul), <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille 360</li><li>En l'air, <kbd>X</kbd> + direction : Method (seul), <kbd>↑</kbd> Rodéo, <kbd>↓</kbd> Tornade, <kbd>←</kbd>/<kbd>→</kbd> vrille 720 — plus longues, mieux payées</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
       <p>Les manettes marchent aussi (A saut, B figure, X tir, Y objet).</p></div>
       <div><h3>Or et boîtes</h3><p>Les <b>pièces d'or</b> (1 G chacune) traînent sur la piste et s'obtiennent surtout avec les <b>figures</b> : termine-les avant d'atterrir, sinon tu tombes ! Enchaîne plusieurs figures dans un même saut pour multiplier le gain.</p>
       <p>Les <b>boîtes rouges</b> donnent un <b>tir</b>, les <b>boîtes bleues</b> un <b>objet</b> ; chaque boîte coûte 1 pièce d'or (gratuite si tu n'en as pas). Un seul tir et un seul objet à la fois.</p>
@@ -82,7 +82,7 @@
   function openTown() {
     SK.Town.setDebug(!!save.debugHouse);show('town'); A.music('town');
     if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
-    $('town-gold').innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold)}</b>`; $('town-char').textContent = SK.charById(save.advChar).name + ' · Niveau '+SK.Progression.info(save).level+' · planche ' + SK.boardById(save.advBoard).name;
+    $('town-gold').innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold,false)}</b>`; $('town-char').textContent = SK.charById(save.advChar).name + ' · Niveau '+SK.Progression.info(save).level+' · planche ' + SK.boardById(save.advBoard).name;
     SK.Town.open({
       canvas: $('town-canvas'), save, walkLevel:save.walkLevel||0, charId: save.advChar, boardId: save.advBoard, look: lookFor(save.advChar), labelEl: $('town-label'),
       onEnter: id => {
@@ -99,6 +99,7 @@
         else if(id==='trophees')openMuseum();
         else openRecords();
       },
+      onDig: amount => {store();$('town-gold').innerHTML=gold(save.gold);A.sfx(amount?'coin':'click');},
       onChat: text => {
         const result=SK.Cheats.apply(text,save);
         if(result){store();SK.Town.setDebug(!!save.debugHouse);$('town-gold').innerHTML=gold(save.gold);A.sfx('unlock');toast(result+' — activé !');}
@@ -187,9 +188,11 @@
   }
   function openCourse() {
     show('course'); A.music(flow.mode==='time'?'timeSelect':'course');
-    const champ=flow.mode==='champ',oldCup=flow.cup?.id;flow.cup=null;
+    const adventure=flow.mode==='champ',champ=adventure||flow.browseCups!==false,oldCup=flow.cup?.id;flow.cup=null;
     $('course-title').textContent=champ?'Tournoi : choisis ta coupe':'Choisis ton tableau';
     $('course-sub').textContent=champ?'7 coupes débutantes · 5 moyennes · 3 expertes. Gagne le classement général pour débloquer la suivante.':'Choisis une piste débloquée. Les records et les victoires sont conservés.';
+    document.getElementById('course-format-tabs')?.remove();
+    if(!adventure){const tabs=document.createElement('div');tabs.id='course-format-tabs';tabs.className='course-format-tabs';for(const [label,cups]of [['Tournois et leurs pistes',true],['Pistes classiques',false]]){const b=document.createElement('button');b.textContent=label;b.setAttribute('aria-pressed',String(champ===cups));b.onclick=()=>{flow.browseCups=cups;openCourse();};tabs.append(b);}$('course-sub').after(tabs);$('course-sub').textContent=champ?'Choisis un tournoi, puis une de ses pistes ou le tournoi complet.':'Choisis une piste classique.';}
     $('laps-row').classList.toggle('hidden',champ);
     const bg=$('course-backdrop'),bc=bg.getContext('2d'),th=SK.THEMES.rookie;
     const gradient=bc.createLinearGradient(0,0,0,1000);gradient.addColorStop(0,'#07437f');gradient.addColorStop(.6,'#44a8d9');gradient.addColorStop(1,'#d8effa');bc.fillStyle=gradient;bc.fillRect(0,0,1600,1000);R.drawBackdrop(bc,'mountains',0,570,1600,th,0);bc.fillStyle='#deeff8';bc.fillRect(0,570,1600,430);
@@ -227,8 +230,16 @@
     openCourse.resizeObserver?.disconnect();openCourse.resizeObserver=new ResizeObserver(()=>rails.forEach(x=>x.update()));rails.forEach(({rail,update})=>{openCourse.resizeObserver.observe(rail);update();});
     refresh();requestAnimationFrame(()=>{const chosen=root.querySelector('.selected');if(chosen){const rail=chosen.parentElement;rail.scrollLeft=Math.max(0,chosen.offsetLeft-rail.offsetLeft);}rails.forEach(x=>x.update());});
     const sel=$('sel-laps');sel.innerHTML='';SK.LAPS_CHOICES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});sel.value=save.laps;
-    $('btn-course-back').onclick=()=>{A.sfx('click');if(champ)openTown();else openSelect(flow.players-1);};
-    $('btn-course-ok').onclick=()=>{if(!picked)return;A.sfx('click');if(champ){startCup(SK.cupById(picked));return;}save.laps=+sel.value;store();flow.course=SK.courseById(picked);flow.laps=save.laps;startRace();};
+    $('btn-course-back').onclick=()=>{A.sfx('click');if(adventure)openTown();else openSelect(flow.players-1);};
+    $('btn-course-ok').onclick=()=>{if(!picked)return;A.sfx('click');if(champ){if(adventure)startCup(SK.cupById(picked));else chooseCupFormat(SK.cupById(picked));return;}save.laps=+sel.value;store();flow.course=SK.courseById(picked);flow.laps=save.laps;startRace();};
+  }
+  function chooseCupFormat(cup){
+    const dialog=document.createElement('dialog');dialog.className='board-skin-dialog cup-format-dialog';dialog.setAttribute('aria-label',cup.name);
+    const title=document.createElement('h2');title.textContent=cup.name;dialog.append(title);const hint=document.createElement('p');hint.textContent=flow.mode==='time'?'Seul contre le chrono : une piste ou toutes les courses à la suite.':'Une piste avec des adversaires ou le tournoi complet.';dialog.append(hint);
+    const launch=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>{dialog.close();dialog.remove();fn();};dialog.append(b);};
+    launch('🏆 Jouer le tournoi complet · '+cup.tracks.length+' courses',()=>startCup(cup));
+    cup.tracks.forEach((id,stage)=>{const course=SK.cupCourse(cup,stage);launch('Course '+(stage+1)+' — '+course.name+(course.blizzard?' · Tempête':'')+' · '+cup.laps+' tours',()=>{flow.cup=null;flow.course=course;flow.laps=cup.laps;startRace();});});
+    launch('Retour',()=>{});dialog.onclose=()=>dialog.remove();document.body.append(dialog);dialog.showModal();
   }
   function chooseBoard(onStart,tournament) {
     document.getElementById('race-board-choice')?.remove();
@@ -239,7 +250,7 @@
     const list=dialog.querySelector('.race-board-list');
     const refresh=()=>{list.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===selected)));dialog.querySelector('.race-board-description').textContent=SK.boardById(selected).desc;};
     for(const b of owned){const button=document.createElement('button');button.type='button';button.dataset.id=b.id;
-      const cv=document.createElement('canvas');cv.width=120;cv.height=210;SK.Shop.drawItem(cv.getContext('2d'),{...b,kind:'board'},60,100,75,0,true);button.append(cv);
+      const cv=document.createElement('canvas');cv.width=360;cv.height=630;cv.style.width='120px';cv.style.height='210px';const bc=cv.getContext('2d');bc.scale(3,3);SK.Shop.drawItem(bc,{...effectiveBoard(b.id),kind:'board'},60,103,82,0,true);bc.setTransform(1,0,0,1,0,0);SK.animateBoardPreview(cv,{...effectiveBoard(b.id),kind:'board'},180,309,246);button.append(cv);
       const name=document.createElement('strong');name.textContent=b.name;button.append(name);
       const stats=document.createElement('span');stats.className='race-board-stats';const eb=effectiveBoard(b.id);
       stats.innerHTML=[['speed','Vitesse'],['corner','Virage'],['acceleration','Accélération'],['jump','Saut']].map(([key,label])=>{const v=eb[key]||0;return '<span title="'+label+'" class="'+(v>0?'positive':v<0?'negative':'neutral')+'"><i class="stat-icon stat-'+key+'"><svg viewBox="0 0 32 34">'+SK.STAT_ICONS[key]+'</svg></i>'+fmtMod(v)+'</span>';}).join('');button.append(stats);button.onclick=()=>{selected=b.id;A.sfx('click');refresh();};list.append(button);
@@ -250,8 +261,8 @@
   }
   function startCup(cup,confirmed=false) {
     if(!confirmed){chooseBoard(()=>startCup(cup,true),true);return;}
-    const opponents=pickAI(3,flow.picks.map(p=>p.charId),false);
-    if(cup.group==='expert'&&!flow.picks.some(p=>p.charId==='shinobin'))opponents[2]={charId:'shinobin',boardId:'pro',ctrl:'cpu',boss:true};
+    const opponents=flow.mode==='time'?[]:pickAI(Math.max(0,4-flow.picks.length),flow.picks.map(p=>p.charId),false);
+    if(flow.mode!=='time'&&cup.group==='expert'&&!flow.picks.some(p=>p.charId==='shinobin'))opponents[opponents.length-1]={charId:'shinobin',boardId:'pro',ctrl:'cpu',boss:true};
     flow.cup=SK.newCupRun(cup,opponents);startCupStage();
   }
   function startCupStage(){const cup=SK.cupById(flow.cup.id);flow.course=SK.cupCourse(cup,flow.cup.stage);flow.laps=cup.laps;startRace();}
@@ -337,6 +348,7 @@
         ctx.save();ctx.fillStyle='#10253def';ctx.beginPath();ctx.roundRect(24,95,350,80+race.racers.length*82,24);ctx.fill();
         ctx.fillStyle='#ffdf56';ctx.textAlign='left';ctx.font='bold 28px Arial';ctx.fillText('ARRIVÉE !',44,139);
         race.racers.slice().sort((a,b)=>a.rank-b.rank).forEach((r,i)=>{const y=154+i*82;ctx.fillStyle=r===humans[0]?'#235f8f':'#24405a';ctx.beginPath();ctx.roundRect(38,y,322,74,14);ctx.fill();R.drawFace(ctx,r,78,y+34,29);ctx.font='900 25px Arial';ctx.lineWidth=4;ctx.strokeStyle='#142a40';ctx.strokeText(String(i+1),47,y+65);ctx.fillStyle='white';ctx.fillText(String(i+1),47,y+65);ctx.font='bold 23px Arial';ctx.fillText(r.def.name,122,y+30);ctx.font='16px Arial';ctx.fillStyle='#bfe5f7';ctx.fillText(r.state==='done'?SK.fmtTime(r.finishTime):'En piste…',122,y+55);});ctx.restore();
+        if(watch!==humans[0])R.drawFinishBanner(ctx,humans[0],SK.W*.65,SK.H*.22,SK.W*.65,t);
       }
     }
   }
@@ -350,6 +362,7 @@
         case 'count': A.sfx('count'); break;
         case 'go': A.sfx('go'); A.music(flow.mode==='practice'?'training':flow.course.theme); break;
         case 'puzzle': if(human&&!flow.debug&&SK.PhotoPuzzles.collect(save,e.id)){store();A.sfx('coin');R.notify(r,'Pièce de casse-tête ! '+save.photoPieces.length+' / '+SK.PhotoPuzzles.ids().length,'#ffe260',true,4);} break;
+        case 'bearhit': if(human)R.notify(r,'Attention à l’ours !','#ffe59b',false,1.5);break;
         case 'snowimpact': if(human){A.sfx('land');R.notify(r,'Plouf !','#e1f5ff',true);} break;
         case 'explode': A.sfx('explode'); break;
         case 'gearbonus': if(human){A.sfx('box');R.notify(r,e.text,'#ffe477',true);} break;
@@ -357,6 +370,8 @@
         case 'box': if (human) { A.sfx('box'); const d = SK.powerPresentation(r,e.kind === 'red' ? 'shot' : 'item',e.got); R.notify(r, d.icon + ' ' + d.name + (e.kind === 'red' ? '  (−' + SK.SHOT_COST + ' G)' : ''), e.kind === 'red' ? '#ff8a80' : '#82b1ff'); } break;
         case 'boxpoor': if (human) { A.sfx('nope'); R.notify(r, 'Boîte rouge : il faut ' + SK.SHOT_COST + ' G (tu en as ' + r.coins + ')', '#ff8a80'); } break;
         case 'boxfull': if (human) { A.sfx('nope'); R.notify(r, e.kind === 'red' ? 'Tu as déjà un tir : utilise-le (' + (r.player === 1 ? 'J' : 'V') + ')' : 'Tu as déjà un objet : utilise-le (' + (r.player === 1 ? 'K' : 'B') + ')', '#ffcc80'); } break;
+        case 'push': if(human||e.target?.ctrl==='human'){A.sfx('land');if(human)R.notify(r,'Poussée !','#ffe477',false,1);if(e.target?.ctrl==='human')R.notify(e.target,'Bousculé !','#ffcf8a',false,1);}break;
+        case 'pump': if(human)R.notify(r,'Petite poussée !','#a4e9ff',false,.8);break;
         case 'jump': if (human && e.big) A.sfx('jump'); break;
         case 'land': if (human) A.sfx('land'); break;
         case 'trick': if (human) { A.sfx('trick'); R.notify(r, e.names.join(' + ') + ' · COMBO ×' + e.combo + ' · BOOST !  +' + e.coins + ' G', '#ffd600', true); } break;
@@ -369,7 +384,7 @@
         case 'item': if (human) { A.sfx(e.kind === 'ventilo' ? 'fan' : e.kind === 'invisible' ? 'invisible' : e.kind === 'nuage' ? 'rain' : e.kind === 'rocher' ? 'rock' : 'steal'); } break;
         case 'hit': if (human || fromHuman) { A.sfx(e.kind === 'gel' ? 'freeze' : e.kind === 'poele' ? 'pan' : e.kind === 'parachute' || e.kind === 'bonhomme' ? 'steal' : 'explode'); if (human) R.notify(r, SK.powerPresentation(e.from,'shot',e.kind).icon + ' ' + SK.powerPresentation(e.from,'shot',e.kind).name + (e.from ? ' de ' + e.from.def.name : '') + ' !', '#ff8a80'); if (fromHuman && !human) R.notify(e.from, SK.powerPresentation(e.from,'shot',e.kind).icon + ' Touché : ' + r.def.name, '#69f0ae'); } break;
         case 'steal': if (human) { A.sfx('steal'); R.notify(r, '🎭 Volé à ' + e.from.def.name + ' !', '#69f0ae'); } else if (e.from.ctrl === 'human') { A.sfx('steal'); R.notify(e.from, '🎭 ' + r.def.name + ' t\'a volé un objet !', '#ff8a80'); } break;
-        case 'rockhit': if (human) { A.sfx('fall'); R.notify(r, '🪨 Rocher !', '#ff8a80'); } else if (e.by && e.by.ctrl === 'human') R.notify(e.by, '🪨 ' + r.def.name + ' a touché ton rocher', '#69f0ae'); break;
+        case 'rockhit': { const trap=SK.TRAPS[e.trapType||'rock'];if(human){A.sfx('fall');R.notify(r,trap.icon+' '+trap.name+' !','#ff8a80');}else if(e.by?.ctrl==='human')R.notify(e.by,trap.icon+' '+r.def.name+' a touché ton piège','#69f0ae');break;}
         case 'lift': if (human) { A.sfx('lift'); R.notify(r, 'Tour ' + (r.lap + 1) + ' terminé · Remontée', '#fff'); } break;
         case 'lapstart': if (human) R.notify(r, r.lap + 1 === race.laps ? 'Dernier tour !' : 'Tour ' + (r.lap + 1), '#ffd600', true); break;
         case 'finish': if (human) { if(flow.mode==='practice'){const ok=SK.missionOutcome(race,r).ok;A.sfx(ok?'win':'nope');A.music(ok?'congrats':'results');}else{A.sfx(r.rank === 0 ? 'win' : 'finish'); A.music('goal','results');} } break;
@@ -384,18 +399,18 @@
     if(flow.debug){openDebug();return;}
     show('result'); if(flow.mode!=='practice'&&A.cur!=='goal') A.music('results');
     const res = race.results(), champ = flow.mode === 'champ', practice = flow.mode === 'practice', me = res.find(x => x.r.ctrl === 'human');
-    let earned = 0, unlockedNew = null, gotShinobin = false, trophy = false, missionOk = null;
+    let earned = 0, unlockedNew = null, gotShinobin = false, trophy = false, missionOk = null, unlockedMission = null;
     for (const x of res) if (x.r.ctrl === 'human') earned += x.coins + (practice ? 0 : x.prize);
     if (practice && me) { // évaluation de la mission
       const m = flow.mission, r = me.r;
       const outcome=SK.missionOutcome(race,r),v=outcome.value;missionOk=outcome.ok;
       A.music(missionOk?'congrats':'results');
       flow.missionValue = v; flow.missionReward = 0;
-      if (missionOk) { save.missions = save.missions || {}; const prev = save.missions[m.id]; if (prev == null) { earned += m.reward; flow.missionReward = m.reward; } if (prev == null || (['time','edges','nofall'].includes(m.type) ? v < prev : v > prev)) save.missions[m.id] = v; }
+      if (missionOk) { const result=SK.recordMission(save,m,v);earned+=result.reward;flow.missionReward=result.reward;unlockedMission=result.unlocked; }
     }
     if (champ && !flow.cup && me && me.rank === 0 && !save.won[flow.course.id]) { trophy = true; earned += SK.TROPHY_GOLD; }
     if (flow.mode !== 'time') { save.gold += earned; }
-    if (me) { const prev = save.best[flow.course.id]; if (me.time && (!prev || me.time < prev) && !me.estimated) save.best[flow.course.id] = me.time; }
+    if (me) { const prev = save.best[flow.course.recordId||flow.course.id]; if (me.time && (!prev || me.time < prev) && !me.estimated) save.best[flow.course.recordId||flow.course.id] = me.time; }
     if (champ && me && me.rank === 0) {
       save.won[flow.course.id] = true;
       const idx = SK.COURSES.findIndex(c=>c.id===flow.course.id);
@@ -403,7 +418,7 @@
       if (flow.course.id === 'dizzy' && !save.shinobin) { save.shinobin = true; gotShinobin = true; }
     }
     let cupOutcome=null;
-    if(flow.cup){SK.scoreCupRace(flow.cup,res);if(flow.cup.finished){cupOutcome=SK.recordCup(save,flow.cup);if(cupOutcome.firstWin){trophy=true;earned+=SK.TROPHY_GOLD;save.gold+=SK.TROPHY_GOLD;}}}
+    if(flow.cup){SK.scoreCupRace(flow.cup,res);if(flow.cup.finished&&flow.mode!=='time'){cupOutcome=SK.recordCup(save,flow.cup);if(cupOutcome.firstWin){trophy=true;earned+=SK.TROPHY_GOLD;save.gold+=SK.TROPHY_GOLD;}}}
     if(flow.finalBoss&&me?.rank===0)save.trophies.shadowKing=true;
     const xpAmount=SK.Progression.reward({finished:!!me&&!me.estimated&&!!me.time,practice,success:missionOk,rank:me?.rank});
     const xpProfile=me&&me.r.def.id!==save.activeProfile?SK.Profiles.peek(save,me.r.def.id):save;
@@ -411,15 +426,24 @@
     if(xpProfile!==save)save.profiles[me.r.def.id]=xpProfile;
     store();
     $('result-title').textContent = (practice ? 'École : ' + flow.mission.name : flow.course.name + ' — ' + (flow.mode === 'time' ? 'Contre-la-montre' : champ ? 'Aventure' : 'Course libre'));
-    $('result-sub').innerHTML = flow.mode === 'time' ? (me && save.best[flow.course.id] === me.time ? '🏆 Nouveau record !' : 'Record : ' + SK.fmtTime(save.best[flow.course.id])) : 'Gagné : ' + gold(earned) + (trophy ? ' (dont ' + SK.TROPHY_GOLD + ' G de trophée)' : practice ? (flow.missionReward ? ' (dont ' + flow.missionReward + ' G de mission)' : '') : ' (pièces ramassées + prime)') + ' · Tirelire : ' + gold(save.gold);
+    $('result-sub').innerHTML = flow.mode === 'time' ? (me && save.best[flow.course.recordId||flow.course.id] === me.time ? '🏆 Nouveau record !' : 'Record : ' + SK.fmtTime(save.best[flow.course.recordId||flow.course.id])) : 'Gagné : ' + gold(earned) + (trophy ? ' (dont ' + SK.TROPHY_GOLD + ' G de trophée)' : practice ? (flow.missionReward ? ' (dont ' + flow.missionReward + ' G de mission)' : '') : ' (pièces ramassées + prime)') + ' · Tirelire : ' + gold(save.gold);
     $('result-sub').innerHTML += '<br>+'+progress.xp+' XP · Niveau '+progress.level+(progress.points?' · +'+progress.points+' points d’entraînement !':'');
-    const card=(r,rank,detail,extra='')=>`<article class="finish-card ${r.ctrl==='human'?'is-player':''}"><div class="finish-face"><canvas width="160" height="160" data-face="${r.def.id}" aria-label="${r.def.name}"></canvas><strong>${rank+1}</strong></div><div><h3>${r.def.name}</h3><p>${detail}</p>${extra}</div>${rank<3?'<span class="finish-medal">'+['🥇','🥈','🥉'][rank]+'</span>':''}</article>`;
-    let html='<div class="finish-grid">'+res.map(x=>card(x.r,x.rank,'⏱ '+SK.fmtTime(x.time)+(x.estimated?' ≈':''),'<div class="finish-chips"><span>🪙 '+x.coins+' G</span><span>🎯 '+x.stats.hits+'</span><span>✊ '+(x.stats.pushes||0)+'</span></div>')).join('')+'</div>';
-    $('result-sub').innerHTML='<div class="finish-rewards"><span>🪙 +'+earned+' G</span><span>⭐ +'+progress.xp+' XP</span><span>Niveau '+progress.level+'</span>'+(progress.points?'<span>💪 +'+progress.points+' points</span>':'')+'</div>';
-    if(flow.mode==='time')$('result-sub').innerHTML += '<p>'+ (me && save.best[flow.course.id]===me.time?'🏆 Nouveau record !':'Record : '+SK.fmtTime(save.best[flow.course.id]))+'</p>';
+    const tip=(content,text,cls='')=>`<span class="result-tip ${cls}" tabindex="0" data-tooltip="${text}" aria-label="${text}">${content}</span>`;
+    const card=(r,rank,detail,extra='',cup=false)=>`<article class="finish-card ${r.ctrl==='human'?'is-player':''} ${cup&&rank<3?['podium-gold','podium-silver','podium-bronze'][rank]:''}"><div class="finish-face"><canvas width="160" height="160" data-face="${r.def.id}" aria-label="${r.def.name}"></canvas><strong>${rank+1}</strong></div><div><h3>${r.def.name}</h3><p>${detail}</p>${extra}</div>${rank<3?tip(['🥇','🥈','🥉'][rank],['Médaille d’or : première place','Médaille d’argent : deuxième place','Médaille de bronze : troisième place'][rank]+(cup?' au classement du tournoi.':' dans cette course.'),'finish-medal'):''}</article>`;
+    let html='<div class="finish-grid">'+res.map(x=>card(x.r,x.rank,tip('⏱ '+SK.fmtTime(x.time)+(x.estimated?' ≈':''),x.estimated?'Temps estimé : ce coureur était encore en piste à la fin.':'Temps pour terminer la course.'),'<div class="finish-chips">'+tip(gold(x.coins),'Pièces gagnées par ce coureur pendant la course.')+tip('🎯 '+x.stats.hits,'Nombre de tirs qui ont touché un adversaire.')+tip('✊ '+(x.stats.pushes||0),'Nombre de poussées réussies avec N.')+'</div>')).join('')+'</div>';
+    const xpInfo=SK.Progression.info(xpProfile);
+    $('result-sub').innerHTML='<div class="finish-rewards"><div class="reward-gold">'+tip('<span class="reward-plus">+</span>'+gold(earned),'Total de pièces gagnées : récolte et récompenses de cette course.')+'</div><div class="reward-progress"><div class="reward-progress-heading">'+tip('⭐ +'+progress.xp+' XP','Expérience gagnée pendant cette course. Elle fait progresser ton personnage.')+'<strong>Niveau '+xpInfo.level+'</strong></div><progress class="result-xp-bar" value="'+xpInfo.current+'" max="'+xpInfo.needed+'" aria-label="Progression vers le niveau '+(xpInfo.level+1)+'"></progress><div class="reward-progress-caption">'+xpInfo.current+' / '+xpInfo.needed+' XP <span>Prochain niveau : '+(xpInfo.level+1)+'</span></div></div>'+(progress.points?'<div class="reward-training">'+tip('💪 +'+progress.points+' points','Points d’entraînement gagnés : utilise-les au gym pour améliorer ton personnage.')+'</div>':'')+'</div>';
+    if(flow.mode==='time')$('result-sub').innerHTML += '<p>'+ (me && save.best[flow.course.recordId||flow.course.id]===me.time?'🏆 Nouveau record !':'Record : '+SK.fmtTime(save.best[flow.course.recordId||flow.course.id]))+'</p>';
     if (champ && me && !flow.cup) html += me.rank === 0 ? `<p class="story-text">🏆 <b>Victoire !</b> ${trophy ? 'Un trophée pour ton musée, et ' + SK.TROPHY_GOLD + ' G ! ' : ''}${unlockedNew ? 'Nouvelle piste débloquée : <b>' + unlockedNew.name + '</b>.' : ''}</p>` : `<p class="story-text">Il faut finir <b>1er</b> pour débloquer la piste suivante. Réessaie, ou passe à la boutique.</p>`;
     if (practice) { $('result-title').textContent=missionOk?'Mission réussie !':'Mission échouée';const m = flow.mission, v = flow.missionValue; html = `<p class="story-text">${missionOk ? '⭐ <b>Mission réussie !</b>' : '✗ <b>Mission échouée. Veux-tu réessayer ?</b>'} ${m.type === 'time' ? 'Temps : ' + SK.fmtTime(v) + ' (objectif ' + SK.fmtTime(m.goal) + ')' : m.type === 'nofall' ? v + ' chute(s)' : v + ' / ' + m.goal}</p>`; }
-    if(flow.cup){const cup=SK.cupById(flow.cup.id),rows=SK.cupStandings(flow.cup);$('result-title').textContent=(flow.cup.finished?'🏆 Fin du tournoi':'Course '+(flow.cup.stage+1)+' / '+cup.tracks.length);html+='<h3 class="finish-heading">🏆 Classement du tournoi</h3><div class="finish-grid cup-cards">'+rows.map((row,i)=>{const r=race.racers.find(r=>r.def.id===row.id)||SK.fakeRacer(row.id,'freestyle','ride',lookFor(row.id));return card(r,i,'⭐ '+row.points+' points');}).join('')+'</div>';if(cupOutcome)html+='<p class="story-text">'+(cupOutcome.won?'🏆 Tournoi gagné !':'La prochaine fois sera la bonne !')+'</p>';}
+    if(flow.cup){const cup=SK.cupById(flow.cup.id),rows=SK.cupStandings(flow.cup);$('result-title').textContent=(flow.cup.finished?'🏆 Fin du tournoi':'Course '+(flow.cup.stage+1)+' / '+cup.tracks.length);html='<div class="finish-columns"><section aria-label="Classement de la course"><h3 class="finish-heading">🏁 Classement de la course</h3>'+html+'</section><section aria-label="Classement du tournoi"><h3 class="finish-heading">🏆 Classement du tournoi</h3><div class="finish-grid cup-cards">'+rows.map((row,i)=>{const r=race.racers.find(r=>r.def.id===row.id)||SK.fakeRacer(row.id,'freestyle','ride',lookFor(row.id));return card(r,i,tip('⭐ '+row.points+' points','Points cumulés dans les courses de ce tournoi.'),'',true);}).join('')+'</div></section></div>';if(cupOutcome)html+='<p class="story-text">'+(cupOutcome.won?'🏆 Tournoi gagné !':'La prochaine fois sera la bonne !')+'</p>';}
+    if(flow.cup&&flow.mode==='time'){
+      flow.cup.times ||= {};flow.cup.times[flow.cup.stage]=me?.time||0;
+      const total=Object.values(flow.cup.times).reduce((a,b)=>a+b,0),cup=SK.cupById(flow.cup.id),key='cup:'+cup.id+':total:time';
+      if(flow.cup.finished&&(!save.best[key]||total<save.best[key])){save.best[key]=total;store();}
+      html='<h3 class="finish-heading">⏱ Temps du tournoi</h3><ol class="cup-time-list">'+cup.tracks.map((id,i)=>'<li>Course '+(i+1)+' — '+SK.cupCourse(cup,i).name+' <strong>'+(flow.cup.times[i]?SK.fmtTime(flow.cup.times[i]):'À venir')+'</strong></li>').join('')+'</ol><p class="story-text">Temps cumulé : <strong>'+SK.fmtTime(total)+'</strong>'+(save.best[key]?' · Record du tournoi : '+SK.fmtTime(save.best[key]):'')+'</p>';
+    }
+    if(unlockedMission){html+='<p class="mission-unlocked" role="status">🔓 Nouvelle mission débloquée !<br><strong>'+unlockedMission.name+' · Niveau '+unlockedMission.level+'</strong></p>';A.sfx('unlock');}
     $('result').innerHTML = html;
     document.querySelectorAll('[data-face]').forEach(c=>{const r=race.racers.find(r=>r.def.id===c.dataset.face)||SK.fakeRacer(c.dataset.face,'freestyle','ride',lookFor(c.dataset.face));R.drawFace(c.getContext('2d'),r,80,80,72);});
     const podium=$('cup-podium');podium.hidden=!(cupOutcome?.won);
@@ -429,11 +453,11 @@
     const mk = (label, cls, fn) => { const b = document.createElement('button'); b.textContent = label; b.className = cls; b.onclick = () => { A.sfx('click'); fn(); }; btns.appendChild(b); };
     if(flow.cup){const cup=SK.cupById(flow.cup.id);if(!flow.cup.finished)mk('Course suivante ('+(flow.cup.stage+2)+' / '+cup.tracks.length+')','primary',()=>{flow.cup.stage++;startCupStage();});mk('Recommencer la coupe',flow.cup.finished?'primary':'',()=>startCup(cup));}else if(!practice)mk('Rejouer', 'primary', startRace);else if(!missionOk)mk('Réessayer', 'primary', ()=>startRace());
     if(flow.finalBoss){$('result-title').textContent=me?.rank===0?'Le dernier défi : victoire !':'Le dernier défi';mk('Salle du trône','gold',openThrone);mk('Village','',openTown);return;}
-    if (practice) { mk('Retour à l\'École', 'gold', openSchool); mk('Village', '', openTown); mk('Menu', 'ghost', () => show('menu')); return; }
+    if (practice) { if(unlockedMission)mk('Jouer le niveau '+unlockedMission.level,'primary',()=>{flow.mission=unlockedMission;flow.course=SK.courseById(unlockedMission.course);flow.seed=null;startRace();}); mk('Retour à l\'École', 'gold', openSchool); mk('Village', '', openTown); mk('Menu', 'ghost', () => show('menu')); return; }
     if (champ && unlockedNew && !flow.cup) mk('Piste suivante : ' + unlockedNew.name, 'gold', () => { flow.course = unlockedNew; flow.laps = unlockedNew.laps; if (unlockedNew.boss) story(unlockedNew.id === 'ninja' ? 'ninja' : 'dizzy', startRace); else startRace(); });
-    mk(flow.cup?'Choisir une autre coupe':'Changer de piste', '', openCourse);
-    if (champ) mk('Retour au village', 'gold', openTown); else if (flow.mode !== 'time') mk('Boutique', 'gold', () => openShop(() => show('menu')));
-    mk('Menu', 'ghost', () => show('menu'));
+    if(!flow.cup)mk('Changer de piste', '', openCourse);
+    if (champ||flow.cup) mk('Retour au village', 'gold', openTown); else if (flow.mode !== 'time') mk('Boutique', 'gold', () => openShop(() => show('menu')));
+    if(!flow.cup)mk('Menu', 'ghost', () => show('menu'));
     if (me && me.rank === 0) A.sfx('win');
     if (gotShinobin && !flow.cup) setTimeout(() => { A.sfx('unlock'); story('ending', () => { save.ending = true; store(); openTown(); }); }, 900);
     else if (unlockedNew) setTimeout(() => A.sfx('unlock'), 600);

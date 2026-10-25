@@ -4,11 +4,15 @@
     "commit": "e795a62294af39cd09420c1868aa57d2c167b9a5"
   },
   "hockey": {
-    "version": "1.4",
-    "commit": "66663018e189203c3e5860f9dfc16211576267ea"
+    "version": "1.5",
+    "commit": "43d4b6b55cc93d9188d7c8e4d5bb3938a1a8b9c0"
   },
   "snow": {
-    "version": "1.5",
-    "commit": "7601dc41413468b2b6f9447625ed941968c39fe2"
+    "version": "1.7",
+    "commit": "dbce994128806f00d8a72680a9f83e94763a6975"
+  },
+  "ballon": {
+    "version": "1.1",
+    "commit": "a2f4146abe7c926878c683dbb98ad69b37b1b401"
   }
 }

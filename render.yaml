@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: jeux-familles
+    runtime: node
+    plan: starter
+    rootDir: family-service
+    buildCommand: node --check server.mjs
+    startCommand: node server.mjs
+    healthCheckPath: /health
+    disk:
+      name: family-portraits
+      mountPath: /var/data/families
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FAMILY_ADMIN_CODE
+        generateValue: true
+      - key: FAMILY_DATA_DIR
+        value: /var/data/families
+      - key: FAMILY_ORIGINS
+        value: https://clichoraire.github.io
+      - key: FAMILY_DAILY_LIMIT
+        value: 10
+      - key: OPENAI_IMAGE_MODEL
+        value: gpt-image-1.5

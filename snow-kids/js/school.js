@@ -7,7 +7,7 @@
   const done=SK.MISSIONS.filter(m=>save.missions?.[m.id]!=null).length;
   document.getElementById('school-sub').textContent=`${done} / ${SK.MISSIONS.length} missions réussies`;
   const progress=document.getElementById('school-progress');progress.max=SK.MISSIONS.length;progress.value=done;
-  document.getElementById('school-gold').innerHTML='<img src="'+SK.COIN_SVG+'" alt="Or">'+SK.fmtGold(save.gold);
+  document.getElementById('school-gold').innerHTML='<img src="'+SK.COIN_SVG+'" alt="Or">'+SK.fmtGold(save.gold,false);
   list.replaceChildren();list.scrollTop=0;
   const previews=[];
   const groups=Object.values(SK.MISSIONS.reduce((all,m)=>{(all[m.type]??=[]).push(m);return all;},{}));
@@ -17,11 +17,11 @@
    const heading=document.createElement('h2');heading.id='mission-level-title';heading.textContent=levels[0].name;
    const hint=document.createElement('p');hint.textContent='Choisis ton niveau';
    const choices=document.createElement('div');choices.className='mission-levels';
-   for(const m of levels){
+   for(const m of levels.filter(m=>SK.missionUnlocked(m,save))){
     const passed=save.missions?.[m.id]!=null,b=document.createElement('button');b.type='button';b.className='mission-level-option'+(passed?' completed':'');
-    b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`🪙 ${m.reward} G`}</span>`;
+    b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(m.reward,false)}</span>`}</span>`;
     const desc=document.createElement('p');desc.textContent=m.desc;b.append(desc);
-    b.onclick=()=>{dialog.close();onMission(m);};choices.append(b);
+    b.onclick=()=>{if(!SK.missionUnlocked(m,save))return;dialog.close();onMission(m);};choices.append(b);
    }
    const back=document.createElement('button');back.className='n64-btn btn-retour';back.textContent='Retour';back.onclick=()=>dialog.close();
    dialog.append(heading,hint,choices,back);dialog.onclose=()=>dialog.remove();document.body.append(dialog);dialog.showModal();choices.firstElementChild.focus();
@@ -54,6 +54,12 @@
    poly([[1260,175],[1440,100],[1440,710],[1260,640]],'#98653d');
    c.strokeStyle='#805331';c.lineWidth=3;for(let y=190;y<650;y+=45){c.beginPath();c.moveTo(1260,y);c.lineTo(1440,y-50);c.stroke();}
    rect(890,230,355,270,'#563a25');rect(900,240,335,248,'#282e2d');rect(905,489,325,9,'#c18b51');rect(1170,482,35,5,'#fff8dc');
+   // Quelques rappels courts, à la craie, dans la partie dégagée du tableau.
+   c.textAlign='left';c.fillStyle='#ffe49a';c.font='bold 20px "Trebuchet MS",sans-serif';c.fillText('LES ASTUCES DU CHALET',916,272);
+   c.strokeStyle='#e8eac080';c.lineWidth=2;c.beginPath();c.moveTo(917,283);c.lineTo(1218,283);c.stroke();
+   c.font='bold 15px "Trebuchet MS",sans-serif';c.fillStyle='#edf5dd';
+   ['← → : dirige ta planche','↑ accélère · ↓ freine','X : plie, puis relâche pour sauter','En l’air : C + une flèche = figure','V : tir · B : objet','N + ← / → : pousse de ce côté'].forEach((tip,i)=>c.fillText(tip,917,312+i*25));
+   c.font='italic 14px "Trebuchet MS",sans-serif';c.fillStyle='#f5dc91';c.fillText('Plus tu plies, plus tu sautes haut !',917,468);
    poly([[1300,245],[1420,210],[1420,500],[1300,520]],'#503923');
    poly([[1310,253],[1410,224],[1410,488],[1310,505]],'#bee8fb');
    c.strokeStyle='#765339';c.lineWidth=8;c.beginPath();c.moveTo(1360,238);c.lineTo(1360,497);c.moveTo(1305,380);c.lineTo(1415,357);c.stroke();
@@ -65,21 +71,41 @@
    c.fillStyle='#284753';c.beginPath();c.roundRect(1234,411,65,110,17);c.fill();
    stroke([[1240,432],[1211,453],[1187,432+Math.sin(t*1.6)*3]],'#284753',18);
    stroke([[1290,432],[1303,482]],'#284753',18);stroke([[1186,431],[1181,424]],'#fff1cf',13);stroke([[1303,481],[1303,489]],'#fff1cf',13);
-   window.FamilyHeads?.draw(c,'jeremie','front',1228,340,76,83);
-   c.fillStyle='#2a5269';c.beginPath();c.ellipse(1266,356,39,25,0,Math.PI,0);c.fill();rect(1228,351,76,12,'#203e51');
-   c.fillStyle='#fff1d6';c.beginPath();c.arc(1266,324,9,0,Math.PI*2);c.fill();
+   window.FamilyHeads?.draw(c,'richard','front',1228,340,76,83);
+   rect(1238,451,58,18,'#fff0c9');c.fillStyle='#513723';c.textAlign='center';c.font='bold 12px Trebuchet MS';c.fillText('Richard',1267,464);
    const bench=(x,y,w)=>{poly([[x,y],[x+w,y+25],[x+w+20,y+13],[x+20,y-12]],'#b27b43');rect(x,y, w,11,'#704823');for(const dx of [10,w-14]){rect(x+dx,y+10,10,60,'#77502d');} };
    const seated=(r,x,y,scale,view)=>{
     c.save();c.translate(x,y);c.scale(scale,scale);const L=r.look||SK.lookOf(r.def,{}),coat=L.jacket||'#3e9bb0',pants=L.pants||'#3c4984';
-    // Thighs sit on the bench; knees bend and boots hang down in front.
-    stroke([[-15,0],[-24,10],[-23,49]],pants,15);stroke([[14,1],[23,13],[24,51]],pants,15);
-    stroke([[-24,45],[-24,59],[-12,59]],'#253849',15);stroke([[24,47],[24,61],[36,61]],'#253849',15);
-    c.fillStyle=coat;c.beginPath();c.roundRect(-32,-80,64,86,15);c.fill();
-    stroke([[-25,-66],[-38,-31],[-29,-8]],coat,16);stroke([[26,-65],[39,-27],[28,-7]],coat,16);
-    stroke([[-29,-9],[-26,-5]],'#253849',13);stroke([[28,-8],[26,-3]],'#253849',13);
-    c.fillStyle='#263d50';c.beginPath();c.ellipse(0,-74,26,11,0,0,Math.PI*2);c.fill();
-    stroke([[-25,-40],[0,-34],[25,-40]],'#ffffff66',3);
-    window.FamilyHeads?.draw(c,r.def.id,view,-39,-143,78,80);
+    const side=view==='side';
+    // Le bassin repose sur le banc : cuisses horizontales, genoux pliés.
+    if(side){
+     stroke([[-7,-2],[24,2],[28,43]],pants,14);stroke([[7,2],[38,10],[40,53]],pants,15);
+     stroke([[27,42],[29,51],[44,52]],'#253849',13);stroke([[39,51],[41,61],[56,62]],'#253849',14);
+    }else{
+     stroke([[-18,-2],[-22,10],[-22,46]],pants,15);stroke([[18,-2],[22,10],[22,46]],pants,15);
+     // Talons vus de dos, semelles dirigées vers le tableau.
+     for(const dx of [-22,22]){c.fillStyle='#253849';c.beginPath();c.roundRect(dx-9,37,18,24,6);c.fill();stroke([[dx-6,57],[dx+6,57]],'#172a35',4);}
+    }
+    c.fillStyle=coat;c.beginPath();c.roundRect(side?-24:-32,-78,side?51:64,83,15);c.fill();
+    if(side){
+     stroke([[-10,-60],[5,-28],[26,-5]],coat,14);stroke([[13,-60],[30,-29],[35,3]],coat,16);
+     stroke([[27,-5],[33,-3]],'#253849',11);stroke([[35,3],[40,5]],'#253849',12);
+    }else{
+     stroke([[-26,-61],[-37,-30],[-22,-10]],coat,16);stroke([[26,-61],[37,-30],[22,-10]],coat,16);
+     stroke([[-24,-11],[-18,-10]],'#253849',11);stroke([[24,-11],[18,-10]],'#253849',11);
+     stroke([[-23,-40],[0,-35],[23,-40]],'#ffffff55',3);
+     stroke([[0,-29],[0,-5]],'#00000018',2);
+    }
+    c.fillStyle=L.skin||r.def.colors.skin;c.beginPath();c.roundRect(-10,-88,20,18,5);c.fill();
+    const drawn=window.FamilyHeads?.draw(c,r.def.id,view,side?-33:-39,-151,78,80);
+    // Zach utilise le sprite original, sans portrait FamilyHeads : tête de secours complète.
+    if(!drawn){
+     const skin=L.skin||r.def.colors.skin,hair=L.hairColor||r.def.colors.hair,cap=L.hatColor||r.def.colors.hat;
+     c.fillStyle=skin;c.beginPath();c.ellipse(side?5:0,-113,28,33,0,0,Math.PI*2);c.fill();
+     c.fillStyle=hair;c.beginPath();c.ellipse(side?-2:0,-122,29,27,0,0,Math.PI*2);c.fill();
+     if(side){c.fillStyle=skin;c.beginPath();c.ellipse(17,-109,17,23,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(32,-109,8,5,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(-1,-110,7,10,0,0,Math.PI*2);c.fill();c.fillStyle='#273749';c.beginPath();c.arc(26,-118,2.5,0,Math.PI*2);c.fill();}
+     if((L.hat||r.def.hat)==='cap'){c.fillStyle=cap;c.beginPath();c.ellipse(0,-131,32,22,0,Math.PI,0);c.fill();stroke([[-28,-131],[side?41:28,-131]],cap,9);if(!side){c.fillStyle=hair;c.beginPath();c.roundRect(-10,-137,20,12,5);c.fill();}}
+    }
     c.restore();
    };
    bench(895,606,210);

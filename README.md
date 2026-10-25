@@ -8,6 +8,7 @@ covers/           images de couverture (jpg, 1200 px de large)
 bunker-zone/      copie du projet ZoneControl (tel quel, aucun build)
 hockey-boisjoli/  copie du projet HockeyBoisjoli (tel quel, aucun build)
 snow-kids/        copie du projet SnowKids (tel quel, aucun build)
+ballon-chasseur/  copie du projet BallonChasseur (tel quel, aucun build)
 sosaria/          index.html = dist/sosaria.html du projet sosaria, + assets/ chargés à l'exécution
 deploy.sh         recopie la dernière version des jeux, commit, push
 .nojekyll         dit à GitHub Pages de servir les fichiers tels quels
@@ -16,14 +17,14 @@ deploy.sh         recopie la dernière version des jeux, commit, push
 ## Mettre à jour les jeux en ligne
 
 Chaque jeu affiche sa version (`ZC.VERSION` dans `ZoneControl/js/config.js`, `HK.VERSION` dans
-`HockeyBoisjoli/js/config.js`, `SK.VERSION` dans `SnowKids/js/config.js`) : il faut l'augmenter à chaque mise en ligne. `deploy.sh` refuse de publier un jeu dont le
+`HockeyBoisjoli/js/config.js`, `SK.VERSION` dans `SnowKids/js/config.js`, `BC.VERSION` dans `BallonChasseur/js/config.js`) : il faut l'augmenter à chaque mise en ligne. `deploy.sh` refuse de publier un jeu dont le
 code a changé sans changement de version (`--force` pour passer outre) et écrit `versions.js`, affiché sur les cartes.
 
 ```bash
 ./deploy.sh "Bunker Zone : nouvelles missions"
 ```
 
-Le script recopie `../ZoneControl/` dans `bunker-zone/`, `../HockeyBoisjoli/` dans `hockey-boisjoli/` et `../SnowKids/` dans `snow-kids/`, rebâtit le bundle de `../sosaria/` dans `sosaria/`,
+Le script recopie `../ZoneControl/` dans `bunker-zone/`, `../HockeyBoisjoli/` dans `hockey-boisjoli/` `../SnowKids/` dans `snow-kids/` et `../BallonChasseur/` dans `ballon-chasseur/`, rebâtit le bundle de `../sosaria/` dans `sosaria/`,
 puis commit et pousse. GitHub Pages republie en une ou deux minutes.
 
 ## Ajouter un jeu

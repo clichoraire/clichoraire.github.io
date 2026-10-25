@@ -1,13 +1,33 @@
 // Hockey Boisjoli — constantes, équipes, personnages et pouvoirs.
 // Tout est dans l'espace de noms HK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.HK = window.HK || {};
-window.HK.VERSION = '1.4';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.HK.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (HK) {
   'use strict';
   HK.W = 1280; HK.H = 720;              // canevas logique
   HK.STEP = 1 / 60;                     // pas de simulation
   HK.RINK = { x: 40, y: 140, w: 1200, h: 540, r: 140 };   // patinoire (coins arrondis de rayon r)
   HK.GOAL = { line: 96, mouth: 80, depth: 30, crease: 54 }; // ligne de but à `line` px du bout, filet de `mouth` px de large
+  // Constant-speed rounded route: outer lane passes behind the net, inner lane returns at centre ice.
+  HK.warmupPoint = function(side, distance) {
+    const r = 105, left = HK.RINK.x + 28, right = HK.W / 2 - 42;
+    const top = HK.RINK.y + 32, bottom = HK.RINK.y + HK.RINK.h - 32;
+    const h = right - left - 2*r, v = bottom - top - 2*r, arc = Math.PI*r/2;
+    const lengths = [h,arc,v,arc,h,arc,v,arc];
+    const total = lengths.reduce((a,b)=>a+b,0);
+    let d = ((distance % total)+total)%total, i=0;
+    while (d > lengths[i] && i < 7) d -= lengths[i++];
+    let x,y,a;
+    if(i===0){x=right-r-d;y=top;}
+    if(i===1){a=-Math.PI/2-d/r;x=left+r+Math.cos(a)*r;y=top+r+Math.sin(a)*r;}
+    if(i===2){x=left;y=top+r+d;}
+    if(i===3){a=Math.PI-d/r;x=left+r+Math.cos(a)*r;y=bottom-r+Math.sin(a)*r;}
+    if(i===4){x=left+r+d;y=bottom;}
+    if(i===5){a=Math.PI/2-d/r;x=right-r+Math.cos(a)*r;y=bottom-r+Math.sin(a)*r;}
+    if(i===6){x=right;y=bottom-r-d;}
+    if(i===7){a=-d/r;x=right-r+Math.cos(a)*r;y=top+r+Math.sin(a)*r;}
+    return {x:side<0?x:HK.W-x,y};
+  };
   HK.PUCK_R = 5;
   HK.PERIODS = 3;
   HK.PERIOD_LENGTHS = [60, 120, 180, 300];
@@ -149,6 +169,8 @@ window.HK.VERSION = '1.4';   // à augmenter à chaque mise en ligne (affichée 
       stats: { speed: 2, shot: 1, force: 3, control: 3 },
       look: { skin: '#f0c8a0', hair: '#6b4a2b', hairStyle: 'curly', glasses: 'round', mustache: '#6b4a2b' } },
   };
+
+  Object.entries(HK.PLAYERS).forEach(([id,def]) => { def.familyPortrait = id; });
 
   // Équipes : les 3 premiers joueurs commencent sur la glace, les autres au banc (changements aux mises au jeu).
   HK.TEAMS = [

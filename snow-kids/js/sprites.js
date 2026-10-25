@@ -205,13 +205,14 @@
     else {view=index===1||index>=6?'back':index===2||index===3?'side':'front';mirror=index===3;}
     const hh=c.height*(board?.32:.34),frame=window.FamilyHeads?.frame(r.def.id,view);
     const hw=frame?Math.min(hh*1.18,hh*frame.width/frame.height):c.width*.67;
-    const top=(frame?hh-Math.min(hh,hh*1.18*frame.height/frame.width):c.height*.015)+headInset(c,r,key);
+    const top=frame?hh-Math.min(hh,hh*1.18*frame.height/frame.width)+headInset(c,r,key):c.height*(view==='back'?.045:.005);
     // Enlever l'ancienne visière de Zach sous le casque.
     if(!frame){const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;for(let y=0;y<c.height*.24;y++)for(let x=0;x<c.width;x++){const j=(y*c.width+x)*4;if(d[j+2]>d[j]*1.2&&d[j+2]>d[j+1])d[j+3]=0;}ctx.putImageData(im,0,0);}
-    ctx.clearRect(0,0,c.width,top+hh*.08);
-    ctx.save();ctx.translate(c.width/2,top);if(mirror)ctx.scale(-1,1);
     const actualH=frame?Math.min(hh,hh*1.18*frame.height/frame.width):hh;
-    const w=hw*(view==='side'?.46:.43),h=actualH*.51;
+    // Retirer cheveux et ancienne casquette sous la coque, pas seulement la pointe du crâne.
+    ctx.clearRect(0,0,c.width,top+actualH*.40);
+    ctx.save();ctx.translate(c.width/2,top);if(mirror)ctx.scale(-1,1);
+    const w=hw*.51,h=actualH*.47;
     ctx.translate(0,-actualH*.015);
     // Coque commune : la sangle et la protection d'oreille suivent la vue.
     ctx.fillStyle='#7e57c2';ctx.beginPath();ctx.moveTo(-w,h*.94);
@@ -239,12 +240,13 @@
     const girl=r.def.gender==='girl',key=girl?'girlWalk':'boyWalk',index=girl?0:1;
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index);
-    const tuck=Math.max(0,Math.min(1,Math.max(r.crouch||0,r.jumpCharge||0))),h=2.5*s,w=h*img.width/img.height;
-    const hipY=-s*.96+tuck*s*.23,hipX=-tuck*s*.12;
+    const tuck=Math.max(0,Math.min(1,Math.max(r.crouch||0,r.jumpCharge||0,r.pumpPose||0))),h=2.5*s,w=h*img.width/img.height;
+    const pump=Math.min(1,Math.max(r.pumpPose||0,r.jumpCharge||0));
+    const hipY=-s*.96+tuck*s*.23+pump*s*.40,hipX=-tuck*s*.12-pump*s*.10;
     ctx.save();
     const leg=(back)=>{
       const footY=(back?-.55:-.06)*s,footX=(back?.025:-.025)*s;
-      const kneeX=(back?.10:.16)*s+tuck*s*.22,kneeY=(hipY+footY)*.5-tuck*s*.06;
+      const kneeX=(back?.10:.16)*s+tuck*s*.22+pump*s*.16,kneeY=(hipY+footY)*.5-tuck*s*.06;
       ctx.strokeStyle=L.pants;ctx.lineWidth=s*(back?.24:.28);ctx.lineCap='round';ctx.lineJoin='round';
       ctx.beginPath();ctx.moveTo(hipX,hipY);ctx.lineTo(kneeX,kneeY);ctx.lineTo(footX,footY-s*.10);ctx.stroke();
       if(back){ctx.strokeStyle='#14203d35';ctx.stroke();}
@@ -256,21 +258,27 @@
     leg(true);leg(false);
     ctx.save();ctx.translate(hipX,hipY);ctx.rotate(tuck*.17);
     // Tête, casque et manteau gardent leurs proportions pendant la flexion.
-    ctx.drawImage(img,0,0,img.width,img.height*.61,-w/2,-h*.61,w,h*.61);
-    for(const edge of [0,.78])ctx.drawImage(img,img.width*edge,img.height*.61,img.width*.22,img.height*.12,-w/2+w*edge,0,w*.22,h*.12);
+    if(r.fx?.pushPose>0){
+      // Conserver la tête et le torse, remplacer les deux manches par des bras articulés.
+      ctx.drawImage(img,0,0,img.width,img.height*.34,-w/2,-h*.61,w,h*.34);
+      ctx.drawImage(img,img.width*.22,img.height*.34,img.width*.56,img.height*.27,-w*.28,-h*.27,w*.56,h*.27);
+      const extension=Math.sin(Math.PI*SK.clamp(1-r.fx.pushPose/.55,0,1));
+      for(const side of [-1,1]){
+        const reach=side===(r.pushDirection||1)?extension:0;
+        const sx=side*w*.22,sy=-h*.24,ex=sx+side*s*(.12+.24*reach),ey=sy+s*(.27-.22*reach);
+        const hx=sx+side*s*(.16+.62*reach),hy=sy+s*(.55-.55*reach);
+        sleeve(ctx,L,sx,sy,ex,ey,hx,hy,s);
+        ctx.fillStyle=r.gear?.gants?'#263e48':L.skin;ctx.beginPath();ctx.arc(hx,hy,s*.10,0,Math.PI*2);ctx.fill();
+      }
+    }else{
+      ctx.drawImage(img,0,0,img.width,img.height*.61,-w/2,-h*.61,w,h*.61);
+      for(const edge of [0,.78])ctx.drawImage(img,img.width*edge,img.height*.61,img.width*.22,img.height*.12,-w/2+w*edge,0,w*.22,h*.12);
+    }
     ctx.restore();ctx.restore();return true;
   }
-  function turningBoard(ctx,L,s,steer) {
-    ctx.save();ctx.translate(0,-s*.25);ctx.rotate(steer*1.04);
-    ctx.translate(0,s*.25);
-    // Extrémités arrondies, nez éloigné et talon au premier plan.
-    ctx.fillStyle=L.board;ctx.strokeStyle='#00000030';ctx.lineWidth=s*.045;
-    ctx.beginPath();ctx.moveTo(-s*.23,-s*.88);
-    ctx.bezierCurveTo(-s*.20,-s*1.07,s*.20,-s*1.07,s*.23,-s*.88);
-    ctx.lineTo(s*.30,s*.22);ctx.bezierCurveTo(s*.31,s*.43,-s*.31,s*.43,-s*.30,s*.22);
-    ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.fillStyle='#ffffff25';ctx.beginPath();ctx.ellipse(0,-s*.81,s*.17,s*.07,0,0,Math.PI*2);ctx.fill();
-    ctx.restore();
+  function turningBoard(ctx,r,L,s,steer) {
+    ctx.save();ctx.translate(0,-s*.25);ctx.rotate(steer*1.04);ctx.translate(0,s*.25);
+    SK.drawBoard(ctx,r.board,0,-s*.32,s*.65,s*1.48,0,r.input?.steer||0);ctx.restore();
   }
   const bareBodies=new WeakMap();
   function bodyWithoutBoard(img,source){
@@ -289,7 +297,7 @@
     if(r.def.hidden)return false;
     const key=r.def.gender==='girl'?'girlBoard':'boyBoard';if(!frames[key])return false;
     if(r.state==='ride'&&!front&&!r.curTrick){
-      const amount=Math.min(1,Math.max(Math.abs(steer),r.brake||0));
+      const amount=r.fx?.pushPose>0||r.pumpPose>0||r.jumpCharge>0?0:Math.min(1,Math.max(Math.abs(steer),r.brake||0));
       const blend=amount*amount*(3-2*amount),c=turnBlend.getContext('2d');
       const unit=120,anchorX=256,anchorY=420;
       c.clearRect(0,0,512,512);c.save();c.translate(anchorX,anchorY);
@@ -298,16 +306,17 @@
         c.globalCompositeOperation='lighter';c.globalAlpha=blend;
         // Même hauteur tête-planche et même ancrage que la pose droite.
         const img=bodyWithoutBoard(colored(frames[key][0],r,L,key+'0'),frames[key][0]);
-        const height=(2.87-.23*Math.min(1,Math.max(r.crouch||0,r.jumpCharge||0)))*unit,width=height*img.width/img.height;
+        const height=(2.87-.23*Math.min(1,Math.max(r.crouch||0,r.jumpCharge||0,r.pumpPose||0)))*unit,width=height*img.width/img.height;
         c.save();if(steer>0)c.scale(-1,1);
         c.drawImage(img,-width/2,-height+.37*unit,width,height);c.restore();
       }
-      c.restore();turningBoard(ctx,L,s,steer);ctx.drawImage(turnBlend,-anchorX*s/unit,-anchorY*s/unit,512*s/unit,512*s/unit);return true;
+      c.restore();turningBoard(ctx,r,L,s,steer);ctx.drawImage(turnBlend,-anchorX*s/unit,-anchorY*s/unit,512*s/unit,512*s/unit);return true;
     }
     let index=front?1:2,mirror=false;
     if(Math.abs(steer)>.35){index=0;mirror=steer>0;}
     if(front&&key==='girlBoard')index=0;
-    const img=colored(frames[key][index],r,L,key+index),height=2.87*s,width=height*img.width/img.height;
+    const img=bodyWithoutBoard(colored(frames[key][index],r,L,key+index),frames[key][index]),height=2.87*s,width=height*img.width/img.height;
+    SK.drawBoard(ctx,r.board,0,s*.12,s*.48,s*2.05,mirror?-.85:.85,r.input?.steer||0);
     ctx.save();if(mirror)ctx.scale(-1,1);ctx.drawImage(img,-width/2,-height+.37*s,width,height);ctx.restore();return true;
   };
   S.seated=function(ctx,r,L,s){
@@ -317,7 +326,7 @@
     ctx.strokeStyle=L.pants;ctx.lineWidth=s*.25;ctx.lineCap='round';ctx.lineJoin='round';
     for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*s*.16,-s*.06);ctx.lineTo(side*s*.28,s*.18);ctx.lineTo(side*s*.29,s*.65);ctx.stroke();
       ctx.fillStyle='#263e48';ctx.fillRect(side*s*.29-s*.13,s*.54,s*.29,s*.22);}
-    ctx.fillStyle=L.board;ctx.beginPath();ctx.ellipse(0,s*.85,s*.95,s*.18,.07,0,Math.PI*2);ctx.fill();
+    SK.drawBoard(ctx,r.board,0,s*.85,s*.4,s*2.05,Math.PI/2+.07,r.input?.steer||0);
   };
   S.face=function(ctx,r,L,x,y,rad) {
     if(r.def.hidden)return false;
@@ -325,7 +334,7 @@
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index);
     ctx.save();ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.clip();ctx.fillStyle='#dceffa';ctx.fillRect(x-rad,y-rad,rad*2,rad*2);
-    ctx.drawImage(img,img.width*.12,0,img.width*.76,img.height*.34,x-rad,y-rad,rad*2,rad*2);ctx.restore();return true;
+    ctx.drawImage(img,img.width*.12,0,img.width*.76,img.height*.34,x-rad,y-rad*1.16,rad*2,rad*2);ctx.restore();return true;
   };
   S.walk=function(ctx,r,L,x,y,s,t,direction,moving) {
     const girl=r.def.gender==='girl',side=moving&&(direction==='left'||direction==='right');

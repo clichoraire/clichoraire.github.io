@@ -99,6 +99,7 @@
   };
 
   S.drawFace = function (ctx, d, hy, R, o) {
+    if(window.FamilyHeads?.has(d.familyPortrait)){window.FamilyHeads.draw(ctx,d.familyPortrait,'front',-R*1.22,hy-R*1.35,R*2.44,R*2.4);return;}
     const look = d.look, hair = look.hair || '#333', kid = d.size < 0.8;
     const ex = R * 0.12;   // les yeux regardent vers l'avant (vue 3/4)
     // cheveux

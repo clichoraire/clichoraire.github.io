@@ -1,10 +1,10 @@
 // Snow Kids — clavier et manettes → entrées des joueurs { steer, up, down, jump, trick, shoot, item }.
-// J1 : flèches, X saut, C figure, V tir, B objet.  J2 : WASD, G saut, H figure, J tir, K objet.  Manettes : stick/croix, A saut, B figure, X tir, Y objet.
+// J1 : flèches, X saut chargé au relâchement, C figure, V tir, B objet.  J2 : WASD, G saut, H figure, J tir, K objet.  Manettes : stick/croix, A saut, B figure, X tir, Y objet.
 (function (SK) {
   'use strict';
   const I = SK.Input = { keys: {}, pressed: {} };
   const MAPS = [
-    { left: ['ArrowLeft'], right: ['ArrowRight'], up: ['ArrowUp'], down: ['ArrowDown'], jump: ['KeyX', 'Space'], trick: ['KeyC'], shoot: ['KeyV'], push: ['KeyN'], item: ['KeyB'] },
+    { left: ['ArrowLeft'], right: ['ArrowRight'], up: ['ArrowUp'], down: ['ArrowDown'], jump: ['KeyX'], trick: ['KeyC'], shoot: ['KeyV'], push: ['KeyN'], item: ['KeyB'] },
     { left: ['KeyA'], right: ['KeyD'], up: ['KeyW'], down: ['KeyS'], jump: ['KeyG'], trick: ['KeyH'], shoot: ['KeyJ'], push: ['KeyL'], item: ['KeyK'] },
   ];
   I.init = function () {
@@ -14,7 +14,7 @@
   };
   I.consume = function (code) { const p = !!I.pressed[code]; I.pressed[code] = false; return p; };
   I.endFrame = function () { I.pressed = {}; };
-  const down = codes => codes.some(c => I.keys[c]);
+  const down = (codes=[]) => codes.some(c => I.keys[c]);
   I.pads = function () { try { return navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : []; } catch (e) { return []; } };
   I.read = function (player) {
     const m = MAPS[player] || MAPS[0];

@@ -8,6 +8,8 @@
     {code:'TETEPROTEGEE',label:'Recevoir le casque',apply:s=>{s.gear=[...new Set([...s.gear,'casque'])];}},
     {code:'SANS CASQUE',label:'Retirer le casque pour comparer',apply:s=>{s.gear=s.gear.filter(x=>x!=='casque');}},
     {code:'GARDE ROBE',label:'Recevoir tous les vêtements',apply:s=>{s.wardrobe=[...new Set([...(s.wardrobe||[]),...SK.WARDROBE.filter(x=>x.cat==='linge').map(x=>x.id)])];}},
+    {code:'ECOLE64',label:'Débloquer toutes les missions de l’école',apply:s=>{s.allMissionsUnlocked=true;}},
+    {code:'TOURNOIS64',label:'Débloquer toutes les coupes et les pistes',apply:s=>{s.allCupsUnlocked=true;s.unlocked=SK.COURSES.length;}},
     {code:'PLANCHES64',label:'Recevoir toutes les planches',apply:s=>{s.boards=SK.BOARDS.map(x=>x.id);}}
   ];
   const normalize=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
