@@ -27,8 +27,8 @@
   if(!offer||offer.action!=='buy'||(save.trainingPoints||0)<offer.price)return false;
   save.trainingPoints-=offer.price;save.upgrades[offer.boardId][stat]=offer.level+1;return true;
  };
- G.stats=save=>{
-  const ch=SK.charById(save.advChar||save.char),board=SK.effectiveBoard(save.advBoard,save),gear=new Set(save.gear||[]),crown=gear.has('couronne')?1:0;
+ G.stats=(save,boardId=save.advBoard,charId=save.advChar||save.char)=>{
+  const ch=SK.charById(charId),board=SK.effectiveBoard(boardId,save),gear=new Set(save.gear||[]),crown=gear.has('couronne')?1:0;
   return {speed:ch.speed+board.speed+crown,corner:ch.corner+board.corner+crown+(gear.has('bottes')?1:0),acceleration:ch.acceleration+board.acceleration+crown,jump:ch.jump+board.jump+crown+(gear.has('ressort')?1:0),strength:ch.strength+(save.strengthLevel||0),walk:save.walkLevel||0,shot:save.powerLevels?.shot||0,item:save.powerLevels?.item||0};
  };
  G.open=({save,store,onBack})=>{

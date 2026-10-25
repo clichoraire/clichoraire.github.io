@@ -246,16 +246,25 @@
   function chooseBoard(onStart,tournament) {
     document.getElementById('race-board-choice')?.remove();
     const dialog=document.createElement('dialog');dialog.id='race-board-choice';
-    dialog.innerHTML='<h2>Choisis ta planche</h2><p>'+ (tournament?'Tu la garderas pendant tout le tournoi.':'Prête pour cette course !')+'</p><div class="race-board-list"></div><p class="race-board-description"></p><div class="race-board-actions"><button type="button" class="n64-btn btn-retour">Retour</button><button type="button" class="n64-btn btn-depart">Départ !</button></div>';
+    dialog.innerHTML='<h2>Choisis ta planche</h2><p>'+ (tournament?'Tu la garderas pendant tout le tournoi.':'Prête pour cette course !')+'</p><div class="race-board-overview" aria-live="polite"></div><div class="race-board-list"></div><p class="race-board-description"></p><div class="race-board-actions"><button type="button" class="n64-btn btn-retour">Retour</button><button type="button" class="n64-btn btn-depart">Départ !</button></div>';
     let selected=flow.picks[0]?.boardId||save.advBoard||'freestyle';
     const owned=SK.BOARDS.filter(b=>b.id==='freestyle'||(save.boards||[]).includes(b.id));if(!owned.some(b=>b.id===selected))selected='freestyle';
-    const list=dialog.querySelector('.race-board-list');
-    const refresh=()=>{list.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===selected)));dialog.querySelector('.race-board-description').textContent=SK.boardById(selected).desc;};
+    const list=dialog.querySelector('.race-board-list'),baseline=selected,overview=dialog.querySelector('.race-board-overview');
+    const preview=id=>{
+      overview.innerHTML=flow.picks.map(pick=>{const ch=SK.charById(pick.charId),cur=SK.Gym.stats(save,baseline,pick.charId),next=SK.Gym.stats(save,id,pick.charId);
+        return '<section><h3>'+ch.name+' · '+SK.boardById(id).name+'</h3><small>Comparaison avec '+SK.boardById(baseline).name+'</small>'+[['speed','Vitesse'],['corner','Virage'],['acceleration','Accélération'],['jump','Saut'],['strength','Force']].map(([key,label])=>{
+          const before=cur[key],after=next[key],max=Math.max(8,before,after),delta=after-before;
+          return '<div class="board-total-row"><span>'+label+'</span><div class="board-total-meter">'+Array.from({length:max},(_,i)=>'<i class="'+(i<Math.min(before,after)?'filled':i<after?'gain':i<before?'loss':'')+'"></i>').join('')+'</div><b class="'+(delta>0?'gain-text':delta<0?'loss-text':'')+'">'+(delta?before+' → ':'')+after+'</b></div>';
+        }).join('')+'</section>';
+      }).join('');
+      dialog.querySelector('.race-board-description').textContent=SK.boardById(id).desc;
+    };
+    const refresh=()=>{list.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===selected)));preview(selected);};
     for(const b of owned){const button=document.createElement('button');button.type='button';button.dataset.id=b.id;
       const cv=document.createElement('canvas');cv.width=360;cv.height=630;cv.style.width='120px';cv.style.height='210px';const bc=cv.getContext('2d');bc.scale(3,3);SK.Shop.drawItem(bc,{...effectiveBoard(b.id),kind:'board'},60,103,82,0,true);bc.setTransform(1,0,0,1,0,0);SK.animateBoardPreview(cv,{...effectiveBoard(b.id),kind:'board'},180,309,246);button.append(cv);
       const name=document.createElement('strong');name.textContent=b.name;button.append(name);
       const stats=document.createElement('span');stats.className='race-board-stats';const eb=effectiveBoard(b.id);
-      stats.innerHTML=[['speed','Vitesse'],['corner','Virage'],['acceleration','Accélération'],['jump','Saut']].map(([key,label])=>{const v=eb[key]||0;return '<span title="'+label+'" class="'+(v>0?'positive':v<0?'negative':'neutral')+'"><i class="stat-icon stat-'+key+'"><svg viewBox="0 0 32 34">'+SK.STAT_ICONS[key]+'</svg></i>'+fmtMod(v)+'</span>';}).join('');button.append(stats);button.onclick=()=>{selected=b.id;A.sfx('click');refresh();};list.append(button);
+      stats.innerHTML=[['speed','Vitesse'],['corner','Virage'],['acceleration','Accélération'],['jump','Saut']].map(([key,label])=>{const v=eb[key]||0;return '<span title="'+label+'" class="'+(v>0?'positive':v<0?'negative':'neutral')+'"><i class="stat-icon stat-'+key+'"><svg viewBox="0 0 32 34">'+SK.STAT_ICONS[key]+'</svg></i>'+fmtMod(v)+'</span>';}).join('');button.append(stats);button.onpointerenter=button.onfocus=()=>preview(b.id);button.onpointerleave=button.onblur=()=>preview(selected);button.onclick=()=>{selected=b.id;A.sfx('click');refresh();};list.append(button);
     }
     dialog.querySelector('.btn-retour').onclick=()=>dialog.close();
     dialog.querySelector('.btn-depart').onclick=()=>{for(const pick of flow.picks)pick.boardId=selected;save.board=selected;if(flow.mode==='champ'||flow.mode==='practice'||flow.finalBoss)save.advBoard=selected;store();dialog.close();onStart();};
