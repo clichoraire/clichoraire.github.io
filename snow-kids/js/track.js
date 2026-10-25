@@ -18,11 +18,9 @@
       if(level>=3)sections.forEach((sec,i)=>{sec.slope=[7,16,22,12,18][i%5];if(i%3!==0){sec.t='c';sec.c=(i%2?1:-1)*(level===5?.075:level===4?.035:.025);}});
     }
     // Dedicated jumping lesson; do not alter the regular Sunset Rock course.
-    if(opts?.rockBarriers)course={...course,surface:'stone',sections:[
-      {t:'s',n:100,w:4.2,boxes:'b',coins:4},
-      {t:'s',n:100,w:3.8,boxes:'b',coins:4},
-      {t:'s',n:100,w:3.4,boxes:'b',coins:4}
-    ]};
+    if(opts?.rockBarriers){const level=Number(opts.rockBarriers);
+      course={...course,surface:'stone',sections:level<=3?Array.from({length:10},(_,i)=>({t:level===3?'c':'s',c:level===3?(i%2?-.065:.065):0,n:22,w:level===1?10:8})): [{t:'s',n:100,w:4.2},{t:'s',n:100,w:3.8},{t:'s',n:100,w:3.4}]};
+    }
     if(opts?.edgeLesson){
       const width=4.6-.3*(opts.edgeLesson-1);
       course={...course,surface:'snow',sections:[{t:'s',n:30,w:width,boxes:'b'},
@@ -113,7 +111,7 @@
         }
       }
     }
-    if(opts?.rockBarriers){
+    if(opts?.rockBarriers>3){
       // Three rocks cover the entire rideable width. Spacing decreases from
       // 170 m to 100 m, leaving time to land and charge the next jump.
       let index=35;
@@ -209,6 +207,24 @@
       }
     }
     if(opts?.coinLevel)SK.CoinWildlife?.setup(track,opts.coinLevel,rng);
+    if(opts?.rockBarriers&&opts.rockBarriers<=3){
+      const level=Number(opts.rockBarriers);track.wildlife=[];
+      for(const s of segs){s.props=s.props.filter(p=>p.decor);s.tunnel=level===3||(level===2&&s.i>=70&&s.i<150);if(s.tunnel)s.props=[];s.coins=[];s.boxes=[];s.cave=true;}
+      for(let i=22;i<nRace-10;i+=level===1?13:7){const s=segs[i],side=s.curve>0?-1:1;
+        const x=level===3?side*(2+rng()*3):rng.range(-s.w+2,s.w-2);
+        s.props.push({type:'rock',x,r:level===1?1.1:.65,size:level===1?1:.65,clearance:level===1?.7:.45,decor:false,trainingBarrier:true,v:rng()});
+      }
+      for(let i=45;i<nRace-12;i+=45){const s=segs[i],type=i%90===0?'lowarch':'fallenlog';
+        for(let j=i-4;j<=i+4;j++)segs[j].props=segs[j].props.filter(p=>p.decor);
+        s.props.push({type,x:0,r:s.w,span:s.w,clearance:.6,mandatory:true,decor:false});
+      }
+      if(level===2)for(const i of [30,175,200]){const s=segs[i],x=(i%2?1:-1)*(s.w-1.5);for(let j=i-1;j<=i+1;j++)segs[j].dirt={x,w:1.3};track.wildlife.push({type:'mole',x,z:s.z+SEG/2,cooldown:0});}
+      if(level===3)for(const start of [38,108,173]){
+        for(let i=start;i<start+15;i++)segs[i].ceiling=1.5;
+        const s=segs[start-5];s.props.push({type:'ceilingwarning',x:0,r:0,decor:true,span:s.w});
+        for(let i=start+2;i<start+14;i+=5){const sg=segs[i];sg.props=sg.props.filter(p=>p.decor);sg.props.push({type:'fallenlog',x:0,r:sg.w,span:sg.w,clearance:.4,mandatory:true,decor:false});}
+      }
+    }
     return track;
   };
 })(window.SK);

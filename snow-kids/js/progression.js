@@ -10,7 +10,7 @@
   save.xp=Math.max(0,Math.floor(Number(save.xp)||0))+amount;const after=P.info(save),points=(after.level-before.level)*2;
   save.trainingPoints=before.points+points;return {xp:amount,levels:after.level-before.level,level:after.level,points};
  };
- P.reward=({finished,practice,success,first=false,rank=0})=>!finished?0:practice?(success?(first?120:60):0):40+Math.max(0,3-rank)*10;
+ P.reward=({finished,practice,success,first=false,rank=0})=>!finished?0:practice?(success?(first?120:60):20):40+Math.max(0,3-rank)*10;
 
  P.animateResult=(root,before,after,onLevel)=>{
   const bar=root.querySelector('.result-xp-bar'),heading=root.querySelector('.reward-progress-heading strong'),caption=root.querySelector('.reward-progress-caption'),panel=root.querySelector('.reward-progress');

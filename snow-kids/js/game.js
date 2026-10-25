@@ -209,7 +209,7 @@
     }
     // ---- latéral : direction, force centrifuge, murs
     const kappa = s.curve / (SEG * SEG), centrifugal = kappa * r.speed * r.speed * 4.2;
-    r.steer += SK.clamp(inp.steer - r.steer, -7/1.3 * dt, 7/1.3 * dt); // la direction se prend progressivement (inclinaison)
+    r.steer += SK.clamp((r.fx.oilSpin>0?Math.sin(this.time*12):inp.steer) - r.steer, -7/1.3 * dt, 7/1.3 * dt); // la direction se prend progressivement (inclinaison)
     // L'inclinaison visuelle suit la direction sans changement instantané de pose.
     r.turnCharge = (r.turnCharge || 0) + SK.clamp(inp.steer - (r.turnCharge || 0), -1.8/1.3 * dt, 1.8/1.3 * dt);
     r.visualTurn = (r.visualTurn || 0) + (r.turnCharge - (r.visualTurn || 0)) * (1 - Math.exp(-10/1.3 * dt));
@@ -246,7 +246,7 @@
     if(releasedJump&&!stunned&&SK.pumpKick(r))this.emit({type:'pump',r});
 
     // ---- relief, sauts, figures
-    const gy = T.groundY(r.z);
+    const gy = T.groundY(r.z);if(r.state==='ride')r.ceilingHit=false;
     if (r.state === 'ride' || (stunned && r.h <= 0)) {
       if (gy < r.yAbs - 1.0 && r.speed > 5 && !stunned) { // le sol se dérobe d'un coup (falaise) : envol
         r.trickRampJump = [T.segAt(zPrev),T.segAt(r.z)].some(q=>q.ramp&&!q.down); r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * .6 * (r.jumpCharge||0) : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; if(inp.jump)this.springJump(r,r.jumpCharge||0);this.emit({ type: 'jump', r, big: true });
@@ -258,6 +258,7 @@
     if(releasedJump||r.state!=='ride')r.jumpCharge=0;
     if (r.state === 'air') {
       r.airT += dt; r.vy -= SK.GRAVITY * dt; r.yAbs += r.vy * dt; r.h = Math.max(0, r.yAbs - gy);
+      if(T.segAt(r.z).ceiling&&r.h>T.segAt(r.z).ceiling){r.h=T.segAt(r.z).ceiling;r.yAbs=gy+r.h;r.vy=-2;if(!r.ceilingHit){r.ceilingHit=true;this.fall(r,1.2,false);this.emit({type:'obstacle',r,kind:'ceiling'});}}
       if (r.curTrick) { r.curTrick.t += dt * r.trickSpeed; if (r.curTrick.t >= r.curTrick.def.dur) { r.tricksDone.push(r.curTrick.def); r.curTrick = null; } }
       else if (edge('trick') || (edge('jump') && r.airT > 0.08)) { // C ou X en l'air + direction = une des huit figures
         const dir = inp.up ? 'up' : inp.down ? 'down' : inp.steer < -0.3 ? 'left' : inp.steer > 0.3 ? 'right' : 'none';
@@ -314,7 +315,7 @@
     }
     for (const k of this.rocks) {
       if (k.until>this.time && k.lap===r.lap && !r.immune() && this.time >= (k.landed || 0) && k.z >= zPrev && k.z < r.z && Math.abs(r.x - k.x) < 1.7 && r.h < 1.2 && !(k.owner === r && this.time - k.t0 < 1.5) && r.state !== 'fall') {
-        k.until = 0; this.fall(r, 1.4, false); if(k.type==='banana'){r.fx.slip=1.4;r.pushVelocity=(r.input.steer<0?-1:1)*6;} this.emit({ type: 'rockhit', r, by: k.owner, trapType:k.type||'rock' }); if (k.owner && k.owner !== r) k.owner.stats.hits++;
+        k.until = 0; if(k.type==='oil'){r.speed*=.45;r.fx.slow=2;r.fx.oilSpin=1.5;r.pushVelocity=(this.rng()<.5?-1:1)*4;if(this.rng()<.5)this.fall(r,1.4,false);}else this.fall(r, 1.4, false); if(k.type==='banana'){r.fx.slip=1.4;r.pushVelocity=(r.input.steer<0?-1:1)*6;} this.emit({ type: 'rockhit', r, by: k.owner, trapType:k.type||'rock' }); if (k.owner && k.owner !== r) k.owner.stats.hits++;
       }
     }
     // ---- tirs et objets
@@ -390,11 +391,10 @@
   P.rollPower = function(r,kind){
     if(this.boostOnly)return 'ventilo';
     this.rankAll();
-    if(r.rank===0)return kind==='red'?'rocher':this.rng.pick(['rocher','rocher','ventilo','invisible']);
+    if(r.rank===0)return kind==='red'?'rocher':this.rng.pick(['rocher','huile','ventilo','invisible']);
     return this.rng.pick(kind==='red'?SK.SHOT_IDS:SK.ITEM_IDS);
   };
-  P.dropTrap = function(r){
-    const type=this.rng.pick(SK.TRAP_IDS);
+  P.dropTrap = function(r,type=this.rng.pick(SK.TRAP_IDS)){
     this.rocks.push({type,z:Math.max(0,r.z-2.5),x:r.x,lap:r.lap,until:this.time+SK.itemDuration(r,30),owner:r,t0:this.time,landed:this.time+.7});
     r.rockAnim=this.time;r.trapType=type;
   };
@@ -427,7 +427,8 @@
   P.useItem = function (r) {
     const kind = r.item; r.item = null; r.stats.items++;
     this.emit({ type: 'item', r, kind });
-    if (kind === 'rocher') this.dropTrap(r);
+    if (kind === 'huile') this.dropTrap(r,'oil');
+    else if (kind === 'rocher') this.dropTrap(r);
     else if (kind === 'ventilo') {if(SK.GearEffects)SK.GearEffects.boost(r,3);else r.fx.fan=3;}
     else if (kind === 'invisible') r.fx.invisible = SK.itemDuration(r,6);
     else if (kind === 'nuage') { for (const o of this.racers) if (o !== r && o.progress()>r.progress() && !o.immune()) o.fx.slow = SK.itemDuration(r,o.gear.lunettes ? 2 : 4); }

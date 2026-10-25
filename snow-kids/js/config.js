@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.51';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.52';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -453,6 +453,7 @@ window.SK.VERSION = '1.51';   // à augmenter à chaque mise en ligne (affichée
     bonhomme:  { name: 'Bonhomme',    icon: '⛄', desc: 'Transforme le coureur devant en bonhomme de neige : lent et impossible à diriger.' },
   };
   SK.ITEMS = {
+    huile: {name:'Huile noire',icon:'🛢️',desc:'Laisse une flaque derrière toi : elle fait déraper et ralentir, avec une chance sur deux de tomber.'},
     rocher:    { name: 'Piège surprise', icon: '🎲', desc: 'Dépose au hasard une roche, un cône, un bonhomme de neige ou une banane derrière toi.' },
     ventilo:   { name: 'Ventilateur', icon: '🌀', desc: 'Turbo : grosse accélération pendant 3 secondes.' },
     invisible: { name: 'Invisible',   icon: '👻', desc: 'Invisible 6 secondes : aucun tir ne peut t\'atteindre.' },
@@ -478,6 +479,7 @@ window.SK.VERSION = '1.51';   // à augmenter à chaque mise en ligne (affichée
     snowman:{name:'Bonhomme de neige',icon:'⛄'}, banana:{name:'Peau de banane',icon:'🍌'}
   };
   SK.TRAP_IDS = Object.keys(SK.TRAPS);
+  SK.TRAPS.oil={name:'Huile noire',icon:'🛢️'};
 
   // ------------------------------------------------------------------ figures (en l'air) : durée de base et pièces
   SK.TRICKS = {
@@ -619,7 +621,7 @@ window.SK.VERSION = '1.51';   // à augmenter à chaque mise en ligne (affichée
     { id: 'tricks1', type: 'tricks', course: 'rookie', goal: 12, reward: 70, name: 'Premières figures', desc: 'Gagne au moins 12 G en figures (saute au sommet des bosses avec X, puis C ou X + direction).' },
     { id: 'shots1', type: 'hits', course: 'highway', goal: 3, reward: 100, name: 'Stand de tir', desc: 'Trois coureurs lents roulent devant toi : touche-les 3 fois avec les tirs des boîtes rouges.' },
     { id: 'time1', type: 'time', course: 'rookie', goal: 60, reward: 80, name: 'Contre la montre', desc: 'Descends le Mont Débutant en moins de 1:00. Penche-toi (↑) dans les lignes droites !' },
-    { id: 'nofall1', type: 'nofall', course: 'sunset', goal: 0, reward: 80, name: 'Pas une chute', desc: 'Une piste étroite sans chute : saute par-dessus les barrages de rochers. Ils se rapprochent vers la fin ! Maintiens X, puis relâche pour sauter.' },
+    { id: 'nofall1', type: 'nofall', course: 'sunset', goal: 0, reward: 80, name: 'Pas une chute', desc: 'Évite les roches, baisse-toi sous les barres et saute les troncs. Termine sans tomber !' },
     { id: 'slalom2', type: 'slalom', course: 'silver', goal: 18, reward: 130, name: 'Slalom débutant', desc: 'Même chose sur la glace du Mont d\'Argent : 18 portes sur 22. Anticipe, ça glisse.' },
     { id: 'tricks2', type: 'tricks', course: 'dizzy', goal: 35, reward: 160, name: 'Premières figures', desc: 'Gagne 35 G en figures au Pays Vertige : enchaîne Rodéo, Tornade et vrilles 720.' },
     { id: 'shots2', type: 'hits', course: 'ninja', goal: 6, reward: 180, name: 'Stand de tir', desc: 'Six touches en un tour du Pays des Ninjas. Le Fantôme vole les tirs des autres !' },
