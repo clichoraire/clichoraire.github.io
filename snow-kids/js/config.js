@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.41';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.42';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -35,9 +35,9 @@ window.SK.VERSION = '1.41';   // à augmenter à chaque mise en ligne (affichée
     { id: 'adam', gender: 'boy', name: 'Adam', birth: '2021-09-11', family: 'Bibi', size: 0.6, speed: 5, corner: 4, acceleration: 2, jump: 2, strength: 2, hairStyle: 'spiky', hat: 'none', weight: 2, cheeks: true,
       colors: { jacket: '#fb8c00', pants: '#3949ab', hat: '#1565c0', hair: '#4a2f1b', skin: '#f6d6bd', board: '#e53935' },
       desc: 'Famille Bibi — Zoom-zoom ! Toujours prêt à repartir à toute vitesse.' },
-    { id: 'milo', gender: 'boy', name: 'Milo', birth: '2024-03-12', family: 'Bibi', size: 0.45, speed: 5, corner: 2, acceleration: 4, jump: 3, strength: 1, hairStyle: 'short', hat: 'none', weight: 1, pacifier: true, cheeks: true,
+    { id: 'milo', lowPassagePassive: true, gender: 'boy', name: 'Milo', birth: '2024-03-12', family: 'Bibi', size: 0.45, speed: 5, corner: 2, acceleration: 4, jump: 3, strength: 1, hairStyle: 'short', hat: 'none', weight: 1, pacifier: true, cheeks: true,
       colors: { jacket: '#26a69a', pants: '#3949ab', hat: '#ff6b6b', hair: '#6b4a2b', skin: '#f6d6bd', board: '#ffee58' },
-      desc: 'Famille Bibi — Le petit dernier, avec sa petite mèche, fait déjà de grandes figures.' },
+      desc: 'Famille Bibi — Petit mais malin ! Milo passe sous les obstacles bas sans se pencher.' },
     { id: 'edison', gender: 'boy', name: 'Edison', birth: '2023-02-08', family: 'Jay', size: 0.5, speed: 2, corner: 4, acceleration: 4, jump: 3, strength: 2, hairStyle: 'curly', hat: 'none', weight: 1, pacifier: true, cheeks: true,
       colors: { jacket: '#1e88e5', pants: '#1e3a8a', hat: '#1565c0', hair: '#2b1d12', skin: '#eec49b', board: '#ffb323' },
       desc: 'Famille Jay — Le champion de la glissade, avec sa chevelure blonde et son grand sourire.' },
