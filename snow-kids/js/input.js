@@ -8,7 +8,7 @@
     { left: ['KeyA'], right: ['KeyD'], up: ['KeyW'], down: ['KeyS'], jump: ['KeyG'], trick: ['KeyH'], shoot: ['KeyJ'], item: ['KeyK'] },
   ];
   I.init = function () {
-    window.addEventListener('keydown', e => { if (e.repeat) return; I.keys[e.code] = true; I.pressed[e.code] = true; if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && document.activeElement.tagName !== 'SELECT') e.preventDefault(); });
+    window.addEventListener('keydown', e => { if (e.repeat || e.target.closest?.('input,textarea,dialog')) return; I.keys[e.code] = true; I.pressed[e.code] = true; if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && document.activeElement.tagName !== 'SELECT') e.preventDefault(); });
     window.addEventListener('keyup', e => { I.keys[e.code] = false; });
     window.addEventListener('blur', () => { I.keys = {}; });
   };

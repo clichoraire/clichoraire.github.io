@@ -11,21 +11,29 @@
   <section id="screen-menu" class="screen">
     <div class="menu-stage">
       <h1 class="sr-only">Snow Kids</h1>
+      <div class="menu-art" aria-hidden="true"><img src="assets/accueil-famille.png" alt=""></div>
+      <div class="menu-snow" aria-hidden="true"></div>
       <div class="menu-buttons">
-        <button id="btn-adv" class="big primary">AVENTURE <small id="champ-progress"></small></button>
-        <div class="menu-row">
-          <button id="btn-free" class="big">COURSE LIBRE</button>
-          <button id="btn-time" class="big">CONTRE-LA-MONTRE</button>
-          <button id="btn-duo" class="big">2 JOUEURS</button>
-          <button id="btn-help" class="big ghost">COMMENT JOUER ?</button>
+        <div class="menu-kicker"><span></span> LA MONTAGNE T’ATTEND <span></span></div>
+        <div class="menu-play">
+          <button id="btn-adv" class="big primary n64-btn btn-depart"><span>Aventure <small id="champ-progress"></small></span><span class="play-arrow" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 16h21M18 7l9 9-9 9"/></svg></span></button>
+          <button id="btn-free" class="big n64-btn btn-retour"><span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M7 12q6-6 13 0t13 0M7 20q6-6 13 0t13 0M7 28q6-6 13 0t13 0"/></svg></span><span>Course libre<small>À toi la descente</small></span></button>
+          <button id="btn-time" class="big n64-btn btn-retour"><span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/><path d="M20 10v11h10"/></svg></span><span>Contre-la-montre<small>Bats ton record</small></span></button>
         </div>
-        <div class="options">
-          <label>Ordi <select id="opt-diff"></select></label>
-          <label><input type="checkbox" id="opt-sound"> Sons</label>
-          <label><input type="checkbox" id="opt-music"> Musique</label>
-          <button id="btn-reset" class="ghost" style="font-size:12px;padding:5px 9px">Effacer la sauvegarde</button>
-          <span id="version"></span>
+        <div class="menu-settings">
+          <div class="difficulty-control">
+            <span id="difficulty-label">Niveau des rivaux</span>
+            <select id="opt-diff" class="sr-only" tabindex="-1" aria-hidden="true"></select>
+            <button id="difficulty-button" aria-labelledby="difficulty-label difficulty-value" aria-haspopup="listbox" aria-expanded="false" aria-controls="difficulty-list"><span class="difficulty-dots" aria-hidden="true">●●<i>●</i></span><span id="difficulty-value">Normal</span><span class="select-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></button>
+            <div id="difficulty-list" role="listbox" aria-labelledby="difficulty-label" class="hidden"></div>
+          </div>
+          <div class="sound-controls">
+            <label class="sound-switch"><input type="checkbox" id="opt-sound" role="switch"><span class="switch-track" aria-hidden="true"></span><span>Sons</span></label>
+            <label class="sound-switch"><input type="checkbox" id="opt-music" role="switch"><span class="switch-track" aria-hidden="true"></span><span>Musique</span></label>
+          </div>
+          <button id="btn-help" class="help-button"><span aria-hidden="true">?</span> Comment jouer</button>
         </div>
+        <div class="menu-footer"><span>9 pistes · Une montagne de plaisir</span><div><span id="version"></span><span aria-hidden="true"> · </span><button id="btn-reset">Effacer la sauvegarde</button></div></div>
       </div>
       <section id="howto" class="hidden">
         <h2>Comment jouer ? <button id="btn-help-close" class="ghost" style="float:right;font-size:13px;padding:5px 10px">Fermer</button></h2>
@@ -35,28 +43,53 @@
   </section>
 
   <section id="screen-school" class="screen hidden">
-    <div class="panel">
-      <h2>École : pratiques et missions</h2>
-      <p class="sub" id="school-sub"></p>
-      <div id="missions" class="cards"></div>
-      <div class="buttons"><button id="btn-school-back" class="ghost">Retour au village</button></div>
-    </div>
+    <canvas id="school-scene" width="1440" height="900" aria-label="Une classe avec les autres enfants du village"></canvas>
+    <header class="school-header"><h2 class="n64-title" data-text="École de glisse">École de glisse</h2><progress id="school-progress"></progress><p id="school-sub"></p></header>
+    <div id="school-gold" class="school-gold"></div>
+    <div id="missions" aria-label="Missions de l’école"></div>
+    <button id="school-more" aria-label="Voir les missions suivantes">⬇</button>
+    <button id="btn-school-back" class="n64-btn btn-retour">Retour au village</button>
   </section>
 
   <section id="screen-advselect" class="screen hidden">
     <div class="panel wide">
-      <h2>Aventure : choisis ton Kid</h2>
+      <h2>Choisis ton personnage</h2>
       <canvas id="adv-canvas" width="1280" height="520"></canvas>
-      <div id="adv-info" class="adv-info"></div>
-      <div class="buttons"><button id="btn-adv-back" class="ghost">Retour</button><button id="btn-adv-ok" class="primary">C'est lui ! (Entrée)</button></div>
+      <div id="adv-info" class="adv-info"></div><div id="adv-names" aria-hidden="true"></div>
+      <div class="buttons"><button id="btn-adv-back" class="ghost n64-btn btn-retour">Retour</button><button id="btn-adv-ok" class="primary n64-btn btn-depart">C’est lui !</button></div>
     </div>
   </section>
 
   <section id="screen-town" class="screen hidden">
     <div class="canvas-wrap"><div class="stage"><canvas id="town-canvas" width="1280" height="720"></canvas>
-      <div id="town-top"><span id="town-gold" class="gold-box"></span><span id="town-char"></span><button id="btn-town-look" class="gold">Apparence</button><button id="btn-town-menu" class="ghost">Menu</button></div>
+      <div id="town-top"><span id="town-gold" class="gold-box"></span><span id="town-char"></span><button id="btn-town-menu" class="ghost">Menu</button></div>
       <div id="town-label"></div>
     </div></div>
+  </section>
+
+  <section id="screen-museum" class="screen hidden">
+    <div class="canvas-wrap"><div class="stage museum-stage">
+      <canvas id="museum-canvas" width="1280" height="720" aria-label="Musée : marche avec les flèches ou clique sur un trophée pour t’en approcher"></canvas>
+      <header class="museum-header"><h2>Musée de Snow Kids</h2><span id="museum-summary"></span></header>
+      <label class="museum-collection">Galerie <select id="museum-collection"><option value="tracks">Trophées des pistes</option><option value="cups">Coupes du circuit</option></select></label>
+      <div id="museum-detail" role="status" hidden></div>
+      <button id="museum-left" class="museum-arrow" aria-label="Marcher vers la gauche">◀</button><button id="museum-right" class="museum-arrow" aria-label="Marcher vers la droite">▶</button>
+      <button id="museum-back" class="n64-btn btn-retour">Retour au village</button>
+      <p class="museum-help">← → ou A / D pour marcher · Clique sur un trophée pour le visiter</p>
+    </div></div>
+  </section>
+
+  <section id="screen-throne" class="screen hidden">
+    <canvas id="throne-canvas" width="1280" height="720" aria-label="Une silhouette couronnée est assise sur un trône dans une salle sombre"></canvas>
+    <aside class="throne-test"><button id="throne-test-toggle" aria-expanded="false" aria-controls="throne-test-controls">Tester les chandelles · temporaire</button><div id="throne-test-controls" hidden><strong id="throne-test-count"></strong><div><button id="throne-test-less" aria-label="Éteindre une chandelle">−1</button><button id="throne-test-more" aria-label="Allumer une chandelle">+1</button><button id="throne-test-all">Tout allumer</button></div><button id="throne-test-reset">Retour à ma progression</button><small>Aperçu seulement · aucun trophée ajouté</small></div></aside>
+    <p id="throne-speech" role="status"></p>
+    <div class="throne-actions"><button id="throne-next" class="n64-btn btn-depart">Suivant</button><button id="throne-back" class="n64-btn btn-retour">Retour au village</button><button id="throne-challenge" class="n64-btn btn-depart" hidden>Accepter le défi</button></div>
+  </section>
+  <section id="screen-wardrobe" class="screen hidden">
+    <div class="closet-panel"><h2 id="wardrobe-title">Ma garde-robe</h2><p class="closet-sub">Tes vêtements et accessoires. Choisis quoi porter, mettre ou enlever.</p>
+      <div class="closet-layout"><div class="closet-fitting"><canvas id="wardrobe-preview" width="300" height="380"></canvas><strong id="wardrobe-name"></strong><button id="wardrobe-wear" class="n64-btn btn-depart">Porter</button></div><div id="wardrobe-items" aria-label="Vêtements possédés"></div></div>
+      <button id="wardrobe-back" class="n64-btn btn-retour">Retour au village</button>
+    </div>
   </section>
 
   <section id="screen-records" class="screen hidden">
@@ -64,7 +97,7 @@
       <h2>Salle des trophées</h2>
       <p class="sub" id="records-sub"></p>
       <div id="records"></div>
-      <div class="buttons"><button id="btn-records-back" class="ghost">Retour au village</button></div>
+      <div class="buttons"><button id="btn-records-back" class="ghost n64-btn btn-retour">Retour au village</button></div>
     </div>
   </section>
 
@@ -77,26 +110,32 @@
         <label>Planche <select id="sel-board"></select></label>
         <span id="sel-board-desc" style="color:#cfd8dc;font-size:14px"></span>
       </div>
-      <div class="buttons"><button id="btn-sel-back" class="ghost">Retour</button><button id="btn-sel-ok" class="primary">Continuer</button></div>
+      <div class="buttons"><button id="btn-sel-back" class="ghost n64-btn btn-retour">Retour</button><button id="btn-sel-ok" class="primary n64-btn btn-depart">Continuer</button></div>
     </div>
   </section>
 
   <section id="screen-course" class="screen hidden">
-    <div class="panel">
-      <h2 id="course-title">Choisis ta piste</h2>
-      <p class="sub" id="course-sub"></p>
-      <div id="course-cards" class="cards"></div>
-      <div class="row" id="laps-row"><label>Tours <select id="sel-laps"></select></label></div>
-      <div class="buttons"><button id="btn-course-back" class="ghost">Retour</button><button id="btn-course-ok" class="primary">Départ !</button></div>
+    <canvas id="course-backdrop" width="1600" height="1000" aria-hidden="true"></canvas>
+    <div class="panel course-panel">
+      <header class="course-header"><span class="course-eyebrow">LE GRAND CIRCUIT SNOW KIDS</span><h2 id="course-title">Tournoi : choisis ta coupe</h2>
+      <p class="sub" id="course-sub"></p></header>
+      <div id="course-cards" class="cup-sections"></div>
+      <footer class="course-actions"><button id="btn-course-back" class="ghost n64-btn btn-retour">← Retour</button><div class="course-choice"><strong id="course-choice-name"></strong><span id="course-choice-info"></span><div class="row" id="laps-row"><label>Tours <select id="sel-laps"></select></label></div></div><button id="btn-course-ok" class="primary n64-btn btn-depart">Départ ! <span aria-hidden="true">→</span></button></footer>
     </div>
   </section>
 
   <section id="screen-shop" class="screen hidden">
     <div class="canvas-wrap"><div class="stage">
       <canvas id="shop-canvas" width="1280" height="720"></canvas>
+      <div class="emergency-plate"><span>URGENCE</span><button id="shop-emergency" aria-label="Bouton rouge d’urgence"><span aria-hidden="true">!</span></button></div>
       <div id="shop-gold" class="gold-box"></div>
       <div id="shop-me"></div>
-      <div id="shop-tabs"></div>
+      <div id="shop-aisle" aria-label="Articles du magasin"><div id="shop-world"></div></div>
+      <button id="shop-pan-left" class="shop-pan" aria-label="Regarder à gauche">◀</button>
+      <button id="shop-pan-right" class="shop-pan" aria-label="Regarder à droite">▶</button>
+      <p id="shop-explore-hint">← → pour explorer · Clique sur un objet</p>
+      <div id="shop-tabs" hidden></div>
+      <dialog id="shop-card" aria-labelledby="shop-title"><button id="shop-card-close" aria-label="Fermer la fiche">✕</button>
       <div id="shop-show">
         <div id="shop-title"></div>
         <div class="show-row"><button id="shop-prev" class="arrow">◀</button><canvas id="shop-item" width="260" height="260"></canvas><button id="shop-next" class="arrow">▶</button></div>
@@ -105,6 +144,7 @@
         <div id="shop-price" class="shop-price"></div>
       </div>
       <div id="shop-bottom"><div id="shop-desc"></div><button id="shop-buy">ACHETER</button></div>
+      </dialog>
       <button id="btn-shop-back" class="ghost">RETOUR</button>
     </div></div>
   </section>
@@ -123,8 +163,16 @@
       <div id="pause" class="hidden">
         <div class="pause-box">
           <h2>PAUSE</h2>
-          <p><b>J1</b> : flèches diriger · ↑ se pencher (plus vite) · ↓ freiner · <kbd>X</kbd> sauter · en l'air <kbd>C</kbd> ou <kbd>X</kbd> + direction = figures · <kbd>V</kbd> tir · <kbd>B</kbd> objet<br>
-             <b>J2</b> : <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>G</kbd> sauter · <kbd>H</kbd> figure · <kbd>J</kbd> tir · <kbd>K</kbd> objet · <kbd>Échap</kbd> pause</p>
+          <div class="pause-controls">
+            <div><kbd>←</kbd><kbd>→</kbd><strong>Tourner</strong></div>
+            <div><kbd>↑</kbd><strong>Accélérer / se baisser</strong></div>
+            <div><kbd>↓</kbd><strong>Freiner</strong></div>
+            <div><kbd>X</kbd><strong>Maintiens, puis relâche pour sauter</strong></div>
+            <div><kbd>V</kbd><strong>Lancer ton tir</strong></div>
+            <div><kbd>B</kbd><strong>Utiliser ton objet</strong></div>
+            <div><kbd>C</kbd><span> + flèche en l’air</span><strong>Faire une figure</strong></div>
+            <div><kbd>Échap</kbd><strong>Pause / reprendre</strong></div>
+          </div>
           <button id="btn-resume" class="primary">Reprendre</button>
           <button id="btn-quit" class="ghost">Abandonner la course</button>
         </div>
@@ -136,21 +184,44 @@
     <div class="panel">
       <h2 id="result-title">Résultats</h2>
       <p class="sub" id="result-sub"></p>
-      <div id="result"></div>
+      <canvas id="cup-podium" width="960" height="380" hidden></canvas><div id="result"></div>
       <div id="result-buttons" class="buttons"></div>
     </div>
   </section>
 </div>
+<section id="screen-gym" class="hidden"><div class="gym-room"><canvas id="gym-scene" width="1280" height="720"></canvas><div id="gym-gold"></div><button id="gym-talk" class="n64-btn btn-depart">Parler à la coach</button><div id="gym-training" hidden></div><button id="gym-back" class="n64-btn btn-retour">Retour au village</button></div></section>
 <div id="toast"></div>
+<dialog id="cheat-dialog" aria-labelledby="cheat-title"><button id="cheat-close" aria-label="Fermer">✕</button><h2 id="cheat-title"></h2><div id="cheat-body"></div></dialog>
 <script src="js/config.js"></script>
+<script src="js/gear-effects.js"></script>
+<script src="js/cups.js"></script>
+<script src="js/photo-puzzles.js"></script>
 <script src="js/track.js"></script>
+<script src="js/lens-snow.js"></script>
 <script src="js/game.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/sprite-sources.js"></script>
+<script src="js/family-head-sources.js"></script>
+<script src="js/family-heads.js"></script>
+<script src="js/sprites.js"></script>
 <script src="js/render.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/input.js"></script>
 <script src="js/town.js"></script>
 <script src="js/shop.js"></script>
+<script src="js/museum.js"></script>
+<script src="js/titles.js"></script>
+<script src="js/home.js"></script>
+<script src="js/cheats.js"></script>
+<script src="js/progression.js"></script>
+<script src="js/profiles.js"></script>
+<script src="js/wardrobe.js"></script>
+<script src="js/throne.js"></script>
+<script src="js/debug-house.js"></script>
+<script src="js/gym.js"></script>
+<script src="js/school.js"></script>
 <script src="js/main.js"></script>
+<script src="js/menu-detail.js"></script>
+
 </body>
 </html>

@@ -61,8 +61,9 @@
     const next = T.segs[Math.min(T.segs.length - 1, i0 + 1)];
     if (r.state === 'ride') {
       if (s.jump || next.jump) inp.jump = true;
-      else for (const p of s.props.concat(next.props)) if (!p.decor && Math.abs(r.x - p.x) < p.r + 0.9) { const pz = (p.sg || s).z; if (r.speed > 10 && race.rng() < 0.5 + 0.1 * r.def.trick) inp.jump = !wasJump; }
+      else for (const p of s.props.concat(next.props)) if (!p.decor && p.type!=='lowarch' && Math.abs(r.x - p.x) < p.r + 0.9) { const pz = (p.sg || s).z; if (r.speed > 10 && race.rng() < 0.8) inp.jump = !wasJump; }
     }
+    if(r.state==='ride'&&T.segs.slice(i0,i0+8).some(s=>s.props.some(p=>p.type==='lowarch'))){inp.up=true;inp.down=false;inp.jump=false;}
     // ---- figures en l'air
     if (r.state === 'air' && !r.curTrick) {
       const g = SK.GRAVITY, vy = r.vy, h = r.h;

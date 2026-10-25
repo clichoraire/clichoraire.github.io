@@ -1,1 +1,14 @@
-{ "bunker": { "version": "3.1", "commit": "e795a62294af39cd09420c1868aa57d2c167b9a5" }, "hockey": { "version": "1.4", "commit": "66663018e189203c3e5860f9dfc16211576267ea" }, "snow": { "version": "1.4", "commit": "627f02f4af48f7930c4a147260bb19bcbdb65049" } }
+{
+  "bunker": {
+    "version": "3.1",
+    "commit": "e795a62294af39cd09420c1868aa57d2c167b9a5"
+  },
+  "hockey": {
+    "version": "1.4",
+    "commit": "66663018e189203c3e5860f9dfc16211576267ea"
+  },
+  "snow": {
+    "version": "1.5",
+    "commit": "7601dc41413468b2b6f9447625ed941968c39fe2"
+  }
+}

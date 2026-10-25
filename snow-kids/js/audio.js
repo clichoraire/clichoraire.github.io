@@ -1,4 +1,4 @@
-// Snow Kids — sons et musique synthétisés (WebAudio, aucun fichier). SK.Audio.sfx('coin'), SK.Audio.music('rookie').
+// Snow Kids — bruitages WebAudio et bande sonore MP3 locale. SK.Audio.sfx('coin'), SK.Audio.music('rookie').
 (function (SK) {
   'use strict';
   const A = SK.Audio = { enabled: true, ctx: null, musicOn: true, cur: null, timer: null };
@@ -18,6 +18,7 @@
     if (!A.enabled || !A.ctx) return;
     if (A.ctx.state === 'suspended') A.ctx.resume();
     switch (name) {
+      case 'emergency': tone(180,620,.09,'triangle',.2); tone(620,230,.16,'sine',.18,.07); break;
       case 'coin': tone(1200, 1800, 0.08, 'square', 0.12); tone(1800, 2400, 0.12, 'square', 0.1, 0.07); break;
       case 'box': tone(500, 900, 0.12, 'triangle', 0.2); tone(900, 1300, 0.15, 'triangle', 0.15, 0.1); break;
       case 'jump': tone(300, 700, 0.18, 'sine', 0.2); break;
@@ -45,37 +46,22 @@
       case 'unlock': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 0.35, 'triangle', 0.2, i * 0.12)); break;
     }
   };
-  // ---- musique : petit séquenceur (mélodie + basse) par thème. Notes en demi-tons depuis A4 ; 0 = silence (null).
-  const SONGS = {
-    menu:    { bpm: 112, mel: [0, 4, 7, 12, 7, 4, 0, null, 2, 5, 9, 14, 9, 5, 2, null], bass: [-24, -24, -17, -17, -22, -22, -15, -15] },
-    rookie:  { bpm: 128, mel: [0, 4, 7, 4, 9, 7, 4, 2, 0, 4, 7, 12, 11, 9, 7, null], bass: [-24, -24, -19, -19, -22, -22, -17, -17] },
-    snowman: { bpm: 120, mel: [7, 7, 4, 0, 2, 4, 5, 4, 7, 9, 7, 4, 2, 0, 2, null], bass: [-24, -20, -17, -20, -22, -19, -15, -19] },
-    sunset:  { bpm: 116, mel: [0, 3, 7, 10, 7, 3, 0, null, -2, 2, 5, 10, 5, 2, -2, null], bass: [-24, -24, -21, -21, -26, -26, -22, -22] },
-    highway: { bpm: 140, mel: [0, 0, 7, 7, 5, 5, 3, 3, 0, 3, 5, 7, 10, 7, 5, 3], bass: [-24, -12, -24, -12, -21, -9, -22, -10] },
-    grass:   { bpm: 124, mel: [0, 2, 4, 7, 9, 7, 4, 2, 0, 2, 4, 5, 7, 5, 4, 2], bass: [-24, -24, -20, -20, -17, -17, -19, -19] },
-    sand:    { bpm: 118, mel: [0, 1, 4, 5, 7, 5, 4, 1, 0, -1, 0, 4, 7, 8, 7, null], bass: [-24, -24, -23, -23, -20, -20, -17, -17] },
-    silver:  { bpm: 136, mel: [12, 7, 4, 7, 12, 14, 12, 7, 9, 4, 0, 4, 9, 11, 9, 4], bass: [-24, -24, -20, -20, -15, -15, -17, -17] },
-    ninja:   { bpm: 126, mel: [0, 1, 5, 7, 5, 1, 0, null, 7, 8, 12, 7, 5, 1, 0, null], bass: [-24, -24, -24, -22, -19, -19, -19, -17] },
-    dizzy:   { bpm: 150, mel: [0, 4, 7, 12, 16, 12, 7, 4, 2, 5, 9, 14, 17, 14, 9, 5], bass: [-24, -12, -20, -8, -17, -5, -19, -7] },
+  // MP3 locaux : les bruitages restent synthétisés, avec un réglage indépendant.
+  const TRACKS = {"1": "01-title-theme.mp3", "2": "02-options-results.mp3", "3": "03-player-and-game-selection.mp3", "4": "04-battle-race-level-and-board-selection.mp3", "5": "05-skill-game-congratulations.mp3", "6": "06-skill-game-level-and-board-selection.mp3", "7": "07-time-attack-level-and-board-selection.mp3", "8": "08-board-shop.mp3", "9": "09-battle-race-start.mp3", "10": "10-battle-race-goal.mp3", "11": "11-rookie-mountain-ninja-land-animal-land.mp3", "12": "12-big-snowman.mp3", "13": "13-sunset-rock.mp3", "14": "14-night-highway.mp3", "15": "15-grass-valley.mp3", "16": "16-dizzy-land.mp3", "17": "17-silver-mountain.mp3", "18": "18-training.mp3", "19": "19-credits.mp3"};
+  const THEMES={menu:1,results:2,select:3,course:4,congrats:5,schoolSelect:6,timeSelect:7,shop:8,start:9,goal:10,rookie:11,ninja:11,snowman:12,sunset:13,highway:14,grass:15,dizzy:16,silver:17,training:18,credits:19,town:18,sand:13};
+  A.player=new Audio();A.player.preload='metadata';A.player.volume=.35;
+  A.music=function(name,next){
+    const track=THEMES[name];
+    if(!name||!track){A.stopMusic();return;}
+    const changed=A.cur!==name;
+    A.cur=name;
+    if(changed){A.player.pause();A.player.src='assets/music/snowboard-kids/'+TRACKS[track];A.player.loop=!['start','goal'].includes(name);A.next=next||null;}
+    if(!A.musicOn)return;
+    if(A.player.paused)A.player.play().catch(()=>{}); // Un geste utilisateur relance si le navigateur bloque l'autoplay.
   };
-  const freq = n => 440 * Math.pow(2, n / 12);
-  A.music = function (name) {
-    if (A.timer) { clearInterval(A.timer); A.timer = null; }
-    A.cur = name;
-    if (!A.enabled || !A.ctx || !A.musicOn || !name || !SONGS[name]) return;
-    const song = SONGS[name], step = 60 / song.bpm / 2; let i = 0, next = A.ctx.currentTime + 0.05;
-    const play = (f, t0, dur, type, vol) => { const o = A.ctx.createOscillator(), g = A.ctx.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur); o.connect(g); g.connect(A.mgain); o.start(t0); o.stop(t0 + dur + 0.02); };
-    A.timer = setInterval(() => {
-      while (next < A.ctx.currentTime + 0.4) {
-        const m = song.mel[i % song.mel.length], b = song.bass[Math.floor(i / 2) % song.bass.length];
-        if (m != null) play(freq(m), next, step * 0.9, 'square', 0.08);
-        if (i % 2 === 0) play(freq(b), next, step * 1.6, 'triangle', 0.12);
-        if (i % 4 === 0) { play(80, next, 0.08, 'sine', 0.25); }
-        next += step; i++;
-      }
-    }, 100);
-  };
-  A.stopMusic = function () { if (A.timer) clearInterval(A.timer); A.timer = null; A.cur = null; };
-  A.setEnabled = function (on) { A.enabled = on; if (!on) A.stopMusic(); else if (A.cur) A.music(A.cur); };
-  A.setMusic = function (on) { A.musicOn = on; if (!on) { const c = A.cur; A.stopMusic(); A.cur = c; } else if (A.cur) A.music(A.cur); };
+  A.player.addEventListener('ended',()=>{if(A.next){const next=A.next;A.next=null;A.music(next);}});
+  A.player.addEventListener('error',()=>console.warn('Musique indisponible : '+A.cur));
+  A.stopMusic=function(){A.player.pause();A.cur=null;A.next=null;};
+  A.setEnabled=function(on){A.enabled=on;};
+  A.setMusic=function(on){A.musicOn=on;if(!on)A.player.pause();else if(A.cur)A.music(A.cur);};
 })(window.SK);

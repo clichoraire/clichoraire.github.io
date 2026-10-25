@@ -29,7 +29,7 @@ echo "▸ Hockey Boisjoli (copie de HockeyBoisjoli/)"
 rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/HockeyBoisjoli/" hockey-boisjoli/
 
 echo "▸ Snow Kids (copie de SnowKids/)"
-rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/SnowKids/" snow-kids/
+python3 "$PROJETS/SnowKids/tools/export-public.py" "$PWD/snow-kids"
 
 echo "▸ Frigo Snap (copie de FrigoSnap/)"
 rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/FrigoSnap/" frigo-snap/
