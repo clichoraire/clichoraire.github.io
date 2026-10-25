@@ -37,7 +37,7 @@
     this.strength = Math.min(10,(d.strength||3)+(opts.strengthLevel||0)); this.pushCooldown=0; this.pushVelocity=0;
     this.stunFactor = 1 - 0.08 * (d.weight - 3);
     this.gear = opts.gear || {}; this.powerLevels=opts.powerLevels||{};
-    if (this.gear.casque) this.stunFactor *= 0.8;
+    if (Object.keys(this.gear).some(SK.isHelmet)) this.stunFactor *= 0.8;
     if (this.gear.gants) this.trickSpeed *= 1.1;
     SK.GearEffects?.init(this);
     this.x = 0; this.z = 0; this.lap = 0; this.yAbs = 0; this.h = 0; this.vy = 0; this.lastVy = 0; this.speed = 0; this.steer = 0;

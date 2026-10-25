@@ -883,3 +883,7 @@ table.results td.num { text-align: right; font-family: monospace; }
 .shop-pan{background-color:#a8753e;background-image:repeating-linear-gradient(4deg,transparent 0 7px,#5c321d44 8px 10px,transparent 11px 19px),radial-gradient(ellipse at 30% 40%,#f2ca83 0,#c89150 42%,#8e572f 100%);border-color:#4a3023;box-shadow:inset 0 0 0 3px #e9bd76,0 5px 0 #422b20}
 @media(min-width:1101px) and (pointer:fine){#screen-shop .shop-pan{width:88px;height:88px;font-size:44px;border-width:6px}#shop-pan-left{left:14px}#shop-pan-right{right:14px}}
 @media(max-width:500px){.board-comparison{padding:8px}.board-comparison table{font-size:13px}.board-comparison thead th{font-size:11px}.board-comparison th,.board-comparison td{padding:6px 3px}}
+
+@media(min-width:1101px) and (min-height:501px){#town-label{left:var(--player-x,50%);right:auto;bottom:6px;transform:translateX(-50%)}#town-label .town-enter{font-size:30px;padding:8px 42px;min-height:54px}}
+.owned-check{position:absolute;right:-12px;top:-12px;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#30a54d;border:3px solid #fff7c4;color:white;font:900 25px Arial;box-shadow:0 3px 0 #175d32;z-index:3;pointer-events:none}
+.product-owned .product-price{background:#d9f4c6;border-color:#348844}.product-owned canvas{filter:drop-shadow(0 0 3px #80d565)}

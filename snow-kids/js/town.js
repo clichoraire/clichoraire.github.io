@@ -490,6 +490,7 @@
       canvas.dataset.villagers=locals.length;
       if(now>=bubbleUntil)bubble.hidden=true;
       bubble.style.left=(SK.clamp(x-camera,145,1135)/12.8)+'%';bubble.style.top=((opts.charId==='milo'?475:opts.charId==='adam'||opts.charId==='edison'?440:410)/7.2)+'%';
+      if(opts.labelEl)opts.labelEl.style.setProperty('--player-x',(SK.clamp(x-camera,150,1130)/12.8)+'%');
       const r=SK.fakeRacer(opts.charId,opts.boardId,'ride',opts.look);R.drawWalker(ctx,r,x,610+(digProgress?Math.sin(digProgress*Math.PI*4)**2*13:0),65,walkTime,facing,moving);
       for(const local of locals)T.drawParentGreeting(ctx,local,opts.charId,camera);
       T.drawRichardChat(ctx,richardChat,camera);

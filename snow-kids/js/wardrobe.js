@@ -5,7 +5,7 @@
     const ch=SK.charById(save.advChar||save.char),base=SK.lookOf(ch,{gear:[],look:{}});
     const original=[['jacket','Manteau de départ'],['pants','Pantalon de départ'],['hat','Chapeau de départ'],['hatColor','Couleur de chapeau de départ']].map(([slot,name])=>({id:'original-'+slot,kind:'wardrobe',slot,value:base[slot],name}));
     const owned=SK.WARDROBE.filter(it=>it.cat==='linge'&&(it.price===0||(save.wardrobe||[]).includes(it.id))).map(it=>({...it,kind:'wardrobe'}));
-    const accessories=SK.GEAR.filter(it=>(save.gear||[]).includes(it.id)&&(it.id==='casque'||it.id==='fusee'||SK.isGoggles(it.id))).map(it=>({...it,kind:'gear',toggle:true,slot:it.id==='fusee'?'rocketPack':it.id==='casque'?'helmet':'goggles',value:SK.isGoggles(it.id)?it.id:true}));
+    const accessories=SK.GEAR.filter(it=>(save.gear||[]).includes(it.id)&&(SK.isHelmet(it.id)||it.id==='fusee'||SK.isGoggles(it.id))).map(it=>({...it,kind:'gear',toggle:true,slot:it.id==='fusee'?'rocketPack':SK.isHelmet(it.id)?'helmet':'goggles',value:(SK.isGoggles(it.id)||SK.isHelmet(it.id))?it.id:true}));
     return original.concat(owned.filter(it=>!original.some(o=>o.slot===it.slot&&o.value===it.value)),accessories);
   };
   W.open=function(opts){

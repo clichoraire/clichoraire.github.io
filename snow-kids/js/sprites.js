@@ -62,7 +62,7 @@
     // Zach conserve exactement les couleurs de la référence par défaut. Les achats restent visibles.
     const base=r.def.colors,custom=r.look||{},original=r.def.id==='zach';
     const colors={jacket:original&&(!custom.jacket||custom.jacket===base.jacket)?null:L.jacket,pants:original&&(!custom.pants||custom.pants===base.pants)?null:L.pants,hat:original&&(!custom.hatColor||custom.hatColor===base.hat)?null:L.hatColor,hair:original&&(!custom.hairColor||custom.hairColor===base.hair)?null:L.hairColor,skin:original&&(!custom.skin||custom.skin===base.skin)?null:L.skin,board:original&&(!r.board||r.board.id==='freestyle')?null:L.board};
-    const id=r.def.id+key+JSON.stringify(colors)+Boolean(L.helmet)+(L.goggles||'')+Boolean(L.rocketPack)+(L.hat||'none');if(cache.has(id))return cache.get(id);
+    const id=r.def.id+key+JSON.stringify(colors)+(L.helmet||'')+(L.goggles||'')+Boolean(L.rocketPack)+(L.hat||'none');if(cache.has(id))return cache.get(id);
     const c=canvas(source.width,source.height),ctx=c.getContext('2d');ctx.drawImage(source,0,0);const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;
     const coat=custom.jacket?SK.jacketPalette(L.jacket):null;
     const coatData=coat?fittedCoat(source,L.jacket,key):null;
@@ -106,7 +106,7 @@
       if(view==='side')ctx.translate(-c.width*.22,0);
       SK.drawRocketPack(ctx,0,0,c.height*(view==='side'?.12:.16),view);ctx.restore();
     }
-    if(L.helmet) helmet(c,r,key);else if(L.hat&&L.hat!=='none')headwear(c,r,key,L);
+    if(L.helmet) helmet(c,r,key,L.helmet);else if(L.hat&&L.hat!=='none')headwear(c,r,key,L);
     if(L.goggles) goggles(c,r,key,L.goggles);
     if(cache.size>180)cache.clear();cache.set(id,c);return c;
   }
@@ -195,7 +195,7 @@
     ctx.save();ctx.translate(c.width/2,top);if(board&&i===0||!board&&!girl&&i===3)ctx.scale(-1,1);
     SK.drawHeadwear(ctx,L.hat,L.hatColor,0,-actualH*.02,hw*.88,actualH*.56,view);ctx.restore();
   }
-  function helmet(c,r,key) {
+  function helmet(c,r,key,id) {
     const ctx=c.getContext('2d'),girl=r.def.gender==='girl',board=key.includes('Board');
     const index=Number(key.match(/(\d+)$/)?.[1]||0);
     let view='front',mirror=false;
@@ -212,26 +212,7 @@
     // Retirer cheveux et ancienne casquette sous la coque, pas seulement la pointe du crâne.
     ctx.clearRect(0,0,c.width,top+actualH*.40);
     ctx.save();ctx.translate(c.width/2,top);if(mirror)ctx.scale(-1,1);
-    const w=hw*.51,h=actualH*.47;
-    ctx.translate(0,-actualH*.015);
-    // Coque commune : la sangle et la protection d'oreille suivent la vue.
-    ctx.fillStyle='#7e57c2';ctx.beginPath();ctx.moveTo(-w,h*.94);
-    ctx.bezierCurveTo(-w,h*.40,-w*.62,0,0,0);
-    ctx.bezierCurveTo(w*.62,0,w,h*.40,w,h*.94);
-    ctx.quadraticCurveTo(0,h*.83,-w,h*.94);ctx.fill();
-    ctx.strokeStyle='#382954';ctx.lineWidth=hh*.035;ctx.stroke();
-    ctx.strokeStyle='#ffd54a';ctx.lineWidth=hh*.07;ctx.beginPath();
-    ctx.moveTo(view==='side'?-w*.25:0,h*.08);ctx.quadraticCurveTo(view==='side'?w*.12:0,h*.35,view==='side'?w*.25:0,h*.76);ctx.stroke();
-    ctx.fillStyle='#b49ade';ctx.beginPath();ctx.ellipse(-w*.4,h*.33,w*.24,h*.12,-.4,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#27353f';ctx.lineWidth=hh*.035;ctx.lineCap='round';
-    if(view==='side'){
-      ctx.beginPath();ctx.moveTo(-w*.43,h*.84);ctx.lineTo(-w*.12,hh*.86);ctx.lineTo(w*.55,hh*.8);ctx.stroke();
-      ctx.fillStyle='#604197';ctx.beginPath();ctx.ellipse(-w*.55,h*.93,w*.21,h*.3,0,0,Math.PI*2);ctx.fill();
-    }else if(view==='front'){
-      for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*w*.87,h*.84);ctx.lineTo(side*w*.57,hh*.87);ctx.stroke();}
-    }else{
-      ctx.fillStyle='#493568';ctx.fillRect(-w*.45,h*.72,w*.9,h*.15);
-    }
+    SK.drawSnowHelmet(ctx,id===true?'casque':id,0,-actualH*.02,hw*1.07,actualH*(view==='back'?.76:view==='side'?.58:.48),view,true);
     ctx.restore();
   }
   // Descente en ligne droite : planche dans l'axe et jambes articulées.
@@ -414,7 +395,11 @@
       // Le torse recouvre la naissance du bras : épaule derrière le manteau.
       ctx.save();ctx.beginPath();ctx.rect(-width/2,-height,width,height);ctx.rect(width*.22,-height*.63,width*.28,height*.40);ctx.clip('evenodd');ctx.drawImage(img,-width/2,-height,width,height);ctx.restore();
     }else ctx.drawImage(img,-width/2,-height,width,height);
-    if(frontLegs)ctx.restore();
+    if(frontLegs){
+      ctx.restore();
+      // Les mitaines passent devant le masque qui remplace les jambes.
+      for(const sign of [-1,1]){if(r.wave&&sign===1)continue;ctx.save();ctx.translate(sign*width*.35,-height*.37);ctx.scale(sign,1);ctx.fillStyle=SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.moveTo(-s*.075,-s*.09);ctx.lineTo(s*.075,-s*.09);ctx.bezierCurveTo(s*.12,s*.01,s*.11,s*.14,s*.025,s*.15);ctx.bezierCurveTo(-s*.05,s*.17,-s*.09,s*.11,-s*.085,s*.04);ctx.quadraticCurveTo(-s*.15,s*.06,-s*.12,-s*.015);ctx.closePath();ctx.fill();ctx.restore();}
+    }
     ctx.restore();
   };
   // Milo : corps et jambes plus courts, sans écraser son visage ni son casque.

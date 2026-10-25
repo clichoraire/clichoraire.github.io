@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.16';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.17';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -157,12 +157,14 @@ window.SK.VERSION = '1.16';   // à augmenter à chaque mise en ligne (affichée
     outline();c.strokeStyle=palette[0];c.lineWidth=.15;c.lineJoin='round';c.stroke();c.restore();
     outline();c.strokeStyle='#263545';c.lineWidth=.025;c.stroke();c.restore();
   };
+  SK.HELMETS={casque:'#afc7df',casqueForet:'#315b53',casqueCorail:'#db756a',casqueNoir:'#46515c'};
+  SK.isHelmet=id=>Object.prototype.hasOwnProperty.call(SK.HELMETS,id);
   SK.GEAR = [
     {id:'lunettesNeige',cat:'equip',name:'Lunettes bleutées',price:250,desc:'Verres bleutés : la neige glisse immédiatement de la caméra lorsque tu les portes.'},
     {id:'lunettesForet',cat:'equip',name:'Lunettes forêt',price:250,desc:'Verres vert forêt : la neige glisse immédiatement de la caméra lorsque tu les portes.'},
     {id:'lunettesMiroir',cat:'equip',name:'Lunettes miroir intégrales',price:950,unlock:{wins:3},desc:'Verres jaune-orange-rose : bloquent toute la neige sur la caméra, même les grosses projections des adversaires, lorsque tu les portes.'},
     {id:'lunettesTricolores',cat:'equip',name:'Lunettes tricolores intégrales',price:950,unlock:{wins:3},desc:'Bleu, blanc et rouge : bloquent toute la neige sur la caméra, même les grosses projections des adversaires, lorsque tu les portes.'},
-    { id: 'casque', cat: 'equip', name: 'Casque', price: 300, desc: 'Tu te relèves 20 % plus vite après une chute.' },
+    ...Object.entries({casque:'bleu glacier',casqueForet:'vert forêt',casqueCorail:'corail',casqueNoir:'anthracite'}).map(([id,color])=>({id,cat:'equip',name:'Casque '+color,price:300,desc:'Casque de snowboard : tu te relèves 20 % plus vite après une chute. Choisis ta couleur !'})),
     { id: 'gants', cat: 'equip', name: 'Gants de pro', price: 400, unlock: { wins: 1 }, desc: 'Les figures s\'exécutent 10 % plus vite : plus de pièces par saut.' },
     { id: 'bottes', cat: 'equip', name: 'Bottes à crampons', price: 500, unlock: { wins: 2 }, desc: 'Plus d\'accroche : +10 % en virage, même sur la glace.' },
     { id: 'lunettes', cat: 'equip', name: 'Lunettes anti-pluie', price: 350, unlock: { wins: 3 }, desc: 'Le nuage et le parachute durent moitié moins longtemps sur toi.' },
@@ -400,7 +402,8 @@ window.SK.VERSION = '1.16';   // à augmenter à chaque mise en ligne (affichée
     const l = save && save.look && save.look[def.id];
     const look = l ? Object.assign(base, l) : base;
     look.goggles = l && Object.prototype.hasOwnProperty.call(l,'goggles') ? (save?.gear?.includes(l.goggles) ? l.goggles : null) : ['lunettesMiroir','lunettesTricolores','lunettesNeige','lunettesForet','lunettes'].find(id=>save?.gear?.includes(id)) || null;
-    look.helmet = !!save?.gear?.includes('casque') && l?.helmet !== false;
+    const ownedHelmets=(save?.gear||[]).filter(SK.isHelmet),selected=l?.helmet===true?'casque':l?.helmet;
+    look.helmet=l?.helmet===false?false:ownedHelmets.includes(selected)?selected:ownedHelmets[0]||false;
     look.rocketPack = !!save?.gear?.includes('fusee') && l?.rocketPack !== false;
     return look;
   };

@@ -48,7 +48,7 @@
     if (tab === 'boards') return SK.BOARDS.map(b => { const eff = SK.effectiveBoard(b.id, save), owned = save.boards.includes(b.id), reason = owned ? null : SK.lockReason(b.unlock, save), lock = b.secret && reason ? 'À toi de découvrir son secret !' : reason; return { id: b.id, kind: 'board', secret: !!b.secret, name: b.secret && lock ? '???' : 'Planche ' + b.name, price: b.price, color: eff.color, pattern: eff.pattern, desc: b.secret && lock ? 'Une planche mystérieuse…' : b.desc + ` Vitesse ${mod(eff.speed)} · Virage ${mod(eff.corner)} · Accélération ${mod(eff.acceleration)} · Saut ${mod(eff.jump)}.`, owned, lock, action: lock ? 'locked' : !owned ? 'buy' : save.advBoard === b.id ? 'equipped' : 'equip' }; });
     if (tab === 'linge') { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); return SK.WARDROBE.filter(w => w.cat === tab).map(w => { const owned = w.price === 0 || (save.wardrobe || []).includes(w.id), eq = look[w.slot] === w.value; return { id: w.id, kind: 'wardrobe', slot: w.slot, value: w.value, name: w.name, price: w.price, desc: w.desc, owned, lock: null, action: eq ? 'equipped' : owned ? 'equip' : 'buy' }; }); }
     if (tab === 'up') { const b = SK.boardById(save.advBoard), u = (save.upgrades[b.id] = save.upgrades[b.id] || { speed: 0, corner: 0, acceleration: 0, jump: 0 }); return UP_DEFS.map(([k, lab, d]) => { const lvl = u[k] || 0, max = lvl >= SK.UPGRADE_MAX, lock = max ? null : SK.lockReason(lvl >= 1 ? { wins: 3 } : null, save); return { id: 'up-' + k, kind: 'up', stat: k, boardId: b.id, name: lab + ' +1 · ' + b.name, price: max ? 0 : SK.upgradeCost(lvl), color: b.color, desc: d + ` Niveau actuel : ${lvl} / ${SK.UPGRADE_MAX}.`, owned: max, lock, action: lock ? 'locked' : max ? 'max' : 'buy', level: lvl }; }); }
-    return SK.GEAR.filter(g => g.cat === tab && g.id !== 'lunettes').map(g => { const owned = save.gear.includes(g.id) || (g.id === 'masque' && save.shinobin), lock = owned ? null : SK.lockReason(g.unlock, save); return { id: g.id, kind: 'gear', name: g.name, price: g.price, desc: g.desc, owned, lock, action: lock ? 'locked' : owned ? SK.isGoggles(g.id)?(SK.lookOf(SK.charById(save.advChar)||SK.CHARACTERS[0],save).goggles===g.id?'equipped':'equip'):'owned' : 'buy' }; });
+    return SK.GEAR.filter(g => g.cat === tab && g.id !== 'lunettes').map(g => { const owned = save.gear.includes(g.id) || (g.id === 'masque' && save.shinobin), lock = owned ? null : SK.lockReason(g.unlock, save); return { id: g.id, kind: 'gear', name: g.name, price: g.price, desc: g.desc, owned, lock, action: lock ? 'locked' : owned ? (SK.isGoggles(g.id)||SK.isHelmet(g.id))?(SK.lookOf(SK.charById(save.advChar)||SK.CHARACTERS[0],save)[SK.isHelmet(g.id)?'helmet':'goggles']===g.id?'equipped':'equip'):'owned' : 'buy' }; });
   }
 
   // Stats du Kid avec sa planche et son équipement ; previewIt = article sélectionné (acheté/équipé → aperçu).
@@ -63,7 +63,7 @@
     }
     return { ch, cur, next: calc(boardId, g2, up) };
   }
-  function previewLook(save, it) { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); if (it && it.kind === 'wardrobe' && it.action !== 'equipped') look[it.slot] = it.value; if(it?.kind === 'gear' && it.id === 'casque') look.helmet = true; if(it?.kind==='gear'&&it.id==='fusee')look.rocketPack=true; if(it?.kind==='gear'&&SK.isGoggles(it.id))look.goggles=it.id; return look; }
+  function previewLook(save, it) { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); if (it && it.kind === 'wardrobe' && it.action !== 'equipped') look[it.slot] = it.value; if(it?.kind === 'gear' && SK.isHelmet(it.id)) look.helmet = it.id; if(it?.kind==='gear'&&it.id==='fusee')look.rocketPack=true; if(it?.kind==='gear'&&SK.isGoggles(it.id))look.goggles=it.id; return look; }
   function renderMe(E, save, it, tab) {
     const { ch, cur, next } = statsFor(save, it), board = SK.effectiveBoard(save.advBoard,save), look = previewLook(save, it);
     const bar = (k, lab) => { let seg = ''; for (let i = 1; i <= 8; i++) { const c0 = cur[k] >= i + 8 ? 'x2' : cur[k] >= i ? 'on' : '', n0 = next[k] >= i + 8 ? 'x2' : next[k] >= i ? 'on' : ''; let cls = n0; if (n0 !== c0) cls += (next[k] > cur[k] ? ' gain' : ' loss'); seg += `<i class="${cls}"></i>`; } const d = next[k] - cur[k]; return `<div class="me-stat"><span class="me-stat-label"><i class="stat-icon stat-${k}" aria-hidden="true"><svg viewBox="0 0 32 34">${STAT_ICONS[k]}</svg></i>${lab}</span><div class="segs">${seg}</div><em class="${d > 0 ? 'gain' : d < 0 ? 'loss' : ''}">${cur[k]}${d ? ' → ' + next[k] : ''}</em></div>`; };
@@ -127,7 +127,7 @@
       const affordable=remainingBoards.filter(e=>!e.it.secret&&e.it.price<=850).sort((a,b)=>a.it.price-b.it.price);
       const intermediate=remainingBoards.filter(e=>e.it.price>850&&e.it.price<=2000).sort((a,b)=>a.it.price-b.it.price);
       const premium=[...remainingBoards.filter(e=>e.it.price>2000).sort((a,b)=>a.it.price-b.it.price),...remainingBoards.filter(e=>e.it.secret)];
-      const ranked=[...gear,...catalog('gadget'),...catalog('other')];
+      const ranked=[...gear.filter(e=>['lunettesNeige','lunettesForet'].includes(e.it.id)),...gear.filter(e=>SK.isHelmet(e.it.id)),...gear.filter(e=>!SK.isHelmet(e.it.id)&&!['lunettesNeige','lunettesForet'].includes(e.it.id)),...catalog('gadget'),...catalog('other')];
       const rankItems=rank=>ranked.filter(e=>SK.gearById(e.it.id).rank===rank);
       const walls=clothingShop
         ? [clothes.filter(e=>e.it.slot!=='jacket'),gear,clothes.filter(e=>e.it.slot==='jacket'),[]]
@@ -184,6 +184,8 @@
           }
           const tag=document.createElement('span');tag.className='product-price';tag.innerHTML=it.secret?(it.lock?'🔒 '+it.name.replace('Planche ',''):it.owned?'✓ '+it.name.replace('Planche ',''):'🎁 '+it.name.replace('Planche ','')):(it.lock?'🔒 ':'<img src="'+SK.COIN_SVG+'" alt=""> ')+SK.fmtGold(it.price,!!it.lock);
           button.append(image,tag);
+          if(it.owned){button.classList.add('product-owned');const badge=document.createElement('span');badge.className='owned-check';badge.textContent='✓';badge.setAttribute('aria-label','Déjà dans ton casier');button.append(badge);button.setAttribute('aria-label',button.getAttribute('aria-label')+' — déjà dans ton casier');}
+
           const stackPrice=()=>{const st=stackSlots.get(it.id);if(st){const label=section.querySelector('[data-stack-price="'+st.group+'"]');if(label)label.innerHTML=tag.innerHTML;}};
           button.onpointerenter=button.onfocus=()=>{renderMe(E,save,items(tab,save)[i],tab);stackPrice();};
           button.onpointerleave=button.onblur=()=>renderMe(E,save,selected(),state.tab);
@@ -247,9 +249,9 @@
         if (it.kind === 'board') { save.boards.push(it.id); save.advBoard = it.id; save.board = it.id; opts.toast(it.name + (it.secret?' reçue et équipée !':' achetée et équipée !')); }
         else if (it.kind === 'up') { save.upgrades[it.boardId][it.stat] = it.level + 1; opts.toast(it.name + ' : fait !'); }
         else if (it.kind === 'wardrobe') { (save.wardrobe = save.wardrobe || []).push(it.id); wear(it); opts.toast(it.name + ' : acheté et porté !'); }
-        else { save.gear.push(it.id);if(SK.isGoggles(it.id)){save.look=save.look||{};(save.look[save.advChar]=save.look[save.advChar]||{}).goggles=it.id;} if (it.id === 'masque') save.shinobin = true; opts.toast(it.name + ' : acheté !'); }
+        else { save.gear.push(it.id);if(SK.isGoggles(it.id)||SK.isHelmet(it.id)){save.look=save.look||{};(save.look[save.advChar]=save.look[save.advChar]||{})[SK.isHelmet(it.id)?'helmet':'goggles']=it.id;} if (it.id === 'masque') save.shinobin = true; opts.toast(it.name + ' : acheté !'); }
         opts.store(); SK.Audio.sfx('buy'); refresh(); populate();
-      } else if(it.action==='equip'&&it.kind==='gear'&&SK.isGoggles(it.id)){save.look=save.look||{};(save.look[save.advChar]=save.look[save.advChar]||{}).goggles=it.id;opts.store();SK.Audio.sfx('box');refresh();}
+      } else if(it.action==='equip'&&it.kind==='gear'&&(SK.isGoggles(it.id)||SK.isHelmet(it.id))){save.look=save.look||{};(save.look[save.advChar]=save.look[save.advChar]||{})[SK.isHelmet(it.id)?'helmet':'goggles']=it.id;opts.store();SK.Audio.sfx('box');refresh();}
       else if (it.action === 'equip' && it.kind === 'wardrobe') { wear(it); opts.store(); SK.Audio.sfx('box'); opts.toast(it.name + ' : porté'); refresh(); }
       else if (it.action === 'equip') { save.advBoard = it.id; save.board = it.id; opts.store(); SK.Audio.sfx('box'); opts.toast(it.name + ' équipée'); refresh(); }
       else if (it.action === 'locked') { SK.Audio.sfx('nope'); opts.toast('Verrouillé : ' + it.lock); }
@@ -573,7 +575,7 @@
       case 'chrono': case 'montreEtoiles': case 'fart': case 'boussole': case 'ressort': case 'sifflet': case 'casqueAero': case 'thermos': case 'sablier': case 'meteore': case 'couronne': {
         drawRankGear(c,it.id,s);break;
       }
-      case 'casque': { c.fillStyle = '#7e57c2'; c.beginPath(); c.arc(0, 0, s, Math.PI, 0); c.lineTo(s, s * 0.35); c.lineTo(-s, s * 0.35); c.fill(); c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.arc(-s * 0.35, -s * 0.35, s * 0.28, 0, TAU); c.fill(); c.fillStyle = '#263238'; c.fillRect(-s, s * 0.1, 2 * s, s * 0.28); c.fillStyle = '#ffd54a'; c.fillRect(-s * 0.1, -s * 0.9, s * 0.2, s); break; }
+      case 'casque': case 'casqueForet': case 'casqueCorail': case 'casqueNoir': { SK.drawSnowHelmet(c,it.id,0,-s*.8,s*1.9,s*1.12,'side');break; }
       case 'gants': { c.fillStyle = tint; rr2(-s * 0.9, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); rr2(s * 0.1, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(-s * 0.9, s * 0.5, s * 0.8, s * 0.3); c.fillRect(s * 0.1, s * 0.5, s * 0.8, s * 0.3); c.fillStyle = tint; rr2(-s * 1.1, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); rr2(s * 0.75, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = s * 0.06; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * 0.75 + k * s * 0.25, -s * 0.5); c.lineTo(-s * 0.75 + k * s * 0.25, s * 0.1); c.moveTo(s * 0.25 + k * s * 0.25, -s * 0.5); c.lineTo(s * 0.25 + k * s * 0.25, s * 0.1); c.stroke(); } break; }
       case 'bottes': { c.fillStyle = tint; rr2(-s * 0.9, -s * 0.9, s * 0.7, s * 1.5, s * 0.2); c.fill(); rr2(s * 0.2, -s * 0.9, s * 0.7, s * 1.5, s * 0.2); c.fill(); c.fillStyle = '#263238'; rr2(-s * 1.0, s * 0.4, s * 0.95, s * 0.45, s * 0.15); c.fill(); rr2(s * 0.1, s * 0.4, s * 0.95, s * 0.45, s * 0.15); c.fill(); c.fillStyle = '#ffd54a'; c.fillRect(-s * 0.8, -s * 0.6, s * 0.5, s * 0.1); c.fillRect(s * 0.3, -s * 0.6, s * 0.5, s * 0.1); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(-s * 0.8, -s * 0.3, s * 0.5, s * 0.08); c.fillRect(s * 0.3, -s * 0.3, s * 0.5, s * 0.08); break; }
       case 'lunettesForet': case 'lunettesTricolores': case 'lunettesNeige': case 'lunettesMiroir': case 'lunettes': SK.drawGoggles(c,it.id,0,0,s);break;
