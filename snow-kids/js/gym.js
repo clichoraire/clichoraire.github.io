@@ -47,18 +47,22 @@
    const hint=document.createElement('small');hint.className='gym-gain-hint';hint.textContent=confirmed?'✓ Amélioration obtenue !':selected?'La case verte montre le gain.':'Choisis une séance pour voir le gain.';statsBox.append(hint);
   };
 
-  const refresh=()=>{renderStats();
-   panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><h2>Jessica · On s’entraîne ?</h2>';
+  const refresh=(confirmedStat=null)=>{renderStats();
+   const info=SK.Progression.info(save),ch=SK.charById(save.advChar||save.char),values=G.stats(save);
+   panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><header class="gym-unified-header"><h2>'+ch.name+'</h2><div>Niveau '+info.level+' · '+info.current+' / '+info.needed+' XP</div><strong>⭐ '+info.points+' point'+(info.points===1?'':'s')+' disponible'+(info.points===1?'':'s')+'</strong><small>Planche '+SK.boardById(save.advBoard).name+'</small></header>';
+   const labels={speed:'Vitesse',corner:'Virage',acceleration:'Accélération',jump:'Saut',strength:'Force',walk:'Marche',shot:'Tirs',item:'Objets'};
    for(const offer of [...G.statOffers(save),G.strengthOffer(save),G.walkOffer(save),...G.powerOffers(save)]){
-    const row=document.createElement('button');row.className='gym-training-row';const unavailable=offer.action!=='buy'||(save.trainingPoints||0)<offer.price;row.setAttribute('aria-disabled',String(unavailable));row.dataset.stat=offer.stat;row.onpointerenter=row.onfocus=()=>renderStats(offer.action==='max'?null:offer.stat);row.onpointerdown=()=>renderStats(offer.action==='max'?null:offer.stat);
-    const ch=SK.charById(save.advChar||save.char),board=SK.effectiveBoard(save.advBoard,save);
-    const current=offer.stat==='walk'?Math.round(100*(1+.15*offer.level)):(ch[offer.stat]||0)+(offer.stat==='strength'?(save.strengthLevel||0):(board[offer.stat]||0));
-    const next=offer.action==='max'?current:current+(offer.stat==='walk'?15:1);
-    const preview=['shot','item'].includes(offer.stat)?'+'+(offer.level*10)+' % → +'+(Math.min(3,offer.level+1)*10)+' %':offer.stat==='walk'?current+' % → '+next+' % en ville':current+' → '+next+' '+(next>8?'(au-delà de 8)':'');
-    row.innerHTML=`<span class="stat-icon stat-${offer.stat}"><svg viewBox="0 0 32 34">${SK.STAT_ICONS[offer.stat]||SK.STAT_ICONS.speed}</svg></span><span><b>${offer.name.split(' · ')[0]}</b><small>Niveau ${offer.level} / ${offer.max||SK.UPGRADE_MAX}</small><span class="gym-stat-preview">${preview}</span></span><strong>${offer.lock|| (offer.action==='max'?'Maximum':offer.price+' point'+(offer.price>1?'s':''))}</strong>`;
-    row.onclick=()=>{if(G.train(save,offer.stat)){store();SK.Audio.sfx('buy');refresh();renderStats(offer.stat,true);panel.querySelector('[data-stat="'+offer.stat+'"]')?.focus({preventScroll:true});renderStats(offer.stat,true);}};panel.append(row);
+    const stat=offer.stat,value=values[stat],max=['shot','item'].includes(stat)?3:stat==='walk'?5:Math.max(8,value+1),unavailable=offer.action!=='buy'||(save.trainingPoints||0)<offer.price;
+    const row=document.createElement('div');row.className='gym-upgrade-stat';row.dataset.stat=stat;
+    const fmt=n=>stat==='walk'?(100+n*15)+' %':['shot','item'].includes(stat)?'+'+n*10+' %':n;
+    row.innerHTML='<span class="stat-icon stat-'+stat+'"><svg viewBox="0 0 32 34">'+(SK.STAT_ICONS[stat]||SK.STAT_ICONS.speed)+'</svg></span><div class="gym-upgrade-detail"><b>'+labels[stat]+'</b><div class="gym-meter"></div><small>'+ (offer.action==='max'?'Maximum atteint':offer.lock||'⭐ '+offer.price+' point'+(offer.price===1?'':'s'))+'</small></div><strong class="gym-upgrade-value"></strong>';
+    const button=document.createElement('button');button.type='button';button.className='gym-plus'+(unavailable?' unavailable':'');button.textContent=offer.action==='max'?'✓':offer.action==='locked'?'🔒':'+';button.setAttribute('aria-label','Augmenter '+labels[stat]+' : '+(offer.lock||offer.price+' points'));button.setAttribute('aria-disabled',String(unavailable));
+    const paint=(preview=false,confirmed=false)=>{const next=value+(preview&&offer.action!=='max'?1:0);row.classList.toggle('previewing',preview);row.querySelector('.gym-meter').innerHTML=Array.from({length:max},(_,i)=>'<i class="'+(i<value?'filled ':'')+((preview&&i===value)||(confirmed&&i===value-1)?'gain':'')+'"></i>').join('');row.querySelector('.gym-meter').setAttribute('aria-label',labels[stat]+' : '+fmt(value)+(preview?' vers '+fmt(next):''));row.querySelector('.gym-upgrade-value').textContent=fmt(value)+(preview?' → '+fmt(next):'');};
+    row.onpointerenter=button.onfocus=()=>paint(true);row.onpointerleave=()=>paint(document.activeElement===button);button.onblur=()=>paint();
+    button.onclick=()=>{if(!G.train(save,stat))return;const top=panel.scrollTop;store();SK.Audio.sfx('buy');refresh(stat);panel.querySelector('[data-stat="'+stat+'"] button')?.focus({preventScroll:true});panel.querySelector('[data-stat="'+stat+'"]')?.dispatchEvent(new Event('trained'));panel.scrollTop=top;};
+    row.addEventListener('trained',()=>paint(false,true));row.append(button);panel.append(row);paint(false,confirmedStat===stat);
    }
-   const note=document.createElement('p');note.className='gym-note';note.textContent='La marche améliore uniquement ta vitesse dans le village (5 niveaux). Les tirs renforcent leurs effets et les objets durent plus longtemps (+10 % par niveau, maximum 3). Les autres séances améliorent cette planche.';panel.append(note);
+   const status=document.createElement('div');status.className='gym-training-status';status.setAttribute('role','status');status.textContent=confirmedStat?'✓ Amélioration obtenue !':'';panel.append(status);
    panel.querySelector('.gym-close').onclick=()=>{panel.hidden=true;talk.hidden=false;screen.classList.remove('gym-choosing');renderStats();talk.focus();};
   };
   const speak=()=>{refresh();panel.hidden=false;talk.hidden=true;screen.classList.add('gym-choosing');panel.querySelector('.gym-close').focus();SK.Audio.sfx('click');};
