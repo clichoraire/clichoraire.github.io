@@ -183,33 +183,27 @@
     const GAMES = [
       {
         title: 'Bunker Zone', path: 'bunker-zone/', cover: 'covers/bunker-zone.jpg', badge: 'Stratégie',
-        tags: ['STR', 'Solo contre IA', 'Aventure en 4 mondes', '4 races'],
-        desc: 'Stratégie en temps réel inspirée de la carte Zone Control de StarCraft : prenez des zones au dropship, garnissez vos bunkers, récoltez le minerai vert avec vos travailleurs et faites évoluer vos soldats. Mode classique, évolution, tournoi et une aventure en quatre mondes avec héros et boutique.',
+        desc: "Conquérez des zones, construisez vos défenses et commandez votre armée dans un jeu de stratégie en temps réel.",
       },
       {
         title: 'Hockey Boisjoli', path: 'hockey-boisjoli/', cover: 'covers/hockey-boisjoli.jpg', badge: 'Sport',
-        tags: ['Hockey', '3 contre 3', '1 ou 2 joueurs', 'Pouvoirs spéciaux', 'Les Boys', 'Pratiques'],
-        desc: 'Du hockey façon Ice Hockey sur NES, mais les équipes sont les familles Boisjoli (grand-papa, grand-maman, parents, enfants, ado) et Les Boys (Bob, Ti-Guy, Méo le fumeur, Stan…), chacun avec son pouvoir spécial. Seul contre l\'ordi, à deux sur le même clavier ou à la manette, la Coupe Boisjoli, et un mode Pratique avec des dizaines d\'exercices en trois difficultés.',
+        desc: "Du hockey en famille avec des pouvoirs spéciaux. Affrontez l’ordinateur ou jouez à deux pour remporter la Coupe Boisjoli.",
       },
       {
         title: 'Snow Kids', path: 'snow-kids/', cover: 'covers/snow-kids.jpg', badge: 'Course',
-        tags: ['Planche à neige', '9 pistes', 'Tirs et objets', 'Figures', 'Boutique', '1 ou 2 joueurs'],
-        desc: 'Descente en planche à neige façon Snowboard Kids sur Nintendo 64 : les neuf tableaux (Mont Débutant, Autoroute de nuit, Vallée des sables, Pays des Ninjas…), la remontée mécanique à chaque tour, les boîtes rouges pour tirer sur le coureur devant, les boîtes bleues pour les objets, des figures qui rapportent des pièces, une boutique de planches et un ninja caché à débloquer. Championnat, course libre, contre-la-montre et écran partagé à deux.',
+        desc: "Dévalez les pistes en planche à neige, faites des figures et utilisez des objets pour dépasser vos rivaux. Explorez le village et remportez les tournois.",
       },
       {
         title: 'Ballon Chasseur Boisjoli', path: 'ballon-chasseur/', cover: 'covers/ballon-chasseur.jpg', badge: 'Sport',
-        tags: ['Ballon chasseur', '3 dedans, 3 dehors', '1 ou 2 joueurs', 'Lancers spéciaux', '4 terrains', 'Coupe Boisjoli'],
-        desc: 'Du ballon chasseur façon Super Dodge Ball sur NES, avec les mêmes visages de la famille que Hockey Boisjoli et Snow Kids. Trois joueurs dans le terrain, trois autour pour relancer, des points de vie, des attrapés au bon moment, des sauts, la course à deux appuis et un lancer spécial par personne (Code de triche, Boulet du vétéran, Bulle de savon, Crise de bacon…). Chaque famille joue chez elle : gymnase, parc, ruelle ou plage. Seul contre l\'ordi, à deux, ou en Coupe Boisjoli.',
+        desc: "Affrontez les familles au ballon chasseur avec des lancers spéciaux. Esquivez, attrapez et lancez pour mener votre équipe à la victoire.",
       },
       {
         title: 'Frigo Snap', locked: true, path: 'frigo-snap/', cover: 'covers/frigo-snap.jpg', badge: 'Photo',
-        tags: ['Safari photo sur rails', '4 virées', '15 créatures', 'Réactions en chaîne', 'Chef Fernand'],
-        desc: 'Façon Pokémon Snap sur Nintendo 64, mais dans un frigo : un demi-avocat à roulettes suit les rails pendant que vous photographiez les restes qui prennent vie (Cornichons Ninjas, Ketchup-Rex, Yéti-Roquefort, Léviathan-Surgelé…). Croûton à l\'ail, Tabasco, clic piézo et flash déclenchent des réactions en chaîne ; à la fin, le Chef Fernand juge vos clichés depuis son grille-pain et remplit le Guide des Restes Oubliés.',
+        desc: "Partez en safari photo dans un frigo où les aliments prennent vie. Surprenez les créatures et capturez leurs moments les plus drôles.",
       },
       {
         title: 'Sosaria Online', path: 'sosaria/', cover: 'covers/sosaria.jpg', badge: 'Alpha', badgeClass: 'alpha',
-        tags: ['RPG', 'Monde ouvert', 'Isométrique', 'Compétences à l\'usage'],
-        desc: 'Jeu de rôle isométrique en monde ouvert inspiré d\'Ultima Online : pas de classes ni de niveaux, seulement des compétences qui montent en les pratiquant. Explorez, forgez, combattez, bâtissez. Sauvegarde automatique dans le navigateur.',
+        desc: "Explorez un monde fantastique où vos compétences progressent en les pratiquant. Combattez, fabriquez votre équipement et bâtissez votre aventure.",
       },
     ];
     const el = document.getElementById('games');
@@ -222,7 +216,6 @@
         </a>
         <div class="body">
           <h3>${esc(g.title)} <small class="ver">${window.GAME_VERSIONS && GAME_VERSIONS[g.path] ? 'v' + esc(GAME_VERSIONS[g.path]) : ''}</small></h3>
-          <div class="tags">${g.tags.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
           <p>${esc(g.desc)}</p>
           <div class="actions">${g.locked ? '<span class="play" aria-disabled="true">🔒 En préparation</span>' : `
             <a class="play" href="${g.path}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2 L14 8 L3 14 Z" fill="currentColor"/></svg>Jouer</a>
