@@ -23,9 +23,14 @@
     const desc=document.createElement('p');desc.textContent=m.type==='slalom'?m.goal+' portes':m.desc+(passed?'':' Première réussite : +120 XP.');b.append(desc);
     if(m.type==='slalom'){
       const thresholds=document.createElement('div');thresholds.className='slalom-thresholds';
-      thresholds.innerHTML=['gold','silver','bronze'].map(key=>'<div><span>'+SK.MEDALS[key].icon+'</span><b>'+SK.fmtTime(m.medalTimes[key])+'</b></div>').join('');b.append(thresholds);
+      thresholds.innerHTML=['gold','silver','bronze'].map(key=>'<div><span>'+SK.MEDALS[key].icon+'</span><b>'+SK.fmtMedalTime(m.medalTimes[key])+'</b></div>').join('');b.append(thresholds);
       const record=save.missionMedals?.[m.id];if(record){
         b.classList.add('medal-'+record.medal);b.setAttribute('aria-label',m.name+' niveau '+m.level+' — '+SK.MEDALS[record.medal].name);
+        if(record.goldPerfect){
+          b.classList.add('gold-perfect');
+          const stars=document.createElement('div');stars.className='card-sparkles';stars.setAttribute('aria-hidden','true');
+          [[8,10],[88,18],[5,38],[93,52],[8,75],[90,91],[34,3],[68,97]].forEach(([x,y],i)=>{const star=document.createElement('i');star.textContent='✦';star.style.cssText='left:'+x+'%;top:'+y+'%;--delay:'+(-i*.43)+'s;--size:'+(12+i%3*5)+'px';stars.append(star);});b.append(stars);
+        }
         const badge=document.createElement('div');badge.className='slalom-best '+record.medal;
         badge.innerHTML='<div class="record-run"><span>⏱ '+SK.fmtTime(record.time)+'</span><span title="Portes réussies pendant ce record">🚩 '+(Number.isFinite(record.gates)?record.gates:'—')+'</span></div>'+(record.goldPerfect?'<span class="record-perfect">✨ OR + PARFAIT ✨</span>':'');b.append(badge);
       }

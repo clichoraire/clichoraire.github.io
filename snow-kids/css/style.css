@@ -983,3 +983,10 @@ table.results td.num { text-align: right; font-family: monospace; }
 .mission-level-option[class*="medal-"] .record-run{border-top:2px solid #0002;padding-top:12px;width:100%;font-size:19px}
 
 .mission-level-option[class*="medal-"] .slalom-best{color:inherit}
+
+.mission-level-option.gold-perfect{position:relative;isolation:isolate;animation:perfect-card-glow 3s ease-in-out infinite;border-color:#ffe578}
+.card-sparkles{position:absolute;inset:0;pointer-events:none;border-radius:18px;overflow:hidden}
+.card-sparkles i{position:absolute;font-style:normal;font-size:var(--size);color:#fffde4;text-shadow:0 0 5px #fff,0 0 12px #ffed62;animation:perfect-star 2.8s ease-in-out var(--delay) infinite}
+@keyframes perfect-star{0%,100%{opacity:.15;transform:scale(.35) rotate(-20deg)}50%{opacity:1;transform:scale(1.2) rotate(35deg)}}
+@keyframes perfect-card-glow{0%,100%{box-shadow:0 5px #a77b1b,0 0 8px #ffce4566}50%{box-shadow:0 5px #a77b1b,0 0 25px #ffd747bb,inset 0 0 22px #fff6bc88}}
+@media(prefers-reduced-motion:reduce){.mission-level-option.gold-perfect,.card-sparkles i{animation:none}.card-sparkles i{opacity:.85}}

@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.30';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.31';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -638,7 +638,7 @@ window.SK.VERSION = '1.30';   // à augmenter à chaque mise en ligne (affichée
     const desc=type==='slalom'?`Passe au moins ${goal} portes de slalom.`:type==='coins'?`Ramasse ${goal} pièces sur la piste en un tour.`:type==='tricks'?`Gagne ${goal} pièces avec tes figures. Saute avec X, puis C + une flèche.`:type==='hits'?`Touche les adversaires ${goal} fois avec tes tirs.`:type==='time'?`Termine en ${Math.floor(goal/60)} min ${String(goal%60).padStart(2,'0')} s maximum.`:type==='pushes'?`Réussis ${goal} poussées : approche-toi, puis N + gauche ou droite.`:type==='edges'?`Aucun contact avec les bords. Virages de difficulté ${level}/5.`:`Aucune chute ! Saute les barrages de difficulté ${level}/5.`;
     return {...base,...old,id:plan.prefix+level,type,level,course:plan.courses[i],goal,reward:base.reward+i*40,desc};
   }));
-  const slalomTimes=[{gold:50,silver:80,bronze:120},{gold:130,silver:160,bronze:200},{gold:120,silver:150,bronze:185},{gold:140,silver:175,bronze:215},{gold:130,silver:160,bronze:200}];
+  const slalomTimes=[{gold:50,silver:80,bronze:120},{gold:80,silver:120,bronze:160},{gold:120,silver:150,bronze:185},{gold:140,silver:175,bronze:215},{gold:130,silver:160,bronze:200}];
   for(const m of SK.MISSIONS.filter(m=>m.type==='slalom')){m.medalTimes=slalomTimes[m.level-1];m.desc=`Passe au moins ${m.goal} portes et termine en ${Math.floor(m.medalTimes.bronze/60)} min ${m.medalTimes.bronze%60} s maximum.`;}
   SK.MEDALS={bronze:{rank:1,name:'Bronze',icon:'🥉'},silver:{rank:2,name:'Argent',icon:'🥈'},gold:{rank:3,name:'Or',icon:'🥇'}};
   SK.missionInstruction=m=>({slalom:'Passe entre les drapeaux',coins:'Ramasse les pièces',tricks:'Fais des figures en sautant',hits:'Touche les adversaires avec tes tirs',pushes:'Pousse les adversaires',time:'Atteins l’arrivée à temps',nofall:'Termine sans tomber',edges:'Ne touche pas les bords'})[m.type];
@@ -664,6 +664,7 @@ window.SK.VERSION = '1.30';   // à augmenter à chaque mise en ligne (affichée
     return f;
   };
   SK.clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  SK.fmtMedalTime = t => Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
   SK.fmtTime = function (t) { if (t == null || !isFinite(t)) return '--:--.--'; const m = Math.floor(t / 60), s = Math.floor(t % 60), c = Math.floor((t * 100) % 100); return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + '.' + (c < 10 ? '0' : '') + c; };
   SK.ordinal = n => n === 1 ? '1er' : n + 'e';
 })(window.SK);
