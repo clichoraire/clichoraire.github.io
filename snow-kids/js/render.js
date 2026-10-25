@@ -119,7 +119,7 @@
   };
 
   R.drawBlizzard=function(c,race,me,x,y,w,h){
-    const gust=SK.stormAt(race.course,race.time,race.seed),t=Math.max(0,race.time),power=gust.strength;
+    const gust=SK.stormAt(race.course,race.time,race.seed),t=race.course.stormFromCountdown?Math.max(0,race.time+3.4):Math.max(0,race.time),power=gust.strength;
     c.save();c.beginPath();c.rect(x,y,w,h);c.clip();
     if(race.course.blizzard){
     c.fillStyle='rgba(37,58,86,.23)';c.fillRect(x,y,w,h);

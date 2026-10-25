@@ -174,7 +174,8 @@
       seg.puzzle={id:course.puzzleId,x:side*(seg.w-1.1),taken:false};
     }
     track.snowGuards=[];
-    if(course.snowGuards)for(let i=65;i<nRace-35;i+=course.guardSpacing||(course.forestLevel===3?65:100)){const s=segs[i];if(s.ramp)continue;const side=track.snowGuards.length%2?1:-1;
+    const guardPositions=course.guardCount?Array.from({length:course.guardCount},(_,k)=>Math.round(40+k*(nRace-80)/(course.guardCount-1))):Array.from({length:Math.max(0,Math.ceil((nRace-100)/(course.guardSpacing||(course.forestLevel===3?65:100))))},(_,k)=>65+k*(course.guardSpacing||(course.forestLevel===3?65:100)));
+    if(course.snowGuards)for(const position of guardPositions){let i=position;if(course.guardCount)while(i<nRace-20&&segs[i].ramp)i++;const s=segs[i];if(!s||s.ramp)continue;const side=track.snowGuards.length%2?1:-1;
       const guard={type:'snowguard',x:side*(s.w+1.8),z:s.z+SEG/2,r:0,decor:true,cooldown:0,windup:0};
       // Dégager le lanceur pour que sa préparation reste visible.
       s.props=s.props.filter(p=>Math.abs(p.x-guard.x)>3);s.props.push(guard);track.snowGuards.push(guard);

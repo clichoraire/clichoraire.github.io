@@ -55,8 +55,8 @@
 
   // Shared deterministic weather: the warning cloud and lateral force use the same clock.
   SK.stormAt=function(course,time,seed=1){
-    if(!(course.blizzard||course.strongWind)||time<6)return {strength:0,force:0,direction:0,warning:false};
-    const elapsed=time-6,cycle=Math.floor(elapsed/12),phase=elapsed%12,direction=(cycle+(seed%2))%2?1:-1;
+    if(!(course.blizzard||course.strongWind)||(!course.stormFromCountdown&&time<6))return {strength:0,force:0,direction:0,warning:false};
+    const elapsed=course.stormFromCountdown?Math.max(0,time+6.7):time-6,cycle=Math.floor(elapsed/12),phase=elapsed%12,direction=(cycle+(seed%2))%2?1:-1;
     const warning=phase<1.4,strength=phase>=1.4&&phase<5.2?Math.sin((phase-1.4)/3.8*Math.PI):0;
     return {strength,force:direction*(course.strongWind?3.5:2.7)*strength,direction,warning};
   };
@@ -456,11 +456,20 @@
       g.cooldown=Math.max(0,g.cooldown-dt);
       if(g.windup>0){g.windup=Math.max(0,g.windup-dt);if(g.windup===0){
         const dx=g.aimX-g.x,dz=g.aimZ-g.z,length=Math.hypot(dx,dz)||1;
-        this.shots.push({kind:'wildsnow',x:g.x,z:g.z,vx:dx/length*26,vz:dz/length*26,h:1,lap:g.lap,life:4});g.cooldown=3.5;
+        this.shots.push({kind:'wildsnow',x:g.x,z:g.z,vx:dx/length*40,vz:dz/length*40,h:1,lap:g.lap,life:4});g.cooldown=3.5;
       }continue;}
       if(g.cooldown>0)continue;
       const r=this.racers.filter(r=>r.state==='ride'&&!r.immune()&&g.z-r.z>15&&g.z-r.z<85).sort((a,b)=>b.z-a.z)[0];
-      if(r){g.windup=1;g.aimX=r.x;g.aimZ=Math.min(g.z-5,r.z+r.speed*1.4);g.lap=r.lap;}
+      if(r){
+        g.windup=1;g.aimX=r.x*.9;g.lap=r.lap;
+        // Viser la position future après la préparation ET le trajet de la boule.
+        const speed=Math.max(0,r.speed),dz=r.z+speed*g.windup-g.z,dx=g.aimX-g.x;
+        const a=speed*speed-40*40,b=2*dz*speed,cc=dx*dx+dz*dz;
+        const disc=Math.max(0,b*b-4*a*cc);
+        const roots=Math.abs(a)<.001?[-cc/(b||-1)]:[(-b-Math.sqrt(disc))/(2*a),(-b+Math.sqrt(disc))/(2*a)];
+        const flight=Math.min(...roots.filter(t=>t>0));
+        g.aimZ=r.z+speed*(g.windup+(Number.isFinite(flight)?Math.min(3,flight):.8));
+      }
     }
   };
   P.updateShots = function (dt) {

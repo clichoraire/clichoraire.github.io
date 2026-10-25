@@ -43,8 +43,8 @@
     Object.assign(c,{puzzleId:cup.id+':course:'+stage,recordId:'cup:'+cup.id+':'+stage+':laps:'+cup.laps,name:ROUTES[order][stage],difficulty:level});
     if(order<3){c.theme='rookie';c.surface='snow';c.sections=c.sections.filter(s=>s.t!=='x');}
     c.forest=cup.id==='sapins';c.forestLevel=c.forest?stage+1:0;
-    c.snowGuards=(c.forest&&stage>=1)||cup.id==='boules';c.guardSpacing=cup.id==='boules'?38:0;c.polarBears=cup.id==='boules';
-    c.blizzard=cup.id==='flocons'&&stage===2;
+    c.snowGuards=c.forest||cup.id==='boules';c.guardCount=c.forest?8:0;c.guardSpacing=cup.id==='boules'?38:0;c.polarBears=cup.id==='boules';
+    c.blizzard=cup.id==='flocons'&&stage===2;c.stormFromCountdown=c.blizzard;
     // Difficulté croissante : virages, largeur, puis enchaînements saut/flexion.
     c.sections=c.sections.map((s,i)=>({...s,...(s.w?{w:Math.max(6.5,s.w*(1-.012*level)-(stage*.25))}:{}),...(s.c?{c:s.c*(1+.018*level)*(stage%2?-1:1)}:{})}));
     c.challenges={spacing:Math.round(100-level*3.1),warning:Math.round(23-level*.65),first:order===0&&stage===0?95:55,stage,style:['highway'].includes(c.theme)?'metal':c.theme==='ninja'?'bamboo':'wood'};
