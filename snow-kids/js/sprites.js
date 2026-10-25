@@ -317,9 +317,11 @@
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index),h=2.5*s,w=h*img.width/img.height;
     const angles={indy:.42,nose:-.65,tail:.95,melon:-.45,method:-.9,double:.3};
-    const angle=(angles[pose]||0)*g,by=-.32-(pose==='tail'?.65:.44)*g;
-    const boardPoint=(across,along)=>[across*Math.cos(angle)-along*Math.sin(angle),by+across*Math.sin(angle)+along*Math.cos(angle)];
-    const hip=[-.06*g,-.96+.14*g];
+    const grabSide=['nose','melon','method'].includes(pose)?-1:1;
+    const angle=(angles[pose]||0)*g,by=-.32-(pose==='tail'?.86:.65)*g;
+    const bx=(pose==='double'?0:grabSide*.60)*g;
+    const boardPoint=(across,along)=>[bx+across*Math.cos(angle)-along*Math.sin(angle),by+across*Math.sin(angle)+along*Math.cos(angle)];
+    const hip=[(pose==='double'?0:grabSide*.10)*g,-.96+.10*g];
     const line=(pts,color,width)=>{c.strokeStyle=color;c.lineWidth=width*s;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x*s,y*s):c.moveTo(x*s,y*s));c.stroke();};
     // Deux segments fixes : les mains ne peuvent pas dépasser la portée du bras.
     const joint=(from,to,length,bend)=>{
@@ -328,11 +330,11 @@
       const offset=Math.sqrt(Math.max(0,length*length-reach*reach/4));
       return {end,middle:[(from[0]+end[0])/2-dy/d*offset*bend,(from[1]+end[1])/2+dx/d*offset*bend]};
     };
-    SK.drawBoard(c,r.board,0,by*s,.65*s,1.48*s,angle,r.input?.steer||0);
+    SK.drawBoard(c,r.board,bx*s,by*s,.65*s,1.48*s,angle,r.input?.steer||0);
     for(const along of [-.25,.25]){
       const foot=boardPoint(0,along),ankle=[foot[0],foot[1]-.10];
       // Genoux rapprochés, fléchis dans le sens de la glisse.
-      const knee=[hip[0]+.08+.12*g,(hip[1]+ankle[1])/2-.08*g];
+      const knee=[hip[0]+.08+(foot[0]-hip[0])*.55*g,(hip[1]+ankle[1])/2-.13*g];
       line([hip,knee,ankle],L.pants,along<0?.24:.28);
       if(along<0)line([hip,knee,ankle],'#14203d25',.24);
       c.save();c.translate(foot[0]*s,foot[1]*s);c.rotate(angle);
@@ -345,14 +347,19 @@
     c.drawImage(img,img.width*.22,img.height*.34,img.width*.56,img.height*.27,hip[0]*s-w*.28,hip[1]*s-h*.27,w*.56,h*.27);
     for(const side of [-1,1]){
       const shoulder=[hip[0]+side*w/s*.22,hip[1]-.6];
-      const rest=[shoulder[0]+side*.08,hip[1]+.12];
+      const rest=[shoulder[0]+side*.32,hip[1]+.08];
       const holds=pose==='double'||side===(['nose','melon','method'].includes(pose)?-1:1);
-      const gripPoint=boardPoint(side*.28,pose==='nose'?-.58:pose==='tail'?.50:0);
-      const target=holds?gripPoint:[shoulder[0]+side*.43,hip[1]-.40];
+      const gripPoint=boardPoint(side*.30,pose==='nose'?-.52:pose==='tail'?.50:0);
+      const target=holds?gripPoint:[shoulder[0]+side*.46,hip[1]-.05];
       const hand=[rest[0]+(target[0]-rest[0])*g,rest[1]+(target[1]-rest[1])*g];
-      const arm=joint(shoulder,hand,.43,-side);
+      const arm=joint(shoulder,hand,.43,side);
       sleeve(c,L,shoulder[0]*s,shoulder[1]*s,arm.middle[0]*s,arm.middle[1]*s,arm.end[0]*s,arm.end[1]*s,s);
       c.fillStyle='#263b4d';c.beginPath();c.arc(arm.end[0]*s,arm.end[1]*s,.10*s,0,Math.PI*2);c.fill();
+      if(holds&&g>.8){
+        // Pouce refermé sur la carre, lisible même à l'échelle de la course.
+        c.strokeStyle='#152936';c.lineWidth=.045*s;c.beginPath();
+        c.arc(arm.end[0]*s,arm.end[1]*s,.075*s,-.4,2.1);c.stroke();
+      }
     }
     return true;
   }
