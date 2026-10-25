@@ -44,7 +44,7 @@
     this.springReadyAt=0;
     this.state = 'ride'; this.stun = 0; this.flat = 0; this.wallT = 0;
     this.shot = null; this.item = null; this.coins = 0; this.coinsTotal = 0; this.trackCoins = 0; this.tricksCoins = 0; this.tricksCount = 0;
-    this.curTrick = null; this.tricksDone = []; this.airT = 0; this.pending = null;
+    this.curTrick = null; this.tricksDone = []; this.airT = 0; this.trickRampJump = false; this.pending = null;
     this.fx = { parachute: 0, fan: 0, invisible: 0, slow: 0, snowman: 0 };
     this.rank = idx; this.finishTime = null; this.lift = null; this.lapTimes = []; this.lapStart = 0;
     this.input = Object.assign({}, EMPTY); this.prev = Object.assign({}, EMPTY); this.ai = null;
@@ -240,10 +240,10 @@
     const gy = T.groundY(r.z);
     if (r.state === 'ride' || (stunned && r.h <= 0)) {
       if (gy < r.yAbs - 1.0 && r.speed > 5 && !stunned) { // le sol se dérobe d'un coup (falaise) : envol
-        r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * .6 * (r.jumpCharge||0) : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; if(inp.jump)this.springJump(r,r.jumpCharge||0);this.emit({ type: 'jump', r, big: true });
+        r.trickRampJump = [T.segAt(zPrev),T.segAt(r.z)].some(q=>q.ramp&&!q.down); r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * .6 * (r.jumpCharge||0) : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; if(inp.jump)this.springJump(r,r.jumpCharge||0);this.emit({ type: 'jump', r, big: true });
       } else {
         r.lastVy = dt > 0 ? (gy - r.yAbs) / dt : 0; r.yAbs = gy; r.h = 0;
-        if (!stunned && releasedJump && (r.jumpCharge||0)>0) { r.state = 'air'; r.vy = r.jumpPower * (.4+.6*r.jumpCharge) + Math.max(0, r.lastVy); const superJump=this.springJump(r,r.jumpCharge);r.jumpCharge=0; r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: superJump }); }
+        if (!stunned && releasedJump && (r.jumpCharge||0)>0) { r.trickRampJump = [T.segAt(zPrev),T.segAt(r.z)].some(q=>q.ramp&&!q.down); r.state = 'air'; r.vy = r.jumpPower * (.4+.6*r.jumpCharge) + Math.max(0, r.lastVy); const superJump=this.springJump(r,r.jumpCharge);r.jumpCharge=0; r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: superJump }); }
       }
     }
     if(releasedJump||r.state!=='ride')r.jumpCharge=0;
@@ -264,11 +264,14 @@
           let total = 0; r.tricksDone.forEach((t, i) => { total += t.coins * (1 + 0.5 * i); });
           total = Math.max(1, Math.round(total * r.trickPay));
           const awarded=SK.collectGold?SK.collectGold(r,total):total;if(!SK.collectGold){r.coins+=total;r.coinsTotal+=total;} r.tricksCoins += total; r.tricksCount += r.tricksDone.length;
-          r.boostCombo = Math.min(5, r.tricksDone.length);
-          r.fx.comboBoost = 2;
+          if(r.trickRampJump){
+            r.boostCombo = Math.min(5, r.tricksDone.length);
+            r.fx.comboBoost = 2;
+          }
           this.emit({ type: 'trick', r, combo: r.tricksDone.length, coins: awarded, names: r.tricksDone.map(t => t.name) });
           r.tricksDone = [];
         } else this.emit({ type: 'land', r });
+        r.trickRampJump=false;
       }
     }
     // ---- collisions sur les segments traversés
