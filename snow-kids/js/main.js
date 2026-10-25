@@ -3,7 +3,7 @@
   'use strict';
   const $ = id => document.getElementById(id), A = SK.Audio, R = SK.Render, I = SK.Input;
   const SAVE_KEY = 'snowkids.save';
-  const DEFAULT_SAVE = { xp:0, trainingPoints:0, gold: 0, boardSkins: {}, ownedSkins: [], boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'zach', board: 'freestyle', char2: 'eliott', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {}, gear: [], wardrobe: [], look: {}, trophies: {}, missions: {} };
+  const DEFAULT_SAVE = { playSeconds:0, xp:0, trainingPoints:0, gold: 0, boardSkins: {}, ownedSkins: [], boards: ['freestyle'], unlocked: 1, shinobin: false, won: {}, best: {}, char: 'zach', board: 'freestyle', char2: 'eliott', board2: 'freestyle', diff: 1, sound: true, music: true, laps: 3, ending: false, advChar: null, advBoard: 'freestyle', upgrades: {}, gear: [], wardrobe: [], look: {}, trophies: {}, missions: {} };
   let save = loadSave();
   function loadSave() { try { const text=localStorage.getItem(SAVE_KEY),raw=JSON.parse(text||'{}');
     if(text&&!raw.profileVersion&&!localStorage.getItem(SAVE_KEY+'.before-profiles'))localStorage.setItem(SAVE_KEY+'.before-profiles',text);
@@ -15,7 +15,7 @@
 
   // ------------------------------------------------------------------ écrans
   const screens = ['gym', 'debug', 'menu', 'advselect', 'town', 'throne', 'museum', 'wardrobe', 'records', 'school', 'select', 'course', 'shop', 'story', 'race', 'result'];
-  function show(name) { SK.Touch.show(name); if(name!=='school')SK.School?.close(); SK.PhotoPuzzles.mount(name,save); if(name!=='gym')SK.Gym.close(); if(name!=='race')SK.DebugHouse.close(); if(name!=='throne')SK.Throne.close(); if(name!=='museum')SK.Museum.close(); if (name !== 'course') openCourse.resizeObserver?.disconnect(); if (name !== 'town' && name !== 'advselect') SK.Town.close(); if (name !== 'shop') SK.Shop.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); SK.RoomViews.show(name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
+  function show(name) { SK.Touch.show(name); if(name!=='school')SK.School?.close(); SK.PhotoPuzzles.mount(name,save); if(name!=='gym')SK.Gym.close(); if(name!=='race')SK.DebugHouse.close(); if(name!=='throne')SK.Throne.close(); if(name!=='museum')SK.Museum.close(); if (name !== 'course') openCourse.resizeObserver?.disconnect(); if (name !== 'town' && name !== 'advselect') SK.Town.close(); if (name !== 'shop') SK.Shop.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); SK.RoomViews.show(name); if(name==='result'){const screen=$('screen-result');screen.scrollTop=0;requestAnimationFrame(()=>{if(!screen.classList.contains('hidden'))screen.scrollTop=0;});} if (name === 'menu') { refreshMenu(); A.music('menu'); } }
   let flow = { mode: 'champ', players: 1, course: null, laps: 3, picks: [] };
 
   const fakeRacer = SK.fakeRacer;
@@ -72,7 +72,7 @@
     const info = $('adv-info'); let current = save.advChar || 'zach';
     SK.Town.select({
       canvas: $('adv-canvas'), info, unlocked: save.shinobin, current, lookFor: id=>SK.lookOf(SK.charById(id),SK.Profiles.peek(save,id)),
-      onChange: c => { current = c.id; $('btn-adv-ok').textContent = c.gender==='girl' ? "C’est elle !" : "C’est lui !"; let bars = ''; for (const [k, lab, icon] of [['speed','Vitesse','ϟ'],['corner','Virage','↝'],['acceleration','Accélération','»'],['jump','Saut','↟'],['strength','Force','✊']]) { bars += `<div class="kid-stat"><span class="stat-icon stat-${k}" aria-hidden="true"><svg viewBox="0 0 32 34">${SK.STAT_ICONS[k]}</svg></span><span>${lab}</span><span class="kid-meter">`; for(let i=1;i<=5;i++)bars+=`<i class="${i<=c[k]?'on':''}"></i>`;bars+=`</span><strong>${c[k]}</strong></div>`; } const profile=SK.Profiles.peek(save,c.id);info.innerHTML=`<b>${c.name}</b>${bars}<div class="kid-progress">Niv. ${SK.Progression.info(profile).level} · 🏆 ${Object.values(profile.cups||{}).filter(x=>x.won).length} / 15 · ${gold(profile.gold)}</div>`; },
+      onChange: c => { current = c.id; $('btn-adv-ok').textContent = c.gender==='girl' ? "C’est elle !" : "C’est lui !"; let bars = ''; for (const [k, lab, icon] of [['speed','Vitesse','ϟ'],['corner','Virage','↝'],['acceleration','Accélération','»'],['jump','Saut','↟'],['strength','Force','✊']]) { bars += `<div class="kid-stat"><span class="stat-icon stat-${k}" aria-hidden="true"><svg viewBox="0 0 32 34">${SK.STAT_ICONS[k]}</svg></span><span>${lab}</span><span class="kid-meter">`; for(let i=1;i<=5;i++)bars+=`<i class="${i<=c[k]?'on':''}"></i>`;bars+=`</span><strong>${c[k]}</strong></div>`; } const profile=SK.Profiles.peek(save,c.id);info.innerHTML=`<b>${c.name}</b>${bars}<div class="kid-progress">Niv. ${SK.Progression.info(profile).level} · 🏆 ${Object.values(profile.cups||{}).filter(x=>x.won).length} / 15 · ${gold(profile.gold)}</div><div class="kid-playtime" data-play-time="${c.id}">⏱ Temps de jeu : ${SK.Session.format(profile.playSeconds)}</div>`; },
       onPick: id => { A.sfx('box'); chooseAdventure(id); },
       onBack,
     });
@@ -83,6 +83,8 @@
     SK.Town.setDebug(!!save.debugHouse);show('town'); A.music('town');
     if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
     $('town-gold').innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold,false)}</b>`; $('town-char').textContent = SK.charById(save.advChar).name + ' · Niveau '+SK.Progression.info(save).level+' · planche ' + SK.boardById(save.advBoard).name;
+    let badge=$('town-level-badge');if(!badge){badge=document.createElement('button');badge.id='town-level-badge';badge.className='level-badge';$('screen-town').appendChild(badge);badge.onclick=openGym;}
+    badge.hidden=!(save.trainingPoints>0);badge.textContent='⭐ ↑ Niveau '+SK.Progression.info(save).level+' · '+(save.trainingPoints||0)+' points au gym';
     SK.Town.open({
       canvas: $('town-canvas'), save, walkLevel:save.walkLevel||0, charId: save.advChar, boardId: save.advBoard, look: lookFor(save.advChar), labelEl: $('town-label'),
       onEnter: id => {
@@ -319,6 +321,7 @@
       if (!flow.cup && flow.mode === 'champ' && flow.course.boss) racers.push({ charId: flow.course.boss, boardId: 'pro', ctrl: 'cpu', boss: true });
     }
     race = new SK.Race({ course: flow.course, racers, laps: flow.laps, seed: flow.seed || (Date.now() & 0xfffff) + 1, difficulty: flow.finalBoss?2:save.diff, mode: flow.mode === 'practice' ? 'free' : flow.mode, mission: flow.mode === 'practice' ? flow.mission : null });
+    for(const r of race.humans){const p=SK.Profiles.peek(save,r.def.id);r.levelInfo=SK.Progression.info(p);}
     SK.PhotoPuzzles.normalize(save);
     for(const seg of race.track?.segs||race.T?.segs||[]){if(seg.puzzle&&(save.photoPieces||[]).includes(seg.puzzle.id))seg.puzzle.taken=true;}
     if(flow.cup&&race.humans[0]){const cup=SK.cupById(flow.cup.id);R.notify(race.humans[0],cup.name+' · Course '+(flow.cup.stage+1)+' / '+cup.tracks.length,'#ffe477',true,5);}
@@ -329,7 +332,7 @@
   function frame(ts) {
     raf = requestAnimationFrame(frame);
     const dt = last ? Math.min(0.1, (ts - last) / 1000) : SK.STEP; last = ts;
-    if (I.anyPause()) togglePause();
+    if (!SK.Session.paused && I.anyPause()) togglePause();
     if (!paused) {
       acc += dt;
       while (acc >= SK.STEP) { for (let p = 0; p < flow.players; p++) race.setInput(p, flow.debug?SK.DebugHouse.input(I.read(p)):I.read(p)); if(flow.debug)SK.DebugHouse.tick(); race.update(SK.STEP); acc -= SK.STEP; }
@@ -422,6 +425,7 @@
     if(flow.finalBoss&&me?.rank===0)save.trophies.shadowKing=true;
     const xpAmount=SK.Progression.reward({finished:!!me&&!me.estimated&&!!me.time,practice,success:missionOk,rank:me?.rank});
     const xpProfile=me&&me.r.def.id!==save.activeProfile?SK.Profiles.peek(save,me.r.def.id):save;
+    const xpBefore=Number(xpProfile.xp)||0;
     const progress=SK.Progression.award(xpProfile,xpAmount);
     if(xpProfile!==save)save.profiles[me.r.def.id]=xpProfile;
     store();
@@ -433,6 +437,7 @@
     let html='<div class="finish-grid">'+res.map(x=>card(x.r,x.rank,tip('⏱ '+SK.fmtTime(x.time)+(x.estimated?' ≈':''),x.estimated?'Temps estimé : ce coureur était encore en piste à la fin.':'Temps pour terminer la course.'),'<div class="finish-chips">'+tip(gold(x.coins),'Pièces gagnées par ce coureur pendant la course.')+tip('🎯 '+x.stats.hits,'Nombre de tirs qui ont touché un adversaire.')+tip('✊ '+(x.stats.pushes||0),'Nombre de poussées réussies avec N.')+'</div>')).join('')+'</div>';
     const xpInfo=SK.Progression.info(xpProfile);
     $('result-sub').innerHTML='<div class="finish-rewards"><div class="reward-gold">'+tip('<span class="reward-plus">+</span>'+gold(earned),'Total de pièces gagnées : récolte et récompenses de cette course.')+'</div><div class="reward-progress"><div class="reward-progress-heading">'+tip('⭐ +'+progress.xp+' XP','Expérience gagnée pendant cette course. Elle fait progresser ton personnage.')+'<strong>Niveau '+xpInfo.level+'</strong></div><progress class="result-xp-bar" value="'+xpInfo.current+'" max="'+xpInfo.needed+'" aria-label="Progression vers le niveau '+(xpInfo.level+1)+'"></progress><div class="reward-progress-caption">'+xpInfo.current+' / '+xpInfo.needed+' XP <span>Prochain niveau : '+(xpInfo.level+1)+'</span></div></div>'+(progress.points?'<div class="reward-training">'+tip('💪 +'+progress.points+' points','Points d’entraînement gagnés : utilise-les au gym pour améliorer ton personnage.')+'</div>':'')+'</div>';
+    requestAnimationFrame(()=>SK.Progression.animateResult($('result-sub'),xpBefore,Number(xpProfile.xp)||0,()=>A.sfx('unlock')));
     if(flow.mode==='time')$('result-sub').innerHTML += '<p>'+ (me && save.best[flow.course.recordId||flow.course.id]===me.time?'🏆 Nouveau record !':'Record : '+SK.fmtTime(save.best[flow.course.recordId||flow.course.id]))+'</p>';
     if (champ && me && !flow.cup) html += me.rank === 0 ? `<p class="story-text">🏆 <b>Victoire !</b> ${trophy ? 'Un trophée pour ton musée, et ' + SK.TROPHY_GOLD + ' G ! ' : ''}${unlockedNew ? 'Nouvelle piste débloquée : <b>' + unlockedNew.name + '</b>.' : ''}</p>` : `<p class="story-text">Il faut finir <b>1er</b> pour débloquer la piste suivante. Réessaie, ou passe à la boutique.</p>`;
     if (practice) { $('result-title').textContent=missionOk?'Mission réussie !':'Mission échouée';const m = flow.mission, v = flow.missionValue; html = `<p class="story-text">${missionOk ? '⭐ <b>Mission réussie !</b>' : '✗ <b>Mission échouée. Veux-tu réessayer ?</b>'} ${m.type === 'time' ? 'Temps : ' + SK.fmtTime(v) + ' (objectif ' + SK.fmtTime(m.goal) + ')' : m.type === 'nofall' ? v + ' chute(s)' : v + ' / ' + m.goal}</p>`; }
@@ -447,7 +452,7 @@
     $('result').innerHTML = html;
     document.querySelectorAll('[data-face]').forEach(c=>{const r=race.racers.find(r=>r.def.id===c.dataset.face)||SK.fakeRacer(c.dataset.face,'freestyle','ride',lookFor(c.dataset.face));R.drawFace(c.getContext('2d'),r,80,80,72);});
     const podium=$('cup-podium');podium.hidden=!(cupOutcome?.won);
-    if(!podium.hidden){const winners=SK.cupStandings(flow.cup).slice(0,3),pc=podium.getContext('2d');let podiumRaf=0;const celebrate=ms=>{if($('screen-result').classList.contains('hidden')){cancelAnimationFrame(podiumRaf);return;}const t=ms/1000;pc.fillStyle='#bce9fc';pc.fillRect(0,0,960,380);pc.fillStyle='#fff4ce';pc.fillRect(0,320,960,60);for(const [place,x,top,col] of [[1,290,260,'#9db4c4'],[0,480,215,'#efbf3c'],[2,670,290,'#bb8158']]){const row=winners[place];if(!row)continue;pc.fillStyle=col;pc.fillRect(x-80,top,160,360-top);const fr=SK.fakeRacer(row.id,'freestyle','ride',lookFor(row.id));R.drawWalker(pc,fr,x,top,42,t,'down',false);pc.fillStyle='#263b51';pc.textAlign='center';pc.font='bold 30px Arial';pc.fillText(String(place+1),x,top+40);pc.font='bold 22px Arial';pc.fillText(row.name,x,top-150);}pc.font='bold 32px Arial';pc.fillStyle='#845119';pc.textAlign='center';pc.fillText('🏆 BRAVO, CHAMPION !',480,40);for(let i=0;i<65;i++){pc.fillStyle=['#f35c73','#f5d141','#4caadc'][i%3];pc.fillRect((i*139)%960,(i*73+t*65)%380,7,11);}podiumRaf=requestAnimationFrame(celebrate);};podiumRaf=requestAnimationFrame(celebrate);}
+    if(!podium.hidden)SK.Podium.start(podium,SK.cupStandings(flow.cup).slice(0,3),lookFor);
 
     const btns = $('result-buttons'); btns.innerHTML = ''; btns.classList.toggle('cup-actions',!!flow.cup&&!flow.cup.finished);
     const mk = (label, cls, fn) => { const b = document.createElement('button'); b.textContent = label; b.className = cls; b.onclick = () => { A.sfx('click'); fn(); }; btns.appendChild(b); };
@@ -469,6 +474,7 @@
     A.enabled = save.sound; A.musicOn = save.music;
     document.addEventListener('pointerdown', () => { A.init(); if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); if (A.player.paused && A.cur) A.music(A.cur); }, { once: false });
     document.addEventListener('keydown', () => { A.init(); if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); if (A.player.paused && A.cur) A.music(A.cur); });
+    SK.Session.init({getSave:()=>save,store,isPaused:()=>paused,pause:()=>{const running=SK.Touch.screen==='race'&&!paused&&race?.phase!=='over';const music=A.cur;if(running)togglePause();A.stopMusic();return {running,music};},resume:previous=>{if(previous.running&&paused)togglePause();else if(!paused&&previous.music)A.music(previous.music);}});
     show('menu');
     const anim = () => { if (!$('screen-menu').classList.contains('hidden')) menuAnim(performance.now() / 1000); requestAnimationFrame(anim); }; anim();
     const q = new URLSearchParams(location.search);

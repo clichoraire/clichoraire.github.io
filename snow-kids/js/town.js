@@ -106,7 +106,7 @@
         const y=H*.80-emphasis*6;
         if(emphasis>.01||hover===i){const radius=s*SK.characterScale(c.id)*.60;ctx.save();ctx.globalAlpha=hover===i?1:emphasis;ctx.fillStyle=sel?'rgba(255,219,92,.14)':'rgba(100,213,255,.12)';ctx.strokeStyle=sel?'#ffe17c':'#98e7ff';ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(x,y+4,radius,radius*.25,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();}
         const fr=SK.fakeRacer(c.id,'freestyle','ride',opts.lookFor?opts.lookFor(c.id):null);fr.wave=sel&&waving;
-        ctx.save();ctx.globalAlpha=.85+.15*emphasis;R.drawWalker(ctx,fr,x,y,s,t,'down',false);ctx.restore();
+        ctx.save();ctx.globalAlpha=1;R.drawWalker(ctx,fr,x,y,s,t,'down',false);ctx.restore();
         const factor=SK.characterScale(c.id);
         const head=y-s*2.5*factor;
         const label=names.children[i];label.hidden=sel;label.style.left=(x/W*100)+'%';label.style.top=((head-15)/H*100)+'%';

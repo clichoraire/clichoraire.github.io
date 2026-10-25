@@ -687,6 +687,11 @@
     ctx.fillText(SK.ordinal(me.rank + 1), vx + 24, vy + 58 * F);
     ctx.fillStyle = '#fff'; ctx.font = 'bold ' + 16 * F + 'px sans-serif'; ctx.fillText('Tour ' + Math.min(race.laps, me.lap + 1) + ' / ' + race.laps, vx + 24, vy + 80 * F);
     ctx.fillText('sur ' + race.racers.length, vx + 100 * F, vy + 58 * F);
+    if(me.levelInfo?.points>0){
+      box(vx+12,vy+96*F,190*F,48*F);ctx.textAlign='left';ctx.fillStyle='#ffe380';ctx.font='bold '+18*F+'px sans-serif';
+      ctx.fillText('⭐ ↑ Niveau '+me.levelInfo.level,vx+22,vy+116*F);
+      ctx.font='bold '+14*F+'px sans-serif';ctx.fillText(me.levelInfo.points+' points au gym',vx+22,vy+135*F);
+    }
     // temps et pièces
     box(vx + vw - 12 - 180 * F, vy + 12, 180 * F, 74 * F);
     ctx.textAlign = 'right'; ctx.font = 'bold ' + 24 * F + 'px monospace'; ctx.fillStyle = '#fff';

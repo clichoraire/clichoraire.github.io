@@ -227,6 +227,13 @@
 
       renderMe(E, save, it, state.tab);
       card.querySelector('.card-stats')?.remove();
+      if(it.kind==='board'&&!(it.secret&&it.lock)){
+        const {cur,next}=statsFor(save,it),current=SK.boardById(save.advBoard);
+        const compare=document.createElement('section');compare.className='card-stats board-comparison';
+        compare.innerHTML='<h3>Compare tes planches</h3><table><thead><tr><th scope="col">Statistique</th><th scope="col">Actuelle<br>'+current.name+'</th><th scope="col">Nouvelle<br>'+SK.boardById(it.id).name+'</th><th scope="col">Écart</th></tr></thead><tbody>'+STATS.map(([key,label])=>{const d=next[key]-cur[key];return '<tr><th scope="row">'+label+'</th><td>'+cur[key]+'</td><td>'+next[key]+'</td><td class="'+(d>0?'better':d<0?'worse':'same')+'">'+(d>0?'+':'')+d+'</td></tr>';}).join('')+'</tbody></table><p>Statistiques de ton personnage avec chaque planche, améliorations comprises.</p>';
+        const bonuses=E.desc.querySelector('.board-bonuses');if(bonuses)bonuses.replaceWith(compare);else E.desc.prepend(compare);
+      }
+
       const ic = E.icon.getContext('2d'); ic.clearRect(0, 0, E.icon.width, E.icon.height); S.drawItem(ic, it, E.icon.width / 2, E.icon.height / 2, E.icon.width * 0.36, performance.now() / 1000);
       SK.animateBoardPreview(E.icon,it,E.icon.width/2,E.icon.height/2,E.icon.width*.36,false);
       E.icon.style.filter=it.lock?'grayscale(1) brightness(.8)':'none';
