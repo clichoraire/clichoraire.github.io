@@ -933,3 +933,14 @@ table.results td.num { text-align: right; font-family: monospace; }
 .reward-gold-number{display:inline-block;min-width:2ch;font-variant-numeric:tabular-nums;text-align:right}
 
 .slalom-medal{font:clamp(32px,6vw,66px) 'Titan One',sans-serif;text-align:center;color:#e7b68b}.slalom-medal.gold{color:#ffdb4c}.slalom-medal.silver{color:#dceaf4}.slalom-time{text-align:center;font-size:26px;font-weight:bold}.slalom-masterpiece{border:4px solid #ffdc57;border-radius:22px;background:linear-gradient(135deg,#76501d,#3a2a47);padding:24px;font:clamp(25px,5vw,48px) 'Titan One',sans-serif;color:#ffe486;text-align:center;box-shadow:0 0 30px #ffda4555}.slalom-masterpiece small{display:block;font:700 16px 'Trebuchet MS',sans-serif;margin-top:14px;color:white}.slalom-best{display:block;color:#81520b;margin:12px 0}.slalom-thresholds{font-weight:bold!important}
+
+.level-up-celebration{position:fixed;left:50%;top:32%;transform:translate(-50%,-50%);width:280px;height:250px;z-index:100;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;filter:drop-shadow(0 8px 12px #07162bcc);animation:level-celebration 3s ease both}
+.level-up-rays{position:absolute;inset:-30px;border-radius:50%;background:repeating-conic-gradient(from 10deg,#ffdf7555 0deg 12deg,transparent 12deg 30deg);mask-image:radial-gradient(circle,#000 20%,transparent 70%);animation:level-rays 3s linear both}
+.level-up-ribbon{position:relative;z-index:2;background:linear-gradient(#ffdb57,#ffac26);border:3px solid #fff1b2;border-radius:12px;padding:10px 16px;font:20px 'Titan One',sans-serif;color:#633c16;transform:rotate(-4deg);box-shadow:0 5px #91561d}
+.level-up-medallion{position:relative;width:150px;height:150px;z-index:1;margin-top:7px;display:grid;place-items:center}.level-up-medallion span{position:absolute;font:170px/1 Arial;color:#ffd64b;-webkit-text-stroke:4px #fff1ae;paint-order:stroke fill;text-shadow:0 7px #bc7625}.level-up-medallion strong{position:relative;top:9px;font:58px 'Titan One',sans-serif;color:#714318;text-shadow:0 2px #fff1a1}
+.level-up-confetti{position:absolute;left:50%;top:55%;width:9px;height:15px;border-radius:2px;animation:level-confetti 2.4s ease-out both}
+@keyframes level-celebration{0%{opacity:0;scale:.35}15%{opacity:1;scale:1.08}25%,80%{opacity:1;scale:1}100%{opacity:0;scale:.85;translate:0 -25px}}
+@keyframes level-rays{to{rotate:75deg}}
+@keyframes level-confetti{0%{opacity:0;transform:scale(.3)}15%,60%{opacity:1}100%{opacity:0;transform:translate(var(--x),calc(var(--y) + 70px)) rotate(var(--r))}}
+@media(max-height:500px){.level-up-celebration{top:45%;scale:.8}}
+@media(prefers-reduced-motion:reduce){.level-up-celebration,.level-up-rays{animation:none}.level-up-confetti{display:none}}
