@@ -20,8 +20,17 @@
    for(const m of levels.filter(m=>SK.missionUnlocked(m,save))){
     const passed=save.missions?.[m.id]!=null,b=document.createElement('button');b.type='button';b.className='mission-level-option'+(passed?' completed':'');if(save.missionPerfect?.[m.id]){b.classList.add('perfect');b.setAttribute('aria-label',m.name+' niveau '+m.level+' — parfait');}
     b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(m.reward*2,false)}</span>`}</span>`;
-    const desc=document.createElement('p');desc.textContent=m.desc+(passed?'':' Première réussite : +120 XP.');b.append(desc);
-    if(m.type==='slalom'){const thresholds=document.createElement('p');thresholds.className='slalom-thresholds';thresholds.textContent=Object.entries(SK.MEDALS).map(([key,v])=>v.icon+' '+SK.fmtTime(m.medalTimes[key])).join(' · ');b.append(thresholds);const record=save.missionMedals?.[m.id];if(record){const badge=document.createElement('strong');badge.className='slalom-best';badge.textContent=record.goldPerfect?'🏆 OR + PARFAIT !':SK.MEDALS[record.medal].icon+' '+SK.MEDALS[record.medal].name;b.append(badge);}}
+    const desc=document.createElement('p');desc.textContent=m.type==='slalom'?m.goal+' portes':m.desc+(passed?'':' Première réussite : +120 XP.');b.append(desc);
+    if(m.type==='slalom'){
+      const thresholds=document.createElement('div');thresholds.className='slalom-thresholds';
+      thresholds.innerHTML=['gold','silver','bronze'].map(key=>'<div><span>'+SK.MEDALS[key].icon+'</span><b>'+SK.fmtTime(m.medalTimes[key])+'</b></div>').join('');b.append(thresholds);
+      const record=save.missionMedals?.[m.id];if(record){
+        b.classList.add('medal-'+record.medal);b.setAttribute('aria-label',m.name+' niveau '+m.level+' — '+SK.MEDALS[record.medal].name);
+        const badge=document.createElement('div');badge.className='slalom-best '+record.medal;
+        badge.innerHTML='<div class="record-run"><span>⏱ '+SK.fmtTime(record.time)+'</span><span title="Portes réussies pendant ce record">🚩 '+(Number.isFinite(record.gates)?record.gates:'—')+'</span></div>'+(record.goldPerfect?'<span class="record-perfect">✨ OR + PARFAIT ✨</span>':'');b.append(badge);
+      }
+    }
+
 
     b.onclick=()=>{if(!SK.missionUnlocked(m,save))return;dialog.close();onMission(m);};choices.append(b);
    }

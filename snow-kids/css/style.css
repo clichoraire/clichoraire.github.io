@@ -967,3 +967,19 @@ table.results td.num { text-align: right; font-family: monospace; }
 .pause-medals{display:flex;justify-content:center;gap:12px}.pause-medals span{flex:1;background:#142b40;border-radius:12px;padding:10px;font-size:22px}.pause-medals b{display:block;font-size:18px;margin-top:5px}
 #pause-mission .pause-perfect{font-size:16px;color:#ffe79b}#pause-help summary{cursor:pointer;font-size:20px;font-weight:bold;padding:10px;color:#d3ebff}#pause-help{margin-bottom:14px}
 @media(max-width:600px),(max-height:500px){#pause .pause-box{padding:12px}#pause-mission{padding:12px}.pause-medals{gap:6px}.pause-medals span{font-size:16px;padding:8px}.pause-medals b{font-size:14px}#pause .pause-box>button{font-size:18px;padding:12px}#pause-mission .pause-perfect{font-size:13px}}
+
+#cup-podium[hidden]{display:none!important}
+.mission-level-option .slalom-thresholds{display:flex;flex-direction:column;gap:7px;width:100%;max-width:190px;margin:8px auto;font-size:18px}
+.slalom-thresholds>div{display:flex;justify-content:center;align-items:center;gap:12px}.slalom-thresholds>div>span{font-size:27px}.slalom-thresholds b{font-variant-numeric:tabular-nums}
+.mission-level-option .slalom-best{margin:8px 0 0;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;color:#e5edf7}
+.record-run{display:flex;justify-content:center;flex-wrap:wrap;gap:8px 14px;font-size:17px;font-weight:800;color:#fff}.record-perfect{font:15px 'Titan One',sans-serif;color:#ffe477;margin-top:6px}
+.mission-level-option:has(.record-perfect).perfect::after{display:none}
+.mission-level-option.perfect::after{color:#ffe477}
+
+.mission-level-option.medal-gold{background:linear-gradient(135deg,#fff0a5,#e9b93d 55%,#f9da73);border-color:#b67e12;color:#382809}
+.mission-level-option.medal-silver{background:linear-gradient(135deg,#f5faff,#b8c8d7 55%,#e1ebf3);border-color:#7d91a3;color:#233747}
+.mission-level-option.medal-bronze{background:linear-gradient(135deg,#f9d4b3,#cf9162 55%,#eab78c);border-color:#9e6035;color:#422714}
+.mission-level-option[class*="medal-"]>span:last-of-type,.mission-level-option[class*="medal-"] .record-run,.mission-level-option[class*="medal-"] .record-perfect,.mission-level-option[class*="medal-"].perfect::after{color:inherit}
+.mission-level-option[class*="medal-"] .record-run{border-top:2px solid #0002;padding-top:12px;width:100%;font-size:19px}
+
+.mission-level-option[class*="medal-"] .slalom-best{color:inherit}
