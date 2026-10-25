@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.10';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -23,8 +23,8 @@ window.SK.VERSION = '1.9';   // à augmenter à chaque mise en ligne (affichée 
   // ------------------------------------------------------------------ personnages (vitesse / virage / accélération / saut / force, 15 points de base par enfant)
   SK.CHARACTERS = [
     // Apparences et dates reprises de HockeyBoisjoli/js/config.js (familles Jo, Bibi et Jay).
-    { id: 'zach', gender: 'boy', name: 'Zach', birth: '2007-08-02', family: 'Jo', size: 1.05, speed: 3, corner: 2, acceleration: 2, jump: 3, strength: 5, hairStyle: 'fringe', hat: 'none', weight: 3, earbuds: true,
-      colors: { jacket: '#d83d36', pants: '#263981', hat: '#2c66b3', hair: '#1b1b1b', skin: '#f0c8a0', board: '#ffb323' },
+    { id: 'zach', gender: 'boy', name: 'Zach', birth: '2007-08-02', family: 'Jo', size: 1.05, speed: 3, corner: 2, acceleration: 2, jump: 3, strength: 5, hairStyle: 'curly', hat: 'none', weight: 3, earbuds: true,
+      colors: { jacket: '#d83d36', pants: '#263981', hat: '#2c66b3', hair: '#593c28', skin: '#f0c8a0', board: '#ffb323' },
       desc: 'Famille Jo — Le grand de la bande, rapide sur les longues descentes.' },
     { id: 'eliott', gender: 'boy', name: 'Eliott', birth: '2016-10-06', family: 'Jo', size: 0.78, speed: 3, corner: 3, acceleration: 3, jump: 3, strength: 3, hairStyle: 'short', hat: 'none', weight: 2, cheeks: true, freckles: true,
       colors: { jacket: '#43a047', pants: '#1e3a8a', hat: '#1565c0', hair: '#3b2a1a', skin: '#f0c8a0', board: '#00acc1' },
