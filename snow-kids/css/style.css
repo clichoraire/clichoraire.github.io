@@ -704,3 +704,42 @@ table.results td.num { text-align: right; font-family: monospace; }
 @media(max-width:1100px) and (orientation:landscape) {
   #touch-controls .touch-directions button,#touch-controls .touch-actions button:not(.touch-jump) { height:54px;line-height:1; }
 }
+
+/* Téléphones : garder la hauteur de la piste, commandes dans les marges latérales. */
+@media(max-width:1100px) and (max-height:500px) and (orientation:landscape) {
+  body.touch-playing,body.touch-playing:has(#touch-controls:not([data-mode=race])) { --touch-height:0px; }
+  #touch-controls:not([hidden]) { height:100%;padding:0;border:0;background:none;pointer-events:none; }
+  #touch-controls button { pointer-events:auto;min-width:42px;min-height:44px;border-radius:12px;font-size:20px;padding:3px; }
+  #touch-controls button small { font-size:10px; }
+  #touch-controls .touch-hint { display:none; }
+  #touch-controls .touch-directions { position:absolute;left:max(6px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,40px);gap:4px; }
+  #touch-controls .touch-directions button { width:40px;height:46px;min-width:40px; }
+  #touch-controls .touch-actions { position:absolute;right:max(6px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(2,48px);gap:5px; }
+  #touch-controls .touch-actions button:not(.touch-jump) { height:44px;min-height:44px; }
+  #touch-controls .touch-jump { grid-row:auto;grid-column:span 2;min-height:56px;height:56px;font-size:26px; }
+  #touch-controls .touch-pause { top:8px;right:max(8px,env(safe-area-inset-right));height:42px;min-height:42px;min-width:44px; }
+  body.touch-playing #screen-race .stage,body.touch-playing #screen-town .stage { width:min(calc(100vw - 268px),calc(100dvh * 16 / 9));height:min(100dvh,calc((100vw - 268px) * 9 / 16)); }
+  #touch-controls:not([data-mode=race]) .touch-directions { display:contents; }
+  #touch-controls:not([data-mode=race]) [data-action=left] { position:absolute;left:10px;bottom:12px;min-width:48px; }
+  #touch-controls:not([data-mode=race]) [data-action=right] { position:absolute;right:10px;bottom:12px;min-width:48px; }
+  body.touch-playing #screen-town .stage { width:min(calc(100vw - 132px),calc(100dvh * 16 / 9));height:min(100dvh,calc((100vw - 132px) * 9 / 16)); }
+  #town-top { top:5px;left:6px;right:6px;gap:5px;font-size:11px; }
+  #town-top span { padding:4px 6px; }
+  #town-top button { font-size:11px;padding:5px 8px;min-height:36px; }
+  #town-top .gold-box { font-size:14px;padding:5px 8px;border-width:2px; }
+  #town-top .gold-box img { width:22px;height:22px; }
+  #town-label { bottom:5px; }
+  #town-label .town-enter { font-size:16px;padding:5px 22px;min-height:42px; }
+}
+@media(max-width:600px) and (orientation:portrait) {
+  body.touch-playing { --touch-height:148px; }
+  body.touch-playing:has(#touch-controls:not([data-mode=race])) { --touch-height:68px; }
+  #touch-controls:not([hidden]) { padding-top:24px; }
+  #touch-controls .touch-directions { grid-template-columns:repeat(3,44px);gap:4px; }
+  #touch-controls .touch-actions { grid-template-columns:repeat(3,44px);gap:4px; }
+  #touch-controls button { min-width:44px;min-height:46px;height:46px;font-size:21px;padding:3px;line-height:1; }
+  #touch-controls button small { font-size:10px; }
+  #touch-controls .touch-jump { height:96px;font-size:28px; }
+  #touch-controls .touch-pause { height:40px;min-height:40px;min-width:40px;top:4px; }
+  .touch-hint { font-size:11px; }
+}
