@@ -369,6 +369,15 @@
   };
   // Une fouille par banc et par jour, conservée dans l’aventure du personnage.
   T.SNOWBANKS=[610,1450,1720,2490,2730,3150,3760,4380,4620].map((x,i)=>({id:'snow-'+i,x,y:650+(i%2)*18}));
+  T.showGoldReward=function(bubble,amount){
+    bubble.classList.add('gold-reward');bubble.replaceChildren();
+    const reward=document.createElement('span');reward.className='gold-reward-amount';
+    const coin=document.createElement('img');coin.src=SK.COIN_SVG;coin.alt='Pièces d’or gagnées';
+    const value=document.createElement('strong');value.textContent='+'+amount;reward.append(coin,value);bubble.append(reward);
+    const colors=['#ffcf3d','#ff695e','#48c8eb','#8ce58b','#b998f4'];
+    for(let i=0;i<24;i++){const p=document.createElement('i'),angle=i*2.39996,distance=55+(i%5)*16;p.className='gold-confetti';p.setAttribute('aria-hidden','true');p.style.setProperty('--dx',Math.cos(angle)*distance+'px');p.style.setProperty('--dy',Math.sin(angle)*distance-35+'px');p.style.setProperty('--spin',(i%2?-1:1)*(160+i*23)+'deg');p.style.setProperty('--delay',(i%4)*.035+'s');p.style.background=colors[i%colors.length];if(i%3===0)p.style.borderRadius='50%';bubble.append(p);}
+    bubble.hidden=false;
+  };
   T.snowDay=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();};
   T.digSnow=function(save,id,random=Math.random){
     if(!T.SNOWBANKS.some(b=>b.id===id))return null;
@@ -430,7 +439,7 @@
     chat.addEventListener('keydown',e=>{e.stopPropagation();if(e.code==='Escape'){e.preventDefault();closeChat();}if(e.code==='Enter'&&(e.repeat||e.isComposing))e.preventDefault();});
     chat.addEventListener('keyup',e=>e.stopPropagation());
     chat.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text)return;
-      bubble.textContent=text;bubble.hidden=false;bubbleUntil=performance.now()+Math.max(6000,Math.min(12000,text.length*70));
+      bubble.classList.remove('gold-reward');bubble.textContent=text;bubble.hidden=false;bubbleUntil=performance.now()+Math.max(6000,Math.min(12000,text.length*70));
       const result=opts.onChat?.(text);if(result){opts.look=result.look;WORLD_WIDTH=result.debugHouse?5350:4860;}
       input.value='';closeChat();
     };
@@ -463,7 +472,7 @@
       moving=Math.abs(x-before)>.01;if(moving)walkTime+=Math.abs(x-before)/255;if(moving)facing=x>before?'right':'left';else facing='down';
       if(pendingDig&&Math.abs(x-pendingDig.x)<8&&!moving){
         digProgress=Math.min(1,digProgress+dt/1.1);
-        if(digProgress>=1){const amount=T.digSnow(opts.save,pendingDig.id);if(amount!==null){opts.onDig?.(amount);bubble.textContent=amount?'Trouvé : '+amount+' pièces d’or !':'Juste de la neige… On cherche ailleurs ?';bubble.hidden=false;bubbleUntil=now+3500;}pendingDig=null;digProgress=0;}
+        if(digProgress>=1){const amount=T.digSnow(opts.save,pendingDig.id);if(amount!==null){opts.onDig?.(amount);if(amount)T.showGoldReward(bubble,amount);else{bubble.classList.remove('gold-reward');bubble.textContent='Juste de la neige… On cherche ailleurs ?';bubble.hidden=false;}bubbleUntil=now+3500;}pendingDig=null;digProgress=0;}
       }
       T._streetX=x;const next=nearest();if(next!==near){near=next;label();}
       const cameraTarget=Math.max(0,Math.min(WORLD_WIDTH-1280,x-640));camera+=(cameraTarget-camera)*(1-Math.exp(-dt*9));
