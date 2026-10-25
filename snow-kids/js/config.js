@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.23';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.24';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -643,7 +643,7 @@ window.SK.VERSION = '1.23';   // à augmenter à chaque mise en ligne (affichée
     const next=SK.MISSIONS.find(n=>n.type===m.type&&n.level===m.level+1),wasUnlocked=next&&SK.missionUnlocked(next,save);
     save.missions??={};const prev=save.missions[m.id],first=prev==null;
     if(first||(['time','edges','nofall'].includes(m.type)?value<prev:value>prev))save.missions[m.id]=value;
-    return {reward:first?m.reward:0,unlocked:next&&!wasUnlocked?next:null};
+    return {first,reward:first?m.reward*2:0,unlocked:next&&!wasUnlocked?next:null};
   };
   SK.missionById = id => SK.MISSIONS.find(m => m.id === id);
 

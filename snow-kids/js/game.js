@@ -80,7 +80,10 @@
   SK.missionOutcome = function(race,r){
     const m=race.mission;if(!m)return null;
     const value=m.type==='slalom'?race.gatesPassed:m.type==='coins'?r.trackCoins:m.type==='tricks'?r.tricksCoins:m.type==='hits'?r.stats.hits:m.type==='pushes'?r.stats.pushes:m.type==='time'?r.finishTime:m.type==='edges'?r.stats.edges:r.stats.falls;
-    return {value,ok:m.type==='time'?value!=null&&value<=m.goal:['nofall','edges'].includes(m.type)?value===0:value>=m.goal};
+    const ok=m.type==='time'?value!=null&&value<=m.goal:['nofall','edges'].includes(m.type)?value===0:value>=m.goal;
+    const clean=(r.stats.falls||0)===0&&(r.stats.edges||0)===0;
+    const perfect=ok&&clean&&(m.type==='slalom'?race.gatesTotal>0&&value===race.gatesTotal:m.type==='time'?value<=m.goal*.9:['nofall','edges'].includes(m.type)?true:value>=Math.ceil(m.goal*1.25));
+    return {value,ok,perfect};
   };
   P.emit = function (e) { this.events.push(e); };
   P.takeEvents = function () { const e = this.events; this.events = []; return e; };

@@ -10,7 +10,7 @@
   save.xp=Math.max(0,Math.floor(Number(save.xp)||0))+amount;const after=P.info(save),points=(after.level-before.level)*2;
   save.trainingPoints=before.points+points;return {xp:amount,levels:after.level-before.level,level:after.level,points};
  };
- P.reward=({finished,practice,success,rank=0})=>!finished?0:practice?(success?60:0):40+Math.max(0,3-rank)*10;
+ P.reward=({finished,practice,success,first=false,rank=0})=>!finished?0:practice?(success?(first?120:60):0):40+Math.max(0,3-rank)*10;
 
  P.animateResult=(root,before,after,onLevel)=>{
   const bar=root.querySelector('.result-xp-bar'),heading=root.querySelector('.reward-progress-heading strong'),caption=root.querySelector('.reward-progress-caption'),panel=root.querySelector('.reward-progress');
@@ -18,6 +18,8 @@
   const screen=root.closest('.screen'),token={};root.xpAnimation=token;
   const initial=P.info({xp:before}),final=P.info({xp:after});let level=initial.level,current=initial.current,left=Math.max(0,after-before),started=null;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gold=root.querySelector('.reward-gold-number'),goldTarget=Math.max(0,Number(gold?.dataset.gold)||0);let goldStart=null;
+  if(gold){gold.textContent=reduced?SK.fmtGold(goldTarget,false):'0';if(!reduced){const count=now=>{if(root.xpAnimation!==token||!root.isConnected||screen?.classList.contains('hidden'))return;if(goldStart===null)goldStart=now+200;const u=Math.max(0,Math.min(1,(now-goldStart)/2400));gold.textContent=SK.fmtGold(Math.floor(goldTarget*(1-Math.pow(1-u,2))),false);if(u<1)requestAnimationFrame(count);};requestAnimationFrame(count);}}
   const draw=(value,needed)=>{bar.max=needed;bar.value=value;bar.setAttribute('aria-label','Progression vers le niveau '+(level+1));heading.textContent='Niveau '+level;caption.innerHTML=Math.floor(value)+' / '+needed+' XP <span>Prochain niveau : '+(level+1)+'</span>';};
   const celebrate=()=>{panel.classList.add('level-pop');let msg=root.querySelector('.level-up-result');if(!msg){msg=document.createElement('div');msg.className='level-up-result';msg.setAttribute('role','status');panel.appendChild(msg);}msg.textContent='⭐ ↑ Niveau '+level+' ! +'+((level-initial.level)*2)+' points au gym';onLevel?.();};
   draw(current,100+50*(level-1));
@@ -25,9 +27,9 @@
   const step=now=>{
    if(root.xpAnimation!==token||!root.isConnected||screen?.classList.contains('hidden'))return;
    if(started===null)started=now+250;
-   const needed=100+50*(level-1),gain=Math.min(left,needed-current),u=Math.max(0,Math.min(1,(now-started)/1000));
-   draw(current+gain*(1-Math.pow(1-u,3)),needed);
-   if(u<1||now-started<1250){requestAnimationFrame(step);return;}
+   const needed=100+50*(level-1),gain=Math.min(left,needed-current),duration=left<=needed-current?2800:1400,u=Math.max(0,Math.min(1,(now-started)/duration));
+   draw(current+gain*(1-Math.pow(1-u,2)),needed);
+   if(u<1||now-started<duration+250){requestAnimationFrame(step);return;}
    left-=gain;current+=gain;
    if(current>=needed){level++;current=0;celebrate();draw(0,100+50*(level-1));}
    if(left>0){started=now;requestAnimationFrame(step);}

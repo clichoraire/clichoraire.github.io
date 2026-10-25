@@ -48,7 +48,7 @@
   };
 
   const refresh=()=>{renderStats();
-   panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><h2>Jessica · On s’entraîne ?</h2><p>Chaque niveau gagné rapporte 2 points. Choisis ce que tu veux améliorer avec ta planche <b>'+SK.boardById(save.advBoard).name+'</b>.</p>';
+   panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><h2>Jessica · On s’entraîne ?</h2>';
    for(const offer of [...G.statOffers(save),G.strengthOffer(save),G.walkOffer(save),...G.powerOffers(save)]){
     const row=document.createElement('button');row.className='gym-training-row';const unavailable=offer.action!=='buy'||(save.trainingPoints||0)<offer.price;row.setAttribute('aria-disabled',String(unavailable));row.dataset.stat=offer.stat;row.onpointerenter=row.onfocus=()=>renderStats(offer.action==='max'?null:offer.stat);row.onpointerdown=()=>renderStats(offer.action==='max'?null:offer.stat);
     const ch=SK.charById(save.advChar||save.char),board=SK.effectiveBoard(save.advBoard,save);

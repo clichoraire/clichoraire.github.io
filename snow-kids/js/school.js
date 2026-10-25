@@ -18,9 +18,9 @@
    const hint=document.createElement('p');hint.textContent='Choisis ton niveau';
    const choices=document.createElement('div');choices.className='mission-levels';
    for(const m of levels.filter(m=>SK.missionUnlocked(m,save))){
-    const passed=save.missions?.[m.id]!=null,b=document.createElement('button');b.type='button';b.className='mission-level-option'+(passed?' completed':'');
-    b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(m.reward,false)}</span>`}</span>`;
-    const desc=document.createElement('p');desc.textContent=m.desc;b.append(desc);
+    const passed=save.missions?.[m.id]!=null,b=document.createElement('button');b.type='button';b.className='mission-level-option'+(passed?' completed':'');if(save.missionPerfect?.[m.id]){b.classList.add('perfect');b.setAttribute('aria-label',m.name+' niveau '+m.level+' — parfait');}
+    b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(m.reward*2,false)}</span>`}</span>`;
+    const desc=document.createElement('p');desc.textContent=m.desc+(passed?'':' Première réussite : +120 XP.');b.append(desc);
     b.onclick=()=>{if(!SK.missionUnlocked(m,save))return;dialog.close();onMission(m);};choices.append(b);
    }
    const back=document.createElement('button');back.className='n64-btn btn-retour';back.textContent='Retour';back.onclick=()=>dialog.close();

@@ -924,3 +924,10 @@ table.results td.num { text-align: right; font-family: monospace; }
 @keyframes gold-pop{from{opacity:0;scale:.45;translate:0 15px}to{opacity:1;scale:1;translate:0 0}}
 @keyframes gold-confetti{0%{opacity:0;transform:translate(0,0) scale(.3)}15%{opacity:1}65%{opacity:1}100%{opacity:0;transform:translate(var(--dx),calc(var(--dy) + 55px)) rotate(var(--spin)) scale(.7)}}
 @media(prefers-reduced-motion:reduce){.gold-reward-amount{animation:none}.gold-confetti{animation:none;opacity:.8;transform:translate(var(--dx),var(--dy)) rotate(var(--spin))}}
+
+.mission-result-score{font:clamp(42px,7vw,82px)/1.2 'Titan One',sans-serif;color:#ffda44;text-align:center;margin:22px 0;text-shadow:0 5px #805226}
+.mission-perfect{font:clamp(24px,5vw,45px) 'Titan One',sans-serif;color:#ffdf66;text-align:center;text-shadow:0 3px #805226}
+.mission-first{font-size:clamp(19px,3vw,28px);font-weight:900;color:#a9f5bc;text-align:center}
+.mission-level-option.perfect::after{content:'🌟 Parfait !';display:block;color:#805300;font-family:'Titan One',sans-serif;margin-top:8px}
+
+.reward-gold-number{display:inline-block;min-width:2ch;font-variant-numeric:tabular-nums;text-align:right}
