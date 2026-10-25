@@ -1013,3 +1013,19 @@ table.results td.num { text-align: right; font-family: monospace; }
 @media(max-width:600px){.gym-upgrade-stat>.stat-icon{grid-column:1;grid-row:1 / 3}.gym-upgrade-detail{grid-column:2;grid-row:1}.gym-upgrade-value{grid-row:2}.gym-plus{grid-row:1 / 3}}
 
 #screen-gym.gym-choosing .room-pan{display:none}
+
+/* Cartes de niveaux compactes et accès discret aux points du gym. */
+#mission-level-choice{padding:16px}
+#mission-level-choice>p{margin:6px 0;font-size:18px}
+.mission-levels{gap:12px;margin:12px 0}
+.mission-level-option{padding:12px;gap:5px}
+.mission-level-option .level-number{width:44px;height:44px;font-size:26px;border-width:2px}
+.mission-level-option strong{font-size:19px}
+.mission-level-option>span:last-of-type{font-size:17px}
+.mission-level-option p{font-size:16px;line-height:1.2}
+.mission-level-option .slalom-thresholds{gap:3px;margin:3px auto;font-size:16px}
+.mission-level-option .slalom-best{gap:3px;margin-top:3px}
+.mission-level-option[class*="medal-"] .record-run{padding-top:5px;font-size:16px}
+#town-level-badge{top:68px;left:12px;transform:none;padding:5px 10px;gap:6px;border-width:1px;border-radius:10px;background:#18334ee8;box-shadow:none;animation:none;font:16px 'Titan One',sans-serif;min-height:32px}
+#town-level-badge span{color:#ffdc57;font:24px/1 Arial}
+@media(max-width:600px),(max-height:500px){#town-level-badge{top:57px;left:6px;padding:4px 8px;font-size:13px;min-height:30px}}

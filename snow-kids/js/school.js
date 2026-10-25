@@ -46,7 +46,7 @@
    levels.sort((a,b)=>(a.level||1)-(b.level||1));const m=levels[0];
    const cleared=levels.filter(m=>save.missions?.[m.id]!=null).length,passed=cleared===levels.length,button=document.createElement('button');button.className='school-mission'+(passed?' completed':'');
    const title=document.createElement('h3');title.textContent=m.name;
-   const level=document.createElement('span');level.className='school-level';level.textContent=levels.length+' niveau'+(levels.length>1?'x':'')+' · '+cleared+' / '+levels.length+' ★';
+   const level=document.createElement('span');level.className='school-level';level.textContent=cleared+' / '+levels.length+' ★';
    const shot=document.createElement('canvas');shot.width=640;shot.height=320;shot.setAttribute('aria-label',m.desc);
    const footer=document.createElement('span');footer.className='school-reward';footer.textContent='Choisir le niveau →';
    button.append(title,level,shot,footer);button.title=m.desc;button.onclick=()=>chooseLevel(levels);list.append(button);
@@ -88,12 +88,12 @@
    stroke([[1240,432],[1211,453],[1187,432+Math.sin(t*1.6)*3]],'#284753',18);
    stroke([[1290,432],[1303,482]],'#284753',18);stroke([[1186,431],[1181,424]],'#fff1cf',13);stroke([[1303,481],[1303,489]],'#fff1cf',13);
    window.FamilyHeads?.draw(c,'richard','front',1228,340,76,83);
-   rect(1238,451,58,18,'#fff0c9');c.fillStyle='#513723';c.textAlign='center';c.font='bold 12px Trebuchet MS';c.fillText('Richard',1267,464);
-   const bench=(x,y,w)=>{poly([[x,y],[x+w,y+25],[x+w+20,y+13],[x+20,y-12]],'#b27b43');rect(x,y, w,11,'#704823');for(const dx of [10,w-14]){rect(x+dx,y+10,10,60,'#77502d');} };
+
+   const bench=(x,y,w)=>{poly([[x,y],[x+w,y],[x+w+12,y-12],[x+12,y-12]],'#b27b43');rect(x,y, w,11,'#704823');for(const dx of [10,w-14]){rect(x+dx,y+10,10,60,'#77502d');} };
    const seated=(r,x,y,scale,view)=>{
     c.save();c.translate(x,y);c.scale(scale,scale);const L=r.look||SK.lookOf(r.def,{}),coat=L.jacket||'#3e9bb0',pants=L.pants||'#3c4984';
     const side=view==='side';
-    const wiggle=Math.sin(t*2.1+x)*2;c.rotate(Math.sin(t*1.3+x)*.018);c.translate(0,wiggle);
+    c.rotate(Math.sin(t*1.3+x)*.012);
     // Le bassin repose sur le banc : cuisses horizontales, genoux pliés.
     if(side){
      stroke([[-7,-2],[24,2],[28,43]],pants,14);stroke([[7,2],[38,10],[40,53]],pants,15);
@@ -106,10 +106,10 @@
     c.fillStyle=coat;c.beginPath();c.roundRect(side?-24:-32,-78,side?51:64,83,15);c.fill();
     if(side){
      stroke([[-10,-60],[5,-28],[26,-5]],coat,14);stroke([[13,-60],[30,-29],[35,3]],coat,16);
-     stroke([[27,-5],[33,-3]],'#253849',11);stroke([[35,3],[40,5]],'#253849',12);
+     stroke([[27,-5],[33,-3]],L.skin||r.def.colors.skin,11);stroke([[35,3],[40,5]],L.skin||r.def.colors.skin,12);
     }else{
-     stroke([[-26,-61],[-37,-30],[-22,-10]],coat,16);stroke([[26,-61],[37,-30],[22,-10]],coat,16);
-     stroke([[-24,-11],[-18,-10]],'#253849',11);stroke([[24,-11],[18,-10]],'#253849',11);
+     stroke([[-26,-61],[-38,-30],[-38,-1]],coat,14);stroke([[26,-61],[38,-30],[38,-1]],coat,14);
+     stroke([[-40,-1],[-34,0]],L.skin||r.def.colors.skin,10);stroke([[40,-1],[34,0]],L.skin||r.def.colors.skin,10);
      stroke([[-23,-40],[0,-35],[23,-40]],'#ffffff55',3);
      stroke([[0,-29],[0,-5]],'#00000018',2);
     }
@@ -126,9 +126,9 @@
     c.restore();
    };
    bench(895,606,210);
-   kids.slice(0,3).forEach((r,i)=>seated(r,920+i*73,604+i*9,.78,i===0?'side':'back'));
+   kids.slice(0,3).forEach((r,i)=>seated(r,920+i*73,602,.78,i===0?'side':'back'));
    bench(1100,752,240);
-   kids.slice(3).forEach((r,i)=>seated(r,1156+i*112,751+i*12,.94,'back'));
+   kids.slice(3).forEach((r,i)=>seated(r,1156+i*112,748,.94,'back'));
    // Une seule bulle à la fois, puis quelques secondes de calme entre les répliques.
    const elapsed=(ms-start)/1000,turn=Math.floor(elapsed/9),phase=elapsed%9;
    if(phase>2&&phase<7.5&&kids.length){

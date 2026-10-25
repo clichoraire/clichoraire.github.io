@@ -84,9 +84,9 @@
     if (!save.boards.includes(save.advBoard)) save.advBoard = 'freestyle';
     $('town-gold').innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold,false)}</b>`; $('town-char').textContent = SK.charById(save.advChar).name + ' · Niveau '+SK.Progression.info(save).level+' · planche ' + SK.boardById(save.advBoard).name;
     let badge=$('town-level-badge');if(!badge){badge=document.createElement('button');badge.id='town-level-badge';badge.className='level-badge';$('screen-town').appendChild(badge);badge.onclick=openGym;}
-    badge.hidden=!(save.trainingPoints>0);const townLevel=SK.Progression.info(save).level,points=save.trainingPoints||0;
-    badge.setAttribute('aria-label','Niveau '+townLevel+' : '+points+' points disponibles. Aller au gym');
-    badge.innerHTML='<span class="town-level-star" aria-hidden="true"><i>★</i><b>'+townLevel+'</b></span><span class="town-level-copy"><span class="town-level-title">NIVEAU '+townLevel+'</span><span class="town-level-points">💪 '+points+' POINT'+(points>1?'S':'')+'</span><span class="town-level-link">Au gym ! →</span></span><span class="town-level-sparkles" aria-hidden="true">✦</span>';
+    badge.hidden=!(save.trainingPoints>0);const points=save.trainingPoints||0;
+    badge.innerHTML='<span aria-hidden="true">★</span> '+points;badge.title=points+' points disponibles au gym';
+    badge.setAttribute('aria-label',points+' points disponibles : aller au gym');
     SK.Town.open({
       canvas: $('town-canvas'), save, walkLevel:save.walkLevel||0, charId: save.advChar, boardId: save.advBoard, look: lookFor(save.advChar), labelEl: $('town-label'),
       onEnter: id => {
@@ -459,7 +459,7 @@
     requestAnimationFrame(()=>SK.Progression.animateResult($('result-sub'),xpBefore,Number(xpProfile.xp)||0,()=>A.sfx('unlock')));
     if(flow.mode==='time')$('result-sub').innerHTML += '<p>'+ (me && save.best[flow.course.recordId||flow.course.id]===me.time?'🏆 Nouveau record !':'Record : '+SK.fmtTime(save.best[flow.course.recordId||flow.course.id]))+'</p>';
     if (champ && me && !flow.cup) html += me.rank === 0 ? `<p class="story-text">🏆 <b>Victoire !</b> ${trophy ? 'Un trophée pour ton musée, et ' + SK.TROPHY_GOLD + ' G ! ' : ''}${unlockedNew ? 'Nouvelle piste débloquée : <b>' + unlockedNew.name + '</b>.' : ''}</p>` : `<p class="story-text">Il faut finir <b>1er</b> pour débloquer la piste suivante. Réessaie, ou passe à la boutique.</p>`;
-    if (practice) { $('result-title').textContent=flow.missionMedal==='gold'&&flow.missionPerfect?'🏆 OR + PARFAIT !':flow.missionPerfect?'🌟 Mission parfaite !':missionOk?'Mission réussie !':'Mission échouée';const m=flow.mission,v=flow.missionValue;html='<div class="mission-result-score">'+(m.type==='time'?SK.fmtTime(v):['nofall','edges'].includes(m.type)?v+(m.type==='nofall'?' chute(s)':' contact(s)'):v+' / '+m.goal)+'</div>'+(flow.missionPerfect?'<p class="mission-perfect">🌟 PARFAIT ! 🌟</p>':'')+(flow.missionFirst?'<p class="mission-first">🏆 Première réussite !<br>+'+flow.missionReward+' G · +120 XP</p>':'')+(!missionOk?'<p class="story-text">Veux-tu réessayer ?</p>':''); }
+    if (practice) { $('result-title').textContent=flow.missionMedal==='gold'&&flow.missionPerfect?'🏆 OR + PARFAIT !':flow.missionPerfect?'🌟 Mission parfaite !':missionOk?'Mission réussie !':'Mission échouée';const m=flow.mission,v=flow.missionValue;html='<div class="mission-result-score">'+(m.type==='time'?SK.fmtTime(v):['nofall','edges'].includes(m.type)?v+(m.type==='nofall'?' chute(s)':' contact(s)'):v+' / '+m.goal)+'</div>'+(flow.missionPerfect?'<p class="mission-perfect">🌟 PARFAIT ! 🌟</p>':'')+(!missionOk?'<p class="story-text">Veux-tu réessayer ?</p>':''); }
     if(practice&&flow.mission.type==='slalom'){
       const medal=SK.MEDALS[flow.missionMedal];html+='<div class="slalom-medal '+(flow.missionMedal||'')+'">'+(medal?medal.icon+' '+medal.name:'Pas de médaille')+'</div><p class="slalom-time">⏱ '+SK.fmtTime(flow.missionTime)+'</p>';
       if(flow.missionMedal==='gold'&&flow.missionPerfect)html+='<div class="slalom-masterpiece">✨ OR + PARFAIT ✨<br><small>Toutes les portes · Aucune chute · Aucun bord touché</small></div>';

@@ -10,6 +10,7 @@
   };
 
   SK.buildTrack = function (course, seed, opts) {
+    if(opts?.slalomLevel===1)course={...course,surface:'snow',sections:[{t:'s',n:155,w:12}]};
     // Dedicated jumping lesson; do not alter the regular Sunset Rock course.
     if(opts?.rockBarriers)course={...course,surface:'stone',sections:[
       {t:'s',n:100,w:4.2,boxes:'b',coins:4},
@@ -28,7 +29,7 @@
       const i = segs.length, s = { i, z: i * SEG, y1: y, y2: y + dy, curve, w, surface, tunnel, ramp: false, jump: false, props: [], boxes: [], coins: [], sec };
       y += dy; segs.push(s); return s;
     };
-    const base = -SK.SLOPE * SEG;
+    const base = -(opts?.slalomLevel===1?Math.tan(10*Math.PI/180):SK.SLOPE) * SEG;
     for (const sec of course.sections) {
       if (sec.t === 'x') { surface = sec.s; continue; }
       if (sec.t === 'tunnel') { tunnel = !!sec.on; continue; }
@@ -133,7 +134,7 @@
 
     // Slalom (École) : portes de 6 m alternant gauche / droite, drapeau rouge puis bleu
     const gates = [];
-    if (opts && opts.slalom) { let k = 0; for (let i = 24; i < nRace - 24; i += (opts.slalomLevel>=4?10:14)) { const s = segs[i]; if (s.ramp) continue; const x = (k % 2 ? 1 : -1) * s.w * 0.42, col = k % 2 ? '#1e88e5' : '#e53935'; s.gate = { x, w: 3.2, color: col, n: k }; s.props.push({ type: 'flag', x: x - 3.2, r: 0, decor: true, color: col }, { type: 'flag', x: x + 3.2, r: 0, decor: true, color: col }); gates.push(s); k++; } }
+    if (opts && opts.slalom) { let k = 0; for (let i = opts.slalomLevel===1?18:24; i < (opts.slalomLevel===1?138:nRace-24); i += (opts.slalomLevel===1?6:opts.slalomLevel>=4?10:14)) { const s = segs[i]; if (s.ramp) continue; const x = (k % 2 ? 1 : -1) * (opts.slalomLevel===1?3.4:s.w*0.42), col = k % 2 ? '#1e88e5' : '#e53935'; s.gate = { x, w: 3.2, color: col, n: k }; s.props.push({ type: 'flag', x: x - 3.2, r: 0, decor: true, color: col }, { type: 'flag', x: x + 3.2, r: 0, decor: true, color: col }); gates.push(s); k++; } }
     if(opts?.deadForest){
       // Décor latéral uniquement : les portes et la largeur skiable restent intactes.
       for(let i=15;i<nRace-10;i+=9){const s=segs[i];for(const side of [-1,1]){

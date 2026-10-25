@@ -348,13 +348,13 @@
     if(local.group.greeting<=0||local.group.conversation>0||!(SK.PARENTS?.[childId]||[]).includes(local.r.def.id))return;
     const x=local.group.x+local.offset;
     if(x<camera-80||x>camera+1360)return;
-    const width=196,left=Math.max(camera+12,Math.min(camera+1072,x-width/2));
+    const width=330,left=Math.max(camera+12,Math.min(camera+938,x-width/2));
     // Couples share a greeting window; staggering their bubbles keeps both readable.
     const top=local.offset?274:334;
     c.save();c.fillStyle='#fff0f3';c.strokeStyle='#cc6a86';c.lineWidth=3;c.beginPath();c.roundRect(left,top,width,65,16);c.fill();c.stroke();
     polygon(c,[[x-9,top+64],[x+9,top+64],[x,top+77]],'#fff0f3');
     c.textAlign='center';c.fillStyle='#8b3854';c.font='bold 14px "Trebuchet MS",sans-serif';c.fillText(local.r.def.name,left+width/2,top+22);
-    c.fillStyle='#a82e55';c.font='bold 24px "Trebuchet MS",sans-serif';c.fillText('Je t’aime !',left+width/2,top+50);c.restore();
+    c.fillStyle='#a82e55';c.font='bold 20px "Trebuchet MS",sans-serif';c.fillText(local.r.def.gender==='boy'?'Je t’aime, amuse-toi bien !':'Bonne glisse, mon trésor !',left+width/2,top+50);c.restore();
   };
   T.updateResidentGroup=function(g,playerX,dt){
     if(g.conversation>0){g.conversation=Math.max(0,g.conversation-dt);return;}

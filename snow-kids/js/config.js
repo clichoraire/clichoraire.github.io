@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.46';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.47';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -614,7 +614,7 @@ window.SK.VERSION = '1.46';   // à augmenter à chaque mise en ligne (affichée
 
   // ------------------------------------------------------------------ École : missions de pratique (1 tour)
   SK.MISSIONS = [
-    { id: 'slalom1', type: 'slalom', course: 'rookie', goal: 12, reward: 60, name: 'Slalom débutant', desc: 'Passe entre les drapeaux : gauche, droite, gauche, droite… Au moins 12 portes sur 16.' },
+    { id: 'slalom1', type: 'slalom', course: 'rookie', goal: 12, reward: 60, name: 'Slalom débutant', desc: 'Passe entre les drapeaux : gauche, droite, gauche, droite… Au moins 12 portes sur 20.' },
     { id: 'coins1', type: 'coins', course: 'grass', goal: 12, reward: 60, name: 'Chasse aux pièces', desc: 'Ramasse au moins 12 pièces d\'or en un tour de la Vallée d\'herbe.' },
     { id: 'tricks1', type: 'tricks', course: 'rookie', goal: 12, reward: 70, name: 'Premières figures', desc: 'Gagne au moins 12 G en figures (saute au sommet des bosses avec X, puis C ou X + direction).' },
     { id: 'shots1', type: 'hits', course: 'highway', goal: 3, reward: 100, name: 'Stand de tir', desc: 'Trois coureurs lents roulent devant toi : touche-les 3 fois avec les tirs des boîtes rouges.' },
