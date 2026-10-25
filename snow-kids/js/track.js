@@ -10,7 +10,13 @@
   };
 
   SK.buildTrack = function (course, seed, opts) {
-    if(opts?.slalomLevel===1)course={...course,surface:'snow',sections:[{t:'s',n:155,w:12}]};
+    if(opts?.slalomLevel){
+      const level=opts.slalomLevel;
+      const sections=level===1?[{t:'s',n:155,w:12}]:Array.from({length:10},(_,i)=>({t:'s',n:level===5?19:17,w:12}));
+      course={...course,surface:'snow',sections,forest:false,lowPassages:false,snowGuards:false,polarBears:false,blizzard:level>=4,strongWind:level===5,progressiveStorm:level>=4,stormFromCountdown:true};
+      if(level===2){sections[3]={...sections[3],t:'c',c:.018};sections[7]={...sections[7],t:'c',c:-.018};}
+      if(level>=3)sections.forEach((sec,i)=>{sec.slope=[7,16,22,12,18][i%5];if(i%3!==0){sec.t='c';sec.c=(i%2?1:-1)*(level===5?.075:level===4?.035:.025);}});
+    }
     // Dedicated jumping lesson; do not alter the regular Sunset Rock course.
     if(opts?.rockBarriers)course={...course,surface:'stone',sections:[
       {t:'s',n:100,w:4.2,boxes:'b',coins:4},
@@ -29,13 +35,13 @@
       const i = segs.length, s = { i, z: i * SEG, y1: y, y2: y + dy, curve, w, surface, tunnel, ramp: false, jump: false, props: [], boxes: [], coins: [], sec };
       y += dy; segs.push(s); return s;
     };
-    const base = -(opts?.slalomLevel===1?Math.tan(10*Math.PI/180):SK.SLOPE) * SEG;
+    const base = -(opts?.slalomLevel?Math.tan(10*Math.PI/180):SK.SLOPE) * SEG;
     for (const sec of course.sections) {
       if (sec.t === 'x') { surface = sec.s; continue; }
       if (sec.t === 'tunnel') { tunnel = !!sec.on; continue; }
       const n = sec.n, w = sec.w || prevW, start = segs.length, trans = Math.min(n, 12);
       for (let k = 0; k < n; k++) {
-        const ww = ease(prevW, w, k / trans); let curve = 0, dy = base;
+        const ww = ease(prevW, w, k / trans); let curve = 0, dy = sec.slope!=null?-Math.tan(sec.slope*Math.PI/180)*SEG:base;
         if (sec.t === 'c') { const q = n / 4; curve = sec.c * (k < q ? ease(0, 1, k / q) : k > 3 * q ? ease(1, 0, (k - 3 * q) / q) : 1); }
         if (sec.t === 'b') { const f = kk => sec.a * Math.sin(2 * Math.PI * kk * 3 / n); dy += f(k + 1) - f(k); }
         if (sec.t === 'r') { // bosse-tremplin : montée de h sur n segments, puis redescente sur n segments (pas de saut sans appuyer)
@@ -134,33 +140,26 @@
 
     // Slalom (École) : portes de 6 m alternant gauche / droite, drapeau rouge puis bleu
     const gates = [];
-    if (opts && opts.slalom) { let k = 0; for (let i = opts.slalomLevel===1?18:24; i < (opts.slalomLevel===1?138:nRace-24); i += (opts.slalomLevel===1?6:opts.slalomLevel>=4?10:14)) { const s = segs[i]; if (s.ramp) continue; const x = (k % 2 ? 1 : -1) * (opts.slalomLevel===1?3.4:s.w*0.42), col = k % 2 ? '#1e88e5' : '#e53935'; s.gate = { x, w: 3.2, color: col, n: k }; s.props.push({ type: 'flag', x: x - 3.2, r: 0, decor: true, color: col }, { type: 'flag', x: x + 3.2, r: 0, decor: true, color: col }); gates.push(s); k++; } }
+    if(opts?.slalom){
+      const level=opts.slalomLevel||1;
+      let index=18;
+      for(let k=0;k<20;k++){
+        const s=segs[index],x=(k%2?1:-1)*(level===1?3.4:level===2?3.2+rng()*1.2:level===5?6.4:4.6),width=level===5?2.5:3.2,col=k%2?'#1e88e5':'#e53935';
+        s.gate={x,w:width,color:col,n:k};for(const side of [-1,1])s.props.push({type:'flag',x:x+side*width,r:0,decor:true,color:col});gates.push(s);
+        index+=level===1?6:level===5?7:5+Math.floor(rng()*3);
+      }
+      for(let i=0;i<nRace;i++){
+        const icy=level===2?((i>=42&&i<51)||(i>=101&&i<110)):level>=3?(i%25< (level===5?19:16)):false;
+        segs[i].surface=icy?'ice':'snow';
+      }
+      if(level>=3)for(const i of [34,68,102,136]){const s=segs[i];s.props.push({type:'lowarch',x:0,r:s.w,span:s.w,decor:false});}
+    }
     if(opts?.deadForest){
       // Décor latéral uniquement : les portes et la largeur skiable restent intactes.
       for(let i=15;i<nRace-10;i+=9){const s=segs[i];for(const side of [-1,1]){
         s.props.push({type:'winterbare',x:side*(s.w+6+(i%3)*2),r:0,decor:true,v:(i%7)/7});
         if(i%2)s.props.push({type:'deadlog',x:side*(s.w+3.8),r:0,decor:true,v:(i%5)/5});
       }}
-    }
-    // Le slalom avancé garde les portes libres et annonce chaque tronc à sauter.
-    if(opts?.slalomLevel>=3){
-      const level=opts.slalomLevel;
-      if(level>=4)for(let i=12;i<nRace-12;i+=level===5?3:6){const s=segs[i];
-        for(const side of [-1,1]){
-          for(let row=0;row<(level===5?3:1);row++)s.props.push({type:row%2?'winterbare':'pine',x:side*(s.w+2+row*4+rng()*2),r:0,decor:true,v:rng()});
-          if(!s.ramp&&!segs.slice(Math.max(0,i-3),i+4).some(q=>q.gate)&&i%(level===5?9:18)===0)s.props.push({type:'pine',x:side*(s.w-1.5),r:1.1,decor:false,v:rng()});
-        }
-      }
-      let number=0;
-      for(let i=42;i<nRace-30;i+=level===5?30:level===4?36:44){
-        let index=i;
-        while(index<i+16&&(segs.slice(index-5,index+6).some(s=>s.ramp)||segs.slice(index-2,index+3).some(s=>s.gate)))index++;
-        if(index>=i+16)continue;
-        const s=segs[index],side=[-1,1,0][number++%3],span=side?s.w*.5:s.w+.3,x=side*s.w*.5;
-        for(let j=index-4;j<=index+4;j++){segs[j].props=segs[j].props.filter(p=>p.decor);segs[j].boxes=[];}
-        s.props.push({type:'fallenlog',x,r:span,span,decor:false,mandatory:true,clearance:.78,style:'wood'});
-        const warning=segs[index-7];for(const edge of [-1,1])warning.props.push({type:'trailwarning',x:edge*(warning.w+1),r:0,decor:true,action:'jump'});
-      }
     }
     // Ground-only speed strips, away from ramps and solid obstacles.
     if(opts?.boostPads)for(let i=55;i<nRace-35;i+=110){

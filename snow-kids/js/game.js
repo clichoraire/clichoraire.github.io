@@ -54,17 +54,18 @@
   Racer.prototype.immune = function () { return this.state === 'lift' || this.state === 'drop' || this.state === 'done' || this.fx.invisible > 0; };
 
   // Shared deterministic weather: the warning cloud and lateral force use the same clock.
-  SK.stormAt=function(course,time,seed=1){
+  SK.stormAt=function(course,time,seed=1,progress=0){
     if(!(course.blizzard||course.strongWind)||(!course.stormFromCountdown&&time<6))return {strength:0,force:0,direction:0,warning:false};
     const elapsed=course.stormFromCountdown?Math.max(0,time+6.7):time-6,cycle=Math.floor(elapsed/12),phase=elapsed%12,direction=(cycle+(seed%2))%2?1:-1;
     const warning=phase<1.4,strength=phase>=1.4&&phase<5.2?Math.sin((phase-1.4)/3.8*Math.PI):0;
-    return {strength,force:direction*(course.strongWind?3.5:2.7)*strength,direction,warning};
+    const intensity=course.progressiveStorm?.08+.92*SK.clamp(progress,0,1):1;
+    return {strength:strength*intensity,force:direction*(course.strongWind?3.5:2.7)*strength*intensity,direction,warning:warning&&intensity>.2,intensity};
   };
   SK.startTurboDuration=seconds=>seconds>=1.4-1e-8&&seconds<=1.6+1e-8?3:seconds>=1.2-1e-8&&seconds<=1.8+1e-8?1.5:0;
   SK.Race = function (opts) {
     this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; const slalomLevel=this.mission?.type==='slalom'?this.mission.level:0;
-    if(slalomLevel>=3)this.course={...this.course,sections:this.course.sections.filter(s=>s.t!=='x').map(s=>({...s,obst:0})),surface:'snow',blizzard:slalomLevel===4,strongWind:slalomLevel===5,snowGuards:slalomLevel>=4,guardSpacing:slalomLevel===5?65:85};
     this.track = SK.buildTrack(this.course, this.seed, { boostPads: !this.mission, slalomLevel, deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
+    if(slalomLevel)this.course=this.track.course;
     this.boostOnly = !!this.mission && this.mission.type !== 'hits';
     if(this.boostOnly)for(const segment of this.track.segs)for(const box of segment.boxes)box.kind='blue';
     this.gatesPassed = 0; this.gatesTotal = this.track.gates.length;
@@ -220,7 +221,7 @@
     }
     if (station && r.lap + 1 < this.laps) { r.speed = Math.max(6, Math.min(r.speed, 14) - 10 * dt); target = 0; }
     r.x -= centrifugal * (r.state === 'air' ? 0.6 : 1-(r.cornerHold||0)) * (SK.SURFACES[s.surface] && s.surface === 'ice' ? 1.25 : 1) * dt;
-    if((this.course.blizzard||this.course.strongWind)&&!station&&(r.state==='ride'||r.state==='air')&&r.speed>1){const gust=SK.stormAt(this.course,this.time,this.seed);r.x+=gust.force*(r.state==='air'?1.15:1)*dt;}
+    if((this.course.blizzard||this.course.strongWind)&&!station&&(r.state==='ride'||r.state==='air')&&r.speed>1){const gust=SK.stormAt(this.course,this.time,this.seed,r.z/this.L);r.x+=gust.force*(r.state==='air'?1.15:1)*dt;}
     r.x += (r.pushVelocity||0)*dt;
     r.pushVelocity *= Math.exp(-3*dt);
     if(r.fx.wobble>0)r.speed=Math.max(0,r.speed-2*dt);
