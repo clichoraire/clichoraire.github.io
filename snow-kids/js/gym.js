@@ -68,7 +68,10 @@
   const oval=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
   const line=(pts,width,color)=>{c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();};
   const weight=(x,y)=>{line([[x-27,y],[x+27,y]],7,'#92a5b1');for(const dx of [-23,23]){c.fillStyle='#293c4e';c.fillRect(x+dx-6,y-14,12,28);}};
-  function draw(ms){raf=requestAnimationFrame(draw);const t=ms/1000;
+  const coachDef=SK.VILLAGERS.find(v=>v.id==='jessica'),coach=SK.fakeRacer('jessica','freestyle','ride',SK.lookOf(coachDef,{gear:[],look:{}}));coach.def=coachDef;
+  const openedAt=performance.now(),reducedMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const bubble=(x,y,lines,small=false)=>{c.save();c.font='bold '+(small?18:20)+'px "Trebuchet MS",sans-serif';const w=Math.max(...lines.map(text=>c.measureText(text).width))+30,h=lines.length*25+20,left=SK.clamp(x-w/2,10,1270-w);c.fillStyle='#fff9df';c.strokeStyle='#80623e';c.lineWidth=3;c.shadowColor='#0003';c.shadowBlur=5;c.shadowOffsetY=4;c.beginPath();c.roundRect(left,y-h,w,h,15);c.fill();c.stroke();c.shadowColor='transparent';c.beginPath();c.moveTo(x-9,y-2);c.lineTo(x,y+11);c.lineTo(x+9,y-2);c.fill();c.fillStyle='#29475a';c.textAlign='center';lines.forEach((text,i)=>c.fillText(text,left+w/2,y-h+27+i*25));c.restore();};
+  function draw(ms){raf=requestAnimationFrame(draw);const t=ms/1000,elapsed=(ms-openedAt)/1000;
    c.fillStyle='#9b7853';c.fillRect(0,0,1280,720);
    for(let y=0;y<480;y+=46){c.fillStyle=y%92?'#a68a68':'#af9370';c.fillRect(0,y,1280,43);}
    c.fillStyle='#49392e';for(const x of [15,440,850,1240])c.fillRect(x,0,24,490);c.fillRect(0,40,1280,22);
@@ -109,15 +112,18 @@
    c.font='bold 16px Arial';c.fillStyle='#263e50';c.fillText('Josué',675,207);
    // Jessica at a human-sized desk, using the same portrait as in the village.
    c.save();c.translate(1035,480);c.scale(.78,.78);c.translate(-1035,-480);
-   c.fillStyle='#a64f77';c.beginPath();c.roundRect(985,325,92,115,24);c.fill();
-   line([[996,346],[968,375],[944,356+Math.sin(t*2)*4]],16,'#a64f77');
-   oval(941,352+Math.sin(t*2)*4,9,11,'#f2c5a0');
-   line([[1066,346],[1080,416]],16,'#a64f77');oval(1080,416,9,11,'#f2c5a0');
-   window.FamilyHeads?.draw(c,'jessica','front',985,239,92,99);
+   coach.wave=elapsed%9<3.5&&!reducedMotion;SK.Render.drawWalker(c,coach,1035,550,125,t,'down',false);
    c.fillStyle='#574032';c.fillRect(867,431,335,170);c.fillStyle='#c39a65';c.fillRect(850,420,370,22);
    c.fillStyle='#816248';c.fillRect(890,460,290,115);c.fillStyle='#f3dfad';c.fillRect(931,477,208,64);
    c.fillStyle='#42594f';c.font='bold 24px Arial';c.fillText('JESSICA',1035,504);c.font='bold 15px Arial';c.fillText('COACH',1035,526);
    c.restore();
+   if(panel.hidden){
+    const prompts=['aller plus vite ?','sauter plus haut ?','accélérer plus vite ?','mieux tourner ?','devenir plus forte ou plus fort ?'];
+    const prompt=prompts[Math.floor(elapsed/9)%prompts.length];
+    bubble(1035,267,['Salut ! Aimerais-tu',prompt]);
+    const effortTurn=Math.floor(elapsed/6),effortPhase=elapsed%6;
+    if(effortPhase>1&&effortPhase<4.5){const i=effortTurn%3,phrases=[['Ouff… ouff…'],['Encore un !'],['Allez, on pédale !'],['Ouf ! Ça travaille !']];bubble([200,435,675][i],i<2?430:180,phrases[effortTurn%phrases.length],true);}
+   }
    const player=SK.fakeRacer(save.advChar||save.char,save.advBoard,'ride',SK.lookOf(SK.charById(save.advChar||save.char),save));SK.Render.drawWalker(c,player,560,650,112,t,'down',false);
   }
   raf=requestAnimationFrame(draw);
