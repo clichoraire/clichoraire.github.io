@@ -752,9 +752,11 @@
       const m=race.mission,values={slalom:race.gatesPassed,coins:me.trackCoins,tricks:me.tricksCoins,pushes:me.stats.pushes,hits:me.stats.hits,edges:me.stats.edges,nofall:me.stats.falls};
       const score=m.type==='time'?SK.fmtTime(Math.max(0,race.time)):['nofall','edges'].includes(m.type)?values[m.type]+(m.type==='nofall'?' chute(s)':' contact(s)'):values[m.type]+' / '+m.goal;
       const label=m.type==='time'?'Objectif '+SK.fmtTime(m.goal):m.name;
-      box(vx+vw/2-160*F,vy+12*F,320*F,96*F);
+      box(vx+vw/2-160*F,vy+12*F,320*F,(m.type==='slalom'?128:96)*F);
       ctx.textAlign='center';ctx.fillStyle='#fff3b9';ctx.font='bold '+16*F+'px sans-serif';ctx.fillText(label,vx+vw/2,vy+36*F,300*F);
       ctx.font=48*F+'px "Titan One", sans-serif';ctx.lineWidth=5*F;ctx.strokeStyle='#16344c';ctx.strokeText(score,vx+vw/2,vy+91*F,300*F);ctx.fillStyle='#ffdb45';ctx.fillText(score,vx+vw/2,vy+91*F,300*F);
+      if(m.type==='slalom'){const elapsed=me.finishTime??Math.max(0,race.time),tier=['gold','silver','bronze'].find(k=>elapsed<=m.medalTimes[k]);ctx.font='bold '+17*F+'px sans-serif';ctx.fillStyle=tier?'#fff4c9':'#ff8a80';ctx.fillText(tier?SK.MEDALS[tier].icon+' Objectif '+SK.MEDALS[tier].name+' · '+SK.fmtTime(Math.max(0,m.medalTimes[tier]-elapsed))+' restantes':'Temps dépassé',vx+vw/2,vy+124*F,300*F);}
+
 
     }
     if (me.curTrick) { ctx.font = 'bold ' + 26 * F + 'px sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(me.curTrick.def.name + '…', vx + vw / 2, vy + vh * 0.3); }
@@ -773,7 +775,7 @@
       ctx.fillText('pour repartir plus vite !',x,y+56*F,w-16*F);
       ctx.restore();
     }
-    if(me.state==='done'){if(race.mission){box(vx+vw/2-160*F,vy+vh/2-50*F,320*F,100*F);ctx.font='bold '+32*F+'px sans-serif';ctx.fillStyle='#ffd600';ctx.fillText(SK.missionOutcome(race,me).perfect?'🌟 PARFAIT !':SK.missionOutcome(race,me).ok?'Mission réussie !':'Mission échouée',vx+vw/2,vy+vh/2);}else R.drawFinishBanner(ctx,me,vx+vw*.5,vy+vh*.25,vw*.88,t);}
+    if(me.state==='done'){if(race.mission){box(vx+vw/2-160*F,vy+vh/2-50*F,320*F,100*F);ctx.font='bold '+32*F+'px sans-serif';ctx.fillStyle='#ffd600';ctx.fillText(SK.missionOutcome(race,me).perfect&&SK.missionOutcome(race,me).medal==='gold'?'🏆 OR + PARFAIT !':SK.missionOutcome(race,me).perfect?'🌟 PARFAIT !':SK.missionOutcome(race,me).ok?'Mission réussie !':'Mission échouée',vx+vw/2,vy+vh/2);}else R.drawFinishBanner(ctx,me,vx+vw*.5,vy+vh*.25,vw*.88,t);}
   };
   R.notify = function (r, text, color, big, dur) { r.hud = r.hud || []; r.hud.push({ text, color, big, until: r.race.time + (dur || 2) }); if (r.hud.length > 3) r.hud.shift(); };
 })(window.SK);

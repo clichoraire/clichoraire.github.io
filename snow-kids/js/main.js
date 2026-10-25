@@ -417,9 +417,9 @@
       const m = flow.mission, r = me.r;
       const outcome=SK.missionOutcome(race,r),v=outcome.value;missionOk=outcome.ok;
       A.music(missionOk?'congrats':'results');
-      flow.missionValue = v; flow.missionReward = 0;flow.missionFirst=false;flow.missionPerfect=outcome.perfect;
+      flow.missionValue = v; flow.missionReward = 0;flow.missionFirst=false;flow.missionPerfect=outcome.perfect;flow.missionMedal=outcome.medal;flow.missionTime=outcome.time;
       if(outcome.perfect)(save.missionPerfect??={})[m.id]=true;
-      if (missionOk) { const result=SK.recordMission(save,m,v);earned+=result.reward;flow.missionFirst=result.first;flow.missionReward=result.reward;unlockedMission=result.unlocked; }
+      if (missionOk) { const result=SK.recordMission(save,m,v,outcome);earned+=result.reward;flow.missionFirst=result.first;flow.missionReward=result.reward;unlockedMission=result.unlocked; }
     }
     if (champ && !flow.cup && me && me.rank === 0 && !save.won[flow.course.id]) { trophy = true; earned += SK.TROPHY_GOLD; }
     if (flow.mode !== 'time') { save.gold += earned; }
@@ -450,7 +450,13 @@
     requestAnimationFrame(()=>SK.Progression.animateResult($('result-sub'),xpBefore,Number(xpProfile.xp)||0,()=>A.sfx('unlock')));
     if(flow.mode==='time')$('result-sub').innerHTML += '<p>'+ (me && save.best[flow.course.recordId||flow.course.id]===me.time?'🏆 Nouveau record !':'Record : '+SK.fmtTime(save.best[flow.course.recordId||flow.course.id]))+'</p>';
     if (champ && me && !flow.cup) html += me.rank === 0 ? `<p class="story-text">🏆 <b>Victoire !</b> ${trophy ? 'Un trophée pour ton musée, et ' + SK.TROPHY_GOLD + ' G ! ' : ''}${unlockedNew ? 'Nouvelle piste débloquée : <b>' + unlockedNew.name + '</b>.' : ''}</p>` : `<p class="story-text">Il faut finir <b>1er</b> pour débloquer la piste suivante. Réessaie, ou passe à la boutique.</p>`;
-    if (practice) { $('result-title').textContent=flow.missionPerfect?'🌟 Mission parfaite !':missionOk?'Mission réussie !':'Mission échouée';const m=flow.mission,v=flow.missionValue;html='<div class="mission-result-score">'+(m.type==='time'?SK.fmtTime(v):['nofall','edges'].includes(m.type)?v+(m.type==='nofall'?' chute(s)':' contact(s)'):v+' / '+m.goal)+'</div>'+(flow.missionPerfect?'<p class="mission-perfect">🌟 PARFAIT ! 🌟</p>':'')+(flow.missionFirst?'<p class="mission-first">🏆 Première réussite !<br>+'+flow.missionReward+' G · +120 XP</p>':'')+(!missionOk?'<p class="story-text">Veux-tu réessayer ?</p>':''); }
+    if (practice) { $('result-title').textContent=flow.missionMedal==='gold'&&flow.missionPerfect?'🏆 OR + PARFAIT !':flow.missionPerfect?'🌟 Mission parfaite !':missionOk?'Mission réussie !':'Mission échouée';const m=flow.mission,v=flow.missionValue;html='<div class="mission-result-score">'+(m.type==='time'?SK.fmtTime(v):['nofall','edges'].includes(m.type)?v+(m.type==='nofall'?' chute(s)':' contact(s)'):v+' / '+m.goal)+'</div>'+(flow.missionPerfect?'<p class="mission-perfect">🌟 PARFAIT ! 🌟</p>':'')+(flow.missionFirst?'<p class="mission-first">🏆 Première réussite !<br>+'+flow.missionReward+' G · +120 XP</p>':'')+(!missionOk?'<p class="story-text">Veux-tu réessayer ?</p>':''); }
+    if(practice&&flow.mission.type==='slalom'){
+      const medal=SK.MEDALS[flow.missionMedal];html+='<div class="slalom-medal '+(flow.missionMedal||'')+'">'+(medal?medal.icon+' '+medal.name:'Pas de médaille')+'</div><p class="slalom-time">⏱ '+SK.fmtTime(flow.missionTime)+'</p>';
+      if(flow.missionMedal==='gold'&&flow.missionPerfect)html+='<div class="slalom-masterpiece">✨ OR + PARFAIT ✨<br><small>Toutes les portes · Aucune chute · Aucun bord touché</small></div>';
+      if(!missionOk)html+='<p class="story-text">'+(flow.missionValue<flow.mission.goal?'Il faut au moins '+flow.mission.goal+' portes. ':'')+(flow.missionTime>flow.mission.medalTimes.bronze?'Temps limite dépassé.':'')+'</p>';
+    }
+
 
     if(flow.cup){const cup=SK.cupById(flow.cup.id),rows=SK.cupStandings(flow.cup);$('result-title').textContent=(flow.cup.finished?'🏆 Fin du tournoi':'Course '+(flow.cup.stage+1)+' / '+cup.tracks.length);html='<div class="finish-columns"><section aria-label="Classement de la course"><h3 class="finish-heading">🏁 Classement de la course</h3>'+html+'</section><section aria-label="Classement du tournoi"><h3 class="finish-heading">🏆 Classement du tournoi</h3><div class="finish-grid cup-cards">'+rows.map((row,i)=>{const r=race.racers.find(r=>r.def.id===row.id)||SK.fakeRacer(row.id,'freestyle','ride',lookFor(row.id));return card(r,i,tip('⭐ '+row.points+' points','Points cumulés dans les courses de ce tournoi.'),'',true);}).join('')+'</div></section></div>';if(cupOutcome)html+='<p class="story-text">'+(cupOutcome.won?'🏆 Tournoi gagné !':'La prochaine fois sera la bonne !')+'</p>';}
     if(flow.cup&&flow.mode==='time'){

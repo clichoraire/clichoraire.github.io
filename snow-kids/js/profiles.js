@@ -1,7 +1,7 @@
 // Une aventure indépendante par personnage; préférences audio/difficulté partagées.
 (function(SK){
   'use strict';
-  const P=SK.Profiles={},fields=['missionPerfect','playSeconds','snowDig','strengthLevel','xp','trainingPoints','powerLevels','photoPieces','walkLevel','photoGoldAt','gold','boardSkins','ownedSkins','boards','unlocked','shinobin','won','best','board','advBoard','upgrades','gear','wardrobe','look','trophies','missions','cups','allCupsUnlocked','allMissionsUnlocked','ending'];
+  const P=SK.Profiles={},fields=['missionMedals','missionPerfect','playSeconds','snowDig','strengthLevel','xp','trainingPoints','powerLevels','photoPieces','walkLevel','photoGoldAt','gold','boardSkins','ownedSkins','boards','unlocked','shinobin','won','best','board','advBoard','upgrades','gear','wardrobe','look','trophies','missions','cups','allCupsUnlocked','allMissionsUnlocked','ending'];
   const copy=v=>JSON.parse(JSON.stringify(v));
   const snapshot=s=>Object.fromEntries(fields.filter(k=>s[k]!==undefined).map(k=>[k,copy(s[k])]));
   let defaults;
