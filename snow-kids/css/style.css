@@ -661,7 +661,7 @@ table.results td.num { text-align: right; font-family: monospace; }
 
 /* Petits écrans : une manette sous la piste, sans recouvrir le jeu. */
 #touch-controls,.touch-help { display:none; }
-@media (max-width:1100px) {
+@media (max-width:1100px), (pointer:coarse) and (max-width:1400px) {
   #app { height:100dvh; }
   .touch-help { display:block; }
   body.touch-playing { --touch-height:190px; }
@@ -679,13 +679,13 @@ table.results td.num { text-align: right; font-family: monospace; }
   body.touch-playing #screen-race,body.touch-playing #screen-town,body.touch-playing #screen-museum { bottom:var(--touch-height); }
   body.touch-playing #screen-race .stage,body.touch-playing #screen-town .stage { width:min(100vw,calc((100dvh - var(--touch-height)) * 16 / 9));height:min(calc(100dvh - var(--touch-height)),calc(100vw * 9 / 16)); }
   #touch-controls:not([data-mode=race]) .touch-actions,#touch-controls:not([data-mode=race]) .touch-pause,#touch-controls:not([data-mode=race]) .touch-hint,#touch-controls:not([data-mode=race]) [data-action=up],#touch-controls:not([data-mode=race]) [data-action=down] { display:none; }
-  #touch-controls:not([data-mode=race]) .touch-directions { display:flex;width:100%;justify-content:space-between; }
+  #touch-controls:not([data-mode=race]) .touch-directions { display:flex;width:100%;justify-content:center;gap:8px; }
   #touch-controls:not([data-mode=race]) button { min-width:80px; }
   body.touch-playing:has(#touch-controls:not([data-mode=race])) { --touch-height:92px; }
   #screen-race #pause { position:fixed;z-index:40; }
   #screen-race .pause-box { max-height:96dvh;overflow:auto;padding:16px; }
 }
-@media(max-width:1100px) and (orientation:landscape) {
+@media(max-width:1100px) and (orientation:landscape), (pointer:coarse) and (max-width:1400px) and (orientation:landscape) {
   body.touch-playing { --touch-height:152px; }
   .touch-directions { grid-template-columns:repeat(3,58px);gap:4px; }
   .touch-actions { grid-template-columns:90px repeat(4,64px);align-items:end; }
@@ -701,7 +701,7 @@ table.results td.num { text-align: right; font-family: monospace; }
   .touch-actions { grid-template-columns:repeat(3,54px);gap:4px; }
   #touch-controls .touch-jump { grid-row:span 2; }
 }
-@media(max-width:1100px) and (orientation:landscape) {
+@media(max-width:1100px) and (orientation:landscape), (pointer:coarse) and (max-width:1400px) and (orientation:landscape) {
   #touch-controls .touch-directions button,#touch-controls .touch-actions button:not(.touch-jump) { height:54px;line-height:1; }
 }
 
@@ -719,16 +719,16 @@ table.results td.num { text-align: right; font-family: monospace; }
   #touch-controls .touch-jump { grid-row:auto;grid-column:span 2;min-height:56px;height:56px;font-size:26px; }
   #touch-controls .touch-pause { top:8px;right:max(8px,env(safe-area-inset-right));height:42px;min-height:42px;min-width:44px; }
   body.touch-playing #screen-race .stage,body.touch-playing #screen-town .stage { width:min(calc(100vw - 268px),calc(100dvh * 16 / 9));height:min(100dvh,calc((100vw - 268px) * 9 / 16)); }
-  #touch-controls:not([data-mode=race]) .touch-directions { display:contents; }
-  #touch-controls:not([data-mode=race]) [data-action=left] { position:absolute;left:10px;bottom:12px;min-width:48px; }
-  #touch-controls:not([data-mode=race]) [data-action=right] { position:absolute;right:10px;bottom:12px;min-width:48px; }
+  #touch-controls:not([data-mode=race]) .touch-directions { display:flex;left:50%;bottom:8px;transform:translateX(-50%);width:auto;gap:6px; }
+  #touch-controls:not([data-mode=race]) [data-action=left] { position:static;min-width:48px; }
+  #touch-controls:not([data-mode=race]) [data-action=right] { position:static;min-width:48px; }
   body.touch-playing #screen-town .stage { width:min(calc(100vw - 132px),calc(100dvh * 16 / 9));height:min(100dvh,calc((100vw - 132px) * 9 / 16)); }
   #town-top { top:5px;left:6px;right:6px;gap:5px;font-size:11px; }
   #town-top span { padding:4px 6px; }
   #town-top button { font-size:11px;padding:5px 8px;min-height:36px; }
   #town-top .gold-box { font-size:14px;padding:5px 8px;border-width:2px; }
   #town-top .gold-box img { width:22px;height:22px; }
-  #town-label { bottom:5px; }
+  #town-label { bottom:62px; }
   #town-label .town-enter { font-size:16px;padding:5px 22px;min-height:42px; }
 }
 @media(max-width:600px) and (orientation:portrait) {
@@ -742,4 +742,22 @@ table.results td.num { text-align: right; font-family: monospace; }
   #touch-controls .touch-jump { height:96px;font-size:28px; }
   #touch-controls .touch-pause { height:40px;min-height:40px;min-width:40px;top:4px; }
   .touch-hint { font-size:11px; }
+}
+
+/* La police arrondie de l’accueil accompagne aussi les commandes. */
+#touch-controls button small,#touch-controls .touch-hint { font-family:'Titan One','Trebuchet MS',sans-serif;font-weight:400; }
+/* Tablettes, y compris les grands iPad tactiles en paysage. */
+@media(min-width:601px) and (min-height:501px) and (max-width:1100px), (pointer:coarse) and (min-width:601px) and (min-height:501px) and (max-width:1400px) {
+  body.touch-playing { --touch-height:238px; }
+  #touch-controls:not([hidden]) { padding:40px max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left)); }
+  #touch-controls .touch-directions { grid-template-columns:repeat(3,76px);gap:8px; }
+  #touch-controls .touch-actions { grid-template-columns:repeat(3,76px);gap:8px; }
+  #touch-controls button,#touch-controls .touch-directions button,#touch-controls .touch-actions button:not(.touch-jump) { min-width:76px;min-height:76px;height:76px;font-size:34px;border-radius:20px;border-width:3px;line-height:1.1; }
+  #touch-controls button small { font-size:14px; }
+  #touch-controls .touch-jump { grid-column:auto;grid-row:span 2;height:160px;min-height:160px;font-size:42px; }
+  #touch-controls .touch-pause { min-width:54px;min-height:52px;width:54px;height:52px;font-size:26px;top:6px; }
+  #touch-controls .touch-hint { top:12px;font-size:14px; }
+  body.touch-playing:has(#touch-controls:not([data-mode=race])) { --touch-height:112px; }
+  #touch-controls:not([data-mode=race]) .touch-directions { gap:8px; }
+  #touch-controls:not([data-mode=race]) button { width:88px;min-width:88px;height:76px; }
 }

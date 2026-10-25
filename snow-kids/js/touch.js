@@ -2,7 +2,7 @@
 (function (SK) {
   'use strict';
   const T = SK.Touch = { held: {}, screen: '', paused: false };
-  const compact = window.matchMedia('(max-width: 1100px)');
+  const compact = window.matchMedia('(max-width: 1100px), (pointer: coarse) and (max-width: 1400px)');
   const pointers = new Map();
   const panel = document.createElement('nav');
   panel.id = 'touch-controls';
