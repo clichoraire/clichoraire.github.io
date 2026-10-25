@@ -54,7 +54,8 @@
     // sprites : du plus loin au plus proche
     const bySeg = {};
     for (const r of race.racers) { if (r.state === 'lift' || r.state === 'done') continue; const i = Math.floor(r.z / SEG); (bySeg[i] = bySeg[i] || []).push({ kind: 'racer', r, x: r.x, z: r.z, h: r.h }); }
-    for (const k of race.rocks) { const i = Math.floor(k.z / SEG); (bySeg[i] = bySeg[i] || []).push({ kind: 'rock', trapType:k.type||'rock', x: k.x, z: k.z, h: 0 }); }
+    for(const a of race.track.wildlife||[]){if(a.mode==='gone')continue;const i=Math.floor(a.z/SEG);(bySeg[i]=bySeg[i]||[]).push({kind:'wildlife',a,x:a.x,z:a.z,h:0});}
+    for(const k of race.rocks){const q=k.launchX!=null?SK.clamp((race.time-k.t0)/.65,0,1):1,x=k.launchX!=null?k.launchX+(k.x-k.launchX)*q:k.x,z=k.launchZ!=null?k.launchZ+(k.z-k.launchZ)*q:k.z,h=q<1?Math.sin(q*Math.PI)*4:0;const i=Math.floor(z/SEG);(bySeg[i]=bySeg[i]||[]).push({kind:'rock',trapType:k.type||'rock',x,z,h});}
     for(const e of race.explosions||[]){const i=Math.floor(e.z/SEG);(bySeg[i]=bySeg[i]||[]).push({kind:'explosion',e,x:e.x,z:e.z,h:1});}
     for (const sh of race.shots) { if (sh.drop != null) { if (sh.target) (bySeg[Math.floor(sh.target.z / SEG)] = bySeg[Math.floor(sh.target.z / SEG)] || []).push({ kind: 'shot', s: sh, x: sh.target.x, z: sh.target.z, h: sh.h }); } else if (sh.z != null) { const i = Math.floor(sh.z / SEG); (bySeg[i] = bySeg[i] || []).push({ kind: 'shot', s: sh, x: sh.x, z: sh.z, h: sh.h }); } }
     for (let n = proj.length - 1; n >= 0; n--) {
@@ -63,7 +64,7 @@
       const items = [];
       for (const pr of s.props) if(!pr.destroyed)items.push({ kind: 'prop', p: pr, x: pr.x, z: s.z + (pr.dz == null ? SEG / 2 : pr.dz), h: 0 });
       for (const b of s.boxes) if (b.taken <= race.time) items.push({ kind: 'box', b, x: b.x, z: s.z + SEG / 2, h: 0.6 });
-      for (const c of s.coins) if (c.taken <= race.time) items.push({ kind: 'coin', c, x: c.x, z: s.z + SEG / 2, h: 0.5 });
+      for (const c of s.coins) if(c.taken<=race.time){const pose=SK.CoinWildlife?.pose(c,race.time)||{x:c.x,h:.5};items.push({kind:'coin',c,x:pose.x,z:s.z+SEG/2,h:pose.h});}
       if(s.puzzle&&!s.puzzle.taken)items.push({kind:'puzzle',x:s.puzzle.x,z:s.z+SEG/2,h:1});
       if (bySeg[s.i]) for (const it of bySeg[s.i]) items.push(it);
       items.sort((a, b) => b.z - a.z);
@@ -82,8 +83,10 @@
         if (it.kind === 'prop') R.drawProp(ctx, it.p.type, sx, sy, sc, it.p.v || 0, t, it.p);
         else if (it.kind === 'box') R.drawBox(ctx, it.b, sx, sy, sc, t);
         else if(it.kind==='puzzle')SK.PhotoPuzzles.drawPiece(ctx,sx,sy,sc,t);
-        else if (it.kind === 'coin') R.drawCoin(ctx, sx, sy, sc, t);
-        else if (it.kind === 'rock') R.drawProp(ctx, it.trapType, sx, sy, sc, 0.5, t, {});
+        else if (it.kind === 'coin') R.drawCoin(ctx, sx, sy-(it.h-.5)*sc, sc, t);
+        else if (it.kind === 'rock') R.drawProp(ctx, it.trapType, sx, sy-it.h*sc, sc, 0.5, t, {});
+        else if(it.kind==='wildlife')SK.CoinWildlife.draw(ctx,it.a,sx,sy,sc,t);
+        else if(it.kind==='shot'&&it.s.kind==='wildrock')R.drawProp(ctx,'rock',sx,sy-sc,sc*.65,0,t,{});
         else if (it.kind === 'shot') R.drawShot(ctx, it.s, sx, sy - it.h * sc, sc, t);
         else if (it.kind === 'racer') { if (it.r === me) me.screen = { sx, sy, sc }; R.drawRacer(ctx, it.r, sx, sy, sc, t, it.r === me); }
         ctx.restore();
@@ -216,6 +219,7 @@
     R.quad(ctx, p.x1 + p.w1, p.y1, p.x2 + p.w2, p.y2, p.x2 + p.w2 + bank * p.sc2, p.y2, p.x1 + p.w1 + bank * p.sc1, p.y1, mix(th.rumble[alt], th.fog, fog));
     // route
     R.quad(ctx, p.x1 - p.w1, p.y1, p.x2 - p.w2, p.y2, p.x2 + p.w2, p.y2, p.x1 + p.w1, p.y1, mix(roadCols[alt], th.fog, fog * 0.9));
+    if(s.dirt){const {x,w}=s.dirt;R.quad(ctx,p.x1+(x-w)*p.sc1,p.y1,p.x2+(x-w)*p.sc2,p.y2,p.x2+(x+w)*p.sc2,p.y2,p.x1+(x+w)*p.sc1,p.y1,'#503320');}
     if(s.boostPad){
       const {x,w}=s.boostPad;
       const point=(u,v)=>{const scale=p.sc1+(p.sc2-p.sc1)*v;return [p.x1+(p.x2-p.x1)*v+(x+u*w)*scale,p.y1+(p.y2-p.y1)*v];};
@@ -429,6 +433,7 @@
   R.drawRacer = function (ctx, r, x, y, s, t, isMe) {
     s *= SK.characterScale(r.def.id);
     const L = lookOf(r), h = r.h || 0;
+    if(r.coinBurst!=null){const age=(r.race?.time??t)-r.coinBurst;if(age>=0&&age<.65){ctx.save();ctx.globalAlpha=1-age/.65;for(let i=0;i<10;i++){const a=i*TAU/10;circ(ctx,x+Math.cos(a)*s*(.3+age*2),y-s+Math.sin(a)*s*(.3+age*2),s*.045,i%2?'#fff5ab':'#ffd13d');}SK.drawGoldCoin(ctx,x,y-s*(1.7+age),s*.20);ctx.restore();}}
     if(r.state==='stunned'){ctx.save();ctx.font='bold '+Math.max(12,s*.28)+'px Arial';ctx.textAlign='center';ctx.fillStyle='#ffdf4d';for(let i=0;i<5;i++){const a=t*3+i*TAU/5;ctx.fillText('★',x+Math.cos(a)*s*.55,y-s*2.7+Math.sin(a)*s*.14);}ctx.restore();}
     if(r.fx?.wobble>0)x+=Math.sin(t*20)*s*.08;
     if(r.fx?.pushPose>0)x+=(r.pushDirection||1)*s*.12;

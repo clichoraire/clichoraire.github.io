@@ -28,6 +28,7 @@
       course={...course,surface:'snow',sections:[{t:'s',n:30,w:width,boxes:'b'},
         ...[-1,1,0,-1,1,0,1,-1,0,-1,1,0].map((dir,i)=>({t:dir?'c':'s',n:dir?(i%2?18:12):12,c:dir*(.055+.01*(opts.edgeLesson-1)),w:width,boxes:i%3===0?'b':undefined}))]};
     }
+    if(opts?.coinLevel&&SK.CoinWildlife)course=SK.CoinWildlife.course(course,opts.coinLevel);
     const rng = SK.rng(seed || 7), theme = SK.THEMES[course.theme];
     const segs = []; let y = 0, surface = course.surface || 'snow', tunnel = false, prevW = opts?.rockBarriers ? 4.2 : opts?.edgeLesson ? (4.6-.3*(opts.edgeLesson-1)) : 12;
     const ease = (a, b, p) => a + (b - a) * (1 - Math.cos(Math.min(1, Math.max(0, p)) * Math.PI)) / 2;
@@ -207,6 +208,7 @@
         for(let j=index-4;j<=index+4;j+=2){const sg=segs[j];sg.coins=[{x:sg.forestPath?.center||0,taken:0}];}
       }
     }
+    if(opts?.coinLevel)SK.CoinWildlife?.setup(track,opts.coinLevel,rng);
     return track;
   };
 })(window.SK);

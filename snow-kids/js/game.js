@@ -64,9 +64,9 @@
   SK.startTurboDuration=seconds=>seconds>=1.4-1e-8&&seconds<=1.6+1e-8?3:seconds>=1.2-1e-8&&seconds<=1.8+1e-8?1.5:0;
   SK.Race = function (opts) {
     this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; const slalomLevel=this.mission?.type==='slalom'?this.mission.level:0;
-    this.track = SK.buildTrack(this.course, this.seed, { boostPads: !this.mission, slalomLevel, deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
-    if(slalomLevel)this.course=this.track.course;
-    this.boostOnly = !!this.mission && this.mission.type !== 'hits';
+    this.track = SK.buildTrack(this.course, this.seed, { coinLevel:this.mission?.type==='coins'&&this.mission.level<=3?this.mission.level:0, boostPads: !this.mission, slalomLevel, deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
+    this.course=this.track.course;
+    this.boostOnly = !!this.mission && this.mission.type !== 'hits' && !(this.mission.type==='coins'&&this.mission.level===3);
     if(this.boostOnly)for(const segment of this.track.segs)for(const box of segment.boxes)box.kind='blue';
     this.gatesPassed = 0; this.gatesTotal = this.track.gates.length;
     this.L = this.track.L; this.gateX = this.track.gateX; this.gateW = this.track.gateW; this.gateZ = this.track.gateZ; this.laps = opts.laps || this.course.laps || SK.DEFAULT_LAPS; this.mode = opts.mode || 'race';
@@ -121,6 +121,7 @@
       cow.x=Math.sin(a)*cow.walk.range;cow.facing=Math.cos(a)>=0?1:-1;
       cow.walkTime=this.time;
     }
+    SK.CoinWildlife?.update(this,dt);
     for (const r of this.racers) if (r.ctrl === 'cpu' && SK.AI) SK.AI.drive(this, r, dt);
     for (const r of this.racers){r.snowPrevious={x:r.x,z:r.z};this.updateRacer(r, dt);}
     this.updateSnowGuards(dt);
@@ -297,6 +298,7 @@
           if(!p.trainingBarrier&&!p.mandatory&&SK.GearEffects?.protect(r,p))continue;
           if(p.type==='lowarch'){this.daze(r,1.8);continue;}
           if(p.type==='snowman'){r.speed*=.55;r.fx.slow=Math.max(r.fx.slow,1.4);SK.LensSnow.splash(r,24,true);this.emit({type:'snowimpact',r});continue;}
+          if(p.type==='banana'){r.fx.slip=1.4;r.pushVelocity=(r.input.steer<0?-1:1)*6;}
           this.fall(r, 1.3, false); this.emit({ type: 'obstacle', r, kind: p.type }); }
       }
       if (sg.gate && r.ctrl === 'human') { const gz = sg.z + SEG / 2; if (gz >= zPrev && gz < r.z) { if (Math.abs(r.x - sg.gate.x) <= sg.gate.w) { this.gatesPassed++; this.emit({ type: 'gate', r, ok: true, n: sg.gate.n }); } else this.emit({ type: 'gate', r, ok: false, n: sg.gate.n }); } }
@@ -307,7 +309,7 @@
       if(sg.puzzle&&!sg.puzzle.taken&&r.ctrl==='human'&&sg.z+SEG/2>=zPrev&&sg.z+SEG/2<r.z&&Math.abs(r.x-sg.puzzle.x)<1.8&&r.h<2.5){sg.puzzle.taken=true;this.emit({type:'puzzle',r,id:sg.puzzle.id});}
       for (const c of sg.coins) {
         const cz = sg.z + SEG / 2;
-        if (c.taken <= this.time && cz >= zPrev && cz < r.z && Math.abs(r.x - c.x) < (r.gear.aimant ? 2.8 : 1.5) && r.h < 2) { c.taken = this.time + SK.BOX_RESPAWN * 3; r.trackCoins++; if(SK.collectGold)SK.collectGold(r,SK.COIN_VALUE);else{r.coins+=SK.COIN_VALUE;r.coinsTotal+=SK.COIN_VALUE;} this.emit({ type: 'coin', r }); }
+        if (c.taken <= this.time && cz >= zPrev && cz < r.z && Math.abs(r.x - (SK.CoinWildlife?.pose(c,this.time).x??c.x)) < (r.gear.aimant ? 2.8 : 1.5) && Math.abs(r.h+.5-(SK.CoinWildlife?.pose(c,this.time).h??.5)) < 1.4) { c.taken = this.time + SK.BOX_RESPAWN * 3; r.trackCoins++; if(SK.collectGold)SK.collectGold(r,SK.COIN_VALUE);else{r.coins+=SK.COIN_VALUE;r.coinsTotal+=SK.COIN_VALUE;} r.coinBurst=this.time;this.emit({ type: 'coin', r }); }
       }
     }
     for (const k of this.rocks) {
@@ -400,7 +402,7 @@
     if (this.mode === 'time') return;
     if (b.kind === 'red') {
       if (r.shot) { this.emit({ type: 'boxfull', r, kind: 'red' }); return; }
-      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.shot = this.rollPower(r,'red'); b.taken = this.time + SK.BOX_RESPAWN; r.boxBurst={at:this.time,kind:b.kind}; this.emit({ type: 'box', r, kind: 'red', got: r.shot });
+      r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.shot = b.wildAmmo?'bombe':this.rollPower(r,'red'); b.taken = this.time + SK.BOX_RESPAWN; r.boxBurst={at:this.time,kind:b.kind}; this.emit({ type: 'box', r, kind: 'red', got: r.shot });
     } else {
       if (r.item) { this.emit({ type: 'boxfull', r, kind: 'blue' }); return; }
       r.coins = Math.max(0, r.coins - SK.SHOT_COST); r.item = this.rollPower(r,'blue'); b.taken = this.time + SK.BOX_RESPAWN; r.boxBurst={at:this.time,kind:b.kind}; this.emit({ type: 'box', r, kind: 'blue', got: r.item });
@@ -409,6 +411,7 @@
   P.fire = function (r) {
     const kind = r.shot; r.shot = null; r.stats.shots++;
     this.emit({ type: 'shoot', r, kind });
+    if(SK.CoinWildlife?.shoot(this,r,kind))return;
     if(kind==='rocher'){this.dropTrap(r);return;}
     if (kind === 'poele') {
       for (const o of this.racers) if (o !== r && o.progress()>r.progress() && !o.immune()) this.shots.push({ kind, from: r, target: o, drop: 1.5, h: 12 });
@@ -486,17 +489,18 @@
   P.updateShots = function (dt) {
     const keep = [];
     for (const s of this.shots) {
-      if(s.kind==='wildsnow'){
+      if(s.kind==='wildsnow'||s.kind==='wildrock'){
         const ox=s.x,oz=s.z;s.x+=s.vx*dt;s.z+=s.vz*dt;s.life-=dt;
         let hit=false;
         for(const r of this.racers){if(r.lap!==s.lap||r.immune()||!['ride','air'].includes(r.state)||r.h>1.8)continue;
           const prev=r.snowPrevious||r,ax=ox-prev.x,az=oz-prev.z,dx=(s.x-r.x)-ax,dz=(s.z-r.z)-az;
           const q=SK.clamp(-(ax*dx+az*dz)/(dx*dx+dz*dz||1),0,1);
-          if(Math.hypot(ax+q*dx,az+q*dz)<1.25){r.speed*=.72;r.fx.wobble=.8;this.emit({type:'snowimpact',r});hit=true;break;}
+          if(Math.hypot(ax+q*dx,az+q*dz)<1.25){if(s.kind==='wildrock'){this.fall(r,1,false);this.emit({type:'rockhit',r});}else{r.speed*=.72;r.fx.wobble=.8;this.emit({type:'snowimpact',r});}hit=true;break;}
         }
         if(!hit&&s.life>0&&s.z>0&&s.z<this.L&&Math.abs(s.x)<this.track.widthAt(s.z)+5)keep.push(s);
         continue;
       }
+      if(s.wildTarget){const a=s.wildTarget;s.life-=dt;if(a.down||a.mode==='gone'||s.life<=0)continue;s.prog+=95*dt;s.z=s.prog-s.lap*this.L;s.x+=(a.x-s.x)*Math.min(1,dt*9);if(s.z>=a.z-1){SK.CoinWildlife.hit(this,a,s.from);continue;}keep.push(s);continue;}
       if (s.drop != null) { s.drop -= dt; s.h = Math.max(0, s.drop * 14); if (s.drop <= 0) { if(s.target.progress()>s.from.progress())this.applyHit(s.target, s.kind, s.from); continue; } keep.push(s); continue; }
       s.life -= dt; if (s.life <= 0) { this.emit({ type: 'fizzle', s }); continue; }
       const spd = 95 + (s.target ? s.target.speed : 0);

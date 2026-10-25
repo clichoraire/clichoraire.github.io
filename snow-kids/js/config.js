@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.50';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.51';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -631,7 +631,7 @@ window.SK.VERSION = '1.50';   // à augmenter à chaque mise en ligne (affichée
   // Cinq niveaux par discipline ; conserver les anciens identifiants sauvegardés.
   const lessonPlans={
     slalom:{prefix:'slalom',courses:['rookie','silver','silver','silver','silver'],goals:[12,14,16,18,20]},
-    coins:{prefix:'coins',courses:['grass','rookie','highway','silver','dizzy'],goals:[12,14,16,18,22]},
+    coins:{prefix:'coins',courses:['grass','grass','grass','silver','dizzy'],goals:[12,14,16,18,22]},
     tricks:{prefix:'tricks',courses:['rookie','dizzy','dizzy','dizzy','dizzy'],goals:[12,35,50,65,80]},
     hits:{prefix:'shots',courses:['highway','ninja','ninja','ninja','ninja'],goals:[3,6,8,10,12]},
     time:{prefix:'time',courses:['rookie','rookie','rookie','rookie','rookie'],goals:[120,110,100,90,80]},
