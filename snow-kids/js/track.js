@@ -162,6 +162,11 @@
         const warning=segs[index-7];for(const edge of [-1,1])warning.props.push({type:'trailwarning',x:edge*(warning.w+1),r:0,decor:true,action:'jump'});
       }
     }
+    // Ground-only speed strips, away from ramps and solid obstacles.
+    if(opts?.boostPads)for(let i=55;i<nRace-35;i+=110){
+      const s=segs[i];if(s.ramp||s.tunnel||s.props.some(p=>!p.decor))continue;
+      s.boostPad={x:0,w:Math.min(3.5,s.w*.6)};
+    }
     const track = { course, theme, segs, walkers, nRace, L, length: segs.length, gateX, gateW, gateZ: L + 3 * SEG, wEnd: prevW, gates };
     track.segAt = z => segs[SK.clamp(Math.floor(z / SEG), 0, segs.length - 1)];
     track.groundY = z => { const s = track.segAt(z); const p = SK.clamp((z - s.z) / SEG, 0, 1); return s.y1 + (s.y2 - s.y1) * p; };

@@ -60,10 +60,11 @@
     const warning=phase<1.4,strength=phase>=1.4&&phase<5.2?Math.sin((phase-1.4)/3.8*Math.PI):0;
     return {strength,force:direction*(course.strongWind?3.5:2.7)*strength,direction,warning};
   };
+  SK.startTurboDuration=seconds=>seconds>=1.4-1e-8&&seconds<=1.6+1e-8?3:seconds>=1.2-1e-8&&seconds<=1.8+1e-8?1.5:0;
   SK.Race = function (opts) {
     this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; const slalomLevel=this.mission?.type==='slalom'?this.mission.level:0;
     if(slalomLevel>=3)this.course={...this.course,sections:this.course.sections.filter(s=>s.t!=='x').map(s=>({...s,obst:0})),surface:'snow',blizzard:slalomLevel===4,strongWind:slalomLevel===5,snowGuards:slalomLevel>=4,guardSpacing:slalomLevel===5?65:85};
-    this.track = SK.buildTrack(this.course, this.seed, { slalomLevel, deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
+    this.track = SK.buildTrack(this.course, this.seed, { boostPads: !this.mission, slalomLevel, deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
     this.boostOnly = !!this.mission && this.mission.type !== 'hits';
     if(this.boostOnly)for(const segment of this.track.segs)for(const box of segment.boxes)box.kind='blue';
     this.gatesPassed = 0; this.gatesTotal = this.track.gates.length;
@@ -104,9 +105,15 @@
     if(this.phase==='race'&&SK.GearEffects)dt*=SK.GearEffects.timeScale(this,dt);
     this.time += dt;
     if (this.phase === 'count') {
+      for(const r of this.humans){
+        const held=!!r.input.up;
+        if(held&&!r.startHeld)r.startTurbo=SK.startTurboDuration(-this.time);
+        if(!held)r.startTurbo=0;
+        r.startHeld=held;
+      }
       const c = Math.min(3, Math.ceil(-this.time));
       if (c !== this.countShown && c <= 3) { this.countShown = c; this.emit({ type: 'count', n: c }); }
-      if (this.time >= 0) { this.phase = 'race'; this.emit({ type: 'go' }); for (const r of this.racers) if (r.gear.fusee) SK.GearEffects?SK.GearEffects.boost(r,3):r.fx.fan=3; } else { this.rankAll(); return; }
+      if (this.time >= 0) { this.phase = 'race'; this.emit({ type: 'go' }); for(const r of this.humans)if(r.startTurbo){r.fx.fan=Math.max(r.fx.fan||0,r.startTurbo);r.speed=SK.raceTopSpeed(r)*1.1;this.emit({type:'startturbo',r,long:r.startTurbo===3});} for (const r of this.racers) if (r.gear.fusee) SK.GearEffects?SK.GearEffects.boost(r,3):r.fx.fan=3; } else { this.rankAll(); return; }
     }
     for(const cow of this.track.walkers||[]){
       const a=this.time*cow.walk.rate+cow.walk.phase;
@@ -278,6 +285,9 @@
     const i0 = SK.clamp(Math.floor(zPrev / SEG), 0, T.segs.length - 1), i1 = SK.clamp(Math.floor(r.z / SEG), 0, T.segs.length - 1);
     for (let i = i0; i <= i1; i++) {
       const sg = T.segs[i];
+      if(sg.boostPad&&sg.z+SEG/2>=zPrev&&sg.z+SEG/2<r.z&&r.state==='ride'&&r.h<.3&&Math.abs(r.x-sg.boostPad.x)<=sg.boostPad.w){
+        r.fx.fan=Math.max(r.fx.fan||0,1.5);r.speed=Math.max(r.speed,SK.raceTopSpeed(r)*1.15);this.emit({type:'groundboost',r});
+      }
       for (const p of sg.props) {
         if (p.decor) continue;
         const pz = sg.z + (p.dz == null ? SEG / 2 : p.dz);

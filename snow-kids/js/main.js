@@ -380,6 +380,8 @@
     for (const e of race.takeEvents()) {
       const r = e.r, human = r && r.ctrl === 'human', fromHuman = e.from && e.from.ctrl === 'human';
       switch (e.type) {
+        case 'startturbo': if(human){A.sfx('box');R.notify(r,e.long?'SUPER DÉPART !':'DÉPART TURBO !','#ffdf55',true,1.5);} break;
+        case 'groundboost': if(human)A.sfx('box');break;
         case 'count': A.sfx('count'); break;
         case 'go': A.sfx('go'); A.music(flow.mode==='practice'?'training':flow.course.theme); break;
         case 'puzzle': if(human&&!flow.debug&&SK.PhotoPuzzles.collect(save,e.id)){store();A.sfx('coin');R.notify(r,'Pièce de casse-tête ! '+save.photoPieces.length+' / '+SK.PhotoPuzzles.ids().length,'#ffe260',true,4);} break;

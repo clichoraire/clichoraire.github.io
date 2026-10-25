@@ -20,7 +20,7 @@
    for(const m of levels.filter(m=>SK.missionUnlocked(m,save))){
     const passed=save.missions?.[m.id]!=null,b=document.createElement('button');b.type='button';b.className='mission-level-option'+(passed?' completed':'');if(save.missionPerfect?.[m.id]){b.classList.add('perfect');b.setAttribute('aria-label',m.name+' niveau '+m.level+' — parfait');}
     b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(m.reward*2,false)}</span>`}</span>`;
-    const desc=document.createElement('p');desc.textContent=m.type==='slalom'?m.goal+' portes':m.desc+(passed?'':' Première réussite : +120 XP.');b.append(desc);
+    const desc=document.createElement('p');desc.textContent=m.type==='slalom'?'🚩 '+m.goal:m.desc+(passed?'':' Première réussite : +120 XP.');if(m.type==='slalom'){desc.title='Passe au moins '+m.goal+' portes pour réussir';desc.setAttribute('aria-label',desc.title);b.classList.add('slalom-card');}b.append(desc);
     if(m.type==='slalom'){
       const thresholds=document.createElement('div');thresholds.className='slalom-thresholds';
       thresholds.innerHTML=['gold','silver','bronze'].map(key=>'<div><span>'+SK.MEDALS[key].icon+'</span><b>'+SK.fmtMedalTime(m.medalTimes[key])+'</b></div>').join('');b.append(thresholds);
