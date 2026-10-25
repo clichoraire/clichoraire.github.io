@@ -944,3 +944,12 @@ table.results td.num { text-align: right; font-family: monospace; }
 @keyframes level-confetti{0%{opacity:0;transform:scale(.3)}15%,60%{opacity:1}100%{opacity:0;transform:translate(var(--x),calc(var(--y) + 70px)) rotate(var(--r))}}
 @media(max-height:500px){.level-up-celebration{top:45%;scale:.8}}
 @media(prefers-reduced-motion:reduce){.level-up-celebration,.level-up-rays{animation:none}.level-up-confetti{display:none}}
+
+.level-up-sky{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:99}
+.level-shooting-star{position:absolute;left:var(--start);top:-100px;width:130px;height:4px;background:linear-gradient(90deg,transparent,#fff4ae);border-radius:50%;filter:drop-shadow(0 0 8px #ffcf48);animation:level-star-flight var(--duration) var(--delay) linear both}
+.level-shooting-star::after{content:'★';position:absolute;right:-12px;top:50%;translate:0 -50%;color:#ffe66e;text-shadow:0 0 9px white;font:var(--size)/1 Arial;rotate:-55deg}
+.level-confetti-rain{position:absolute;top:-25px;width:8px;height:13px;border-radius:2px;animation:level-rain 2.8s var(--delay) ease-in both}
+.level-confetti-rain:nth-child(3n){width:7px;height:7px;border-radius:50%}
+@keyframes level-star-flight{0%{opacity:0;transform:translate3d(0,0,0) rotate(55deg)}8%,85%{opacity:1}100%{opacity:0;transform:translate3d(70vw,calc(100dvh + 220px),0) rotate(55deg)}}
+@keyframes level-rain{0%{opacity:0;transform:translate3d(0,0,0) rotate(0)}8%,90%{opacity:1}100%{opacity:0;transform:translate3d(var(--drift),calc(100dvh + 80px),0) rotate(var(--turn))}}
+@media(prefers-reduced-motion:reduce){.level-up-sky{display:none}}
