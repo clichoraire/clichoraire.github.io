@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.36';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.37';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -473,18 +473,16 @@ window.SK.VERSION = '1.36';   // à augmenter à chaque mise en ligne (affichée
 
   // ------------------------------------------------------------------ figures (en l'air) : durée de base et pièces
   SK.TRICKS = {
-    // bouton C (figure) + direction
-    grab:    { name: 'Grab',           dur: 0.35, coins: 1, dir: 'none',  btn: 'trick', anim: 'grab' },
-    spinL:   { name: 'Vrille 360',     dur: 0.55, coins: 2, dir: 'left',  btn: 'trick', anim: 'spin', turns: 1, sign: -1 },
-    spinR:   { name: 'Vrille 360',     dur: 0.55, coins: 2, dir: 'right', btn: 'trick', anim: 'spin', turns: 1, sign: 1 },
-    back:    { name: 'Salto arrière',  dur: 0.85, coins: 4, dir: 'up',    btn: 'trick', anim: 'flip', sign: -1 },
-    front:   { name: 'Salto avant',    dur: 0.85, coins: 4, dir: 'down',  btn: 'trick', anim: 'flip', sign: 1 },
-    // bouton X (saut) + direction, en l'air
-    method:  { name: 'Method',         dur: 0.45, coins: 2, dir: 'none',  btn: 'jump', anim: 'method' },
-    spin2L:  { name: 'Vrille 720',     dur: 1.0,  coins: 5, dir: 'left',  btn: 'jump', anim: 'spin', turns: 2, sign: -1 },
-    spin2R:  { name: 'Vrille 720',     dur: 1.0,  coins: 5, dir: 'right', btn: 'jump', anim: 'spin', turns: 2, sign: 1 },
-    rodeo:   { name: 'Rodéo',          dur: 1.1,  coins: 7, dir: 'up',    btn: 'jump', anim: 'rodeo', sign: -1 },
-    tornade: { name: 'Tornade',        dur: 1.1,  coins: 7, dir: 'down',  btn: 'jump', anim: 'rodeo', sign: 1 },
+    grab: {name:'Indy grab',dur:.45,coins:1,dir:'none',btn:'trick',anim:'pose',pose:'indy'},
+    spinL: {name:'Nose grab',dur:.55,coins:2,dir:'left',btn:'trick',anim:'pose',pose:'nose'},
+    spinR: {name:'Tail grab',dur:.55,coins:2,dir:'right',btn:'trick',anim:'pose',pose:'tail'},
+    back: {name:'Melon grab',dur:.65,coins:4,dir:'up',btn:'trick',anim:'pose',pose:'melon'},
+    front: {name:'Method',dur:.65,coins:4,dir:'down',btn:'trick',anim:'pose',pose:'method'},
+    method: {name:'Double grab',dur:.55,coins:2,dir:'none',btn:'jump',anim:'pose',pose:'double'},
+    spin2L: {name:'Nose grab tendu',dur:.8,coins:5,dir:'left',btn:'jump',anim:'pose',pose:'nose',tweak:true},
+    spin2R: {name:'Tail grab tendu',dur:.8,coins:5,dir:'right',btn:'jump',anim:'pose',pose:'tail',tweak:true},
+    rodeo: {name:'Melon tendu',dur:.85,coins:7,dir:'up',btn:'jump',anim:'pose',pose:'melon',tweak:true},
+    tornade: {name:'Method tendu',dur:.85,coins:7,dir:'down',btn:'jump',anim:'pose',pose:'method',tweak:true},
   };
   SK.trickFor = (btn, dir) => Object.keys(SK.TRICKS).find(id => SK.TRICKS[id].btn === btn && SK.TRICKS[id].dir === dir);
 
