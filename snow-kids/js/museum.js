@@ -61,7 +61,7 @@
     }
     collection.onchange=()=>{renderBoards();visit(list[collection.value==='cups'?SK.COURSES.length:0]);};renderBoards();
     const frame=()=>{if(!active)return;raf=requestAnimationFrame(frame);const now=performance.now(),dt=Math.min(.05,(now-last)/1000);last=now;
-      let direction=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);if(target!==null)direction=Math.sign(target-x);
+      let direction=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);const touch=SK.Touch?.held||{};if(touch.left||touch.right){target=null;direction=(touch.right?1:0)-(touch.left?1:0);}if(target!==null)direction=Math.sign(target-x);
       const old=x,step=260*dt;x=clamp(target!==null&&Math.abs(target-x)<step?target:x+direction*step);if(x===target)target=null;
       const moving=Math.abs(x-old)>.01;if(moving){walk+=Math.abs(x-old)/260;facing=x>old?'right':'left';}else facing='down';
       camera+=(Math.max(0,Math.min(Math.max(0,end-viewW),x-viewW*.58))-camera)*(1-Math.exp(-dt*8));

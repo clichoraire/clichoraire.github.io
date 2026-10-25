@@ -19,6 +19,11 @@
   I.read = function (player) {
     const m = MAPS[player] || MAPS[0];
     const o = { steer: (down(m.right) ? 1 : 0) - (down(m.left) ? 1 : 0), up: down(m.up), down: down(m.down), jump: down(m.jump), trick: down(m.trick), shoot: down(m.shoot), push: down(m.push), item: down(m.item) };
+    if (player === 0 && SK.Touch?.screen === 'race' && !SK.Touch.paused) {
+      const t = SK.Touch.held;
+      if (t.left || t.right) o.steer = (t.right ? 1 : 0) - (t.left ? 1 : 0);
+      for (const action of ['up', 'down', 'jump', 'trick', 'shoot', 'push', 'item']) if (t[action]) o[action] = true;
+    }
     const pad = I.pads()[player];
     if (pad) {
       const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0, b = i => !!(pad.buttons[i] && pad.buttons[i].pressed);

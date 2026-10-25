@@ -450,7 +450,7 @@
       if(hit>=0){if(hit===near&&!moving)enter();else target=door(STREET[hit]);}else if(my>420)target=clamp(mx);};
     canvas.addEventListener('click',clickHandler);near=nearest();label();
     const frame=()=>{raf=requestAnimationFrame(frame);const now=performance.now(),dt=Math.min(.05,(now-last)/1000),t=now/1000;last=now;
-      let direction=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);
+      let direction=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);const touch=SK.Touch?.held||{};if(touch.left||touch.right){target=null;direction=(touch.right?1:0)-(touch.left?1:0);}
       if(target!==null)direction=Math.sign(target-x);
       const before=x,step=SK.townWalkSpeed(opts.walkLevel)*dt;
       if(target!==null&&Math.abs(target-x)<=step){x=target;target=null;}else x=clamp(x+direction*step);

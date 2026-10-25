@@ -658,3 +658,49 @@ table.results td.num { text-align: right; font-family: monospace; }
 .course-format-tabs{display:flex;justify-content:center;gap:12px;margin:12px;flex-wrap:wrap}.course-format-tabs button[aria-pressed=true]{background:#ffd34b;color:#203953;outline:3px solid white}.cup-format-dialog>button{display:block;width:100%;margin:12px 0;padding:15px;font-size:18px}.cup-time-list{text-align:left;padding:0;list-style:none}.cup-time-list li{padding:16px;background:#203d56;border-radius:12px;margin:10px 0;color:#e4f4ff}.cup-time-list strong{float:right;margin-left:15px;color:#ffe081}
 
 .family-chooser select{max-width:210px;padding:10px;border:2px solid #c8e7f4;border-radius:12px;background:#fffaf0;color:#19415b;font:700 15px "Trebuchet MS",sans-serif}.family-chooser button{padding:8px 15px}
+
+/* Petits écrans : une manette sous la piste, sans recouvrir le jeu. */
+#touch-controls,.touch-help { display:none; }
+@media (max-width:1100px) {
+  #app { height:100dvh; }
+  .touch-help { display:block; }
+  body.touch-playing { --touch-height:190px; }
+  #touch-controls:not([hidden]) { position:fixed;z-index:30;bottom:0;left:0;right:0;height:var(--touch-height);display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:28px max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));background:linear-gradient(#163955,#081c32);border-top:2px solid #6bb9dc;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none; }
+  #touch-controls button { min-width:52px;min-height:54px;padding:5px;border:2px solid #b5e8ff;border-radius:16px;background:#256c98;color:white;box-shadow:0 4px #061829;font:bold 25px 'Trebuchet MS',sans-serif;touch-action:none; }
+  #touch-controls button small { display:block;font-size:12px;line-height:1.2; }
+  #touch-controls button.is-held { background:#ffda57;color:#15364b;transform:translateY(3px);box-shadow:none; }
+  .touch-directions { display:grid;grid-template-columns:repeat(3,54px);gap:6px; }
+  .touch-directions [data-action=up] { grid-column:2; }
+  .touch-directions [data-action=left] { grid-column:1; }
+  .touch-actions { display:grid;grid-template-columns:repeat(3,minmax(52px,72px));gap:6px; }
+  #touch-controls .touch-jump { grid-row:span 2;background:#f7c643;color:#193e58;border-color:#fff1b4;font-size:34px; }
+  #touch-controls .touch-pause { position:absolute;top:5px;right:10px;min-height:44px;min-width:44px;font-size:20px; }
+  .touch-hint { position:absolute;top:5px;left:12px;margin:0;font-size:13px;color:#e0f4ff; }
+  body.touch-playing #screen-race,body.touch-playing #screen-town,body.touch-playing #screen-museum { bottom:var(--touch-height); }
+  body.touch-playing #screen-race .stage,body.touch-playing #screen-town .stage { width:min(100vw,calc((100dvh - var(--touch-height)) * 16 / 9));height:min(calc(100dvh - var(--touch-height)),calc(100vw * 9 / 16)); }
+  #touch-controls:not([data-mode=race]) .touch-actions,#touch-controls:not([data-mode=race]) .touch-pause,#touch-controls:not([data-mode=race]) .touch-hint,#touch-controls:not([data-mode=race]) [data-action=up],#touch-controls:not([data-mode=race]) [data-action=down] { display:none; }
+  #touch-controls:not([data-mode=race]) .touch-directions { display:flex;width:100%;justify-content:space-between; }
+  #touch-controls:not([data-mode=race]) button { min-width:80px; }
+  body.touch-playing:has(#touch-controls:not([data-mode=race])) { --touch-height:92px; }
+  #screen-race #pause { position:fixed;z-index:40; }
+  #screen-race .pause-box { max-height:96dvh;overflow:auto;padding:16px; }
+}
+@media(max-width:1100px) and (orientation:landscape) {
+  body.touch-playing { --touch-height:152px; }
+  .touch-directions { grid-template-columns:repeat(3,58px);gap:4px; }
+  .touch-actions { grid-template-columns:90px repeat(4,64px);align-items:end; }
+  #touch-controls .touch-jump { grid-row:auto;min-height:100px; }
+  #touch-controls button { min-height:48px; }
+}
+@media(max-width:380px) and (orientation:portrait) {
+  .touch-directions { grid-template-columns:repeat(3,46px);gap:4px; }
+  .touch-actions { grid-template-columns:repeat(3,46px);gap:4px; }
+  #touch-controls button { min-width:46px; }
+}
+@media(max-width:650px) and (orientation:landscape) {
+  .touch-actions { grid-template-columns:repeat(3,54px);gap:4px; }
+  #touch-controls .touch-jump { grid-row:span 2; }
+}
+@media(max-width:1100px) and (orientation:landscape) {
+  #touch-controls .touch-directions button,#touch-controls .touch-actions button:not(.touch-jump) { height:54px;line-height:1; }
+}
