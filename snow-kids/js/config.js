@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.20';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.21';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -118,6 +118,7 @@ window.SK.VERSION = '1.20';   // à augmenter à chaque mise en ligne (affichée
   ].map(([id,name,color,animated,desc])=>({id:'motif-'+id,name,color,pattern:'custom-'+id,animated,price:animated?350:200,desc}));
   // Échange des dessins seulement : identifiants, prix et caractéristiques conservés.
   for(const [boardId,motifId,name,desc] of [
+    ['cristal','motif-cosmic','Cristaux précieux','Des facettes de cristal bleu.'],
     ['eclair','motif-reptile','Éclair jaune','Un grand éclair jaune sur la planche.'],
     ['doree','motif-synthwave','Dorures','Le motif doré des champions.'],
     ['dragon','motif-electric','Écailles vertes','Les écailles de la planche Dragon.'],
@@ -412,6 +413,7 @@ window.SK.VERSION = '1.20';   // à augmenter à chaque mise en ligne (affichée
     look.goggles = l && Object.prototype.hasOwnProperty.call(l,'goggles') ? (save?.gear?.includes(l.goggles) ? l.goggles : null) : ['lunettesMiroir','lunettesTricolores','lunettesNeige','lunettesForet','lunettes'].find(id=>save?.gear?.includes(id)) || null;
     const ownedHelmets=(save?.gear||[]).filter(SK.isHelmet),selected=l?.helmet===true?'casque':l?.helmet;
     look.helmet=l?.helmet===false?false:ownedHelmets.includes(selected)?selected:ownedHelmets[0]||false;
+    look.gripBoots=!!save?.gear?.includes('bottes');
     look.rocketPack = !!save?.gear?.includes('fusee') && l?.rocketPack !== false;
     return look;
   };

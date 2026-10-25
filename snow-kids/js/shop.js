@@ -55,7 +55,7 @@
   // Barre de 8 coches ; au-delà de 8, les coches repartent du début en rouge (comptées double).
   function statsFor(save, previewIt) {
     const ch = SK.charById(save.advChar) || SK.CHARACTERS[0];
-    const calc = (boardId, gear, up) => { const b = SK.effectiveBoard(boardId, save); return { speed: ch.speed + b.speed + (up.speed || 0) + (gear.has('couronne') ? 1 : 0), corner: ch.corner + b.corner + (up.corner || 0) + (gear.has('bottes') ? 1 : 0) + (gear.has('couronne') ? 1 : 0), acceleration: ch.acceleration + b.acceleration + (up.acceleration || 0) + (gear.has('couronne') ? 1 : 0), jump: (ch.jump || 3) + (b.jump || 0) + (up.jump || 0) + (gear.has('ressort') ? 1 : 0) + (gear.has('couronne') ? 1 : 0) }; };
+    const calc = (boardId, gear, up) => { const b = SK.effectiveBoard(boardId, save); return { speed: ch.speed + b.speed + (up.speed || 0) + (gear.has('couronne') ? 1 : 0), corner: ch.corner + b.corner + (up.corner || 0) + (gear.has('bottes') ? 1 : 0) + (gear.has('couronne') ? 1 : 0), acceleration: ch.acceleration + b.acceleration + (up.acceleration || 0) + (gear.has('couronne') ? 1 : 0), strength:ch.strength+(save.strengthLevel||0), jump: (ch.jump || 3) + (b.jump || 0) + (up.jump || 0) + (gear.has('ressort') ? 1 : 0) + (gear.has('couronne') ? 1 : 0) }; };
     const gear = new Set(save.gear || []), cur = calc(save.advBoard, gear, {});
     let boardId = save.advBoard, up = {}, g2 = new Set(gear);
     if (previewIt && !(previewIt.secret&&previewIt.lock) && (previewIt.action === 'buy' || previewIt.action === 'equip' || previewIt.action === 'locked')) {
@@ -63,16 +63,16 @@
     }
     return { ch, cur, next: calc(boardId, g2, up) };
   }
-  function previewLook(save, it) { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); if (it && it.kind === 'wardrobe' && it.action !== 'equipped') look[it.slot] = it.value; if(it?.kind === 'gear' && SK.isHelmet(it.id)) look.helmet = it.id; if(it?.kind==='gear'&&it.id==='fusee')look.rocketPack=true; if(it?.kind==='gear'&&SK.isGoggles(it.id))look.goggles=it.id; return look; }
+  function previewLook(save, it) { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); if (it && it.kind === 'wardrobe' && it.action !== 'equipped') look[it.slot] = it.value; if(it?.kind === 'gear' && SK.isHelmet(it.id)) look.helmet = it.id; if(it?.kind==='gear'&&it.id==='bottes')look.gripBoots=true; if(it?.kind==='gear'&&it.id==='fusee')look.rocketPack=true; if(it?.kind==='gear'&&SK.isGoggles(it.id))look.goggles=it.id; return look; }
   function renderMe(E, save, it, tab) {
     const { ch, cur, next } = statsFor(save, it), board = SK.effectiveBoard(save.advBoard,save), look = previewLook(save, it);
     const bar = (k, lab) => { let seg = ''; for (let i = 1; i <= 8; i++) { const c0 = cur[k] >= i + 8 ? 'x2' : cur[k] >= i ? 'on' : '', n0 = next[k] >= i + 8 ? 'x2' : next[k] >= i ? 'on' : ''; let cls = n0; if (n0 !== c0) cls += (next[k] > cur[k] ? ' gain' : ' loss'); seg += `<i class="${cls}"></i>`; } const d = next[k] - cur[k]; return `<div class="me-stat"><span class="me-stat-label"><i class="stat-icon stat-${k}" aria-hidden="true"><svg viewBox="0 0 32 34">${STAT_ICONS[k]}</svg></i>${lab}</span><div class="segs">${seg}</div><em class="${d > 0 ? 'gain' : d < 0 ? 'loss' : ''}">${cur[k]}${d ? ' → ' + next[k] : ''}</em></div>`; };
     const owned = (save.gear || []).map(id => SK.gearById(id)).filter(Boolean);
     E.me.innerHTML = `<h4>Mon équipement</h4><div class="me-top"><div class="me-info"><b>${ch.name}</b><span class="me-board"><i style="background:${board.color}"></i>${board.name}</span><small>${owned.length ? owned.length + ' article' + (owned.length > 1 ? 's' : '') : 'Aucun article'}</small></div></div>
-      <div class="me-stats">${bar('speed', 'Vitesse')}${bar('corner', 'Virage')}${bar('acceleration', 'Accélération')}${bar('jump', 'Saut')}</div>
+      <div class="me-stats">${bar('speed', 'Vitesse')}${bar('corner', 'Virage')}${bar('acceleration', 'Accélération')}${bar('jump', 'Saut')}${bar('strength','Force')}</div>
       <div class="me-gear">${owned.map(g => `<canvas width="48" height="48" data-id="${g.id}" title="${g.name}"></canvas>`).join('')}${it && it.kind === 'gear' && !it.owned ? `<canvas width="48" height="48" data-id="${it.id}" class="preview" title="${it.name} (aperçu)"></canvas>` : ''}</div>
       <p class="me-hint">${it && (it.action === 'buy' || it.action === 'equip' || it.action === 'locked') ? 'En vert : ce que « ' + it.name + ' » te ferait gagner. Rouge plein = au-delà de 8, compté double.' : 'Choisis un article pour voir son effet sur tes barres. 8 coches max, puis les coches rouges comptent double.'}</p>`;
-    E.me.querySelector('.me-stats').hidden=!!it&&it.kind!=='board';
+    E.me.querySelector('.me-stats').hidden=false;
     E.me.querySelector('.me-hint').textContent=it?.kind==='board'?'Aperçu des statistiques avec cette planche.':'Choisis une planche pour comparer ses statistiques, ou un accessoire pour l’essayer.';
     const cc = document.getElementById('shop-standing-kid');
     if(cc){const c=cc.getContext('2d');c.clearRect(0,0,300,360);const fr=SK.fakeRacer(ch.id,board.id);fr.look=look;
@@ -87,10 +87,11 @@
     const aisle=document.getElementById('shop-aisle'),world=document.getElementById('shop-world'),card=document.getElementById('shop-card');
     let wall=0,focusItem=null,turning=false;
     const kid=document.createElement('canvas');kid.id='shop-standing-kid';kid.width=300;kid.height=360;kid.setAttribute('aria-label','Ton personnage dans la boutique');aisle.parentElement.appendChild(kid);
+    const cardHome=card.parentElement;document.body.appendChild(card);
     const selected=()=>focusItem?items(state.tab,save)[state.idx]:null;
     function positionCard(){if(!card.open||!focusItem)return;const r=focusItem.getBoundingClientRect(),w=card.offsetWidth,h=card.offsetHeight;
-      const onRight=r.right+w+24<innerWidth;const x=onRight?r.right+16:Math.max(12,r.left-w-16),y=Math.max(12,Math.min(innerHeight-h-12,r.top+r.height/2-h/2));
-      card.style.left=x+'px';card.style.top=y+'px';card.style.setProperty('--tail-top',Math.max(30,Math.min(h-30,r.top+r.height/2-y))+'px');card.classList.toggle('tail-right',!onRight);}
+      const onRight=r.right+w+24<innerWidth;const x=Math.min(innerWidth-w-12,onRight?r.right+16:Math.max(12,r.left-w-16)),y=Math.max(12,Math.min(innerHeight-h-12,r.top+r.height/2-h/2));
+      card.style.left=Math.max(8,x)+'px';card.style.top=(innerWidth<=700&&innerHeight>600?260:y)+'px';card.style.setProperty('--tail-top',Math.max(30,Math.min(h-30,r.top+r.height/2-y))+'px');card.classList.toggle('tail-right',!onRight);}
     const outside=e=>{if(e.target.closest('.board-skin-dialog'))return;if(card.open&&!card.contains(e.target)&&!e.target.closest('.shop-product'))card.close();};
     document.addEventListener('pointerdown',outside);window.addEventListener('resize',positionCard);
     const left=document.getElementById('shop-pan-left'),right=document.getElementById('shop-pan-right');
@@ -117,7 +118,7 @@
     const wheel=e=>{if(e.target.closest('.motif-workshop')||SK.RoomViews?.overflow('shop'))return;e.preventDefault();if(performance.now()-lastWheel>650){lastWheel=performance.now();turn((e.deltaX||e.deltaY)>0?1:-1);}};
     aisle.addEventListener('pointerdown',down);window.addEventListener('pointerup',up);aisle.addEventListener('wheel',wheel,{passive:false});
     const emergency=document.querySelector('.emergency-plate'),home=emergency.parentElement;
-    cleanup=()=>{document.querySelectorAll('.board-skin-dialog').forEach(d=>d.close());kid.remove();document.removeEventListener('pointerdown',outside);window.removeEventListener('resize',positionCard);card.onclose=null;card.close();home.appendChild(emergency);window.removeEventListener('pointerup',up);aisle.removeEventListener('pointerdown',down);aisle.removeEventListener('wheel',wheel);};
+    cleanup=()=>{document.querySelectorAll('.board-skin-dialog').forEach(d=>d.close());kid.remove();document.removeEventListener('pointerdown',outside);window.removeEventListener('resize',positionCard);card.onclose=null;card.close();cardHome.appendChild(card);home.appendChild(emergency);window.removeEventListener('pointerup',up);aisle.removeEventListener('pointerdown',down);aisle.removeEventListener('wheel',wheel);};
     function populate(){
       const selectedId=focusItem?.dataset.item;home.appendChild(emergency);world.replaceChildren();
       const catalog=tab=>items(tab,save).map((it,i)=>({it,i,tab}));
@@ -167,7 +168,7 @@
           if(it.id==='aimant'&&n!==0){support.fillStyle='#574538';support.fillRect(86,84,8,16);support.fillStyle='#d5c5aa';support.beginPath();support.arc(90,88,7,0,TAU);support.fill();support.fillStyle='#fff1d5';support.beginPath();support.arc(88,86,2,0,TAU);support.fill();}
           const boardPlacement=it.kind==='board'?[x*12.8+8,n===0?288:360,n===0?52:57]:null;
           const rankIndex=list.filter(e=>e.it.kind==='gear').findIndex(e=>e.it.id===it.id);
-          const counterPlacement=boardPlacement||(clothingShop&&n===1?[410+(oi-1)%5*110,310+Math.floor((oi-1)/5)*130,70]:null)||(!clothingShop&&it.kind==='gear'?[410+(rankIndex%6)*94,rankIndex<6?490:rankIndex<12?590:675,58]:null);
+          const counterPlacement=boardPlacement||(clothingShop&&n===1?[410+(oi-1)%5*110,310+Math.floor((oi-1)/5)*130,70]:null)||(!clothingShop&&it.kind==='gear'?[410+(rankIndex%6)*94,rankIndex<6?490:rankIndex<12?590:675,['portemonnaie','portefeuilleOr','portefeuilleRoyal','boussole'].includes(it.id)?36:it.id==='bottes'?48:58]:null);
           if(counterPlacement||button.classList.contains('stacked-clothing')){
             // Recadrage alpha : le bas réel de l'objet repose sur le plateau propre à chaque objet.
             const pixels=support.getImageData(0,0,image.width,image.height).data;let l=image.width,t=image.height,r=0,b=0;
@@ -200,7 +201,7 @@
         }
         if(n===(clothingShop?3:2)){section.appendChild(emergency);}
         if(n===3&&!clothingShop)S.mountMotifWall(section,save,()=>{opts.store();refresh();populate();});
-        if(n===3&&clothingShop){const door=document.createElement('button');door.className='shop-exit-door';door.textContent='Sortir';door.setAttribute('aria-label','Sortir de la boutique');door.onclick=opts.onBack;section.appendChild(door);}
+        if(n===3){const door=document.createElement('button');door.className='shop-exit-door';door.textContent='Sortir';door.setAttribute('aria-label','Sortir de la boutique');door.onclick=opts.onBack;section.appendChild(door);}
         world.appendChild(section);
       });
       if(selectedId){focusItem=[...world.querySelectorAll('.shop-product')].find(b=>b.dataset.item===selectedId);positionCard();}
@@ -223,19 +224,13 @@
       }
       E.buy.textContent = it.action === 'buy' ? (it.price ? 'ACHETER' : 'PRENDRE') : it.action === 'equip' ? (it.kind === 'wardrobe' ? 'PORTER' : 'ÉQUIPER') : it.action === 'equipped' ? (it.kind === 'wardrobe' ? 'PORTÉ' : 'ÉQUIPÉE') : it.action === 'max' ? 'MAX' : it.action === 'locked' ? 'VERROUILLÉ' : 'POSSÉDÉ';
       E.buy.disabled = !(it.action === 'buy' || it.action === 'equip');
+      E.buy.classList.toggle('not-enough-gold',it.action==='buy'&&save.gold<it.price);
       E.buy.onclick = () => act(it);
       card.querySelector('.board-skin-open')?.remove();
 
 
       renderMe(E, save, it, state.tab);
       card.querySelector('.card-stats')?.remove();
-      if(it.kind==='board'&&!(it.secret&&it.lock)){
-        const {cur,next}=statsFor(save,it),current=SK.boardById(save.advBoard);
-        const compare=document.createElement('section');compare.className='card-stats board-comparison';
-        compare.innerHTML='<h3>Compare tes planches</h3><table><thead><tr><th scope="col">Statistique</th><th scope="col">Actuelle<br>'+current.name+'</th><th scope="col">Nouvelle<br>'+SK.boardById(it.id).name+'</th><th scope="col">Écart</th></tr></thead><tbody>'+STATS.map(([key,label])=>{const d=next[key]-cur[key];return '<tr><th scope="row">'+label+'</th><td>'+cur[key]+'</td><td>'+next[key]+'</td><td class="'+(d>0?'better':d<0?'worse':'same')+'">'+(d>0?'+':'')+d+'</td></tr>';}).join('')+'</tbody></table><p>Statistiques de ton personnage avec chaque planche, améliorations comprises.</p>';
-        const bonuses=E.desc.querySelector('.board-bonuses');if(bonuses)bonuses.replaceWith(compare);else E.desc.prepend(compare);
-      }
-
       const ic = E.icon.getContext('2d'); ic.clearRect(0, 0, E.icon.width, E.icon.height); S.drawItem(ic, it, E.icon.width / 2, E.icon.height / 2, E.icon.width * 0.36, performance.now() / 1000);
       SK.animateBoardPreview(E.icon,it,E.icon.width/2,E.icon.height/2,E.icon.width*.36,false);
       E.icon.style.filter=it.lock?'grayscale(1) brightness(.8)':'none';
@@ -320,7 +315,7 @@
     else{ /* Articles suspendus : pas de tablette sous les étiquettes. */ }
     if(!clothingShop&&n!==3){shelf(390,490,680);shelf(390,590,680);}
     else if(n===1){for(const y of [310,440])shelf(390,y,595);}
-    if(n===3&&clothingShop){ctx.fillStyle='#342116';ctx.fillRect(1090,225,150,350);ctx.fillStyle='#704624';ctx.fillRect(1100,235,130,330);ctx.fillStyle='#8bc7df';ctx.fillRect(1118,255,94,120);ctx.fillStyle='#effaff';ctx.beginPath();ctx.moveTo(1118,365);ctx.lineTo(1155,300);ctx.lineTo(1212,365);ctx.fill();ctx.fillStyle='#403021';ctx.fillRect(1160,255,7,120);ctx.fillRect(1118,310,94,7);ctx.fillStyle='#e8b750';ctx.beginPath();ctx.arc(1210,430,7,0,TAU);ctx.fill();ctx.fillStyle='#eee5ca';ctx.fillRect(1110,185,110,30);ctx.fillStyle='#354539';ctx.font='bold 23px Arial';ctx.textAlign='center';ctx.fillText('SORTIE',1165,209);ctx.fillStyle='#49382d';ctx.fillRect(1065,580,195,40);}
+    if(n===3){ctx.fillStyle='#342116';ctx.fillRect(1090,225,150,350);ctx.fillStyle='#704624';ctx.fillRect(1100,235,130,330);ctx.fillStyle='#8bc7df';ctx.fillRect(1118,255,94,120);ctx.fillStyle='#effaff';ctx.beginPath();ctx.moveTo(1118,365);ctx.lineTo(1155,300);ctx.lineTo(1212,365);ctx.fill();ctx.fillStyle='#403021';ctx.fillRect(1160,255,7,120);ctx.fillRect(1118,310,94,7);ctx.fillStyle='#e8b750';ctx.beginPath();ctx.arc(1210,430,7,0,TAU);ctx.fill();ctx.fillStyle='#eee5ca';ctx.fillRect(1110,185,110,30);ctx.fillStyle='#354539';ctx.font='bold 23px Arial';ctx.textAlign='center';ctx.fillText('SORTIE',1165,209);ctx.fillStyle='#49382d';ctx.fillRect(1065,580,195,40);}
     if(n===3&&!clothingShop){const worker=SK.fakeRacer('jeremie','freestyle');worker.look=SK.lookOf(worker.def,{gear:[],look:{}});SK.Render.drawWalker(ctx,worker,1150,610,84,0,'down',false);ctx.fillStyle='#633c23';ctx.fillRect(1060,560,195,115);ctx.fillStyle='#b08251';ctx.fillRect(1045,548,215,18);ctx.fillStyle='#fff0c9';ctx.fillRect(1080,580,155,35);ctx.fillStyle='#513723';ctx.textAlign='center';ctx.font='bold 22px Trebuchet MS';ctx.fillText('Jérémie',1158,605);}
     if(n===0||n===3&&!clothingShop)drawRegister(ctx,n===0?1080:1095,n===0?540:548);
     ctx=old;
@@ -476,7 +471,7 @@
 
   // One reusable texture per design; animated frames replace it instead of accumulating.
   const boardArt=new Map(),animatedPreviews=new Map();let previewFrame=0;
-  const animatedPattern=pattern=>pattern==='animated-flames'||pattern==='animated-ink'||pattern==='custom-electric'||pattern==='custom-synthwave'||SK.BOARD_MOTIFS.some(m=>m.pattern===pattern&&m.animated);
+  const animatedPattern=pattern=>pattern==='animated-flames'||pattern==='animated-ink'||pattern==='custom-electric'||pattern==='custom-synthwave'||pattern==='custom-cosmic'||SK.BOARD_MOTIFS.some(m=>m.pattern===pattern&&m.animated);
   const patternFrame=(pattern,t)=>Math.floor(t*24)%(pattern==='animated-ink'||pattern.startsWith('custom-')?192:96);
   SK.animateBoardPreview=function(canvas,board,x,y,size,standing=true,offsetX=0,offsetY=0){
     if(!animatedPattern(board.pattern)){animatedPreviews.delete(canvas);return;}
@@ -589,20 +584,20 @@
       }
       case 'casque': case 'casqueForet': case 'casqueCorail': case 'casqueNoir': { SK.drawSnowHelmet(c,it.id,0,-s*.8,s*1.9,s*1.12,'side');break; }
       case 'gants': { c.fillStyle = tint; rr2(-s * 0.9, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); rr2(s * 0.1, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(-s * 0.9, s * 0.5, s * 0.8, s * 0.3); c.fillRect(s * 0.1, s * 0.5, s * 0.8, s * 0.3); c.fillStyle = tint; rr2(-s * 1.1, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); rr2(s * 0.75, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = s * 0.06; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * 0.75 + k * s * 0.25, -s * 0.5); c.lineTo(-s * 0.75 + k * s * 0.25, s * 0.1); c.moveTo(s * 0.25 + k * s * 0.25, -s * 0.5); c.lineTo(s * 0.25 + k * s * 0.25, s * 0.1); c.stroke(); } break; }
-      case 'bottes': { c.fillStyle = tint; rr2(-s * 0.9, -s * 0.9, s * 0.7, s * 1.5, s * 0.2); c.fill(); rr2(s * 0.2, -s * 0.9, s * 0.7, s * 1.5, s * 0.2); c.fill(); c.fillStyle = '#263238'; rr2(-s * 1.0, s * 0.4, s * 0.95, s * 0.45, s * 0.15); c.fill(); rr2(s * 0.1, s * 0.4, s * 0.95, s * 0.45, s * 0.15); c.fill(); c.fillStyle = '#ffd54a'; c.fillRect(-s * 0.8, -s * 0.6, s * 0.5, s * 0.1); c.fillRect(s * 0.3, -s * 0.6, s * 0.5, s * 0.1); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(-s * 0.8, -s * 0.3, s * 0.5, s * 0.08); c.fillRect(s * 0.3, -s * 0.3, s * 0.5, s * 0.08); break; }
+      case 'bottes': { SK.drawGripBoot(c,-s*.95,-s*.85,s*.87,s*1.65,-1);SK.drawGripBoot(c,s*.08,-s*.85,s*.87,s*1.65,1);break; }
       case 'lunettesForet': case 'lunettesTricolores': case 'lunettesNeige': case 'lunettesMiroir': case 'lunettes': SK.drawGoggles(c,it.id,0,0,s);break;
 
       case 'veste': { c.fillStyle = '#e53935'; rr2(-s * 0.8, -s * 0.9, s * 1.6, s * 1.8, s * 0.3); c.fill(); c.fillStyle = '#b71c1c'; c.fillRect(-s * 0.08, -s * 0.9, s * 0.16, s * 1.8); c.fillStyle = '#e53935'; rr2(-s * 1.2, -s * 0.8, s * 0.4, s * 1.1, s * 0.15); c.fill(); rr2(s * 0.8, -s * 0.8, s * 0.4, s * 1.1, s * 0.15); c.fill(); c.fillStyle = '#fff'; for (let k = 0; k < 3; k++) c.fillRect(-s * 0.7, -s * 0.5 + k * s * 0.5, s * 1.4, s * 0.08); break; }
       case 'portefeuilleOr': case 'portefeuilleRoyal': case 'portemonnaie': {
-        const leather=it.id==='portefeuilleOr'?'#b98b23':it.id==='portefeuilleRoyal'?'#59386b':'#815032';
+        c.scale(1,.72); for(let k=0;k<2;k++){c.save();c.rotate(-.12+k*.08);c.fillStyle=k?'#7fa34c':'#3f793f';c.fillRect(-s*.57,-s*(1.14-k*.13),s*1.12,s*.48);c.strokeStyle='#b7cc72';c.lineWidth=s*.035;c.strokeRect(-s*.49,-s*(1.07-k*.13),s*.96,s*.30);c.restore();} const leather=it.id==='portefeuilleOr'?'#b98b23':it.id==='portefeuilleRoyal'?'#59386b':'#815032';
         c.fillStyle='#4f2e21';rr2(-s*.77,-s*.94,s*1.45,s*1.5,s*.12);c.fill();
         c.fillStyle='#ba8557';rr2(-s*.75,-s*.92,s*1.40,s*.13,s*.05);c.fill();
         const g=c.createLinearGradient(-s,-s,s,s);g.addColorStop(0,leather);g.addColorStop(1,it.id==='portemonnaie'?'#663921':leather);c.fillStyle=g;rr2(-s*.80,-s*.72,s*1.65,s*1.46,s*.13);c.fill();
         c.strokeStyle='#bd8857';c.lineWidth=s*.022;c.setLineDash([s*.035,s*.035]);rr2(-s*.70,-s*.62,s*1.45,s*1.25,s*.08);c.stroke();c.setLineDash([]);
         c.fillStyle='#5c351f';rr2(s*.45,-s*.15,s*.57,s*.35,s*.09);c.fill();c.fillStyle='#c99a61';c.beginPath();c.arc(s*.65,s*.02,s*.065,0,TAU);c.fill();break;
       }
-      case 'aimant': { c.strokeStyle = '#e53935'; c.lineWidth = s * 0.5; c.lineCap = 'butt'; c.beginPath(); c.arc(0, -s * 0.1, s * 0.7, Math.PI, 0); c.stroke(); c.fillStyle = '#e53935'; c.fillRect(-s * 0.95, -s * 0.1, s * 0.5, s * 0.8); c.fillRect(s * 0.45, -s * 0.1, s * 0.5, s * 0.8); c.fillStyle = '#eceff1'; c.fillRect(-s * 0.95, s * 0.35, s * 0.5, s * 0.35); c.fillRect(s * 0.45, s * 0.35, s * 0.5, s * 0.35);  break; }
-      case 'fusee': { SK.drawRocketPack(c,0,0,s); break; }
+      case 'aimant': {c.save();c.rotate(.65);c.strokeStyle='#762630';c.lineWidth=s*.52;c.beginPath();c.arc(0,-s*.1,s*.62,0,Math.PI);c.stroke();for(const side of [-1,1]){c.fillStyle='#e84955';c.fillRect(side*s*.62-s*.22,-s*.72,s*.44,s*.70);c.fillStyle='#dfeaf1';c.fillRect(side*s*.62-s*.22,-s*.90,s*.44,s*.25);}c.strokeStyle='#f54f5d';c.lineWidth=s*.37;c.beginPath();c.arc(0,-s*.1,s*.62,0,Math.PI);c.stroke();c.strokeStyle='#ff9d9f';c.lineWidth=s*.065;c.beginPath();c.arc(0,-s*.1,s*.68,.25,2.7);c.stroke();c.restore();break;}
+      case 'fusee': {c.save();c.scale(s,s);c.strokeStyle='#364856';c.lineWidth=.045;for(const sign of [-1,1]){c.fillStyle='#e84651';c.beginPath();c.moveTo(sign*.30,.20);c.quadraticCurveTo(sign*.65,.38,sign*.62,.83);c.lineTo(sign*.24,.58);c.closePath();c.fill();c.stroke();}c.fillStyle='#dcebf1';c.beginPath();c.moveTo(0,-1.1);c.bezierCurveTo(-.64,-.65,-.43,.45,-.25,.68);c.lineTo(.25,.68);c.bezierCurveTo(.43,.45,.64,-.65,0,-1.1);c.fill();c.stroke();c.fillStyle='#e94351';c.beginPath();c.moveTo(0,-1.1);c.quadraticCurveTo(-.22,-.91,-.30,-.65);c.quadraticCurveTo(0,-.51,.30,-.65);c.closePath();c.fill();c.stroke();c.fillStyle='#4d8eb8';c.beginPath();c.arc(0,-.23,.17,0,TAU);c.fill();c.stroke();c.fillStyle='#b6edff';c.beginPath();c.arc(-.04,-.27,.065,0,TAU);c.fill();c.fillStyle='#e94351';c.beginPath();c.moveTo(0,.23);c.quadraticCurveTo(-.12,.7,0,.95);c.quadraticCurveTo(.12,.7,0,.23);c.fill();c.stroke();c.restore();break;}
       case 'sac': {
         const g=c.createLinearGradient(-s,0,s,0);g.addColorStop(0,'#f62a35');g.addColorStop(.75,'#d91829');g.addColorStop(1,'#ae1420');c.fillStyle=g;c.fillRect(-s*.74,-s*.42,s*1.48,s*1.20);
         c.fillStyle='#ffdb53';c.fillRect(-s*.13,-s*.46,s*.26,s*1.24);
