@@ -1029,3 +1029,22 @@ table.results td.num { text-align: right; font-family: monospace; }
 #town-level-badge{top:68px;left:12px;transform:none;padding:5px 10px;gap:6px;border-width:1px;border-radius:10px;background:#18334ee8;box-shadow:none;animation:none;font:16px 'Titan One',sans-serif;min-height:32px}
 #town-level-badge span{color:#ffdc57;font:24px/1 Arial}
 @media(max-width:600px),(max-height:500px){#town-level-badge{top:57px;left:6px;padding:4px 8px;font-size:13px;min-height:30px}}
+/* Smaller finish cards leave room for the main actions. */
+#screen-result .panel{padding:16px 22px}
+#result-title{margin:6px 0 10px;font-size:clamp(28px,4vw,46px)}
+#screen-result .finish-rewards{margin:8px auto;gap:12px}
+#screen-result .reward-gold,#screen-result .reward-training,#screen-result .reward-progress{padding:10px 14px}
+#screen-result .reward-progress-heading{font-size:20px}
+#screen-result .result-xp-bar{height:18px;margin:8px 0 5px}
+#screen-result .finish-heading{font-size:21px;margin:12px 0 6px}
+#screen-result .finish-grid{gap:8px;margin:8px 0}
+#screen-result .finish-card{padding:8px 12px;gap:12px;border-radius:16px}
+#screen-result .finish-face{flex-basis:54px;height:54px;border-radius:12px}
+#screen-result .finish-card h3{font-size:20px;margin:0 42px 3px 0}
+#screen-result .finish-card p{font-size:16px}
+#screen-result .finish-chips{font-size:15px;margin-top:5px;gap:9px}
+#screen-result .finish-medal{font-size:34px;top:8px;right:10px}
+#screen-result .finish-face strong{font-size:24px}
+#result-buttons{margin-top:12px}
+@media(max-width:700px){#screen-result .panel{padding:12px}#screen-result .finish-face{flex-basis:48px;height:48px}#screen-result .finish-card h3{font-size:18px}}
+#shop-standing-kid{left:8%}

@@ -240,9 +240,9 @@
     const skullWidth=hw*(skullWidths[r.def.id]||.86);
     const shellW=skullWidth*(view==='side'?1.13:1.12);
     const shellH=shellW*(view==='back'?.68:view==='side'?.67:.66);
-    const brimY=actualH*(view==='back'?.68:view==='side'?.44:.43);
+    const brimY=actualH*(view==='back'?.48:view==='side'?.44:.43);
     const shellTop=Math.max(-top,brimY-shellH*(view==='side'?.78:.79));
-    ctx.clearRect(0,0,c.width,top+Math.min(brimY,actualH*.43));
+    if(view!=='back')ctx.clearRect(0,0,c.width,top+Math.min(brimY,actualH*.43));
     ctx.save();ctx.translate(c.width/2,top);if(mirror)ctx.scale(-1,1);
     SK.drawSnowHelmet(ctx,id===true?'casque':id,0,shellTop,shellW,shellH,view,true,{chinY:actualH*.97-shellTop});
     ctx.restore();
@@ -391,6 +391,28 @@
     const img=bodyWithoutBoard(colored(frames[key][index],r,L,key+index),frames[key][index]),height=2.87*s,width=height*img.width/img.height;
     SK.drawBoard(ctx,r.board,0,s*.12,s*.48,s*2.05,mirror?-.85:.85,r.input?.steer||0);
     ctx.save();if(mirror)ctx.scale(-1,1);ctx.drawImage(img,-width/2,-height+.37*s,width,height);ctx.restore();return true;
+  };
+  // Preview pose: fixed feet on the board, gentle balance through elbows and knees.
+  S.shopPose=function(c,r,L,s,t){
+    const key=r.def.gender==='girl'?'girlFront':'boyWalk';if(!frames[key])return;
+    const img=colored(frames[key][0],r,L,key+'0'),h=2.5*s,w=h*img.width/img.height;
+    const hip=-s*.65+Math.sin(t*1.7)*s*.018;
+    c.fillStyle='#16374733';c.beginPath();c.ellipse(0,s*.13,s*1.05,s*.18,0,0,Math.PI*2);c.fill();
+    SK.drawBoard(c,r.board,0,0,s*.42,s*2.5,Math.PI/2,0);
+    c.lineCap='round';c.lineJoin='round';
+    for(const side of [-1,1]){
+      c.strokeStyle=L.pants;c.lineWidth=s*.24;c.beginPath();c.moveTo(side*s*.18,hip);c.lineTo(side*s*.34,-s*.39);c.lineTo(side*s*.37,-s*.12);c.stroke();
+      c.fillStyle='#263e48';c.beginPath();c.roundRect(side*s*.37-s*.14,-s*.23,s*.31,s*.25,s*.06);c.fill();
+      if(L.springBoots||L.gripBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(c,side*s*.37-s*.16,-s*.27,s*.34,s*.30,side);
+    }
+    // Keep the original head and central jacket at their native proportions.
+    c.drawImage(img,0,0,img.width,img.height*.34,-w/2,hip-h*.61,w,h*.34);
+    c.drawImage(img,img.width*.22,img.height*.34,img.width*.56,img.height*.27,-w*.28,hip-h*.27,w*.56,h*.27);
+    for(const side of [-1,1]){
+      const sy=hip-h*.23,sx=side*w*.22,ey=sy+s*.23,hx=side*s*.80,hy=sy-s*.04+Math.sin(t*1.7+side)*s*.05;
+      sleeve(c,L,sx,sy,side*s*.60,ey,hx,hy,s);
+      c.fillStyle='#263e48';c.beginPath();c.arc(hx,hy,s*.10,0,Math.PI*2);c.fill();
+    }
   };
   S.seated=function(ctx,r,L,s){
     const girl=r.def.gender==='girl',key=girl?'girlFront':'boyWalk',img=colored(frames[key][0],r,L,key+'0');

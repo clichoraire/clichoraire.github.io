@@ -37,8 +37,8 @@
   }
 
 
-  let raf = 0, keyHandler = null, cleanup=null, ctx, canvas, state;
-  function stop() { if(cleanup){cleanup();cleanup=null;} SK.Cheats?.reset(); cancelAnimationFrame(raf); raf = 0; if (keyHandler) { window.removeEventListener('keydown', keyHandler); keyHandler = null; } }
+  let kidFrame=0; let raf = 0, keyHandler = null, cleanup=null, ctx, canvas, state;
+  function stop() { cancelAnimationFrame(kidFrame); if(cleanup){cleanup();cleanup=null;} SK.Cheats?.reset(); cancelAnimationFrame(raf); raf = 0; if (keyHandler) { window.removeEventListener('keydown', keyHandler); keyHandler = null; } }
   S.close = stop;
   S.trainingOffers=save=>items('up',save);
   const mod = v => (v > 0 ? '+' : '') + v;
@@ -75,13 +75,20 @@
     E.me.querySelector('.me-stats').hidden=false;
     E.me.querySelector('.me-hint').textContent=it?.kind==='board'?'Aperçu des statistiques avec cette planche.':'Choisis une planche pour comparer ses statistiques, ou un accessoire pour l’essayer.';
     const cc = document.getElementById('shop-standing-kid');
-    if(cc){const c=cc.getContext('2d');c.clearRect(0,0,300,360);const fr=SK.fakeRacer(ch.id,board.id);fr.look=look;
-      SK.Render.drawWalker(c,fr,150,332,110,0,'down',false);}
+    cancelAnimationFrame(kidFrame);
+    if(cc){const c=cc.getContext('2d'),fr=SK.fakeRacer(ch.id,board.id);fr.look=look;
+      fr.board=SK.effectiveBoard(it?.kind==='board'&&!(it.secret&&it.lock)?it.id:save.advBoard,save);
+      const animate=ms=>{c.clearRect(0,0,300,360);
+        if(S._clothing)SK.Render.drawWalker(c,fr,150,332,110,0,'down',false);
+        else {c.save();c.translate(150,320);SK.Sprites.shopPose(c,fr,look,95,ms/1000);c.restore();}
+        if(cc.isConnected)kidFrame=requestAnimationFrame(animate);
+      };animate(performance.now());}
     E.me.querySelectorAll('.me-gear canvas').forEach(cv => { S.drawItem(cv.getContext('2d'), { kind: 'gear', id: cv.dataset.id }, 24, 26, 14, 0); });
   }
 
   // opts : { canvas, els:{gold,tabs,title,icon,strip,name,price,desc,buy,prev,next,back,me}, save, store, toast, onBack }
   S.open = function (opts) {
+    S._clothing=opts.tab==='linge';
     stop(); canvas = opts.canvas; ctx = canvas.getContext('2d');
     const save = opts.save, E = opts.els;
     const aisle=document.getElementById('shop-aisle'),world=document.getElementById('shop-world'),card=document.getElementById('shop-card');
@@ -213,7 +220,7 @@
       const list = items(state.tab, save); if (state.idx >= list.length) state.idx = 0; const it = list[state.idx]; state.list = list;
       E.gold.innerHTML = `<img src="${SK.COIN_SVG}" alt=""><b>${SK.fmtGold(save.gold,false)}</b>`;
       E.title.textContent = it.name;
-      E.name.textContent = it.action === 'locked' ? '🔒 Verrouillé' : it.action === 'buy' ? (it.price ? 'Prix' : 'Gratuit') : it.action === 'max' ? 'Niveau maximum' : it.action === 'equipped' ? 'Planche équipée' : it.action === 'equip' ? 'Dans ton casier' : 'Déjà acheté';
+      E.name.textContent = it.action === 'locked' ? '🔒 Verrouillé' : it.action === 'buy' ? (it.price ? 'Prix' : 'Gratuit') : it.action === 'max' ? 'Niveau maximum' : it.action === 'equipped' ? (it.kind==='board'?'Planche équipée':'Sur toi') : it.action === 'equip' ? 'Dans ton casier' : 'Déjà acheté';
       E.price.innerHTML = it.secret ? (it.lock?'Récompense secrète':'Récompense de champion') : it.action === 'buy' || it.action === 'locked' ? `<img src="${SK.COIN_SVG}" alt=""> ${SK.fmtGold(it.price,false)}` : '';
       E.price.className = 'shop-price' + ((it.action === 'buy' && save.gold < it.price) || it.action === 'locked' ? ' poor' : '');
       E.desc.parentElement.classList.toggle('board-details',it.kind==='board');
@@ -223,7 +230,9 @@
         E.desc.innerHTML='<div class="wallet-caption">Capacité de pièces par course</div><div class="wallet-capacity"><span>'+current+'</span><span class="capacity-arrow" aria-label="vers">→</span><span>'+next+'</span></div>'+(it.lock?'<span class="board-summary">🔒 '+it.lock+'</span>':'');
       }
       E.buy.textContent = it.action === 'buy' ? (it.price ? 'ACHETER' : 'PRENDRE') : it.action === 'equip' ? (it.kind === 'wardrobe' ? 'PORTER' : 'ÉQUIPER') : it.action === 'equipped' ? (it.kind === 'wardrobe' ? 'PORTÉ' : 'ÉQUIPÉE') : it.action === 'max' ? 'MAX' : it.action === 'locked' ? 'VERROUILLÉ' : 'POSSÉDÉ';
-      E.buy.disabled = !(it.action === 'buy' || it.action === 'equip');
+      const removable=it.kind==='gear'&&it.action==='equipped'&&(SK.isHelmet(it.id)||SK.isGoggles(it.id));
+      if(removable)E.buy.textContent='ENLEVER';
+      E.buy.disabled = !(it.action === 'buy' || it.action === 'equip' || removable);
       E.buy.classList.toggle('not-enough-gold',it.action==='buy'&&save.gold<it.price);
       E.buy.onclick = () => act(it);
       card.querySelector('.board-skin-open')?.remove();
@@ -238,6 +247,7 @@
     };
     const wear = it => { save.look = save.look || {}; const l = (save.look[save.advChar] = save.look[save.advChar] || {}); l[it.slot] = it.value; };
     const act = it => {
+      if(it.action==='equipped'&&it.kind==='gear'&&(SK.isHelmet(it.id)||SK.isGoggles(it.id))){wear({slot:SK.isHelmet(it.id)?'helmet':'goggles',value:false});opts.store();SK.Audio.sfx('box');refresh();populate();renderMe(E,save,null,state.tab);return;}
       if (it.action === 'buy') {
         if (save.gold < it.price) { SK.Audio.sfx('nope'); opts.toast('Pas assez d\'or : il te manque ' + SK.fmtGold(it.price - save.gold)); return; }
         save.gold -= it.price;

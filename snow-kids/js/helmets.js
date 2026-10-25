@@ -5,7 +5,7 @@
   const color=SK.HELMETS[id]||SK.HELMETS.casque;
   c.save();c.translate(x,y);c.scale(w/2,h);c.lineJoin='round';c.lineCap='round';
   const pad=(px,py,rx,ry)=>{c.fillStyle='#222b32';c.beginPath();c.ellipse(px,py,rx,ry,0,0,Math.PI*2);c.fill();c.strokeStyle='#46515a';c.lineWidth=.025;c.stroke();};
-  if(view==='back'){pad(0,.89,.83,.19);pad(-.76,.92,.22,.32);pad(.76,.92,.22,.32);}
+  if(view==='back'){if(!worn)pad(0,.89,.83,.19);pad(-.86,.89,.14,.20);pad(.86,.89,.14,.20);}
   else if(view==='side'){pad(-.50,.91,.31,.31);if(!worn)pad(.65,.90,.18,.25);}
   else{pad(-.84,.90,.16,.30);pad(.84,.90,.16,.30);}
   c.strokeStyle='#19242d';c.lineWidth=.055;
