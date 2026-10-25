@@ -752,6 +752,17 @@
       me.hud = me.hud.filter(m => m.until > race.time);
       me.hud.forEach((m, i) => { const a = SK.clamp((m.until - race.time) / 0.4, 0, 1); ctx.globalAlpha = a; ctx.font = 'bold ' + (m.big ? 40 : 26) * F + 'px sans-serif'; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillText(m.text, vx + vw / 2 + 2, vy + vh * 0.2 + i * 36 * F + 2); ctx.fillStyle = m.color || '#fff'; ctx.fillText(m.text, vx + vw / 2, vy + vh * 0.2 + i * 36 * F); ctx.globalAlpha = 1; });
     }
+    // La consigne reste visible pendant la récupération, puis disparaît à 70 km/h.
+    if(race.phase==='race' && me.recovering && (me.state==='fall'||me.state==='ride') && me.speed<70/3.6){
+      ctx.save();
+      const w=Math.min(vw*.9,460*F),x=vx+vw/2,y=vy+vh*.77;
+      box(x-w/2,y,w,70*F);
+      ctx.textAlign='center';ctx.font='bold '+26*F+'px sans-serif';ctx.fillStyle='#ffe16b';
+      ctx.fillText('Tapote vite sur ↑',x,y+29*F,w-16*F);
+      ctx.font='bold '+22*F+'px sans-serif';ctx.fillStyle='#fff';
+      ctx.fillText('pour repartir plus vite !',x,y+56*F,w-16*F);
+      ctx.restore();
+    }
     if(me.state==='done'){if(race.mission){box(vx+vw/2-160*F,vy+vh/2-50*F,320*F,100*F);ctx.font='bold '+32*F+'px sans-serif';ctx.fillStyle='#ffd600';ctx.fillText(SK.missionOutcome(race,me).ok?'Mission réussie !':'Mission échouée',vx+vw/2,vy+vh/2);}else R.drawFinishBanner(ctx,me,vx+vw*.5,vy+vh*.25,vw*.88,t);}
   };
   R.notify = function (r, text, color, big, dur) { r.hud = r.hud || []; r.hud.push({ text, color, big, until: r.race.time + (dur || 2) }); if (r.hud.length > 3) r.hud.shift(); };
