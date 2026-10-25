@@ -178,7 +178,6 @@
       if(this.debugLab){const angle=Math.atan2(s.y1-s.y2,SEG);f*=Math.max(0,1+Math.sin(angle)-Math.sin(Math.atan(SK.SLOPE)));}
       if(r.state==='ride')f*=1-.12*Math.pow(Math.abs(r.visualTurn||0),1.4);
       if(r.gear.casqueAero&&Math.abs(r.steer)<.15&&Math.abs(s.curve)<.3)f*=1.1;
-      if(r.gear.fart&&s.surface==='snow'&&!inp.up&&!inp.down)f*=1.02;
       target = SK.raceTopSpeed(r) * f;
     }
     if (r.state === 'air') { /* en l'air : la vitesse se conserve (légère perte) */ r.speed = Math.max(0, r.speed - 0.6 * dt); }

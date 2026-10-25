@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.17';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.18';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -116,6 +116,14 @@ window.SK.VERSION = '1.17';   // à augmenter à chaque mise en ligne (affichée
     ['circuit','Circuit robot','#102b25',true,'Des pistes dorées et des LED qui clignotent.'],
     ['carbon','Carbone et métal','#303942',false,'Fibre de carbone et métal brossé, esprit course.']
   ].map(([id,name,color,animated,desc])=>({id:'motif-'+id,name,color,pattern:'custom-'+id,animated,price:animated?350:200,desc}));
+  // Échange des dessins seulement : identifiants, prix et caractéristiques conservés.
+  for(const [boardId,motifId,name,desc] of [
+    ['eclair','motif-reptile','Éclair jaune','Un grand éclair jaune sur la planche.'],
+    ['doree','motif-synthwave','Dorures','Le motif doré des champions.'],
+    ['dragon','motif-electric','Écailles vertes','Les écailles de la planche Dragon.'],
+    ['glacier','motif-polar','Cristaux de glace','De grands cristaux bleus sur la planche.'],
+    ['requin','motif-snow-shark','Dents de requin','Des dents acérées sur fond bleu.']
+  ]){const board=SK.boardById(boardId),motif=SK.BOARD_MOTIFS.find(m=>m.id===motifId),old={pattern:board.pattern,color:board.color};board.pattern=motif.pattern;board.color=motif.color;Object.assign(motif,old,{name,desc,animated:false});}
   SK.skinById=id=>SK.BOARD_MOTIFS.find(b=>b.id===id)||SK.BOARDS.find(b=>b.id===id);
   SK.ownsBoardSkin=(save,id)=>SK.BOARDS.some(b=>b.id===id)?!!save.boards?.includes(id):SK.BOARD_MOTIFS.some(b=>b.id===id)&&!!save.ownedSkins?.includes(id);
   SK.availableBoardSkins=save=>[...SK.BOARDS,...SK.BOARD_MOTIFS].filter(b=>SK.ownsBoardSkin(save,b.id));

@@ -4,7 +4,6 @@
  ['montreEtoiles','Montre des étoiles',5000,4,'Prolonge les effets temporaires de tes objets de 35 %. Avec le chronomètre : +50 %.','⌚'],
  ['portefeuilleOr','Portefeuille en or',1500,2,'Capacité de 150 pièces par course.','👛'],
  ['portefeuilleRoyal','Portefeuille royal',3500,3,'Capacité de 500 pièces par course.','👛'],
- ['fart','Fer à farter de poche',350,1,'Glisse passive améliorée : +0,5, soit 2 % de vitesse sur la neige sans accélérer.','♨'],
  ['boussole','Boussole de montagne',450,1,'Indique la direction du prochain virage et la distance avant celui-ci.','🧭'],
  ['ressort','Bottes à ressort',800,2,'+1 en saut pour franchir les obstacles bas.','🦘'],
  ['sifflet','Sifflet de secours',900,2,'Évite le premier choc contre un sapin, un drapeau ou un cône. Une charge par course.','📣'],

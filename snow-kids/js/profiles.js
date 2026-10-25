@@ -8,6 +8,7 @@
   P.init=function(raw,base){defaults=copy(base);const s=Object.assign(copy(base),copy(raw||{}));s.profiles=s.profiles||{};s.activeProfile=s.activeProfile||s.advChar||s.char||'zach';
     for(const profile of [s,...Object.values(s.profiles)])for(const upgrade of Object.values(profile.upgrades||{})){if(upgrade.acceleration==null&&upgrade.trick!=null)upgrade.acceleration=upgrade.trick;delete upgrade.trick;}
     if(!s.profiles[s.activeProfile])s.profiles[s.activeProfile]=snapshot(s);
+    for(const profile of [s,...Object.values(s.profiles)])if(profile.gear)profile.gear=profile.gear.filter(id=>id!=='fart');
     s.profileVersion=1;return s;
   };
   P.capture=s=>{s.profiles[s.activeProfile]=snapshot(s);};
