@@ -27,26 +27,43 @@
   if(!offer||offer.action!=='buy'||(save.trainingPoints||0)<offer.price)return false;
   save.trainingPoints-=offer.price;save.upgrades[offer.boardId][stat]=offer.level+1;return true;
  };
+ G.stats=save=>{
+  const ch=SK.charById(save.advChar||save.char),board=SK.effectiveBoard(save.advBoard,save),gear=new Set(save.gear||[]),crown=gear.has('couronne')?1:0;
+  return {speed:ch.speed+board.speed+crown,corner:ch.corner+board.corner+crown+(gear.has('bottes')?1:0),acceleration:ch.acceleration+board.acceleration+crown,jump:ch.jump+board.jump+crown+(gear.has('ressort')?1:0),strength:ch.strength+(save.strengthLevel||0),walk:save.walkLevel||0,shot:save.powerLevels?.shot||0,item:save.powerLevels?.item||0};
+ };
  G.open=({save,store,onBack})=>{
   G.close();const canvas=document.getElementById('gym-scene'),c=canvas.getContext('2d'),panel=document.getElementById('gym-training'),talk=document.getElementById('gym-talk');
-  panel.hidden=true;talk.hidden=false;talk.textContent='Parler à Jessica';
-  const refresh=()=>{const progress=SK.Progression.info(save);document.getElementById('gym-gold').textContent='Niveau '+progress.level+' · '+progress.current+' / '+progress.needed+' XP · '+progress.points+' points';
+  const screen=document.getElementById('screen-gym'),statsBox=document.getElementById('gym-gold');
+  panel.hidden=true;talk.hidden=false;talk.textContent='Parler à Jessica';screen.classList.remove('gym-choosing');
+  const renderStats=(selected=null,confirmed=false)=>{
+   const info=SK.Progression.info(save),values=G.stats(save),ch=SK.charById(save.advChar||save.char);
+   statsBox.innerHTML='<strong class="gym-player-name">'+ch.name+'</strong><div class="gym-progress">Niveau '+info.level+' · '+info.current+' / '+info.needed+' XP<br>⭐ '+info.points+' point'+(info.points===1?'':'s')+' disponible'+(info.points===1?'':'s')+'</div><div class="gym-board-name">Planche '+SK.boardById(save.advBoard).name+'</div>';
+   for(const [key,label] of [['speed','Vitesse'],['corner','Virage'],['acceleration','Accélération'],['jump','Saut'],['strength','Force'],['walk','Marche'],['shot','Tirs'],['item','Objets']]){
+    const value=values[key],active=selected===key,next=value+(active&&!confirmed?1:0),max=['shot','item'].includes(key)?3:key==='walk'?5:Math.max(8,next);
+    const fmt=n=>key==='walk'?(100+n*15)+' %':['shot','item'].includes(key)?'+'+n*10+' %':n;
+    const row=document.createElement('div');row.className='gym-overview-row'+(active?' previewing':'');
+    row.innerHTML='<span>'+label+'</span><div class="gym-meter" aria-label="'+label+' : '+fmt(value)+(active&&!confirmed?' vers '+fmt(next):'')+'">'+Array.from({length:max},(_,i)=>'<i class="'+(i<value?'filled ':'')+(active&&i===(confirmed?value-1:value)?'gain':'')+'"></i>').join('')+'</div><b>'+fmt(value)+(active&&!confirmed?' → '+fmt(next):'')+'</b>';statsBox.append(row);
+   }
+   const hint=document.createElement('small');hint.className='gym-gain-hint';hint.textContent=confirmed?'✓ Amélioration obtenue !':selected?'La case verte montre le gain.':'Choisis une séance pour voir le gain.';statsBox.append(hint);
+  };
+
+  const refresh=()=>{renderStats();
    panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><h2>Jessica · On s’entraîne ?</h2><p>Chaque niveau gagné rapporte 2 points. Choisis ce que tu veux améliorer avec ta planche <b>'+SK.boardById(save.advBoard).name+'</b>.</p>';
    for(const offer of [...G.statOffers(save),G.strengthOffer(save),G.walkOffer(save),...G.powerOffers(save)]){
-    const row=document.createElement('button');row.className='gym-training-row';row.disabled=offer.action!=='buy'||(save.trainingPoints||0)<offer.price;
+    const row=document.createElement('button');row.className='gym-training-row';const unavailable=offer.action!=='buy'||(save.trainingPoints||0)<offer.price;row.setAttribute('aria-disabled',String(unavailable));row.dataset.stat=offer.stat;row.onpointerenter=row.onfocus=()=>renderStats(offer.action==='max'?null:offer.stat);row.onpointerdown=()=>renderStats(offer.action==='max'?null:offer.stat);
     const ch=SK.charById(save.advChar||save.char),board=SK.effectiveBoard(save.advBoard,save);
     const current=offer.stat==='walk'?Math.round(100*(1+.15*offer.level)):(ch[offer.stat]||0)+(offer.stat==='strength'?(save.strengthLevel||0):(board[offer.stat]||0));
     const next=offer.action==='max'?current:current+(offer.stat==='walk'?15:1);
     const preview=['shot','item'].includes(offer.stat)?'+'+(offer.level*10)+' % → +'+(Math.min(3,offer.level+1)*10)+' %':offer.stat==='walk'?current+' % → '+next+' % en ville':current+' → '+next+' '+(next>8?'(au-delà de 8)':'');
     row.innerHTML=`<span class="stat-icon stat-${offer.stat}"><svg viewBox="0 0 32 34">${SK.STAT_ICONS[offer.stat]||SK.STAT_ICONS.speed}</svg></span><span><b>${offer.name.split(' · ')[0]}</b><small>Niveau ${offer.level} / ${offer.max||SK.UPGRADE_MAX}</small><span class="gym-stat-preview">${preview}</span></span><strong>${offer.lock|| (offer.action==='max'?'Maximum':offer.price+' point'+(offer.price>1?'s':''))}</strong>`;
-    row.onclick=()=>{if(G.train(save,offer.stat)){store();SK.Audio.sfx('buy');refresh();}};panel.append(row);
+    row.onclick=()=>{if(G.train(save,offer.stat)){store();SK.Audio.sfx('buy');refresh();renderStats(offer.stat,true);panel.querySelector('[data-stat="'+offer.stat+'"]')?.focus({preventScroll:true});renderStats(offer.stat,true);}};panel.append(row);
    }
    const note=document.createElement('p');note.className='gym-note';note.textContent='La marche améliore uniquement ta vitesse dans le village (5 niveaux). Les tirs renforcent leurs effets et les objets durent plus longtemps (+10 % par niveau, maximum 3). Les autres séances améliorent cette planche.';panel.append(note);
-   panel.querySelector('.gym-close').onclick=()=>{panel.hidden=true;talk.hidden=false;talk.focus();};
+   panel.querySelector('.gym-close').onclick=()=>{panel.hidden=true;talk.hidden=false;screen.classList.remove('gym-choosing');renderStats();talk.focus();};
   };
-  const speak=()=>{refresh();panel.hidden=false;talk.hidden=true;panel.querySelector('.gym-close').focus();SK.Audio.sfx('click');};
+  const speak=()=>{refresh();panel.hidden=false;talk.hidden=true;screen.classList.add('gym-choosing');panel.querySelector('.gym-close').focus();SK.Audio.sfx('click');};
   talk.onclick=speak;document.getElementById('gym-back').onclick=onBack;
-  key=e=>{if(e.code==='Escape'){if(!panel.hidden){panel.hidden=true;talk.hidden=false;}else onBack();}else if(e.code==='Enter'&&e.target===document.body){e.preventDefault();speak();}};window.addEventListener('keydown',key);
+  key=e=>{if(e.code==='Escape'){if(!panel.hidden){panel.hidden=true;talk.hidden=false;screen.classList.remove('gym-choosing');renderStats();}else onBack();}else if(e.code==='Enter'&&e.target===document.body){e.preventDefault();speak();}};window.addEventListener('keydown',key);
   refresh();
   const oval=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
   const line=(pts,width,color)=>{c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();};
@@ -101,7 +118,7 @@
    c.fillStyle='#816248';c.fillRect(890,460,290,115);c.fillStyle='#f3dfad';c.fillRect(931,477,208,64);
    c.fillStyle='#42594f';c.font='bold 24px Arial';c.fillText('JESSICA',1035,504);c.font='bold 15px Arial';c.fillText('COACH',1035,526);
    c.restore();
-   const player=SK.fakeRacer(save.advChar||save.char,save.advBoard,'ride',SK.lookOf(SK.charById(save.advChar||save.char),save));SK.Render.drawWalker(c,player,780,640,64,t,'down',false);
+   const player=SK.fakeRacer(save.advChar||save.char,save.advBoard,'ride',SK.lookOf(SK.charById(save.advChar||save.char),save));SK.Render.drawWalker(c,player,560,650,112,t,'down',false);
   }
   raf=requestAnimationFrame(draw);
  };
