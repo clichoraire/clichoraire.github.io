@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.28';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.29';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -641,6 +641,7 @@ window.SK.VERSION = '1.28';   // à augmenter à chaque mise en ligne (affichée
   const slalomTimes=[{gold:100,silver:125,bronze:155},{gold:130,silver:160,bronze:200},{gold:120,silver:150,bronze:185},{gold:140,silver:175,bronze:215},{gold:130,silver:160,bronze:200}];
   for(const m of SK.MISSIONS.filter(m=>m.type==='slalom')){m.medalTimes=slalomTimes[m.level-1];m.desc=`Passe au moins ${m.goal} portes et termine en ${Math.floor(m.medalTimes.bronze/60)} min ${m.medalTimes.bronze%60} s maximum.`;}
   SK.MEDALS={bronze:{rank:1,name:'Bronze',icon:'🥉'},silver:{rank:2,name:'Argent',icon:'🥈'},gold:{rank:3,name:'Or',icon:'🥇'}};
+  SK.missionInstruction=m=>({slalom:'Passe entre les drapeaux',coins:'Ramasse les pièces',tricks:'Fais des figures en sautant',hits:'Touche les adversaires avec tes tirs',pushes:'Pousse les adversaires',time:'Atteins l’arrivée à temps',nofall:'Termine sans tomber',edges:'Ne touche pas les bords'})[m.type];
   SK.missionUnlocked=(m,save)=>!!save.allMissionsUnlocked||m.level===1||save.missions?.[m.id]!=null||SK.MISSIONS.some(prev=>prev.type===m.type&&prev.level===m.level-1&&save.missions?.[prev.id]!=null);
   SK.recordMission=(save,m,value,outcome=null)=>{
     if(outcome&&!outcome.ok)return {first:false,reward:0,unlocked:null};

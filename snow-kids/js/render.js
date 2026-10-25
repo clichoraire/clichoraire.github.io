@@ -692,6 +692,8 @@
     const small = vw < 900, F = small ? 0.8 : 1;
     ctx.textBaseline = 'alphabetic';
     const box = (x, y, w, h) => { ctx.fillStyle = 'rgba(0,0,0,0.42)'; rr(ctx, x, y, w, h, 10); ctx.fill(); };
+    // En mission, le panneau d’objectif remplace le classement solo.
+    if(!race.mission){
     // position et tour
     box(vx + 12, vy + 12, 150 * F, 74 * F);
     ctx.fillStyle = ['#ffd600', '#cfd8dc', '#ff8a65', '#fff', '#fff'][Math.min(4, me.rank)] || '#fff'; ctx.font = 'bold ' + 44 * F + 'px sans-serif'; ctx.textAlign = 'left';
@@ -703,6 +705,7 @@
       ctx.fillText('⭐ ↑ Niveau '+me.levelInfo.level,vx+22,vy+116*F);
       ctx.font='bold '+14*F+'px sans-serif';ctx.fillText(me.levelInfo.points+' points au gym',vx+22,vy+135*F);
     }
+    }
     // temps et pièces
     box(vx + vw - 12 - 180 * F, vy + 12, 180 * F, 74 * F);
     ctx.textAlign = 'right'; ctx.font = 'bold ' + 24 * F + 'px monospace'; ctx.fillStyle = '#fff';
@@ -710,12 +713,11 @@
     ctx.font = '900 ' + 22 * F + 'px "Arial Black", Arial, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(SK.fmtGold(me.coins,false), vx + vw - 24, vy + 74 * F);
     SK.drawGoldCoin(ctx, vx + vw - 24 - ctx.measureText(SK.fmtGold(me.coins,false)).width - 20 * F, vy + 66 * F, 12 * F);
     ctx.save();ctx.textAlign='right';ctx.font='bold '+14*F+'px Arial';ctx.fillStyle='#ffe59b';
-    ctx.fillText('Récolte '+me.coinsTotal+' / '+(me.coinCapacity||20)+' · Pointe +'+SK.coinSpeedBonus(me)+' km/h',vx+vw-24,vy+98*F);
-    ctx.fillText('Turbo '+Math.round((me.turboCharge||0)*100)+' %',vx+vw-24,vy+118*F);
+    if(!race.mission){ctx.fillText('Récolte '+me.coinsTotal+' / '+(me.coinCapacity||20)+' · Pointe +'+SK.coinSpeedBonus(me)+' km/h',vx+vw-24,vy+98*F);
+    ctx.fillText('Turbo '+Math.round((me.turboCharge||0)*100)+' %',vx+vw-24,vy+118*F);}
     if(me.gear.boussole){const future=race.track.segs.slice(Math.floor(me.z/SK.SEG)+4,Math.floor(me.z/SK.SEG)+45).find(s=>Math.abs(s.curve)>.4);ctx.textAlign='center';ctx.fillText(future?(future.curve>0?'Virage →':'← Virage')+' · '+Math.round(future.z-me.z)+' m':'↑ Tout droit',vx+vw*.5,vy+105*F);}
     if(me.gear.meteore&&me.meteorUntil>race.time){ctx.strokeStyle='#ffdc6390';ctx.lineWidth=7*F;ctx.beginPath();ctx.ellipse(vx+vw*.5,vy+vh*.77,vw*.15,vh*.05,0,0,Math.PI*2);ctx.stroke();}
     ctx.restore();
-    ctx.save();ctx.font='bold '+18*F+'px Arial';ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('N · Pousser '+(me.pushCooldown>0?Math.ceil(me.pushCooldown)+' s':'✊'),vx+20,vy+vh-95*F);ctx.restore();
     // tir et objet
     const slot = (x, y, kind, id, label, key) => {
       const def = id ? SK.powerPresentation(me,kind,id) : null;
@@ -726,8 +728,8 @@
       ctx.fillStyle = '#fff'; ctx.font = 'bold ' + 14 * F + 'px sans-serif'; ctx.fillText(def ? def.name : '—', x + 64 * F, y + 44 * F, 82 * F);
     };
     const keys = me.player === 1 ? ['J', 'K'] : ['V', 'B'];
-    slot(vx + 12, vy + vh - 12 - 62 * F, 'shot', me.shot, 'Tir', keys[0]);
-    slot(vx + 12 + 158 * F, vy + vh - 12 - 62 * F, 'item', me.item, 'Objet', keys[1]);
+    if(!race.mission||me.shot||race.mission.type==='hits')slot(vx + 12, vy + vh - 12 - 62 * F, 'shot', me.shot, 'Tir', keys[0]);
+    if(!race.mission||me.item)slot(vx + 12 + 158 * F, vy + vh - 12 - 62 * F, 'item', me.item, 'Objet', keys[1]);
     // vitesse
     box(vx + vw - 12 - 170 * F, vy + vh - 12 - 62 * F, 170 * F, 62 * F);
     const kmh = Math.round(me.speed * 3.6), pct = SK.clamp(me.speed / (SK.raceTopSpeed(me) * 1.45), 0, 1);
@@ -736,6 +738,7 @@
     ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.font = 'bold ' + 20 * F + 'px monospace'; ctx.fillText(kmh + ' km/h', vx + vw - 24, vy + vh - 12 - 36 * F);
     const surf = SK.SURFACES[race.track.segAt(me.z).surface]; ctx.textAlign = 'left'; ctx.font = 12 * F + 'px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(surf ? surf.name : '', vx + vw - 12 - 160 * F, vy + vh - 12 - 36 * F);
     // barre de progression à droite : UN tour de piste (départ en haut, remontée en bas) ; pendant la remontée on remonte
+    if(!race.mission){
     const bx = vx + vw - 40, by0 = vy + 110 * F, by1 = vy + vh - 100 * F;
     ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(bx, by0); ctx.lineTo(bx, by1); ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.fillRect(bx - 12, by0 - 2, 24, 4); ctx.fillRect(bx - 12, by1 - 2, 24, 4);
@@ -749,6 +752,7 @@
       circ(ctx, bx, yy, rad + 3, o === me ? '#ffd600' : 'rgba(0,0,0,0.55)'); R.drawFace(ctx, o, bx, yy, rad);
       if (race.laps > 1) { ctx.fillStyle = o === me ? '#ffd600' : '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('T' + Math.min(race.laps, o.lap + 1), bx + rad + 5, yy + 4); }
     });
+    }
     // le rocher qu'on vient de lâcher : il part de la main et tombe derrière nous (vers la caméra)
     if (me.rockAnim != null && race.time - me.rockAnim < 0.7 && me.screen) { const q = (race.time - me.rockAnim) / 0.7, sc = me.screen.sc * (0.8 + 2.2 * q); const rx = me.screen.sx + 0.6 * me.screen.sc + (vx + vw * 0.5 - me.screen.sx) * q, ry = me.screen.sy - 1.5 * me.screen.sc - Math.sin(q * Math.PI) * 60 * F + (vy + vh + 40 - me.screen.sy) * q; R.drawProp(ctx, me.trapType||'rock', rx, ry, sc * 0.5, 0.5, t, {}); }
     // messages centraux
@@ -762,11 +766,11 @@
     if (race.mission) { // objectif de la pratique
       const m=race.mission,values={slalom:race.gatesPassed,coins:me.trackCoins,tricks:me.tricksCoins,pushes:me.stats.pushes,hits:me.stats.hits,edges:me.stats.edges,nofall:me.stats.falls};
       const score=m.type==='time'?SK.fmtTime(Math.max(0,race.time)):['nofall','edges'].includes(m.type)?values[m.type]+(m.type==='nofall'?' chute(s)':' contact(s)'):values[m.type]+' / '+m.goal;
-      const label=m.type==='time'?'Objectif '+SK.fmtTime(m.goal):m.name;
-      box(vx+vw/2-160*F,vy+12*F,320*F,(m.type==='slalom'?128:96)*F);
-      ctx.textAlign='center';ctx.fillStyle='#fff3b9';ctx.font='bold '+16*F+'px sans-serif';ctx.fillText(label,vx+vw/2,vy+36*F,300*F);
-      ctx.font=48*F+'px "Titan One", sans-serif';ctx.lineWidth=5*F;ctx.strokeStyle='#16344c';ctx.strokeText(score,vx+vw/2,vy+91*F,300*F);ctx.fillStyle='#ffdb45';ctx.fillText(score,vx+vw/2,vy+91*F,300*F);
-      if(m.type==='slalom'){const elapsed=me.finishTime??Math.max(0,race.time),tier=['gold','silver','bronze'].find(k=>elapsed<=m.medalTimes[k]);ctx.font='bold '+17*F+'px sans-serif';ctx.fillStyle=tier?'#fff4c9':'#ff8a80';ctx.fillText(tier?SK.MEDALS[tier].icon+' Objectif '+SK.MEDALS[tier].name+' · '+SK.fmtTime(Math.max(0,m.medalTimes[tier]-elapsed))+' restantes':'Temps dépassé',vx+vw/2,vy+124*F,300*F);}
+      const label=SK.missionInstruction(m),cx=vx+12+160*F;
+      box(vx+12,vy+12*F,320*F,(m.type==='slalom'?128:96)*F);
+      ctx.textAlign='center';ctx.fillStyle='#fff3b9';ctx.font='bold '+16*F+'px sans-serif';ctx.fillText(label,cx,vy+36*F,300*F);
+      ctx.font=48*F+'px "Titan One", sans-serif';ctx.lineWidth=5*F;ctx.strokeStyle='#16344c';ctx.strokeText(score,cx,vy+91*F,300*F);ctx.fillStyle='#ffdb45';ctx.fillText(score,cx,vy+91*F,300*F);
+      if(m.type==='slalom'){const elapsed=me.finishTime??Math.max(0,race.time),tier=['gold','silver','bronze'].find(k=>elapsed<=m.medalTimes[k]);ctx.font='bold '+17*F+'px sans-serif';ctx.fillStyle=tier?'#fff4c9':'#ff8a80';ctx.fillText(tier?SK.MEDALS[tier].icon+' Objectif '+SK.MEDALS[tier].name+' · '+SK.fmtTime(Math.max(0,m.medalTimes[tier]-elapsed))+' restantes':'Temps dépassé',cx,vy+124*F,300*F);}
 
 
     }
