@@ -62,13 +62,15 @@
   // opts : { canvas, unlocked (Shinobin ?), current, onPick(charId), onBack, info(el) }
   T.select = function (opts) {
     stop(); canvas = opts.canvas; const ctx = canvas.getContext('2d');let W=1280,H=800;
-    const resize=()=>{const bounds=canvas.getBoundingClientRect();W=1280;H=Math.max(620,Math.round(W*bounds.height/Math.max(1,bounds.width)));canvas.width=W;canvas.height=H;};resize();
+    const viewport=document.getElementById('adv-viewport'),room=document.getElementById('adv-room');
+    const resize=()=>{W=Math.max(1280,list.length*166+280,Math.round(viewport.clientWidth/Math.max(1,viewport.clientHeight)*800));H=800;room.style.width=Math.max(viewport.clientWidth,viewport.clientHeight*W/H)+'px';canvas.width=W;canvas.height=H;document.getElementById('adv-scroll-hint').hidden=room.offsetWidth<=viewport.clientWidth+1;};
     const allKids=SK.CHARACTERS.filter(c=>!c.hidden||opts.unlocked);let list=[...allKids];
     const names=document.getElementById('adv-names');names.replaceChildren(...list.map(c=>{const el=document.createElement('span');el.textContent=c.name;return el;}));
     let idx = Math.max(0, list.findIndex(c => c.id === opts.current)), bounce = 0, hover=-1, waving=false;
     let selectionBlend=list.map((_,i)=>i===idx?1:0);let lastSelectionFrame=performance.now();
-    const positions=()=>list.map((c,i)=>{const first=Math.floor(idx/6)*6,count=Math.min(6,list.length-first);return i<first||i>=first+6?NaN:W*(.5+(i-first-(count-1)/2)*.13);});
-    const update = () => { if (opts.onChange) opts.onChange(list[idx]); };
+    const positions=()=>list.map((c,i)=>W/2+(i-(list.length-1)/2)*166);
+    const reveal=()=>{const x=positions()[idx]/W*room.offsetWidth;viewport.scrollTo({left:Math.max(0,x-viewport.clientWidth/2),behavior:'auto'});};
+    const update = () => { resize();reveal();if (opts.onChange) opts.onChange(list[idx]); };
     keyHandler = e => {
       if(e.target.closest?.('select,button'))return;
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') { idx = (idx + list.length - 1) % list.length; bounce = 1; waving=true; update(); SK.Audio.sfx('click'); e.preventDefault(); }
@@ -78,7 +80,7 @@
     };
     window.addEventListener('keydown', keyHandler);
     const hit=e=>{const box=canvas.getBoundingClientRect(),mx=(e.clientX-box.left)*W/box.width,my=(e.clientY-box.top)*H/box.height;
-      return positions().findIndex((x,i)=>{const c=list[i],size=SK.characterScale(c.id);return Math.abs(mx-x)<W*.045&&my>H*.80-190*size&&my<H*.82;});};
+      return positions().findIndex((x,i)=>{const c=list[i],size=SK.characterScale(c.id);return Math.abs(mx-x)<58&&my>H*.80-190*size&&my<H*.82;});};
     const move=e=>{hover=hit(e);canvas.style.cursor=hover>=0?'pointer':'default';};
     const leave=()=>{hover=-1;canvas.style.cursor='default';};
     clickHandler=e=>{const found=hit(e);if(found<0)return;idx=found;waving=true;bounce=1;update();SK.Audio.sfx('click');};
@@ -88,8 +90,8 @@
     for(const family of new Set(allKids.map(c=>c.family).filter(Boolean)))select.add(new Option('Famille '+family,family));
     select.onchange=()=>{const current=list[idx]?.id;list=allKids.filter(c=>!select.value||c.family===select.value);idx=Math.max(0,list.findIndex(c=>c.id===current));selectionBlend=list.map((_,i)=>i===idx?1:0);names.replaceChildren(...list.map(c=>{const el=document.createElement('span');el.textContent=c.name;return el;}));update();};
     chooser.append(select);for(const [label,dir] of [['←',-1],['→',1]]){const b=document.createElement('button');b.type='button';b.textContent=label;b.setAttribute('aria-label',dir<0?'Personnage précédent':'Personnage suivant');b.onclick=()=>{idx=(idx+list.length+dir)%list.length;waving=true;update();};chooser.append(b);}
-    if(allKids.some(c=>c.custom))canvas.parentElement.append(chooser);
-    const observer=new ResizeObserver(resize);observer.observe(canvas);
+    if(allKids.some(c=>c.custom))viewport.parentElement.append(chooser);
+    const observer=new ResizeObserver(()=>{resize();reveal();});observer.observe(viewport);
     selectCleanup=()=>{chooser.remove();observer.disconnect();canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerleave',leave);canvas.style.cursor='default';};
     update();
     const frame = () => {
@@ -100,7 +102,7 @@
       bounce = Math.max(0, bounce - dt*2.4);
       positions().forEach((x, i) => {
         if(!Number.isFinite(x)){names.children[i].hidden=true;return;}
-        const c=list[i],sel=i===idx;selectionBlend[i]+=(Number(sel)-selectionBlend[i])*(1-Math.exp(-10*dt));const emphasis=selectionBlend[i],s=(60+18*emphasis)*(W/1280);
+        const c=list[i],sel=i===idx;selectionBlend[i]+=(Number(sel)-selectionBlend[i])*(1-Math.exp(-10*dt));const emphasis=selectionBlend[i],s=60+18*emphasis;
         const y=H*.80-emphasis*6;
         if(emphasis>.01||hover===i){const radius=s*SK.characterScale(c.id)*.60;ctx.save();ctx.globalAlpha=hover===i?1:emphasis;ctx.fillStyle=sel?'rgba(255,219,92,.14)':'rgba(100,213,255,.12)';ctx.strokeStyle=sel?'#ffe17c':'#98e7ff';ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(x,y+4,radius,radius*.25,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();}
         const fr=SK.fakeRacer(c.id,'freestyle','ride',opts.lookFor?opts.lookFor(c.id):null);fr.wave=sel&&waving;
@@ -417,11 +419,13 @@
     const snowMove=e=>{const box=canvas.getBoundingClientRect();hoverSnow=snowHit((e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height);canvas.style.cursor=hoverSnow&&!dug(hoverSnow)?'pointer':'default';};
     canvas.addEventListener('pointermove',snowMove);
     const stage=canvas.parentElement,chat=document.createElement('form'),bubble=document.createElement('div');
-    chat.id='town-chat';chat.hidden=true;chat.innerHTML='<label for="town-chat-input">Parler dans le village</label><div><input id="town-chat-input" maxlength="180" autocomplete="off" placeholder="Écris ton message…"><button type="submit">Envoyer</button><button type="button" aria-label="Fermer le chat">×</button></div>';
+    chat.id='town-chat';chat.hidden=true;chat.innerHTML='<label for="town-chat-input">Parler dans le village</label><div><input id="town-chat-input" maxlength="180" autocomplete="off" placeholder="Message ou code de triche…"><button type="submit">Envoyer</button><button type="button" aria-label="Fermer le chat">×</button></div>';
     bubble.id='town-player-speech';bubble.hidden=true;bubble.setAttribute('role','status');bubble.setAttribute('aria-live','polite');stage.append(chat,bubble);
+    const chatButton=document.createElement('button');chatButton.id='town-chat-open';chatButton.type='button';chatButton.textContent='💬 Message';chatButton.setAttribute('aria-controls','town-chat');chatButton.setAttribute('aria-expanded','false');stage.append(chatButton);
     const input=chat.querySelector('input');let bubbleUntil=0;
-    const closeChat=()=>{chat.hidden=true;input.blur();held.clear();SK.Input.keys={};SK.Input.pressed={};};
-    const openChat=()=>{held.clear();target=null;moving=false;chat.hidden=false;input.focus();SK.Input.keys={};SK.Input.pressed={};};
+    const closeChat=()=>{chat.hidden=true;chatButton.setAttribute('aria-expanded','false');SK.Touch.pause(false);input.blur();held.clear();SK.Input.keys={};SK.Input.pressed={};};
+    const openChat=()=>{held.clear();target=null;pendingDig=null;digProgress=0;moving=false;SK.Touch.pause(true);chat.hidden=false;chatButton.setAttribute('aria-expanded','true');input.focus();SK.Input.keys={};SK.Input.pressed={};};
+    chatButton.onclick=openChat;
     chat.querySelector('[type=button]').onclick=closeChat;
     chat.addEventListener('keydown',e=>{e.stopPropagation();if(e.code==='Escape'){e.preventDefault();closeChat();}if(e.code==='Enter'&&(e.repeat||e.isComposing))e.preventDefault();});
     chat.addEventListener('keyup',e=>e.stopPropagation());
@@ -430,7 +434,7 @@
       const result=opts.onChat?.(text);if(result){opts.look=result.look;WORLD_WIDTH=result.debugHouse?5350:4860;}
       input.value='';closeChat();
     };
-    selectCleanup=()=>{canvas.removeEventListener('pointermove',snowMove);canvas.style.cursor='default';chat.remove();bubble.remove();held.clear();SK.Input.keys={};SK.Input.pressed={};};
+    selectCleanup=()=>{canvas.removeEventListener('pointermove',snowMove);canvas.style.cursor='default';chat.remove();bubble.remove();chatButton.remove();held.clear();SK.Input.keys={};SK.Input.pressed={};};
 
     const nearest=()=>STREET.findIndex(b=>Math.abs(door(b)-x)<115);
     const label=()=>{const h=near<0?null:T.HOUSES.find(h=>h.id===STREET[near].id);

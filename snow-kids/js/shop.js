@@ -112,9 +112,9 @@
     card.onclose=()=>{SK.Input.keys={};renderMe(E,save,selected(),state.tab);};
     card.onkeydown=e=>{if(e.code==='Escape')card.close();e.stopPropagation();};card.onkeyup=e=>e.stopPropagation();
     let pointer=null,dragged=false,lastWheel=0;
-    const down=e=>{dragged=false;if(e.pointerType==='touch')pointer=e.clientX;};
+    const down=e=>{dragged=false;if(e.pointerType==='touch'&&!SK.RoomViews?.overflow('shop'))pointer=e.clientX;};
     const up=e=>{if(pointer!==null&&e.clientX!=null&&Math.abs(e.clientX-pointer)>45){dragged=true;turn(e.clientX<pointer?1:-1);}pointer=null;};
-    const wheel=e=>{if(e.target.closest('.motif-workshop'))return;e.preventDefault();if(performance.now()-lastWheel>650){lastWheel=performance.now();turn((e.deltaX||e.deltaY)>0?1:-1);}};
+    const wheel=e=>{if(e.target.closest('.motif-workshop')||SK.RoomViews?.overflow('shop'))return;e.preventDefault();if(performance.now()-lastWheel>650){lastWheel=performance.now();turn((e.deltaX||e.deltaY)>0?1:-1);}};
     aisle.addEventListener('pointerdown',down);window.addEventListener('pointerup',up);aisle.addEventListener('wheel',wheel,{passive:false});
     const emergency=document.querySelector('.emergency-plate'),home=emergency.parentElement;
     cleanup=()=>{document.querySelectorAll('.board-skin-dialog').forEach(d=>d.close());kid.remove();document.removeEventListener('pointerdown',outside);window.removeEventListener('resize',positionCard);card.onclose=null;card.close();home.appendChild(emergency);window.removeEventListener('pointerup',up);aisle.removeEventListener('pointerdown',down);aisle.removeEventListener('wheel',wheel);};
@@ -168,17 +168,19 @@
           const boardPlacement=it.kind==='board'?[x*12.8+8,n===0?288:360,n===0?52:57]:null;
           const rankIndex=list.filter(e=>e.it.kind==='gear').findIndex(e=>e.it.id===it.id);
           const counterPlacement=boardPlacement||(clothingShop&&n===1?[410+(oi-1)%5*110,310+Math.floor((oi-1)/5)*130,70]:null)||(!clothingShop&&it.kind==='gear'?[410+(rankIndex%6)*94,rankIndex<6?490:rankIndex<12?590:675,58]:null);
-          if(counterPlacement){
+          if(counterPlacement||button.classList.contains('stacked-clothing')){
             // Recadrage alpha : le bas réel de l'objet repose sur le plateau propre à chaque objet.
             const pixels=support.getImageData(0,0,image.width,image.height).data;let l=image.width,t=image.height,r=0,b=0;
             for(let yy=0;yy<image.height;yy++)for(let xx=0;xx<image.width;xx++)if(pixels[(yy*image.width+xx)*4+3]>8){l=Math.min(l,xx);t=Math.min(t,yy);r=Math.max(r,xx);b=Math.max(b,yy);}
             const crop=document.createElement('canvas');crop.width=r-l+1;crop.height=b-t+1;crop.getContext('2d').drawImage(image,l,t,crop.width,crop.height,0,0,crop.width,crop.height);
             image.width=crop.width;image.height=crop.height;image.getContext('2d').drawImage(crop,0,0);image.style.transform='none';
             if(it.kind==='board')SK.animateBoardPreview(image,it,55,125,94,true,l,t);
-            const displayWidth=counterPlacement?counterPlacement[2]:65,displayHeight=displayWidth*crop.height/crop.width;
+            if(counterPlacement){
+            const displayWidth=counterPlacement[2],displayHeight=displayWidth*crop.height/crop.width;
             button.classList.add('on-display-shelf');button.style.width=(displayWidth/1280*100)+'%';
             button.style.left=counterPlacement?(counterPlacement[0]/12.8)+'%':(31+list.filter(e=>e.it.kind==='gear').findIndex(e=>e.it.id===it.id)*8.3)+'%';
             button.style.top=(((counterPlacement?counterPlacement[1]:510)-displayHeight)/720*100)+'%';button.style.height=(displayHeight/720*100)+'%';
+            }
           }
           const tag=document.createElement('span');tag.className='product-price';tag.innerHTML=it.secret?(it.lock?'🔒 '+it.name.replace('Planche ',''):it.owned?'✓ '+it.name.replace('Planche ',''):'🎁 '+it.name.replace('Planche ','')):(it.lock?'🔒 ':'<img src="'+SK.COIN_SVG+'" alt=""> ')+SK.fmtGold(it.price,!!it.lock);
           button.append(image,tag);
@@ -191,7 +193,7 @@
           const groups=new Map();for(const entry of list){const st=stackSlots.get(entry.it.id);groups.set(st.group,entry.it);}
           for(const [group,it] of groups){const label=document.createElement('span');label.className='product-price stack-price';label.dataset.stackPrice=group;
             label.innerHTML='<img src="'+SK.COIN_SVG+'" alt=""> '+SK.fmtGold(it.price,false);
-            label.style.cssText=`left:${28+(group%3)*(n===0?19:23)+7}%;top:${18+Math.floor(group/3)*24+21}%;`;
+            label.style.cssText=`left:${28+(group%3)*(n===0?19:23)+7}%;top:${18+Math.floor(group/3)*24+27}%;`;
             section.appendChild(label);}
         }
         if(n===(clothingShop?3:2)){section.appendChild(emergency);}
@@ -263,9 +265,9 @@
   function addFamilyFrames(section,n,clothes,save,reward){
     const jay='shop-photos/jay-cartoon.png',jo='shop-photos/jo-cartoon.png';
     const layouts=[
-      [[jay,76,338,92,66,-4,'Famille de Jay'],['shop-photos/edison-cartoon.png',207,350,56,65,5,'Edison']],
+      [[jay,55,200,150,105,-4,'Famille de Jay'],['shop-photos/edison-cartoon.png',215,200,95,110,5,'Edison']],
       [[jo,405,35,185,92,2,'Souper chez Jo'],['shop-photos/couple-cartoon.png',800,38,80,92,-6,'Mickaël et Marie'],['shop-photos/grandsparents-cartoon.png',925,40,90,88,4,'Josée et Richard']],
-      [[clothes?jo:jay,480,33,155,78,-3,clothes?'Souper chez Jo':'Famille de Jay']],
+      [[clothes?jo:jay,60,195,210,120,-3,clothes?'Souper chez Jo':'Famille de Jay']],
       [[jo,370,190,260,190,-3,'Souper chez Jo'],[jay,690,135,210,157,4,'Famille de Jay'],['shop-photos/couple-cartoon.png',760,340,115,156,-5,'Mickaël et Marie']]
     ];
     for(const [src,x,y,w,h,angle,label] of layouts[n]){
@@ -273,7 +275,7 @@
       frame.onclick=()=>{const amount=reward();if(amount)SK.PhotoGold.show(frame,amount);};
       frame.style.cssText=`left:${x/12.8}%;top:${y/7.2}%;width:${w/12.8}%;height:${h/7.2}%;transform:rotate(${angle}deg)`;
       const photo=document.createElement('img');photo.src='assets/'+src;photo.alt=label;photo.decoding='async';
-      photo.onload=()=>{const innerH=h-18,fitW=innerH*photo.naturalWidth/photo.naturalHeight+18;frame.style.width=(fitW/12.8)+'%';};
+      photo.onload=()=>{frame.style.width=(w/12.8)+'%';};
       frame.appendChild(photo);SK.PhotoPuzzles.decorate(frame,save,'assets/'+src);section.appendChild(frame);
     }
   }

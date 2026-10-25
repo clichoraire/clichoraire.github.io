@@ -761,3 +761,100 @@ table.results td.num { text-align: right; font-family: monospace; }
   #touch-controls:not([data-mode=race]) .touch-directions { gap:8px; }
   #touch-controls:not([data-mode=race]) button { width:88px;min-width:88px;height:76px; }
 }
+
+/* Une salle à proportions fixes que l’on parcourt au doigt. */
+#adv-viewport{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#e7c46e #513322}
+#adv-room{position:relative;height:100%;min-width:100%;isolation:isolate}
+#adv-canvas{touch-action:pan-x}
+#adv-scroll-hint{position:absolute;top:10%;left:50%;transform:translateX(-50%);margin:0;padding:5px 12px;border-radius:16px;background:#49301fbd;color:#fff3c9;font-size:14px;pointer-events:none;z-index:3;white-space:nowrap}
+#adv-scroll-hint[hidden]{display:none}
+#screen-advselect .family-chooser{top:16%!important}
+#adv-room .room-memories{z-index:1;top:20%;left:5%}
+#adv-info,#adv-names{z-index:2}
+#town-label{left:auto;right:12px;bottom:8px;transform:none}
+#town-label .town-enter{font-size:18px;padding:5px 22px;min-height:42px}
+#town-chat-open{position:absolute;left:12px;bottom:10px;z-index:5;font:16px 'Titan One','Trebuchet MS',sans-serif;padding:9px 14px;min-height:44px;border:2px solid #e1f6ff;border-radius:16px;background:#24688a;color:white}
+#town-chat{position:fixed;bottom:12px;z-index:50;width:min(620px,94vw);max-height:90dvh;overflow:auto}
+#town-chat input{font-size:16px}
+@media(max-height:500px){#adv-info{scale:.65;transform-origin:50% 100%;translate:0 40px}#adv-scroll-hint{top:15%;font-size:11px}#screen-advselect .buttons button{font-size:14px;padding:6px 16px}#town-label{bottom:8px;right:8px}#town-label .town-enter{font-size:14px;padding:4px 15px}#town-chat-open{left:8px;bottom:8px;font-size:12px;padding:6px 10px}}
+
+/* Les souvenirs font partie du décor, derrière les commandes. */
+.room-memories{z-index:0}
+#screen-wardrobe .closet-panel,#screen-records>.panel,.school-header,#school-gold,#missions,#btn-school-back{position:relative;z-index:2}
+.school-header,#school-gold,#missions,#btn-school-back{position:absolute}
+#screen-shop #shop-me,#screen-shop #shop-gold{z-index:6}
+.shop-wall .shop-family-frame{border-radius:6px;padding:4px;min-width:0;min-height:0}
+.shop-wall .shop-product.stacked-clothing{padding:0 0 12px}
+.shop-wall .stacked-clothing canvas{height:100%;width:100%;object-fit:contain}
+.shop-wall .stacked-clothing .product-price{display:none}
+#screen-shop .shop-wall .emergency-plate{padding:5px 5px 7px;gap:2px;right:15%;top:53%;}
+#screen-shop .shop-wall #shop-emergency{width:28px;height:28px;font-size:13px;border-width:2px;min-height:0;min-width:0;position:relative}
+#shop-emergency::after{content:'';position:absolute;inset:-8px}
+#screen-shop .shop-wall .emergency-plate>span{font-size:6px;letter-spacing:.5px}
+
+/* L’école conserve les proportions du décor et laisse respirer les missions. */
+#school-scene{object-fit:cover}
+@media(max-width:1100px) and (orientation:portrait){
+ .school-header{top:24px;left:18%;width:80%}.school-header h2{font-size:clamp(23px,4vw,36px);margin-bottom:8px}#school-sub{font-size:16px}.school-gold{font-size:18px;padding:8px}
+ #screen-school .room-memories{top:116px;left:20px;z-index:1}#screen-school .room-memories button{width:80px}
+ #missions{left:16px;right:16px;top:196px;bottom:106px;width:auto;height:auto;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:4px 8px 14px 4px}
+ .school-mission{min-height:0}.school-mission h3{font-size:18px}.school-level{font-size:14px}.school-reward{font-size:15px}
+ #school-more{left:auto;right:16px;bottom:28px;transform:none;width:48px;height:48px;padding:10px}#btn-school-back{bottom:22px;font-size:16px;padding:10px 18px;max-width:70%;white-space:normal}
+}
+@media(max-width:500px) and (orientation:portrait){#missions{grid-template-columns:1fr}.school-header{left:23%;width:75%}.school-header h2{font-size:22px}}
+@media(max-height:500px){
+ .school-header{left:20%;top:8px;width:76%}.school-header h2{font-size:23px;margin:0 0 4px}#school-sub{font-size:12px;margin:3px}.school-gold{font-size:16px;padding:6px}
+ #screen-school .room-memories{top:76px;left:12px}#screen-school .room-memories button{width:50px}
+ #missions{top:92px;bottom:60px;left:3%;right:3%;width:auto;height:auto;display:flex;overflow:auto;gap:12px;padding:4px 4px 10px}
+ .school-mission{flex:0 0 230px;min-height:0;height:100%;overflow-y:auto}.school-mission h3{font-size:15px;margin:6px}.school-level{font-size:12px;margin:4px 6px}.school-mission canvas{height:64px;object-fit:cover}.school-reward{font-size:13px;padding:5px}
+ #school-more{display:none}#btn-school-back{bottom:8px;font-size:14px;padding:6px 16px}
+}
+
+/* Même principe que le musée : une fenêtre sur une pièce, jamais un décor écrasé. */
+.pan-room{padding:0!important;overflow:hidden!important}
+.room-viewport{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#d8b66e #513823;touch-action:pan-x pan-y}
+.room-world{position:relative!important;flex:none;margin:0 auto;max-width:none!important;max-height:none!important;overflow:visible!important;isolation:isolate}
+.room-world>#shop-canvas,.room-world>#gym-scene,.room-world>#throne-canvas,.room-world>#school-scene{position:absolute!important;inset:0;width:100%!important;height:100%!important;object-fit:fill!important}
+.room-overlay{z-index:10!important}
+.room-pan{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);z-index:12;display:flex;gap:6px;padding:4px;border-radius:18px;background:#24180dbb}
+.room-pan[hidden]{display:none}
+.room-pan button{width:46px;height:42px;padding:2px;font-size:23px;border:2px solid #fff0bd;border-radius:12px;background:#805e38;color:#ffe9a4;min-height:42px;touch-action:manipulation}
+.room-pan button:disabled{opacity:.35}
+#screen-shop .room-world{min-width:0}
+#screen-shop #shop-aisle{touch-action:pan-x}
+#screen-shop #shop-me{left:23%;top:10px;width:50%;max-height:100px;overflow:auto;font-size:13px}
+#screen-shop #shop-me .me-stats,#screen-shop #shop-me .me-hint,#screen-shop #shop-me h3{display:none}
+#screen-shop #shop-gold{left:10px;top:10px;font-size:18px;padding:8px}
+#screen-shop #shop-gold img{width:28px;height:28px}
+#screen-shop #btn-shop-back{position:absolute;bottom:12px;left:12px;transform:none;font-size:16px;padding:8px 20px}
+#screen-shop #shop-explore-hint{right:12px;bottom:12px;max-width:60%;font-size:12px;text-align:right}
+#screen-shop .shop-pan{position:absolute;top:48%;width:44px;height:48px;font-size:22px}
+#screen-shop #shop-pan-left{left:6px}#screen-shop #shop-pan-right{right:6px}
+#screen-school .room-world #missions{top:24%;left:4%;bottom:16%;right:auto;width:55%;height:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;overflow-y:auto;touch-action:pan-y;padding:6px 12px 20px 6px}
+#screen-school .room-world .school-mission{height:auto;min-height:250px;flex:none}
+#screen-school .room-world .school-mission canvas{height:auto;aspect-ratio:2;object-fit:contain}
+#screen-school .room-world .school-mission h3{font-size:20px}
+#screen-school .room-world .room-memories{top:13%;left:4%}
+#screen-school .room-world .room-memories button{width:90px}
+#school-more{z-index:12}
+#screen-school .room-pan{bottom:24px;left:auto;right:16px;transform:none}
+#screen-school #school-more{left:22px;right:auto;bottom:22px;width:44px;height:44px;transform:none}
+#btn-school-back{max-width:55%}
+#screen-gym .room-world{overflow:hidden!important}
+#gym-talk{bottom:18px;right:16px;font-size:16px;padding:8px 16px}#gym-back{bottom:18px;left:16px;font-size:16px;padding:8px 16px}
+#gym-training{right:4%;width:min(560px,92%);top:14%;max-height:70%;padding:18px}
+#screen-wardrobe .room-viewport{overflow-y:auto;touch-action:pan-x pan-y;padding-bottom:90px}
+#screen-wardrobe .closet-panel{padding:50px 24px 100px;min-height:100%;box-sizing:border-box}
+#screen-wardrobe .closet-layout{grid-template-columns:260px 1fr;gap:24px}
+#screen-wardrobe .closet-fitting canvas{height:300px}
+#screen-wardrobe #wardrobe-items{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+#screen-wardrobe .closet-item canvas{height:160px}
+#screen-wardrobe .closet-item span{font-size:16px}
+#screen-wardrobe .closet-panel>.room-memories{top:8px;left:24px;z-index:-1}
+#wardrobe-back{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:16px;white-space:nowrap}
+@media(max-height:500px){.room-pan{bottom:60px}.room-pan button{width:40px;height:36px;min-height:36px;font-size:18px}#screen-school .room-world #missions{top:28%;bottom:22%;grid-template-columns:repeat(2,minmax(0,1fr))}#screen-school .room-world .school-mission{min-height:210px}#screen-school .room-world .school-mission h3{font-size:16px}#screen-shop #shop-me{max-height:66px}#gym-talk,#gym-back{font-size:12px;padding:6px 10px}}
+#screen-wardrobe #wardrobe-title{position:absolute;top:18px;left:0;width:100%;text-align:center;margin:0;font-size:clamp(20px,3vw,30px);pointer-events:none}
+#screen-wardrobe>.closet-sub{position:absolute;top:58px;left:5%;width:90%;margin:0;text-align:center;font-size:14px;pointer-events:none}
+#screen-wardrobe .closet-panel{padding-top:112px}
+#screen-shop .shop-wall .stack-price{font-size:14px;padding:3px 7px;z-index:3}
+#screen-shop .shop-wall .stack-price img{width:16px;height:16px}

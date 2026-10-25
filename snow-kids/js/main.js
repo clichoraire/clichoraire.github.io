@@ -15,7 +15,7 @@
 
   // ------------------------------------------------------------------ écrans
   const screens = ['gym', 'debug', 'menu', 'advselect', 'town', 'throne', 'museum', 'wardrobe', 'records', 'school', 'select', 'course', 'shop', 'story', 'race', 'result'];
-  function show(name) { SK.Touch.show(name); if(name!=='school')SK.School?.close(); SK.PhotoPuzzles.mount(name,save); if(name!=='gym')SK.Gym.close(); if(name!=='race')SK.DebugHouse.close(); if(name!=='throne')SK.Throne.close(); if(name!=='museum')SK.Museum.close(); if (name !== 'course') openCourse.resizeObserver?.disconnect(); if (name !== 'town' && name !== 'advselect') SK.Town.close(); if (name !== 'shop') SK.Shop.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
+  function show(name) { SK.Touch.show(name); if(name!=='school')SK.School?.close(); SK.PhotoPuzzles.mount(name,save); if(name!=='gym')SK.Gym.close(); if(name!=='race')SK.DebugHouse.close(); if(name!=='throne')SK.Throne.close(); if(name!=='museum')SK.Museum.close(); if (name !== 'course') openCourse.resizeObserver?.disconnect(); if (name !== 'town' && name !== 'advselect') SK.Town.close(); if (name !== 'shop') SK.Shop.close(); for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); SK.RoomViews.show(name); if (name === 'menu') { refreshMenu(); A.music('menu'); } }
   let flow = { mode: 'champ', players: 1, course: null, laps: 3, picks: [] };
 
   const fakeRacer = SK.fakeRacer;

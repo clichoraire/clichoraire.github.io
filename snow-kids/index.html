@@ -54,8 +54,12 @@
   <section id="screen-advselect" class="screen hidden">
     <div class="panel wide">
       <h2>Choisis ton personnage</h2>
-      <canvas id="adv-canvas" width="1280" height="520"></canvas>
-      <div id="adv-info" class="adv-info"></div><div id="adv-names" aria-hidden="true"></div>
+      <div id="adv-viewport" tabindex="0" aria-label="Salle des personnages : fais défiler de gauche à droite">
+        <div id="adv-room"><canvas id="adv-canvas" width="1280" height="800"></canvas>
+          <div id="adv-info" class="adv-info"></div><div id="adv-names" aria-hidden="true"></div>
+        </div>
+      </div>
+      <p id="adv-scroll-hint">↔ Glisse pour voir tout le monde</p>
       <div class="buttons"><button id="btn-adv-back" class="ghost n64-btn btn-retour">Retour</button><button id="btn-adv-ok" class="primary n64-btn btn-depart">C’est lui !</button></div>
     </div>
   </section>
@@ -225,6 +229,7 @@
 <script src="js/debug-house.js"></script>
 <script src="js/gym.js"></script>
 <script src="js/school.js"></script>
+<script src="js/room-views.js"></script>
 <script src="js/main.js"></script>
 <script src="js/menu-detail.js"></script>
 
