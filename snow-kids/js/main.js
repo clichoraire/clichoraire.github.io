@@ -255,8 +255,8 @@
     const preview=id=>{
       overview.innerHTML=flow.picks.map(pick=>{const ch=SK.charById(pick.charId),cur=SK.Gym.stats(save,baseline,pick.charId),next=SK.Gym.stats(save,id,pick.charId);
         return '<section><h3>'+ch.name+' · '+SK.boardById(id).name+'</h3><small>Comparaison avec '+SK.boardById(baseline).name+'</small>'+[['speed','Vitesse'],['corner','Virage'],['acceleration','Accélération'],['jump','Saut'],['strength','Force']].map(([key,label])=>{
-          const before=cur[key],after=next[key],max=Math.max(8,before,after),delta=after-before;
-          return '<div class="board-total-row"><span>'+label+'</span><div class="board-total-meter">'+Array.from({length:max},(_,i)=>'<i class="'+(i<Math.min(before,after)?'filled':i<after?'gain':i<before?'loss':'')+'"></i>').join('')+'</div><b class="'+(delta>0?'gain-text':delta<0?'loss-text':'')+'">'+(delta?before+' → ':'')+after+'</b></div>';
+          const before=cur[key],after=next[key],max=SK.STAT_MAX,delta=after-before;
+          return '<div class="board-total-row"><span>'+label+'</span><div class="board-total-meter">'+Array.from({length:max},(_,i)=>'<i class="'+(i<Math.min(before,after)?'filled':i<after?'gain':i<before?'loss':'')+'"></i>').join('')+'</div><b class="'+(delta>0?'gain-text':delta<0?'loss-text':'')+'">'+(delta?before+' → ':'')+after+' / 50</b></div>';
         }).join('')+'</section>';
       }).join('');
       dialog.querySelector('.race-board-description').textContent=SK.boardById(id).desc;

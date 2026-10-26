@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.53';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -440,7 +440,7 @@ window.SK.VERSION = '1.53';   // à augmenter à chaque mise en ligne (affichée
     return null;
   };
   SK.townWalkSpeed=level=>255*(1+Math.max(0,Math.min(5,level||0))*.15);
-  SK.UPGRADE_MAX = 2; SK.upgradeCost = lvl => 400 * (lvl + 1);
+  SK.STAT_MAX = 50; SK.capStat=n=>Math.max(0,Math.min(SK.STAT_MAX,Number(n)||0)); SK.UPGRADE_MAX = 50; SK.upgradeCost = lvl => 400 * (lvl + 1);
   // Planche avec ses améliorations achetées (save.upgrades[boardId] = { speed, corner, acceleration })
   SK.effectiveBoard = function (id, save) { const b = SK.boardById(id), u = (save && save.upgrades && save.upgrades[b.id]) || {}; return Object.assign({}, b, { color: SK.boardSkin(id,save).color, pattern: SK.boardSkin(id,save).pattern, skinId: SK.boardSkin(id,save).id, speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), acceleration: b.acceleration + (u.acceleration ?? u.trick ?? 0), jump: (b.jump || 0) + (u.jump || 0), base: b }); };
 

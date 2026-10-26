@@ -9,9 +9,11 @@
   // Shared with the test cabin: cornering improves edge hold, not lateral speed.
   SK.applyHandlingStats=function(r,corner,acceleration){
     r.steerRate=10.8;
-    r.cornerHold=SK.clamp(corner/16,0,1)*.82;
-    r.accelerationSeconds=15-7*SK.clamp(acceleration/16,0,1);
+    corner=SK.capStat(corner);acceleration=SK.capStat(acceleration);r.cornerHold=Math.min(corner,16)/16*.82+Math.max(0,corner-16)/34*.14;
+    r.accelerationSeconds=15-7*Math.min(acceleration,16)/16-5*Math.max(0,acceleration-16)/34;
   };
+  SK.speedFromStat=n=>27+.8*Math.min(SK.capStat(n),16)+.3*Math.max(0,SK.capStat(n)-16);
+  SK.jumpFromStat=n=>3.7+.32*Math.min(SK.capStat(n),16)+.07*Math.max(0,SK.capStat(n)-16);
   SK.coinSpeedBonus=r=>Math.max(0,Math.min(r.coinCapacity||20,r.coins||0));
   SK.raceTopSpeed=r=>r.maxSpeed+SK.coinSpeedBonus(r)/3.6;
   SK.accelerationStep=function(speed,target,seconds,dt){
@@ -29,12 +31,12 @@
     this.race = race; this.idx = idx; this.def = opts.def || SK.charById(opts.charId) || SK.CHARACTERS[0]; this.board = opts.board || SK.boardById(opts.boardId);
     this.ctrl = opts.ctrl || 'cpu'; this.player = opts.player == null ? -1 : opts.player; this.boss = !!opts.boss; this.look = opts.look || null;
     const d = this.def, b = this.board;
-    this.maxSpeed = 27 + 0.8 * d.speed + 0.8 * b.speed;
+    this.maxSpeed = SK.speedFromStat(d.speed+b.speed);
     SK.applyHandlingStats(this,d.corner+(b.corner||0),(d.acceleration??3)+(b.acceleration||0));
     this.trickSpeed = 1;
     this.trickPay = 1;
-    this.jumpPower = 3.7 + 0.32 * ((d.jump || 3) + (b.jump || 0)); // vitesse verticale d'un saut au bouton
-    this.strength = Math.min(10,(d.strength||3)+(opts.strengthLevel||0)); this.pushCooldown=0; this.pushVelocity=0;
+    this.jumpPower = SK.jumpFromStat((d.jump||3)+(b.jump||0)); // vitesse verticale d'un saut au bouton
+    this.strength = SK.capStat((d.strength||3)+(opts.strengthLevel||0)); this.pushCooldown=0; this.pushVelocity=0;
     this.stunFactor = 1 - 0.08 * (d.weight - 3);
     this.gear = opts.gear || {}; this.powerLevels=opts.powerLevels||{};
     if (Object.keys(this.gear).some(SK.isHelmet)) this.stunFactor *= 0.8;
@@ -366,9 +368,9 @@
     const o=targets[0];if(!o)return false;
     const difference=r.strength-o.strength,dir=aim||Math.sign(o.x-r.x)||r.pushDirection;
     // Déplacement net même contre un personnage plus fort, puis retour au contrôle.
-    o.pushVelocity=dir*SK.clamp(10+difference*2.8,7,22);o.fx.wobble=1.1;
+    o.pushVelocity=dir*(13+9*Math.tanh(difference/12));o.fx.wobble=1.1;
     o.fx.pushHit=.65;o.pushHitDirection=dir;
-    r.speed*=.92;o.speed*=.90;r.pushCooldown=3;
+    r.speed*=.92;o.speed*=.90;r.pushCooldown=3-1.2*Math.max(0,r.strength-10)/40;
     o.pushImpactUntil=difference>=2?this.time+1.2:0;r.pushDirection=dir;
     r.stats.pushes++;this.emit({type:'push',r,target:o});return true;
   };

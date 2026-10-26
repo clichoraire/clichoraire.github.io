@@ -27,9 +27,9 @@
  SK.raceGold=(r,prize)=>{const multi=r.gear.couronne&&r.rank===0?2:1,coins=Math.min(r.coinCapacity,r.coinsTotal*multi);return {coins,prize:Math.max(0,Math.min(r.coinCapacity-coins,prize*multi))};};
  SK.GearEffects={
   init(r){r.coinCapacity=SK.coinCapacity(r.gear);r.turboCharge=0;r.whistleUsed=false;r.sandCooldown=0;r.sandUntil=0;r.meteorUntil=0;
-   const bonus=r.gear.couronne?1:0;if(bonus){r.maxSpeed+=.8;SK.applyHandlingStats(r,r.def.corner+(r.board.corner||0)+1,(r.def.acceleration??3)+(r.board.acceleration||0)+1);}
+   const bonus=r.gear.couronne?1:0;if(bonus){r.maxSpeed=SK.speedFromStat(r.def.speed+r.board.speed+1);SK.applyHandlingStats(r,r.def.corner+(r.board.corner||0)+1,(r.def.acceleration??3)+(r.board.acceleration||0)+1);}
    if(r.gear.bottes)SK.applyHandlingStats(r,r.def.corner+(r.board.corner||0)+bonus+1,(r.def.acceleration??3)+(r.board.acceleration||0)+bonus);
-   r.jumpPower+=.32*(bonus+(r.gear.ressort?1:0));if(r.gear.gants)r.trickPay=1.5;
+   r.jumpPower=SK.jumpFromStat((r.def.jump||3)+(r.board.jump||0)+bonus+(r.gear.ressort?1:0));if(r.gear.gants)r.trickPay=1.5;
   },
   boost(r,seconds){r.fx.fan=Math.max(r.fx.fan,SK.itemDuration(r,seconds));if(r.gear.meteore)r.meteorUntil=r.race.time+3;},
   land(r){if(!r.trickRampJump)return;r.turboCharge=Math.min(1,r.turboCharge+(r.gear.thermos?.5:.25));if(r.turboCharge>=1){r.turboCharge=0;this.boost(r,3);r.race.emit({type:'gearbonus',r,text:'Turbo chargé !'});}},
