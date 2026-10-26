@@ -815,7 +815,8 @@
       const label=SK.missionInstruction(m),cx=vx+12+160*F;
       box(vx+12,vy+12*F,320*F,(m.type==='slalom'?128:96)*F);
       ctx.textAlign='center';ctx.fillStyle='#fff3b9';ctx.font='bold '+16*F+'px sans-serif';ctx.fillText(label,cx,vy+36*F,300*F);
-      ctx.font=48*F+'px "Titan One", sans-serif';ctx.lineWidth=5*F;ctx.strokeStyle='#16344c';ctx.strokeText(score,cx,vy+91*F,300*F);ctx.fillStyle='#ffdb45';ctx.fillText(score,cx,vy+91*F,300*F);
+      const scoreX=cx+(m.type==='coins'?22*F:0);if(m.type==='coins')SK.drawGoldCoin(ctx,cx-118*F,vy+76*F,18*F);
+      ctx.font=48*F+'px "Titan One", sans-serif';ctx.lineWidth=5*F;ctx.strokeStyle='#16344c';ctx.strokeText(score,scoreX,vy+91*F,250*F);ctx.fillStyle='#ffdb45';ctx.fillText(score,scoreX,vy+91*F,250*F);
       if(m.type==='slalom'){const elapsed=me.finishTime??Math.max(0,race.time),tier=['gold','silver','bronze'].find(k=>elapsed<=m.medalTimes[k]);ctx.font='bold '+17*F+'px sans-serif';ctx.fillStyle=tier?'#fff4c9':'#ff8a80';ctx.fillText(tier?SK.MEDALS[tier].icon+' Objectif '+SK.MEDALS[tier].name+' · '+SK.fmtTime(Math.max(0,m.medalTimes[tier]-elapsed))+' restantes':'Temps dépassé',cx,vy+124*F,300*F);}
 
 

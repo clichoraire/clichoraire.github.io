@@ -402,8 +402,12 @@
   function snowbank(c,b,dug,hover,progress,t){
     c.save();c.translate(b.x,b.y);oval(c,0,5,66,12,'#afcbd966');
     if(dug){oval(c,0,-2,55,15,'#eaf5fa');oval(c,0,-5,34,10,'#91b5c9');oval(c,0,-2,25,6,'#b8d4e3');}
-    else {oval(c,-26,-12,36,23,'#e1eff7');oval(c,16,-21,45,32,'#faffff');oval(c,46,-9,24,17,'#edf8ff');c.strokeStyle=hover?'#ffcf57':'#c2dce9';c.lineWidth=hover?3:1.5;c.beginPath();c.ellipse(0,1,61,13,0,0,TAU);c.stroke();
-      c.fillStyle='#416b83';c.font='bold 16px "Trebuchet MS"';c.textAlign='center';c.fillText(hover?'Creuser !':'✦',0,-35);
+    else {
+      const g=c.createLinearGradient(0,-43,0,8);g.addColorStop(0,'#ffffff');g.addColorStop(.65,'#eff9ff');g.addColorStop(1,'#c5dfec');c.fillStyle=g;
+      c.beginPath();c.moveTo(-62,3);c.bezierCurveTo(-60,-10,-45,-19,-29,-20);c.bezierCurveTo(-19,-46,16,-48,32,-27);c.bezierCurveTo(49,-25,64,-13,65,3);c.bezierCurveTo(37,15,-39,15,-62,3);c.fill();
+      c.strokeStyle=hover?'#ffcf57':'#dfedf5';c.lineWidth=hover?3:1;c.stroke();
+      c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(-22,-24);c.bezierCurveTo(-8,-40,13,-39,26,-28);c.stroke();
+      c.fillStyle='#416b83';c.font='bold 16px "Trebuchet MS"';c.textAlign='center';c.fillText(hover?'Creuser !':'✦',0,-19);
     }
     if(progress>0){for(let i=0;i<9;i++){const a=i*2.4,phase=(progress*3+i/9)%1;oval(c,Math.cos(a)*phase*65,-18-Math.sin(phase*Math.PI)*65,3+i%3,3,'#ffffff');}c.strokeStyle='#efbf45';c.lineWidth=5;c.beginPath();c.arc(0,-64,12,-Math.PI/2,-Math.PI/2+TAU*progress);c.stroke();}
     c.restore();

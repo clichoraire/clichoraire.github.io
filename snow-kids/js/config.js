@@ -1,7 +1,7 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.52';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.53';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
@@ -633,7 +633,7 @@ window.SK.VERSION = '1.52';   // à augmenter à chaque mise en ligne (affichée
   // Cinq niveaux par discipline ; conserver les anciens identifiants sauvegardés.
   const lessonPlans={
     slalom:{prefix:'slalom',courses:['rookie','silver','silver','silver','silver'],goals:[12,14,16,18,20]},
-    coins:{prefix:'coins',courses:['grass','grass','grass','silver','dizzy'],goals:[12,14,16,18,22]},
+    coins:{prefix:'coins',courses:['grass','grass','grass','silver','dizzy'],goals:[50,40,28,18,22]},
     tricks:{prefix:'tricks',courses:['rookie','dizzy','dizzy','dizzy','dizzy'],goals:[12,35,50,65,80]},
     hits:{prefix:'shots',courses:['highway','ninja','ninja','ninja','ninja'],goals:[3,6,8,10,12]},
     time:{prefix:'time',courses:['rookie','rookie','rookie','rookie','rookie'],goals:[120,110,100,90,80]},
@@ -647,8 +647,10 @@ window.SK.VERSION = '1.52';   // à augmenter à chaque mise en ligne (affichée
     const desc=type==='slalom'?`Passe au moins ${goal} portes de slalom.`:type==='coins'?`Ramasse ${goal} pièces sur la piste en un tour.`:type==='tricks'?`Gagne ${goal} pièces avec tes figures. Saute avec X, puis C + une flèche.`:type==='hits'?`Touche les adversaires ${goal} fois avec tes tirs.`:type==='time'?`Termine en ${Math.floor(goal/60)} min ${String(goal%60).padStart(2,'0')} s maximum.`:type==='pushes'?`Réussis ${goal} poussées : approche-toi, puis N + gauche ou droite.`:type==='edges'?`Aucun contact avec les bords. Virages de difficulté ${level}/5.`:`Aucune chute ! Saute les barrages de difficulté ${level}/5.`;
     return {...base,...old,id:plan.prefix+level,type,level,course:plan.courses[i],goal,reward:base.reward+i*40,desc};
   }));
-  const slalomTimes=[{gold:30,silver:38,bronze:45},{gold:80,silver:120,bronze:160},{gold:80,silver:120,bronze:160},{gold:140,silver:175,bronze:215},{gold:130,silver:160,bronze:200}];
+  const slalomTimes=[{gold:22,silver:30,bronze:38},{gold:22,silver:26,bronze:32},{gold:35,silver:45,bronze:60},{gold:140,silver:175,bronze:215},{gold:130,silver:160,bronze:200}];
   for(const m of SK.MISSIONS.filter(m=>m.type==='slalom')){m.medalTimes=slalomTimes[m.level-1];m.desc=`Passe au moins ${m.goal} portes et termine en ${Math.floor(m.medalTimes.bronze/60)} min ${m.medalTimes.bronze%60} s maximum.`;}
+  for(const m of SK.MISSIONS.filter(m=>m.type==='coins')){m.medalCounts={gold:m.goal,silver:Math.ceil(m.goal*.8),bronze:Math.ceil(m.goal*.6)};m.desc='Ramasse '+m.goal+' pièces pour l’or.';}
+  SK.firstMissionGold=m=>Math.round(m.reward/5);
   SK.MEDALS={bronze:{rank:1,name:'Bronze',icon:'🥉'},silver:{rank:2,name:'Argent',icon:'🥈'},gold:{rank:3,name:'Or',icon:'🥇'}};
   SK.missionInstruction=m=>({slalom:'Passe entre les drapeaux',coins:'Ramasse les pièces',tricks:'Fais des figures en sautant',hits:'Touche les adversaires avec tes tirs',pushes:'Pousse les adversaires',time:'Atteins l’arrivée à temps',nofall:'Termine sans tomber',edges:'Ne touche pas les bords'})[m.type];
   SK.missionUnlocked=(m,save)=>!!save.allMissionsUnlocked||m.level===1||save.missions?.[m.id]!=null||SK.MISSIONS.some(prev=>prev.type===m.type&&prev.level===m.level-1&&save.missions?.[prev.id]!=null);
@@ -657,11 +659,11 @@ window.SK.VERSION = '1.52';   // à augmenter à chaque mise en ligne (affichée
     const next=SK.MISSIONS.find(n=>n.type===m.type&&n.level===m.level+1),wasUnlocked=next&&SK.missionUnlocked(next,save);
     save.missions??={};const prev=save.missions[m.id],first=prev==null;
     if(first||(['time','edges','nofall'].includes(m.type)?value<prev:value>prev))save.missions[m.id]=value;
-    if(m.type==='slalom'&&outcome?.medal){const records=save.missionMedals??={},old=records[m.id],rank=SK.MEDALS[outcome.medal].rank;
-      if(!old||rank>SK.MEDALS[old.medal].rank||(rank===SK.MEDALS[old.medal].rank&&(outcome.time<old.time||(outcome.time===old.time&&value>(old.gates??-1)))))records[m.id]={medal:outcome.medal,time:outcome.time,gates:value,goldPerfect:!!old?.goldPerfect};
+    if(['slalom','coins'].includes(m.type)&&outcome?.medal){const records=save.missionMedals??={},old=records[m.id],rank=SK.MEDALS[outcome.medal].rank;
+      if(!old||rank>SK.MEDALS[old.medal].rank||(rank===SK.MEDALS[old.medal].rank&&(m.type==='coins'?value>(old.gates??-1):(outcome.time<old.time||(outcome.time===old.time&&value>(old.gates??-1))))))records[m.id]={medal:outcome.medal,time:outcome.time,gates:value,goldPerfect:!!old?.goldPerfect};
       if(outcome.medal==='gold'&&outcome.perfect)records[m.id].goldPerfect=true;
     }
-    return {first,reward:first?m.reward*2:0,unlocked:next&&!wasUnlocked?next:null};
+    return {first,reward:first?SK.firstMissionGold(m):0,unlocked:next&&!wasUnlocked?next:null};
   };
   SK.missionById = id => SK.MISSIONS.find(m => m.id === id);
 

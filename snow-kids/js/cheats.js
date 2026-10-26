@@ -3,6 +3,7 @@
   'use strict';
   const C=SK.Cheats={};
   const codes=[
+    ...[5,10,20,50].map(n=>({code:'LEVELUP'+n,label:'Gagner '+n+' niveaux',apply:s=>{const info=SK.Progression.info(s);let xp=info.needed-info.current;for(let i=1;i<n;i++)xp+=100+50*(info.level+i-1);SK.Progression.award(s,xp);}})),
     {code:'CABANE64',label:'Débloquer la cabane de debug',apply:s=>{s.debugHouse=true;}},
     {code:'PACTOLE64',label:'Ajouter 10 000 G',apply:s=>{s.gold=Math.min(9999999,s.gold+10000);}},
     {code:'TETEPROTEGEE',label:'Recevoir le casque',apply:s=>{s.gear=[...new Set([...s.gear,'casque'])];}},

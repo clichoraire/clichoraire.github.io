@@ -12,7 +12,7 @@
   SK.buildTrack = function (course, seed, opts) {
     if(opts?.slalomLevel){
       const level=opts.slalomLevel;
-      const sections=level===1?[{t:'s',n:155,w:12}]:Array.from({length:10},(_,i)=>({t:'s',n:level===5?19:17,w:12}));
+      const sections=level===1?[{t:'s',n:155,w:12}]:Array.from({length:10},(_,i)=>({t:'s',n:level>=3?15+level*2:17,w:12}));
       course={...course,surface:'snow',sections,forest:false,lowPassages:false,snowGuards:false,polarBears:false,blizzard:level>=4,strongWind:level===5,progressiveStorm:level>=4,stormFromCountdown:true};
       if(level===2){sections[3]={...sections[3],t:'c',c:.018};sections[7]={...sections[7],t:'c',c:-.018};}
       if(level>=3)sections.forEach((sec,i)=>{sec.slope=[7,16,22,12,18][i%5];if(i%3!==0){sec.t='c';sec.c=(i%2?1:-1)*(level===5?.075:level===4?.035:.025);}});
@@ -143,9 +143,10 @@
       const level=opts.slalomLevel||1;
       let index=18;
       for(let k=0;k<20;k++){
-        const s=segs[index],x=(k%2?1:-1)*(level===1?3.4:level===2?3.2+rng()*1.2:level===5?6.4:4.6),width=level===5?2.5:3.2,col=k%2?'#1e88e5':'#e53935';
+        const s=segs[index],x=(k%2?1:-1)*(level===1?3.4:level===2?3.2+rng()*1.2:level===3?7.2:level===4?7.8:8.2),width=level>=3?1.8-(level-3)*.2:3.2,col=k%2?'#1e88e5':'#e53935';
         s.gate={x,w:width,color:col,n:k};for(const side of [-1,1])s.props.push({type:'flag',x:x+side*width,r:0,decor:true,color:col});gates.push(s);
-        index+=level===1?6:level===5?7:5+Math.floor(rng()*3);
+        if(level>=3)for(let j=index-5;j<=index;j++)segs[j].curve=Math.sign(x)*(.10+(level-3)*.035);
+        index+=level===1?6:level>=3?6+level:5+Math.floor(rng()*3);
       }
       for(let i=0;i<nRace;i++){
         const icy=level===2?((i>=42&&i<51)||(i>=101&&i<110)):level>=3?(i%25< (level===5?19:16)):false;

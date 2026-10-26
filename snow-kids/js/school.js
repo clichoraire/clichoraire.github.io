@@ -16,14 +16,15 @@
    const dialog=document.createElement('dialog');dialog.id='mission-level-choice';dialog.setAttribute('aria-labelledby','mission-level-title');
    const heading=document.createElement('h2');heading.id='mission-level-title';heading.textContent=levels[0].name;
    const hint=document.createElement('p');hint.textContent='Choisis ton niveau';
+   const coinIcon='<img src="'+SK.COIN_SVG+'" alt="Pièces d’or" style="width:1em;height:1em;vertical-align:middle">';
    const choices=document.createElement('div');choices.className='mission-levels';
    for(const m of levels.filter(m=>SK.missionUnlocked(m,save))){
     const passed=save.missions?.[m.id]!=null,b=document.createElement('button');b.type='button';b.className='mission-level-option'+(passed?' completed':'');if(save.missionPerfect?.[m.id]){b.classList.add('perfect');b.setAttribute('aria-label',m.name+' niveau '+m.level+' — parfait');}
-    b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(m.reward*2,false)}</span>`}</span>`;
-    const desc=document.createElement('p');desc.textContent=m.type==='slalom'?'🚩 '+m.goal:m.desc+(passed?'':' Première réussite : +120 XP.');if(m.type==='slalom'){desc.title='Passe au moins '+m.goal+' portes pour réussir';desc.setAttribute('aria-label',desc.title);b.classList.add('slalom-card');}b.append(desc);
-    if(m.type==='slalom'){
+    b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(SK.firstMissionGold(m),false)}</span>`}</span>`;
+    const desc=document.createElement('p');desc.textContent=['slalom','coins'].includes(m.type)?(m.type==='coins'?'🪙 ':'🚩 ')+m.goal:m.desc+(passed?'':' Première réussite : +120 XP.');if(['slalom','coins'].includes(m.type)){desc.title=m.type==='coins'?'Ramasse '+m.goal+' pièces pour l’or':'Passe au moins '+m.goal+' portes pour réussir';desc.setAttribute('aria-label',desc.title);b.classList.add('slalom-card');}if(m.type==='coins')desc.innerHTML=coinIcon+' '+m.goal;b.append(desc);
+    if(['slalom','coins'].includes(m.type)){
       const thresholds=document.createElement('div');thresholds.className='slalom-thresholds';
-      thresholds.innerHTML=['gold','silver','bronze'].map(key=>'<div><span>'+SK.MEDALS[key].icon+'</span><b>'+SK.fmtMedalTime(m.medalTimes[key])+'</b></div>').join('');b.append(thresholds);
+      thresholds.innerHTML=['gold','silver','bronze'].map(key=>'<div><span>'+SK.MEDALS[key].icon+'</span><b>'+(m.type==='coins'?coinIcon+' '+m.medalCounts[key]:SK.fmtMedalTime(m.medalTimes[key]))+'</b></div>').join('');b.append(thresholds);
       const record=save.missionMedals?.[m.id];if(record){
         b.classList.add('medal-'+record.medal);b.setAttribute('aria-label',m.name+' niveau '+m.level+' — '+SK.MEDALS[record.medal].name);
         if(record.goldPerfect){
@@ -32,7 +33,7 @@
           [[8,10],[88,18],[5,38],[93,52],[8,75],[90,91],[34,3],[68,97]].forEach(([x,y],i)=>{const star=document.createElement('i');star.textContent='✦';star.style.cssText='left:'+x+'%;top:'+y+'%;--delay:'+(-i*.43)+'s;--size:'+(12+i%3*5)+'px';stars.append(star);});b.append(stars);
         }
         const badge=document.createElement('div');badge.className='slalom-best '+record.medal;
-        badge.innerHTML='<div class="record-run"><span>⏱ '+SK.fmtMedalTime(record.time)+'</span><span title="Portes réussies pendant ce record">🚩 '+(Number.isFinite(record.gates)?record.gates:'—')+'</span></div>'+(record.goldPerfect?'<span class="record-perfect">✨ OR + PARFAIT ✨</span>':'');b.append(badge);
+        badge.innerHTML='<div class="record-run"><span>⏱ '+SK.fmtMedalTime(record.time)+'</span><span title="Score de ce record">'+(m.type==='coins'?coinIcon:'🚩')+' '+(Number.isFinite(record.gates)?record.gates:'—')+'</span></div>'+(record.goldPerfect?'<span class="record-perfect">✨ OR + PARFAIT ✨</span>':'');b.append(badge);
       }
     }
 
