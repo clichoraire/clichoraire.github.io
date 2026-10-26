@@ -16,7 +16,7 @@
   };
   S.shade = shade;
 
-  // La balle de ballon chasseur : rouge avec une bande claire, ombre portée dessinée par l'appelant.
+  // Ballon de caoutchouc rouge : coutures fines et reflet doux, sans anneau flottant.
   S.drawBall = function (ctx, x, y, r, o) {
     o = o || {};
     ctx.save(); ctx.translate(x, y);
@@ -26,18 +26,27 @@
     g.addColorStop(0, o.color2 || '#ff8d7a'); g.addColorStop(1, o.color || '#c8281e');
     ctx.fillStyle = g; circle(ctx, 0, 0, r); ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = Math.max(1, r * 0.16);
-    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.95, r * 0.45, (o.spin || 0), 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; circle(ctx, 0, 0, r); ctx.stroke();
+    // Coutures discrètes sur le caoutchouc, découpées dans la sphère.
+    ctx.save(); circle(ctx, 0, 0, r * 0.98); ctx.clip(); ctx.rotate(o.spin || 0);
+    ctx.strokeStyle = 'rgba(95,15,18,0.35)'; ctx.lineWidth = Math.max(0.65, r * 0.045);
+    for (const side of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(-r, side * r * 0.55);
+      ctx.bezierCurveTo(-r * 0.35, side * r * 0.15, r * 0.35, side * r * 0.15, r, side * r * 0.55); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(-r * 0.25, -r); ctx.bezierCurveTo(r * 0.25, -r * 0.35, r * 0.25, r * 0.35, -r * 0.25, r); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.23)'; ctx.beginPath(); ctx.ellipse(-r * 0.33, -r * 0.4, r * 0.22, r * 0.12, -0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(100,18,22,0.6)'; ctx.lineWidth = Math.max(0.7, r * 0.045); circle(ctx, 0, 0, r); ctx.stroke();
     ctx.restore();
   };
 
   // Personnage debout, pieds en (x, y) (le saut est géré par l'appelant via translate).
   // o : {dir, frame, moving, dash, pose: 'idle'|'windup'|'throw'|'catch'|'hit'|'down'|'jump'|'angel'|'pickup'|'wave', ball, scale, face, alpha}
   S.drawPerson = function (ctx, x, y, d, team, o) {
+    if (d.monster) return S.drawMonster(ctx, x, y, d, team, o);
     o = o || {};
     const look = d.look, s = d.size * (o.scale || 1), dir = o.dir || 1, pose = o.pose || 'idle';
-    const legH = 14 * s, bodyH = (look.belly ? 22 : 20) * s, bodyW = (look.belly ? 30 : look.broad ? 28 : look.tall ? 20 : 23) * s;
+    const legH = 14 * s, bodyH = 20 * s, bodyW = (look.belly ? 30 : look.broad ? 28 : look.tall ? 20 : 23) * s;
     const headR = 10 * s * (1 + Math.max(0, 1 - d.size) * 0.9);
     const H = legH + bodyH + headR * 2;
     const color = team.color, color2 = team.color2, shorts = team.dark || '#222';
@@ -45,6 +54,8 @@
     if (o.alpha != null) ctx.globalAlpha = o.alpha;
     if (pose === 'down') { ctx.translate(0, -4 * s); ctx.rotate(dir * Math.PI / 2); ctx.translate(0, H / 2); }
     if (pose === 'hit') { ctx.rotate(-dir * 0.35); }
+    if (pose === 'windup') ctx.rotate(-dir * 0.055);
+    if (pose === 'throw') ctx.rotate(dir * 0.08);
     ctx.scale(dir, 1);
     const f = o.frame || 0, mv = o.moving ? 1 : 0, run = o.dash ? 1.6 : 1;
     const sw = Math.sin(f) * 5 * s * mv * run;
@@ -67,15 +78,54 @@
 
     // --- bras arrière ---
     const armL = bodyH * 0.72;
-    const armBack = (ang, len) => { ctx.save(); ctx.translate(-bodyW / 2 + 2 * s, by + 3 * s); ctx.rotate(ang); ctx.fillStyle = shade(skin, 0.9); rr(ctx, -3 * s, 0, 6 * s, len, 3 * s); ctx.fill(); ctx.fillStyle = skin; circle(ctx, 0, len, 3.4 * s); ctx.fill(); ctx.restore(); };
-    let backArmAng = 0.55 + Math.sin(f) * 0.5 * mv * run;
+    // La main suit l'avant-bras ; le miroir anatomique place le pouce
+    // vers le corps au repos et du bon côté quand la paume se lève.
+    const mitten = (x, y, angle, side, holding = false) => {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(angle); ctx.scale(-side * s, s);
+      // Le poignet se fond dans le bras : aucune bordure de manchette.
+      ctx.beginPath(); ctx.moveTo(-2.15, -2.3);
+      ctx.bezierCurveTo(-2.3, -0.5, -3.05, 0.2, -3.05, 1.8);
+      ctx.bezierCurveTo(-3.05, 4.1, -1.8, 5.0, 0.1, 5.0);
+      ctx.bezierCurveTo(2.3, 5.0, 3.1, 3.7, 3.0, 2.0);
+      ctx.bezierCurveTo(4.0, 1.7, 4.65, 0.65, 4.2, -0.1);
+      ctx.bezierCurveTo(3.7, -0.9, 2.8, -0.2, 2.35, 0.45);
+      ctx.quadraticCurveTo(2.05, -0.8, 2.15, -2.3); ctx.closePath();
+      ctx.fillStyle = skin; ctx.fill();
+      // Un seul pli léger à la base du pouce, jamais un cercle au poignet.
+      ctx.strokeStyle = shade(skin, 0.85); ctx.lineWidth = 0.35;
+      ctx.beginPath(); ctx.moveTo(2.35, 0.5); ctx.quadraticCurveTo(1.7, 1.1, 1.95, holding ? 2.2 : 1.7); ctx.stroke();
+      ctx.restore();
+    };
+    // Épaule, coude et poignet : deux os de longueur fixe pour chaque pose.
+    const drawArm = (side, ang, len, rear = false) => {
+      const ax = side * (bodyW / 2 - 0.25 * s), ay = by + 3.5 * s;
+      let upper = ang + side * 0.12, lower = ang - side * 0.18;
+      if (pose === 'idle' || (pose === 'wave' && rear)) { upper = side * -0.18 + Math.sin(f) * 0.5 * mv * run; lower = upper + side * 0.10; }
+      if (pose === 'windup') { upper = rear ? 0.65 : -1.75; lower = rear ? -0.45 : -2.95 + Math.sin((o.t || 0) * 12) * 0.04; }
+      if (pose === 'throw') { upper = rear ? 0.4 : -1.65; lower = rear ? -1.05 : -1.8; }
+      if (pose === 'wave' && !rear) { upper = -1.25; lower = -3.0 + Math.sin((o.t || 0) * 7) * 0.18; }
+      if (pose === 'catch') { upper = rear ? -0.65 : -1.05; lower = -1.7; }
+      if (pose === 'pickup') { upper = rear ? -0.3 : -0.55; lower = rear ? -0.9 : -0.1; }
+      const u = len * 0.54, l = len * 0.54;
+      const ex = ax - Math.sin(upper) * u, ey = ay + Math.cos(upper) * u;
+      const hx = ex - Math.sin(lower) * l, hy = ey + Math.cos(lower) * l;
+      ctx.strokeStyle = shade(skin, rear ? 0.84 : 0.9); ctx.lineWidth = 5.3 * s;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.strokeStyle = rear ? shade(skin, 0.96) : skin; ctx.lineWidth = 4.4 * s; ctx.stroke();
+      mitten(hx, hy, lower, side, o.ball && !rear);
+      return { x: hx, y: hy, angle: lower };
+    };
+    const armBack = (ang, len) => drawArm(-1, ang, len, true);
+    let backArmAng = 0.18 + Math.sin(f) * 0.5 * mv * run;
     if (pose === 'windup') backArmAng = -0.4; else if (pose === 'throw') backArmAng = 1.0; else if (pose === 'catch') backArmAng = -1.3;
     else if (pose === 'hit') backArmAng = -2.2; else if (pose === 'jump') backArmAng = -2.6; else if (pose === 'pickup') backArmAng = 1.4; else if (pose === 'angel') backArmAng = -0.2;
-    if (pose !== 'windup') armBack(backArmAng, armL);
+    const backInFront = ['idle', 'wave', 'throw', 'catch'].includes(pose);
+    if (!backInFront) armBack(backArmAng, armL);
 
     // --- jambes et espadrilles ---
     for (const k of [-1, 1]) {
-      const lx = k * 5.5 * s, dy = k * sw * 0.6;
+      const stance = pose === 'windup' || pose === 'throw' ? 1.22 : 1;
+      const lx = k * 5.5 * s * stance, dy = k * sw * 0.6;
       let ly = -legH + dy, lh = legH - 3 * s;
       if (pose === 'jump') { ly = -legH - 2 * s + k * 3 * s; lh = legH - 6 * s; }
       // cuisse (peau) puis short court
@@ -92,8 +142,6 @@
     ctx.fillStyle = color; rr(ctx, -bodyW / 2, by, bodyW, bodyH + 2 * s, 5 * s); ctx.fill();
     if (team.stripe) { ctx.fillStyle = color2; ctx.fillRect(-bodyW / 2, by + bodyH * 0.58, bodyW, 7 * s); ctx.fillStyle = team.stripe; ctx.fillRect(-bodyW / 2, by + bodyH * 0.58 + 1.5 * s, bodyW, 4 * s); }
     else { ctx.fillStyle = color2; ctx.fillRect(-bodyW / 2, by + bodyH * 0.68, bodyW, 3 * s); }
-    // épaules nues (débardeur) : deux encoches de peau
-    ctx.fillStyle = skin; circle(ctx, -bodyW / 2 + 1.5 * s, by + 1.5 * s, 3.2 * s); ctx.fill(); circle(ctx, bodyW / 2 - 1.5 * s, by + 1.5 * s, 3.2 * s); ctx.fill();
     ctx.fillStyle = shade(color, 0.75); rr(ctx, -bodyW * 0.22, by - 1, bodyW * 0.44, 3 * s, 1.5 * s); ctx.fill();
     const num = o.number != null ? o.number : (d.number != null ? d.number : d.age);
     ctx.save(); ctx.scale(dir, 1);
@@ -102,21 +150,21 @@
     ctx.restore();
 
     // --- bras avant ---
-    const armFront = (ang, len) => { ctx.save(); ctx.translate(bodyW / 2 - 2 * s, by + 3 * s); ctx.rotate(ang); ctx.fillStyle = skin; rr(ctx, -3 * s, 0, 6 * s, len, 3 * s); ctx.fill(); circle(ctx, 0, len, 3.4 * s); ctx.fill(); const p = { x: 0, y: len }; ctx.restore(); return p; };
+    const armFront = (ang, len) => drawArm(1, ang, len);
     const t = o.t || 0;
-    let frontAng = -0.55 - Math.sin(f) * 0.5 * mv * run;
-    if (pose === 'windup') frontAng = -2.75 + Math.sin(t * 20) * 0.08; else if (pose === 'throw') frontAng = -1.55; else if (pose === 'catch') frontAng = -1.35;
+    let frontAng = -0.18 - Math.sin(f) * 0.5 * mv * run;
+    if (pose === 'windup') frontAng = -2.25 + Math.sin(t * 20) * 0.08; else if (pose === 'throw') frontAng = -1.55; else if (pose === 'catch') frontAng = -1.35;
     else if (pose === 'hit') frontAng = -2.6; else if (pose === 'jump') frontAng = -2.5; else if (pose === 'pickup') frontAng = -0.3; else if (pose === 'wave') frontAng = Math.PI + 0.55 + Math.sin(t * 7) * 0.35; else if (pose === 'angel') frontAng = -0.2;
-    armFront(frontAng, armL * 0.95);
-    if (pose === 'windup') armBack(-2.75, armL);   // les deux mains tiennent la balle au-dessus de la tête
+    if (backInFront) armBack(backArmAng, armL);
+    const hand = armFront(frontAng, armL * 0.95);
     // --- balle dans les mains ---
     if (o.ball) {
       const br = BC.BALL_R * Math.max(0.8, s);
-      let bx, byy;
-      const ax = bodyW / 2 - 2 * s, ay = by + 3 * s, L = armL * 0.95;
-      if (pose === 'windup') { bx = Math.sin(-frontAng) * L * 0.9; byy = hy - headR * 1.6; bx = bx - bodyW * 0.1; }
-      else { bx = ax + Math.sin(-frontAng) * L; byy = ay + Math.cos(frontAng) * L; }
+      // Le ballon repose dans la main, à côté du visage.
+      const released = pose === 'throw';
+      const bx = hand.x + br * (released ? 2.2 : 0.72), byy = hand.y - br * (released ? 0.35 : 0.68);
       ctx.save(); ctx.scale(dir, 1); S.drawBall(ctx, bx * dir, byy, br, {}); ctx.restore();
+      mitten(hand.x, hand.y, hand.angle, 1, true);
     }
 
     // --- tête : portrait de famille, sinon visage procédural ---
@@ -274,6 +322,7 @@
   };
   // Visage seul (pour le tableau des points de vie).
   S.drawHead = function (ctx, d, x, y, size) {
+    if (d.monster) return S.drawMonsterHead(ctx, d, x, y, size * 0.4);
     if (window.FamilyHeads && window.FamilyHeads.has(d.familyPortrait)) { window.FamilyHeads.draw(ctx, d.familyPortrait, 'front', x - size / 2, y - size / 2, size, size); return; }
     ctx.save(); ctx.translate(x, y); const R = size * 0.4;
     ctx.fillStyle = d.look.skin; circle(ctx, 0, 0, R); ctx.fill(); S.drawFace(ctx, d, 0, R, {}); ctx.restore();

@@ -5,7 +5,7 @@
   const bar=document.createElement('nav');bar.id='touch-controls';bar.setAttribute('aria-label','Commandes tactiles');
   bar.innerHTML='<div class="touch-stick" role="button" aria-label="Direction : glisse le doigt"><span>▲</span><span>◀　●　▶</span><span>▼</span></div><div class="touch-actions"></div><button class="touch-pause" aria-label="Pause">Ⅱ</button>';
   document.getElementById('screen-match').appendChild(bar);
-  const actions=[['a','Lancer /<br>sauter'],['b','Passe /<br>attraper'],['cycle','Joueur ↻']];
+  const actions=[['a','Lancer /<br>sauter'],['b','Passe /<br>attraper'],['p','Pouvoir ✨'],['cycle','Joueur ↻']];
   bar.querySelector('.touch-actions').innerHTML=actions.map(([key,label])=>'<button data-touch="'+key+'">'+label+'</button>').join('');
   const stick=bar.querySelector('.touch-stick');let stickId=null;
   function reset(){held.clear();for(const k of Object.keys(state))delete state[k];stickId=null;bar.querySelectorAll('.held').forEach(b=>b.classList.remove('held'));}

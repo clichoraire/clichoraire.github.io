@@ -33,7 +33,15 @@
     switch (name) {
       case 'throw': noise(0.12, 0.7, 1200); tone(300, 'sine', 0.1, 0.15, 0.5); break;
       case 'super': for (let i = 0; i < 6; i++) tone(300 + i * 160, 'sawtooth', 0.1, 0.2, 1.3, i * 0.04); noise(0.3, 0.6, 2000, 0.2); break;
+      case 'smash': noise(0.16, 0.9, 1500); tone(180, 'sine', 0.2, 0.35, 0.5); tone(640, 'sawtooth', 0.1, 0.15, 1.6); break;
       case 'pass': noise(0.06, 0.4, 2200); break;
+      case 'power': for (let i = 0; i < 5; i++) tone(400 + i * 140, 'square', 0.12, 0.18, 1.2, i * 0.05); noise(0.25, 0.5, 1800, 0.15); break;
+      case 'arm': tone(880, 'triangle', 0.1, 0.2, 1.5); tone(1320, 'triangle', 0.12, 0.18, 1.2, 0.1); break;
+      case 'bad': tone(200, 'square', 0.2, 0.2, 0.6); break;
+      case 'explode': noise(0.5, 1, 500); tone(60, 'sine', 0.5, 0.7, 0.4); tone(120, 'sawtooth', 0.2, 0.3, 0.5); break;
+      case 'bubble': tone(1200, 'sine', 0.12, 0.15, 1.4); tone(1800, 'sine', 0.08, 0.1, 1.2, 0.1); break;
+      case 'ghost': tone(500, 'sine', 0.4, 0.15, 0.6); tone(750, 'sine', 0.4, 0.1, 0.6, 0.1); break;
+      case 'zap': noise(0.2, 0.6, 3000); tone(1500, 'square', 0.2, 0.12, 0.5); break;
       case 'catch': noise(0.08, 0.9, 700); tone(160, 'square', 0.08, 0.2, 0.7); break;
       case 'hit': noise(0.18, 1, 350); tone(90, 'sine', 0.22, 0.6, 0.5); tone(700, 'square', 0.05, 0.15, 0.3); break;
       case 'bounce': tone(220, 'sine', 0.1, 0.25, 0.6); break;
@@ -43,7 +51,6 @@
       case 'whistle': tone(2600, 'square', 0.18, 0.12); tone(2650, 'square', 0.18, 0.12, 1, 0.22); break;
       case 'teleport': tone(900, 'sine', 0.25, 0.2, 2.2); break;
       case 'ui': tone(700, 'triangle', 0.08, 0.2); break;
-      case 'bad': tone(200, 'square', 0.2, 0.2, 0.6); break;
       case 'win': for (let i = 0; i < 8; i++) tone([523, 659, 784, 1047][i % 4], 'triangle', 0.25, 0.25, 1, i * 0.13); noise(1.5, 0.5, 800, 0.1); break;
     }
   };

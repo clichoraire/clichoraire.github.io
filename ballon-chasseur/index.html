@@ -6,30 +6,50 @@
 <title>Ballon chasseur</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/touch.css">
+<link rel="stylesheet" href="css/arcade.css">
 </head>
 <body>
 <div id="app">
   <section id="screen-menu" class="screen">
     <div class="menu-box">
-      <h1>BALLON <span>CHASSEUR</span></h1>
-      <p class="tagline">Façon Super Dodge Ball · 3 dedans, 3 dehors · chaque famille son terrain, chaque joueur son lancer spécial <span id="version"></span></p>
-      <canvas id="menu-anim" width="1280" height="720" aria-label="Toute la famille s'échauffe sur le terrain du parc"></canvas>
-      <div id="logos"></div>
-      <div class="buttons">
-        <button id="btn-solo" class="primary">1 joueur contre l'ordi</button>
-        <button id="btn-duo">2 joueurs (même clavier ou manettes)</button>
-        <button id="btn-cup">Coupe des familles <small id="cups-won"></small></button>
-        <button id="btn-help">Comment jouer ?</button>
+      <canvas id="menu-anim" width="1280" height="720" aria-hidden="true"></canvas>
+      <header class="menu-title">
+        <p class="menu-eyebrow">LES FAMILLES ENTRENT EN JEU !</p>
+        <h1>BALLON <span>CHASSEUR</span></h1>
+        <p class="tagline">Des cousins, des pouvoirs… et une balle !</p>
+      </header>
+      <div id="menu-faces" aria-label="Les vedettes de la famille"></div>
+      <div class="menu-dock">
+        <div class="menu-kicker"><span></span> À TOI DE JOUER <span></span></div>
+        <div class="buttons menu-modes">
+          <button id="btn-adventure" class="primary"><span class="mode-badge" aria-hidden="true">★</span>Aventure</button>
+          <button id="btn-solo"><span class="mode-badge" aria-hidden="true">●</span>Match solo<small>Défie l’ordinateur</small></button>
+          <button id="btn-cup"><span class="mode-badge" aria-hidden="true">🏆</span>Coupe des familles <small id="cups-won"></small></button>
+          <button id="btn-options"><span class="mode-badge" aria-hidden="true">⚙</span>Options du jeu<small>À ta façon</small></button>
+        </div>
+        <div class="menu-bottom">
+          <button id="btn-family">Toute la famille</button>
+          <div id="logos" aria-label="Les équipes"></div>
+          <button id="btn-help">Comment jouer ?</button>
+        </div>
+        <span id="version"></span>
       </div>
-      <div class="options">
-        <label>Ordi <select id="opt-diff"></select></label>
-        <label><input type="checkbox" id="opt-sound"> Son</label>
-      </div>
-      <section id="howto">
-        <h2>Comment jouer ?</h2>
-        <p class="howto-intro">Lance la balle sur les trois joueurs de l'autre famille jusqu'à ce qu'ils n'aient plus de points de vie. Attrape leurs balles, saute, cours… et sors ton lancer spécial !</p>
+      <dialog id="menu-options" class="menu-dialog" aria-labelledby="options-title">
+        <form method="dialog"><button class="dialog-close" aria-label="Fermer les options">✕</button></form>
+        <h2 id="options-title">Options du jeu</h2>
+        <div class="options">
+          <label>Difficulté <select id="opt-diff"></select></label>
+          <label><input type="checkbox" id="opt-sound"> Son</label>
+        </div>
+      </dialog>
+      <dialog id="howto" class="menu-dialog" aria-labelledby="help-title">
+        <form method="dialog"><button class="dialog-close" aria-label="Fermer l’aide">✕</button></form>
+        <h2 id="help-title">Comment jouer ?</h2>
+        <p class="howto-intro">Lance la balle sur les trois joueurs de l'autre famille jusqu'à ce qu'ils n'aient plus de points de vie. Charge tes lancers, attrape leurs balles, saute, cours… et sors ton pouvoir !</p>
         <div id="howto-grid"></div>
-      </section>
+        <h2>Les quinze pouvoirs</h2>
+        <div id="powers-grid"></div>
+      </dialog>
     </div>
   </section>
 
@@ -39,12 +59,19 @@
     <div class="buttons"><button id="btn-sel-back">Retour</button></div>
   </section>
 
+  <section id="screen-family" class="screen hidden">
+    <h2>Toute la famille</h2>
+    <p class="howto-intro">Survole un personnage pour le voir saluer. Les réglages servent à faire des images : choisis la pose, le décor (ou aucun pour un fond transparent) et télécharge.</p>
+    <canvas id="family-canvas" width="1280" height="720"></canvas>
+    <div id="family-options" class="options"></div>
+  </section>
+
   <section id="screen-match" class="screen hidden">
     <div class="canvas-wrap"><div class="stage"><canvas id="game" width="1280" height="720"></canvas>
       <div id="pause" class="hidden">
         <div class="pause-box">
           <h2>PAUSE</h2>
-          <p>Flèches / WASD : bouger (deux fois vers l'avant = course) · X / G : lancer ou sauter · C / H : passer ou attraper · 1 2 3 : choisir son joueur</p>
+          <p>Flèches : bouger (deux fois vers l'avant = course) · X : lancer (tenu = charge, ⬆ ou ⬇ = diagonale) ou sauter · C : sauter avec la balle, passer (direction + C) ou attraper · V : pouvoir · 1 2 3 : choisir son joueur</p>
           <button id="btn-resume" class="primary">Reprendre</button>
           <button id="btn-quit">Quitter le match</button>
         </div>
@@ -62,16 +89,26 @@
 </div>
 <div id="hover-card" class="hidden"></div>
 <script src="js/config.js"></script>
+<script src="js/monsters.js"></script>
+<script src="js/monster-head-source.js"></script>
+<script src="js/monster-heads.js"></script>
+<script src="js/monster-bodies-source.js"></script>
+<script src="js/monster-arms-source.js"></script>
+<script src="js/monster-body-art.js"></script>
 <script src="js/family-head-sources.js"></script>
 <script src="js/family-heads.js"></script>
 <script src="../config.js"></script>
 <script src="js/family-online.js"></script>
 <script src="js/sprites.js"></script>
+<script src="js/monster-sprites.js"></script>
 <script src="js/game.js"></script>
+<script src="js/powers.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/render.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/input.js"></script>
+<script src="js/adventure.js"></script>
+<script src="js/arcade-ui.js"></script>
 <script src="js/main.js"></script>
 <script src="js/touch.js"></script>
 </body>

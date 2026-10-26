@@ -5,7 +5,7 @@
 const path = require('path');
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] === undefined ? true : m[2]] : [a, true]; }));
 global.window = {}; global.performance = { now: () => Date.now() };
-for (const f of ['config', 'game', 'ai']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['config', 'game', 'powers', 'ai']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const BC = window.BC;
 
 function play(aId, bId, diff, verbose) {
