@@ -1,7 +1,7 @@
 // Ballon chasseur — constantes, personnages, équipes, lancers spéciaux et terrains.
 // Tout est dans l'espace de noms BC. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BC = window.BC || {};
-window.BC.VERSION = '2.21';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BC.VERSION = '2.22';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BC) {
   'use strict';
   BC.W = 1280; BC.H = 720;              // canevas logique
@@ -116,6 +116,9 @@ window.BC.VERSION = '2.21';   // à augmenter à chaque mise en ligne (affichée
       stats: { speed: 10, power: 8, catch: 6, hp: 8 },
       look: { skin: '#f0c8a0', hair: '#1b1b1b', hairStyle: 'fringe', tall: true, earbuds: true } },
   };
+  // Tirage reproductible par personnage : aucune relance des stats à chaque écran.
+  BC.initialHeroStats=(id,base)=>{let seed=2166136261;for(const ch of id)seed=Math.imul(seed^ch.charCodeAt(0),16777619)>>>0;return {speed:Math.max(1,Math.min(7,Math.round(base.speed*.65))),power:Math.max(1,Math.min(7,Math.round(base.power*.65))),catch:Math.max(1,Math.min(7,Math.round(base.catch*.65))),hp:Math.max(1,Math.min(7,Math.round(base.hp*.65))),precision:1+seed%7};};
+  for(const [id,d] of Object.entries(BC.PLAYERS))d.stats=BC.initialHeroStats(id,d.stats);
   Object.entries(BC.PLAYERS).forEach(([id, def]) => { def.id = id; def.familyPortrait = id; if (def.birth) def.age = BC.ageOf(def.birth); });
 
   // Équipes : les trois premiers jouent à l'intérieur du terrain, les suivants à l'extérieur (haut, bas, fond).
@@ -141,6 +144,7 @@ window.BC.VERSION = '2.21';   // à augmenter à chaque mise en ligne (affichée
   BC.squads = function (a, b) {
     const pool = BC.TEAMS.filter(t => t !== a && t !== b).flatMap(t => t.players).sort((x, y) => BC.PLAYERS[y].size - BC.PLAYERS[x].size);
     return [a, b].map(team => {
+      if(team.species&&team.innerCount)return {inner:team.players.slice(0,team.innerCount),outer:team.players.slice(team.innerCount),lent:[]};
       if(team.boss)return {inner:team.players.slice(0,1),outer:[],lent:[]};
       const own = team.players.slice(0, BC.INNER + BC.OUTER), lent = [];
       while (own.length + lent.length < BC.INNER + BC.OUTER && pool.length) lent.push(pool.shift());

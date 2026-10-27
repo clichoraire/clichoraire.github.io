@@ -15,6 +15,7 @@
     // opts : { teams: [A, B], ctrl: ['p1'|'cpu', …], difficulty: 0..2, intro: bool, stats: { pid: stats } (aventure), mode: 'adventure' }
     constructor(opts) {
       this.teams = opts.teams; this.ctrl = opts.ctrl; this.difficulty = opts.difficulty || 0; this.mode = opts.mode || 'match';
+      if(BC.monsterRoster&&this.mode!=='practice')this.teams=this.teams.map(t=>BC.monsterRoster(t,this.difficulty));
       this.controlMode=opts.controlMode==='fixed'?'fixed':'auto';
       this.statsOf = opts.stats || {};this.adventure=opts.adventure||null;
       this.court = BC.COURTS[this.teams[1].court] || BC.COURTS.gym; this.courtId = this.teams[1].court;
@@ -30,7 +31,7 @@
         const dir = t === 0 ? 1 : -1;
         const home = t === 0 ? [C.left + 150, C.left + 270, C.left + 150] : [C.right - 150, C.right - 270, C.right - 150];
         const ys = [(C.top + C.bottom) / 2 - 95, (C.top + C.bottom) / 2, (C.top + C.bottom) / 2 + 95];
-        sq.inner.forEach((pid, i) => this.players.push(this.makePlayer(pid, t, 'in', null, home[i], ys[i], dir)));
+        sq.inner.forEach((pid, i) => this.players.push(this.makePlayer(pid, t, 'in', null, home[i]??(t===0?C.left+170:C.right-170),sq.inner.length>3?C.top+40+(C.bottom-C.top-80)*i/(sq.inner.length-1):ys[i], dir)));
         const lanes = ['top', 'bottom', 'back'];
         sq.outer.forEach((pid, i) => {
           const lane = lanes[i], ox = t === 0 ? C.mid + (C.right - C.mid) / 2 : C.left + (C.mid - C.left) / 2;
@@ -47,11 +48,10 @@
     }
     makePlayer(pid, t, zone, lane, x, y, dir) {
       const def = BC.PLAYERS[pid];
-      let stats = this.statsOf[pid] || def.stats;
-      if (def.custom && !this.statsOf[pid]) stats = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, Math.min(BC.MAX_STAT, v * 2)]));   // personnages du catalogue : échelle 0-5 → 0-12
+      let stats = def.monster&&BC.monsterStats&&this.mode!=='practice'?BC.monsterStats(pid,this.difficulty):(this.statsOf[pid] || def.stats);
       if(BC.Equipment?.effectiveStats&&BC.Equipment.allowed(this.difficulty))stats=BC.Equipment.effectiveStats(pid,stats);
-      const ph = BC.phys(def, stats);if(def.boss&&this.adventure)ph.maxHp=Math.round(ph.maxHp*BC.BOSS_HP_MULTIPLIERS[this.difficulty]);const P = BC.POWERS[def.power] || null;
-      return { id: pid, def, stats, phys: ph, team: t, zone, lane, x, y, z: 0, vz: 0, vx: 0, vy: 0, hp: ph.maxHp, maxHp: ph.maxHp,
+      const ph = BC.phys(def, stats);if(def.boss)ph.maxHp=Math.round(ph.maxHp*BC.BOSS_HP_MULTIPLIERS[this.difficulty]);const P = BC.POWERS[def.power] || null;
+      return { id: pid, def, level:def.monster&&BC.monsterLevel?BC.monsterLevel(pid,this.difficulty):null, stats, phys: ph, team: t, zone, lane, x, y, z: 0, vz: 0, vx: 0, vy: 0, hp: ph.maxHp, maxHp: ph.maxHp,
         state: 'idle', stateT: 0, facing: dir, frame: 0, moving: false, dash: { lastTap: -9, dir: 0, active: false, t: 0, fromJump: false, endedAt: -9 },
         hasBall: false, alive: true, knock: 0, knockDir: 1, ko: 0, aiT: rnd(0, 1), ai: {}, lent: this.squads[t].lent.includes(pid), home: { x, y }, mx: 0, my: 0, lastMove: null,
         charge: 0, charging: false, chargeGoal: null, pending: null,

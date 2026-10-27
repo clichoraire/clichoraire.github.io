@@ -107,6 +107,7 @@
     if (g.shake > 0) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
     drawBackground(ctx, g, t);
     BC.Practice?.drawGround(ctx,g);
+    BC.drawDifficultyEvent?.(ctx,g,'ground');
     BC.drawBossArena?.(ctx,g,'ground');
     drawRainbow(ctx,g,t);
     BC.drawElementZones?.(ctx,g);
@@ -144,6 +145,7 @@
     if(ui&&BC.app?.settings?.aimMode==='auto'&&!g.practice&&g.phase==='play')for(const h of ui.humans){const p=g.controlled(h.team);if(!p?.alive)continue;const target=g.aimDir(p,p.lastMove).target;if(!target?.alive)continue;ctx.save();ctx.strokeStyle='#ffdc65';ctx.lineWidth=3;ctx.setLineDash([7,5]);ctx.beginPath();ctx.ellipse(target.x,target.y-8,32*(target.def.boss?1.7:1),13,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.font='bold 14px Arial';ctx.textAlign='center';const text='CIBLE · '+target.def.name+' · T / R3';const y=Math.max(24,target.y-target.z-50*Math.max(.6,target.def.size)-42);ctx.fillStyle='#101a35e8';ctx.fillRect(target.x-ctx.measureText(text).width/2-7,y-16,ctx.measureText(text).width+14,23);ctx.fillStyle='#ffe178';ctx.fillText(text,target.x,y);ctx.restore();}
     for(const a of g.anvils||[]){if(a.t<1.2||a.hit)continue;const fall=Math.min(1,(a.t-1.2)/1),y=a.y-340*(1-fall*fall);ctx.save();ctx.translate(a.x,y);ctx.fillStyle='#61758b';ctx.strokeStyle='#c3d8e8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-22,-24);ctx.lineTo(22,-24);ctx.lineTo(31,-18);ctx.lineTo(15,-12);ctx.lineTo(8,-12);ctx.lineTo(8,-4);ctx.lineTo(17,0);ctx.lineTo(-17,0);ctx.lineTo(-8,-4);ctx.lineTo(-8,-12);ctx.lineTo(-22,-17);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
     BC.drawBossArena?.(ctx,g,'front');
+    BC.drawDifficultyEvent?.(ctx,g,'front');
     BC.drawSkeletonEffects?.(ctx,g);
     BC.drawLizardEffects?.(ctx,g);
     BC.Practice?.draw(ctx,g);
@@ -289,11 +291,11 @@
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; rr(ctx, W / 2 - 110, 12, 220, 40, 10); ctx.fill();
     ctx.fillStyle = '#ffd166'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText(g.court.name, W / 2, 37, 205);
     // bas : points de vie et pouvoir des trois joueurs intérieurs de chaque équipe
-    const ph = 66, y0 = H - ph - 10, bw = 150, gap = 14, tm = g.time;
+    const ph = 66, y0 = H - ph - 10, gap = 8, tm = g.time;
     for (let t = 0; t < 2; t++) {
-      const team = g.teams[t], players = g.inner(t), human = ui && ui.humans.find(h => h.team === t);
+      const team = g.teams[t], players = g.inner(t), human = ui && ui.humans.find(h => h.team === t),bw=Math.min(150,(W/2-40-(players.length-1)*gap)/players.length);
       players.forEach((p, i) => {
-        const x = t === 0 ? 20 + i * (bw + gap) : W - 20 - bw - (2 - i) * (bw + gap);
+        const x = t === 0 ? 20 + i * (bw + gap) : W - 20 - bw - (players.length-1-i) * (bw + gap);
         ctx.fillStyle = p.alive ? 'rgba(0,0,0,0.5)' : 'rgba(60,0,0,0.5)'; rr(ctx, x, y0, bw, ph, 10); ctx.fill();
         if (human && g.controlled(t) === p) { ctx.strokeStyle = human.color; ctx.lineWidth = 2.5; rr(ctx, x, y0, bw, ph, 10); ctx.stroke(); }
         ctx.save(); ctx.beginPath(); rr(ctx, x + 4, y0 + 4, 42, 42, 8); ctx.clip(); ctx.fillStyle = team.color; ctx.fillRect(x + 4, y0 + 4, 42, 42); S.drawHead(ctx, p.def, x + 25, y0 + 27, 44); ctx.restore();

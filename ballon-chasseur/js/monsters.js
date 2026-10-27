@@ -45,7 +45,7 @@
     BC.COURTS[court] = { name:place, floor:palette[0], floor2:palette[1], sky:palette[2], line:'#e2d9a2', monster:true, biome, accent:color };
     const players = Array.from({length:6}, (_,i) => {
       const pid = 'monster-' + id + '-' + (i+1);
-      BC.PLAYERS[pid] = { id:pid, name:singular + ' ' + (i+1), monster:id, portraitVariant:i, age:0, number:i+1, role:'monstre', size:size*(i===0?1.06:1), power:kits[id][i],
+      BC.PLAYERS[pid] = { id:pid, name:singular + ' ' + (i+1), monster:id, portraitVariant:i, encounterLevel:1+index*2, age:0, number:i+1, role:'monstre', size:size*(i===0?1.06:1), power:kits[id][i],
         stats:Object.fromEntries(BC.STAT_KEYS.map((k,j)=>[k,k==='precision'?6:values[j]])), look:{skin:color,hair:'#29333f',hairStyle:'short'}, description };
       return pid;
     });
@@ -59,7 +59,15 @@
   });
   BC.BOSS_TEAMS=[['troll','Brise-Montagne'],['witch','La Reine des maléfices'],['orc','Gorak le Colosse'],['specter','Le Roi du néant']].map(([species,name],i)=>{
     const base=BC.MONSTER_TEAMS.find(t=>t.species===species),id='boss-'+species,pid=id+'-1',original=BC.PLAYERS[base.players[0]];
-    BC.PLAYERS[pid]={...original,id:pid,name,boss:true,size:3.6,bossHp:i===0?150:450+i*100,stats:{speed:6+i,power:16,catch:10,hp:18,precision:10},power:'bossmeteor',bossPowers:i%2?['bossshadow','bossstorm','bossmeteor']:['bossmeteor','bossstorm','bossshadow']};
+    BC.PLAYERS[pid]={...original,id:pid,name,boss:true,size:3.6,bossHp:[150,250,400,600][i],encounterLevel:7+i*6,stats:{speed:6+i,power:16,catch:10,hp:18,precision:10},power:'bossmeteor',bossPowers:i%2?['bossshadow','bossstorm','bossmeteor']:['bossmeteor','bossstorm','bossshadow']};
     return {...base,id,name,short:'BOSS',boss:true,players:[pid],description:'Un colosse solitaire. Trois tirs spéciaux redoutables !'};
   });
+
+  BC.MONSTER_LEVEL_BONUSES=[0,5,10,22,35];
+  BC.MONSTER_STAT_BONUSES=[0,2,4,8,14];
+  BC.monsterLevel=(pid,difficulty=0)=>(BC.PLAYERS[pid].encounterLevel||1)+BC.MONSTER_LEVEL_BONUSES[difficulty];
+  BC.monsterStats=(pid,difficulty=0)=>{const d=BC.PLAYERS[pid],bonus=BC.MONSTER_STAT_BONUSES[difficulty];return {...Object.fromEntries(BC.STAT_KEYS.map(k=>[k,Math.min(BC.MAX_STAT,(d.stats[k]??6)+bonus)])),lifeBonus:d.boss?0:Math.max(0,BC.MONSTER_LEVEL_BONUSES[difficulty]-10)*2};};
+  // Les renforts ont leurs propres identifiants ; les trois extérieurs restent en place.
+  for(const team of BC.MONSTER_TEAMS)for(let i=0;i<2;i++){const source=BC.PLAYERS[team.players[i+3]],id='monster-'+team.species+'-'+(7+i);BC.PLAYERS[id]={...source,id,name:source.name.replace(/\d+$/,String(7+i)),number:7+i,reinforcement:true};}
+  BC.monsterRoster=(team,difficulty=0)=>{if(!team.species)return team;const base=[...BC.MONSTER_TEAMS,...BC.BOSS_TEAMS].find(t=>t.id===team.id)||team,extra=[0,0,1,1,2][difficulty],reinforcements=Array.from({length:extra},(_,i)=>'monster-'+team.species+'-'+(7+i)),innerCount=(team.boss?1:3)+extra;return {...base,players:team.boss?[...base.players,...reinforcements]:[...base.players.slice(0,3),...reinforcements,...base.players.slice(3)],innerCount};};
 })(window.BC);

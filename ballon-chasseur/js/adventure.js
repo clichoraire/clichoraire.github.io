@@ -7,7 +7,7 @@
   const A = BC.Adventure = {};
   A.DIFFICULTIES=['Facile','Moyen','Difficile','Dangereux','Impossible'];
   A.XP_MULTIPLIERS=[1,1.5,2,3,4];
-  A.STAT_BONUSES=[0,2,4,6,8];
+  A.STAT_BONUSES=BC.MONSTER_STAT_BONUSES||[0,2,4,8,14];
 
   A.load = leader => {
     try {
@@ -87,10 +87,10 @@
     if (!A.teamComplete(s)) throw new Error('Choisis six personnages de la famille, dont ton chef.');
     const selected=A.resolve(s,choice),nx={...A.next(s),...selected},mine=s.team.inner.concat(s.team.outer),leader=BC.PLAYERS[s.leader],fam=A.familyOf(s.leader);
     const myTeam={...fam,id:'aventure',name:'Équipe '+leader.name,short:leader.name.slice(0,4).toUpperCase(),initial:leader.name[0],players:mine};
-    const stats=A.statsMap(s),bonus=A.STAT_BONUSES[selected.difficulty];
-    for(const pid of selected.team.players){const base=BC.PLAYERS[pid].stats;stats[pid]=Object.fromEntries(Object.entries(base).map(([k,v])=>[k,Math.min(BC.MAX_STAT,v+bonus)]));}
+    const stats=A.statsMap(s),enemy=BC.monsterRoster(selected.team,selected.difficulty);
+    for(const pid of enemy.players)stats[pid]=BC.monsterStats(pid,selected.difficulty);
     const {team,...adventure}=selected;
-    return {teams:[myTeam,team],stats,difficulty:selected.difficulty,next:nx,adventure};
+    return {teams:[myTeam,enemy],stats,difficulty:selected.difficulty,next:nx,adventure};
   };
   // Les récompenses se basent sur le match réellement joué, pas sur la prochaine étape.
   A.record = (s, g) => {
@@ -131,7 +131,7 @@
 
   U.resume = leader => { state=A.load(leader); U.hub(); };
   U.hub = () => {
-    if (!state) state = A.load();
+    if (!state) state = A.load();else state=A.load(state.leader)||state;
     if (!state) { U.pickLeader(); return; }
     A.char(state, state.leader);
     BC.ArcadeUI.campaign(state, {
@@ -148,6 +148,7 @@
   U.setupMatch=(choice=challenge)=>{if(!A.teamComplete(state)){U.hub();return;}challenge=choice||{};BC.ArcadeUI.challenge(state,challenge,{back:()=>U.hub(),confirm:selection=>{challenge=selection;const m=A.buildMatch(state,challenge);app().startMatch({...m,ctrl:['p1','cpu'],mode:'adventure'});}});};
   // Avant le match : trois à l'intérieur (le chef y est toujours), trois à l'extérieur.
   U.pickTeam = () => {
+    state=state?(A.load(state.leader)||state):A.load();if(!state){U.pickLeader();return;}
     const s=state;
     const role=id=>id===s.leader?'Chef · intérieur':s.team.inner.includes(id)?'Intérieur':s.team.outer.includes(id)?'Extérieur':'';
     const assign=(id,where)=>{if(id===s.leader)return;const list=s.team[where];if(where&& !list.includes(id)&&list.length>=3){BC.audio.play('bad');return;}s.team.inner=s.team.inner.filter(p=>p!==id);s.team.outer=s.team.outer.filter(p=>p!==id);if(where)s.team[where].push(id);A.save(s);};
