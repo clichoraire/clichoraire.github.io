@@ -34,6 +34,8 @@
     if (!id) return;
     try { localStorage.removeItem(KEY + '.' + id); if (active?.leader === id) localStorage.removeItem(KEY); } catch (e) { }
   };
+  A.selectedHero = s => s && [...s.team.inner,...s.team.outer].includes(s.activeHero) ? s.activeHero : s?.leader;
+  A.selectHero = (s,pid) => {if(!s||![...s.team.inner,...s.team.outer].includes(pid))return false;s.activeHero=pid;A.char(s,pid);A.save(s);return true;};
   A.start = leader => A.save({ leader, chars: {}, match: 0, bosses: 0, wins: 0, losses: 0, team: { inner: [leader], outer: [] }, created: Date.now() });
   // Fiche d'aventure d'un personnage (créée à la demande avec ses stats de base).
   A.char = (s, pid) => {

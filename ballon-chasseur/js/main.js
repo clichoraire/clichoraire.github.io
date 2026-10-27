@@ -178,7 +178,7 @@
     if (g.phase === 'end' && g.endT > (bossWon?4.2:3)) showResult();
   }
   $('#btn-resume').onclick = () => { paused = false; $('#pause').classList.add('hidden'); BC.input.flush(); };
-  $('#btn-quit').onclick = () => { paused = false; app.cup = null; if(app.game?.practice){BC.Practice.open(app.game.practice.pid);return;} if (app.matchOpts && app.matchOpts.mode === 'adventure') BC.AdventureUI.open(); else show('menu'); };
+  $('#btn-quit').onclick = () => { paused = false; app.cup = null; if(app.game?.practice){BC.Practice.open(app.game.practice.pid,app.game.practice.leader);return;} if (app.matchOpts && app.matchOpts.mode === 'adventure') BC.AdventureUI.open(); else show('menu'); };
 
   // ----- Résultat -----
   function showResult() {
