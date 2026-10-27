@@ -483,7 +483,7 @@
       if (b.z <= 0) { this.kill(b, 0.35); return; }     // au sol : la balle est morte
       // sortie par le fond du camp adverse, ou retour dans son propre camp (balle d'un extérieur du fond ou d'un téléporté)
       const fwd = b.team === 0 ? 1 : -1, beyondBack = fwd > 0 ? b.x > C.right + 10 : b.x < C.left - 10, backHome = fwd > 0 ? b.x < C.mid - 40 : b.x > C.mid + 40;
-      if ((b.vx * fwd > 0 && beyondBack) || (b.vx * fwd < 0 && backHome)) { this.kill(b, 0.25); b.vx *= 0.6; return; }
+      if ((b.vx * fwd > 0 && beyondBack) || (b.vx * fwd < 0 && backHome && !(b.power==='witchloop'&&b.t<.36))) { this.kill(b, 0.25); b.vx *= 0.6; return; }
     }
     kill(b, k) { b.state = 'dead'; b.power = null; b.visible = true; b.alpha = 1; b.r = b.r0; b.vx *= k; b.vy *= k; b.vz = Math.max(b.vz, 120); this.emit('bounce'); this.retargetAll(); }
     spark(x, y, z, color) { this.fx.push({ kind: 'spark', x, y, z, color, t: 0, dur: 0.4 }); }

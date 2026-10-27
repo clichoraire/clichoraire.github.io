@@ -108,6 +108,7 @@
     drawBackground(ctx, g, t);
     BC.Practice?.drawGround(ctx,g);
     BC.drawDifficultyEvent?.(ctx,g,'ground');
+    BC.drawSlimeCourt?.(ctx,g,'ground');
     BC.drawBossArena?.(ctx,g,'ground');
     drawRainbow(ctx,g,t);
     BC.drawElementZones?.(ctx,g);
@@ -154,6 +155,9 @@
     BC.drawSkeletonEffects?.(ctx,g);
     BC.drawLizardEffects?.(ctx,g);
     BC.drawOrcHorde?.(ctx,g);
+    BC.drawWitchForm?.(ctx,g);
+    BC.drawBeastPack?.(ctx,g);
+    BC.drawSlimeCourt?.(ctx,g,'front');
     BC.Practice?.draw(ctx,g);
     drawFx(ctx, g);
     ctx.restore();
