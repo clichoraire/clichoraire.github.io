@@ -64,7 +64,7 @@
     if(o.ball){const br=BC.BALL_R/d.size,bx=front.wrist[0]+(pose==='throw'?br*2:br*.7),by=front.wrist[1]-br*.65;S.drawBall(c,bx,by,br,{});art.arm(c,k,front.shoulder,front.elbow,front.wrist,front.side,true);}
     // Le menton chevauche légèrement le col, sans tête flottante.
     c.save();if(pose==='laugh'){c.translate(0,-43.5);c.rotate(-.1+Math.sin(t*11)*.045);c.translate(0,43.5);}
-    if(!o.headless)S.drawMonsterHead(c,d,0,k==='slime'?-51:-43.5,12);
+    if(!o.headless)S.drawMonsterHead(c,d,0,k==='slime'?-51:k==='goblin'&&d.number===6?-41:-43.5,12);
     c.restore();
     if(k==='slime'&&pose==='hit')for(const side of [-1,1])S.drawMonsterHead(c,d,side*25,-7,3.5);
     if(pose==='angel'){c.strokeStyle='#ffe493';c.lineWidth=1.7;c.beginPath();c.ellipse(0,-78,10,3,0,0,Math.PI*2);c.stroke();}

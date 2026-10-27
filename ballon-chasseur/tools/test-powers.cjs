@@ -12,6 +12,7 @@ const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 function game(ctrl) {
   const g = new BC.Game({ teams: [BC.teamById('matt'), BC.teamById('jo')], ctrl: ctrl || ['p1', 'cpu'], difficulty: 1, intro: false });
   g.ai.update = () => { for (const p of g.players) { p.ai.move = { dx: 0, dy: 0 }; p.ai.act = null; } };   // personne ne bouge
+  for(const p of g.players)p.phys.aimSpread=0; // Collisions déterministes ; dispersion testée séparément.
   return g;
 }
 const N = { dx: 0, dy: 0 };

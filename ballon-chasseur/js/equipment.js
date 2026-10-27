@@ -2,6 +2,7 @@
 'use strict';
 const E=B.Equipment={},P=B.Game.prototype,C=B.COURT;
 E.elements={fire:{name:'Feu',icon:'🔥',color:'#ff793a'},ice:{name:'Glace',icon:'❄️',color:'#7ee6ff'},earth:{name:'Terre',icon:'🪨',color:'#d3ae79'},electric:{name:'Électricité',icon:'⚡',color:'#ffe75b'}};
+E.allowed=difficulty=>Number.isInteger(difficulty)&&difficulty>=0&&difficulty<=4;
 E.slots={gloves:'Gants',boots:'Bottes',armor:'Armure',charm:'Amulette'};
 E.items=[];
 for(const [element,e]of Object.entries(E.elements))for(const [slot,label]of Object.entries(E.slots))for(const tier of [1,2]){
@@ -15,7 +16,7 @@ E.buy=(pid,id)=>{const item=E.items.find(x=>x.id===id);if(!item)return false;con
 E.buyLife=pid=>{if(E.state.gold<50)return false;const h=E.hero(pid);E.state.gold-=50;h.life=(h.life||0)+1;E.save();return true;};
 E.equip=(pid,id)=>{const item=E.items.find(x=>x.id===id),h=E.hero(pid);if(!item||!h.owned.includes(id))return false;if(h.equipped[item.slot]===id)delete h.equipped[item.slot];else h.equipped[item.slot]=id;E.save();return true;};
 E.award=g=>{if(g.goldReward!=null)return g.goldReward;if(g.phase!=='end'||g.winner==null)return 0;const human=g.ctrl.findIndex(x=>x!=='cpu');if(human<0)return 0;const won=g.winner===human;const amount=Math.round((won?40:20)*(1+.25*g.difficulty))+(won&&g.teams[1-human].boss?40:0);E.state.gold+=amount;g.goldReward=amount;E.save();return amount;};
-const make=P.makePlayer;P.makePlayer=function(...args){const p=make.apply(this,args);p.equipment=p.def.monster?{}:{...E.hero(p.id).equipped};if(!p.def.monster){const life=E.hero(p.id).life||0;p.maxHp+=life;p.hp=p.maxHp;p.phys.maxHp=p.maxHp;}return p;};
+const make=P.makePlayer;P.makePlayer=function(...args){const p=make.apply(this,args);p.equipment=p.def.monster||!E.allowed(this.difficulty)?{}:{...E.hero(p.id).equipped};if(!p.def.monster){const life=E.hero(p.id).life||0;p.maxHp+=life;p.hp=p.maxHp;p.phys.maxHp=p.maxHp;}return p;};
 E.rank=(p,slot,element)=>{const item=E.items.find(x=>x.id===p.equipment?.[slot]);return item?.element===element?item.tier:0;};
 const powerElements={fireball:'fire',bossmeteor:'fire',fusee:'fire','arena-lava':'fire',blizzard:'ice',icefield:'ice',boulet:'earth',anvil:'earth',bossquake:'earth',bossstorm:'electric',pika:'electric','arena-lightning':'electric'};
 E.element=power=>power?.startsWith('element-')?power.slice(8):power?.startsWith('floor-')?power.slice(6):powerElements[power];

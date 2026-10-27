@@ -49,7 +49,7 @@
       const def = BC.PLAYERS[pid];
       let stats = this.statsOf[pid] || def.stats;
       if (def.custom && !this.statsOf[pid]) stats = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, Math.min(BC.MAX_STAT, v * 2)]));   // personnages du catalogue : échelle 0-5 → 0-12
-      if(BC.Equipment?.effectiveStats)stats=BC.Equipment.effectiveStats(pid,stats);
+      if(BC.Equipment?.effectiveStats&&BC.Equipment.allowed(this.difficulty))stats=BC.Equipment.effectiveStats(pid,stats);
       const ph = BC.phys(def, stats);if(def.boss&&this.adventure)ph.maxHp=Math.round(ph.maxHp*BC.BOSS_HP_MULTIPLIERS[this.difficulty]);const P = BC.POWERS[def.power] || null;
       return { id: pid, def, stats, phys: ph, team: t, zone, lane, x, y, z: 0, vz: 0, vx: 0, vy: 0, hp: ph.maxHp, maxHp: ph.maxHp,
         state: 'idle', stateT: 0, facing: dir, frame: 0, moving: false, dash: { lastTap: -9, dir: 0, active: false, t: 0, fromJump: false, endedAt: -9 },
@@ -172,7 +172,7 @@
       if (ph.regen && p.hp < p.maxHp) { F.regenT += dt; if (F.regenT > 4) { F.regenT = 0; p.hp = Math.min(p.maxHp, p.hp + (ph.regenAmount || 1)); } }
       // états à durée fixe
       if (s === 'windup') {
-        if (p.charging) { p.charge = Math.min(1, p.charge + dt / CHARGE_TIME); if ((p.chargeGoal != null && p.charge >= p.chargeGoal) || p.stateT > CHARGE_TIME + 0.6) this.release(p); }
+        if (p.charging) { p.charge = Math.min(1, p.charge + dt / CHARGE_TIME); if ((p.chargeGoal != null && p.charge >= p.chargeGoal) || (!this.isPlayerControlled(p) && p.stateT > CHARGE_TIME + 0.6)) this.release(p); }
         else if (p.stateT > 0.1) this.release(p);
       }
       if (s === 'throw' && p.stateT > 0.28) { this.setState(p, 'idle'); if (p.tele) this.teleReturn(p); }
@@ -395,7 +395,7 @@
     // Un attrapé (balle adverse ou passe interceptée) : statistiques, et toute l'équipe recharge un peu son pouvoir.
     caught(p, o) {
       this.give(p); this.stats[p.team].catches++;
-      for (const q of this.players.filter(q=>q.team===p.team&&(q.zone==='in'||q.def.monster==='skeleton'))) if (q.alive) q.power.charge = Math.min(q.power.max, q.power.charge + 1);
+      for (const q of this.players.filter(q=>q.team===p.team&&(q.zone==='in'||q.def.monster==='skeleton'))) if (q.alive) for(const power of q.powerStates?Object.values(q.powerStates):[q.power]) power.charge = Math.min(power.max, power.charge + 1);
       this.emit('catch', Object.assign({ p }, o || {}));
       this.say(o && o.intercept ? 'INTERCEPTÉ !' : 'ATTRAPÉ !', 0.8);
       this.fx.push({ kind: 'pow', x: p.x, y: p.y, z: p.z + 40, text: o && o.intercept ? 'INTERCEPTÉ' : 'ATTRAPÉ', color: '#7dffa0', t: 0, dur: 0.8 });
@@ -462,7 +462,7 @@
       b.visible = true; b.alpha = 1; b.r = b.r0;
       if (this.powerLive(b, dt)) return;                // balle spéciale entièrement gérée par le pouvoir (tornade, triche…)
       // lancer normal : la balle accélère en vol (jusqu'à 1,4 × la vitesse de départ) et pique légèrement
-      const sp = Math.hypot(b.vx, b.vy) || 1, want = Math.min(b.speed * (b.power === 'fusee' ? 2 : 1.4), sp + b.speed * (b.power === 'fusee' ? 2.6 : 1.8) * dt);
+      const sp = Math.hypot(b.vx, b.vy) || 1, want = b.power==='witchtempo'&&BC.witchBallSpeed?BC.witchBallSpeed(b):Math.min(b.speed * (b.power === 'fusee' ? 2 : 1.4), sp + b.speed * (b.power === 'fusee' ? 2.6 : 1.8) * dt);
       b.vx *= want / sp; b.vy *= want / sp; b.vz -= G * 0.03 * dt;
       b.z += b.vz * dt;
       b.x += b.vx * dt; b.y += b.vy * dt;

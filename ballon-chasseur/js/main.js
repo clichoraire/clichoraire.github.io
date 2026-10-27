@@ -4,7 +4,7 @@
   'use strict';
   await Promise.all([window.FamilyHeads.ready, window.MonsterHeads.ready, window.MonsterBodyArt.ready, window.FamilyArmArt.ready]);
   const $ = s => document.querySelector(s), S = BC.sprites;
-  const app = BC.app = { screen: 'menu', settings: { difficulty: 1, sound: true, controlMode: 'auto' }, game: null, cup: null, mode: 'solo' };
+  const app = BC.app = { screen: 'menu', settings: { difficulty: 1, sound: true, controlMode: 'auto', aimMode: 'manual' }, game: null, cup: null, mode: 'solo' };
   const P_COLOR = '#ffd166';
   try { Object.assign(app.settings, JSON.parse(localStorage.getItem('bc.settings') || '{}')); } catch (e) { }
   const save = () => { try { localStorage.setItem('bc.settings', JSON.stringify(app.settings)); } catch (e) { } };
@@ -56,6 +56,7 @@
     d.value = app.settings.difficulty; d.onchange = () => { app.settings.difficulty = +d.value; save(); };
     const snd = $('#opt-sound'); snd.checked = app.settings.sound; snd.onchange = () => { app.settings.sound = snd.checked; BC.audio.setMuted(!snd.checked); save(); };
     for(const id of ['opt-control','pause-control']){const select=$('#'+id);select.value=app.settings.controlMode==='fixed'?'fixed':'auto';select.onchange=()=>{app.settings.controlMode=select.value;for(const other of ['opt-control','pause-control'])$('#'+other).value=select.value;if(app.game)app.game.setControlMode(select.value);save();};}
+    for(const id of ['opt-aim','pause-aim']){const select=$('#'+id);select.value=app.settings.aimMode==='auto'?'auto':'manual';select.onchange=()=>{app.settings.aimMode=select.value;for(const other of ['opt-aim','pause-aim'])$('#'+other).value=select.value;save();};}
     BC.audio.muted = !app.settings.sound;
     $('#btn-adventure').onclick = () => { BC.audio.init(); BC.audio.play('ui'); BC.AdventureUI.open(); };
     $('#btn-solo').onclick = () => startSelect('solo');
@@ -99,7 +100,7 @@
   const KEY = k => `<kbd class="kcap">${k}</kbd>`;
   const HOWTO = [
     { icon: '🏃', cat: 'Déplacement', color: '#5fe3ff', title: 'Bouger sur le terrain', text: 'Déplace ton joueur dans sa moitié de terrain. Appuie deux fois vite vers l\'avant pour partir à la course !', keys: `<div class="krow">${KEY('⬆')}</div><div class="krow">${KEY('⬅')}${KEY('⬇')}${KEY('➡')}</div>`, label: 'Flèches · deux fois ➡ = course' },
-    { icon: '🎯', cat: 'Lancer', color: '#ffd166', title: 'Charger et lancer', text: 'Tiens X pour charger : la barre monte, plus tu tiens, plus la balle part vite et fort. Relâche pour lancer ! La balle vise toute seule l\'adversaire le mieux placé (ligne verte) et accélère en vol. ⬆ ou ⬇ tenu : en diagonale (ligne jaune).', keys: `<div class="krow">${KEY('X')}</div><div class="krow">${KEY('⬆')}${KEY('X')}</div>`, label: 'X tenu = charge · ⬆ ou ⬇ + X = diagonale' },
+    { icon: '🎯', cat: 'Lancer', color: '#ffd166', title: 'Charger et lancer', text: 'Tiens X pour charger : la barre monte, plus tu tiens, plus la balle part vite et fort. Relâche pour lancer ! Vise avec la souris, le stick droit ou un doigt sur le terrain. Au clavier, ajuste avec ↑ et ↓ pendant la charge. Le ballon part au hasard dans le cône ; à 18 en précision, la visée devient une ligne.', keys: `<div class="krow">${KEY('X')}</div><div class="krow">${KEY('⬆')}${KEY('X')}</div>`, label: 'X ou clic tenu = charge · relâche pour lancer' },
     { icon: '✨', cat: 'Pouvoir', color: '#d7a6ff', title: 'Ton pouvoir spécial', text: 'Chaque joueur a son pouvoir, avec V. Certains agissent tout de suite (laser, bulles, blizzard, aimant…). D\'autres s\'arment : l\'icône scintille et ton prochain lancer devient spécial (biscuits, fusée, licorne…). Après, il faut 3 attrapés de ton équipe pour le recharger : regarde les cases sous ton nom !', keys: `<div class="krow">${KEY('V')}</div>`, label: 'V · manette : X ou Y · 3 attrapés pour recharger' },
     { icon: '🧤', cat: 'Défense', color: '#7dffa0', title: 'Attraper et intercepter', text: 'Appuie juste au moment où la balle arrive sur toi : si tu l\'attrapes, zéro dégât, la balle est à toi et toute ton équipe recharge un peu son pouvoir. Tu peux aussi intercepter une passe adverse avec C, ou en sautant dessus !', keys: `<div class="krow">${KEY('C')}</div>`, label: 'Touche C sans la balle' },
     { icon: '🦘', cat: 'Esquive', color: '#ff8a7a', title: 'Sauter par-dessus', text: 'Sans la balle, X te fait sauter : la balle passe sous tes pieds. Tu peux aussi simplement t\'écarter vers le haut ou le bas.', keys: `<div class="krow">${KEY('X')}</div>`, label: 'Touche X sans la balle' },
@@ -139,6 +140,7 @@
     if (!o.confirmed) { BC.ArcadeUI.versus(o,()=>startMatch({...o,confirmed:true}),()=>{if(o.mode==='adventure')BC.AdventureUI.hub();else if(app.mode==='cup')startSelect('cup');else startSelect('solo');}); return; }
     BC.audio.init();
     const g = new BC.Game({ teams: o.teams, ctrl: o.ctrl, difficulty: o.difficulty == null ? app.settings.difficulty : o.difficulty, intro: true, controlMode:app.settings.controlMode, stats: o.stats, mode: o.mode, adventure:o.adventure });
+    if(o.practice)BC.Practice.attach(g,o.practice);
     app.game = g; app.matchOpts = {...o, confirmed:false}; ui.humans = []; paused = false;
     o.ctrl.forEach((c, i) => { if (c === 'p1') ui.humans.push({ team: i, n: 1, label: 'TOI', color: P_COLOR }); });
     $('#pause').classList.add('hidden');
@@ -174,12 +176,13 @@
     if (g.phase === 'end' && g.endT > (bossWon?4.2:3)) showResult();
   }
   $('#btn-resume').onclick = () => { paused = false; $('#pause').classList.add('hidden'); BC.input.flush(); };
-  $('#btn-quit').onclick = () => { paused = false; app.cup = null; if (app.matchOpts && app.matchOpts.mode === 'adventure') BC.AdventureUI.open(); else show('menu'); };
+  $('#btn-quit').onclick = () => { paused = false; app.cup = null; if(app.game?.practice){BC.Practice.open(app.game.practice.pid);return;} if (app.matchOpts && app.matchOpts.mode === 'adventure') BC.AdventureUI.open(); else show('menu'); };
 
   // ----- Résultat -----
   function showResult() {
     const g = app.game, A = g.teams[0], B = g.teams[1], won = g.winner === 0, adventure = app.matchOpts && app.matchOpts.mode === 'adventure';
     if(g.resultsShown)return;g.resultsShown=true;
+    if(g.practice){BC.Practice.result(g);return;}
     const box = $('#result'); let html = '';
     const cup = app.cup; let cupText = '';
     if (cup) {
@@ -188,8 +191,8 @@
       else cupText = 'Défaite… Tu peux réessayer ce match.';
     }
     const winner = g.teams[g.winner];
-    html += `<section class="finish-celebration"><div class="finish-banner"><span class="finish-kicker">FIN DU MATCH</span><h1>${won?'VICTOIRE !':'BIEN ESSAYÉ !'}</h1><p class="finish-winner"><strong>${winner.name} ${winner.name.startsWith('Les ')?'remportent':'remporte'} le match</strong></p><span class="finish-medal" aria-hidden="true">🏆</span></div><canvas id="finish-team" width="700" height="240" aria-label="L’équipe gagnante"></canvas></section>`;
-    const gold=BC.Equipment.award(g);html+=`<div class="result-gold"><i class="gold-coin">★</i> +${gold} pièces <small>Trésor : ${BC.Equipment.state.gold}</small></div>`;
+    html += `<section class="finish-celebration"><div class="finish-banner"><span class="finish-kicker">FIN DU MATCH</span><h1>${won?'VICTOIRE !':'BIEN ESSAYÉ !'}</h1><p class="finish-winner"><strong>${winner.name} ${winner.name.startsWith('Les ')?'remportent':'remporte'} le match</strong></p>${won?'<span class="finish-medal" aria-hidden="true">🏆</span>':''}</div><canvas id="finish-team" width="700" height="240" aria-label="L’équipe gagnante"></canvas></section>`;
+    const gold=BC.Equipment.award(g);html+=`<div class="result-gold"><i class="gold-coin">★</i> +${gold} pièces</div>`;
     if (cupText) html += `<div class="cup-text">${cupText}</div>`;
     if (adventure) html += BC.AdventureUI.result(g);
     html += '<h2 class="match-stats-title">Les statistiques de la partie</h2><div class="cols result-stats">';

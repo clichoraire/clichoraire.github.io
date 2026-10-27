@@ -1,0 +1,32 @@
+'use strict';const assert=require('node:assert/strict');global.window={};const storage=new Map();global.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};
+for(const f of ['config','monsters','game','powers','ai','match-rules','boss-arena','adventure','equipment','magic-items','rare-items','skeleton-powers','lizard-powers'])require('../js/'+f+'.js');const B=window.BC;B.ArcadeUI={finish(){}};require('../js/special-powers');const S=B.SpecialPowers,E=B.Equipment,A=B.Adventure;
+const state=A.start('matthieu');A.char(state,'matthieu');A.save(state);
+for(const team of [...B.MONSTER_TEAMS,...B.BOSS_TEAMS])for(const id of S.teamPowers(team))assert.ok(S.catalog().some(x=>x.id===id));
+assert.deepEqual([1,9,10,29,30].map(S.capacity),[1,1,2,2,3]);
+const make=(difficulty=1)=>new B.Game({teams:[B.TEAMS[0],B.MONSTER_TEAMS[0]],ctrl:['p1','cpu'],difficulty,intro:false,controlMode:'fixed'});
+E.state.gold=10000;assert.equal(S.buy('matthieu','goblinbomb'),false);
+const low=make(0);low.phase='end';low.winner=0;assert.deepEqual(S.award(low),[]);
+const loss=make();loss.phase='end';loss.winner=1;assert.deepEqual(S.award(loss),[]);
+const win=make();win.phase='end';win.winner=0;const unlocked=S.award(win);assert.ok(unlocked.includes('goblinbomb'));assert.equal(S.award(win),unlocked);
+assert.ok(S.buy('matthieu','goblinbomb'));const gold=E.state.gold;assert.equal(S.buy('matthieu','goblinbomb'),false);assert.equal(E.state.gold,gold);
+assert.equal(S.equip('matthieu','goblinbomb',1),false);state.chars.matthieu.earned=9;A.save(state);assert.equal(S.level('matthieu'),10);assert.ok(S.equip('matthieu','goblinbomb',1));
+let g=make(),p=g.inner(0)[0];assert.equal(p.specialPowers.length,2);assert.ok(g.selectSpecialPower(p,'goblinbomb'));assert.ok(g.usePower(p));assert.equal(p.power.armed,true);assert.equal(g.selectSpecialPower(p,'triche'),false);g.give(p);g.throwBall(p,{charge:0});assert.equal(g.ball.power,'goblinbomb');
+state.chars.matthieu.earned=29;A.save(state);E.state.unlockedPowers.push('anvil');assert.ok(S.buy('matthieu','anvil'));assert.ok(S.equip('matthieu','anvil',2));g=make();p=g.inner(0)[0];assert.equal(p.specialPowers.length,3);assert.ok(g.selectSpecialPower(p,'anvil'));assert.ok(g.usePower(p));g.updateBossRain(.1);assert.ok(g.anvils.some(a=>a.from===p));assert.equal(p.power.charge,0);assert.ok(g.selectSpecialPower(p,'triche'));assert.equal(p.power.charge,p.power.max);assert.equal(p.powerStates.anvil.charge,0);
+assert.ok(JSON.parse(storage.get('bc.equipment')).heroes.matthieu.powers.includes('anvil'));
+console.log('OK : catalogue complet, victoire Moyen minimum, achats, persistance, niveaux 10/30, lancer goblin, enclumes et recharges indépendantes.');
+
+// Deux lancers et un instantané consomment chacun leur propre réserve.
+assert.ok(g.usePower(p));g.give(p);g.throwBall(p,{charge:0});assert.equal(p.powerStates.triche.charge,0);
+assert.ok(g.selectSpecialPower(p,'goblinbomb'),'sélection possible pendant le vol du tir précédent');
+assert.equal(p.power.charge,p.power.max);assert.equal(g.ball.power,'triche');
+g.give(p);g.setState(p,'idle');assert.ok(g.usePower(p));g.throwBall(p,{charge:0});
+assert.equal(g.ball.power,'goblinbomb');assert.equal(p.powerStates.goblinbomb.charge,0);
+assert.ok(g.selectSpecialPower(p,'anvil'));g.setState(p,'idle');assert.equal(g.usePower(p),false);
+const teammate=g.inner(0)[1];g.caught(teammate);
+for(const pw of Object.values(p.powerStates))assert.equal(pw.charge,1,'les pouvoirs non sélectionnés rechargent aussi');
+for(let i=0;i<20;i++)g.caught(teammate);
+for(const pw of Object.values(p.powerStates))assert.equal(pw.charge,pw.max,'charge plafonnée');
+assert.ok(g.usePower(p));assert.equal(p.powerStates.anvil.charge,0);assert.equal(p.powerStates.goblinbomb.charge,p.power.max);
+g.paused=true;assert.equal(g.selectSpecialPower(p,'goblinbomb'),false);g.paused=false;
+const next=make().inner(0)[0];for(const pw of Object.values(next.powerStates))assert.equal(pw.charge,pw.max);
+console.log('OK : trois consommations séparées, recharge hors sélection, plafonds, pause et remise à zéro entre matchs.');

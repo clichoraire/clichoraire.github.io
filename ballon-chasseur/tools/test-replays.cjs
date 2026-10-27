@@ -5,8 +5,23 @@ const B=window.BC,A=B.Adventure;
 const fresh=()=>{const s=A.start('matthieu');s.team={inner:['matthieu','josee','richard'],outer:['mickael','milo','jeremie']};s.match=2;return s;};
 const s=fresh();assert.ok(A.beaten(s,B.MONSTER_TEAMS[0]));assert.equal(s.clears,undefined);
 assert.throws(()=>A.buildMatch(s,{teamId:B.MONSTER_TEAMS[8].id,replay:true}));assert.throws(()=>A.buildMatch(s,{difficulty:5}));assert.throws(()=>A.buildMatch(s,{difficulty:-1}));assert.throws(()=>A.buildMatch(s,{teamId:'unknown'}));
+const clearAll=(state,difficulty)=>{state.clears??={};for(const team of [...B.MONSTER_TEAMS,...B.BOSS_TEAMS]){state.clears[team.id]??={};state.clears[team.id][difficulty]=1;}};
+// Chaque difficulté avancée exige toutes les hordes ET tous les boss.
+const locked=fresh();
+for(const difficulty of [3,4])assert.throws(()=>A.buildMatch(locked,{difficulty}),/Gagne/);
+clearAll(locked,2);delete locked.clears[B.BOSS_TEAMS[3].id][2];
+assert.equal(A.difficultyUnlocked(locked,3),false);
+locked.clears[B.BOSS_TEAMS[3].id][2]=1;
+assert.equal(A.difficultyUnlocked(locked,3),true);
+assert.equal(A.difficultyUnlocked(locked,4),false);
+clearAll(locked,3);delete locked.clears[B.MONSTER_TEAMS[11].id][3];
+assert.equal(A.difficultyUnlocked(locked,4),false);
+locked.clears[B.MONSTER_TEAMS[11].id][3]=1;
+assert.equal(A.difficultyUnlocked(locked,4),true);
+A.save(locked);assert.equal(A.difficultyUnlocked(A.load('matthieu'),4),true);
 let lastXp=0,lastSpeed=0,lastReaction=1;
 for(let difficulty=0;difficulty<5;difficulty++){
+ if(difficulty>=3)clearAll(s,difficulty-1);
  const m=A.buildMatch(s,{teamId:B.MONSTER_TEAMS[0].id,replay:true,difficulty});assert.equal(m.difficulty,difficulty);assert.ok(m.adventure.replay);assert.ok(m.adventure.revealed);
  const g=new B.Game({...m,ctrl:['p1','cpu'],intro:false,mode:'adventure'});g.winner=0;g.xp.matthieu=10;
  assert.ok(g.ai.D.react<lastReaction);lastReaction=g.ai.D.react;assert.ok(g.inner(1)[0].phys.throwSpeed>=lastSpeed);lastSpeed=g.inner(1)[0].phys.throwSpeed;
@@ -17,9 +32,9 @@ for(let difficulty=0;difficulty<5;difficulty++){
 }
 const saved=A.load('matthieu');assert.equal(Object.keys(saved.clears[B.MONSTER_TEAMS[0].id]).length,5);
 // Une défaite donne de l'XP, sans médaille, déblocage ni progression.
-const lose=fresh(),m=A.buildMatch(lose,{difficulty:4}),g=new B.Game({...m,ctrl:['p1','cpu'],intro:false});g.winner=1;A.record(lose,g);assert.equal(lose.match,2);assert.equal(lose.clears,undefined);assert.equal(A.char(lose,'milo').totalXp,8);
+const lose=fresh(),m=A.buildMatch(lose,{difficulty:2}),g=new B.Game({...m,ctrl:['p1','cpu'],intro:false});g.winner=1;A.record(lose,g);assert.equal(lose.match,2);assert.equal(lose.clears,undefined);assert.equal(A.char(lose,'milo').totalXp,4);
 // Gagner le défi courant avance une seule fois et fait apparaître le boss.
 const win=new B.Game({...A.buildMatch(lose,{difficulty:2}),ctrl:['p1','cpu'],intro:false});win.winner=0;A.record(lose,win);assert.equal(lose.match,3);assert.ok(A.next(lose).boss);assert.equal(lose.clears[win.teams[1].id][2],1);
 // Les boss battus sont rejouables sans refaire avancer la campagne.
-lose.bosses=1;const boss=A.buildMatch(lose,{teamId:B.BOSS_TEAMS[0].id,replay:true,difficulty:4}),bg=new B.Game({...boss,ctrl:['p1','cpu'],intro:false});assert.equal(bg.inner(1)[0].maxHp,300);bg.winner=0;A.record(lose,bg);assert.equal(lose.match,3);assert.equal(lose.bosses,1);
+lose.bosses=1;clearAll(lose,2);clearAll(lose,3);const boss=A.buildMatch(lose,{teamId:B.BOSS_TEAMS[0].id,replay:true,difficulty:4}),bg=new B.Game({...boss,ctrl:['p1','cpu'],intro:false});assert.equal(bg.inner(1)[0].maxHp,300);bg.winner=0;A.record(lose,bg);assert.equal(lose.match,3);assert.equal(lose.bosses,1);
 console.log('OK : 5 difficultés, IA et stats croissantes, XP et prime d’équipe, trophées persistants, replays sans progression, boss, anciens déblocages et attribution unique.');

@@ -242,3 +242,7 @@ Vérification : `node tools/test-victory-loot.cjs` (80 rencontres/difficultés, 
 Les petits écrans utilisent `css/mobile.css` au lieu de réduire le menu de bureau. Les actions principales restent dans un pied de page fixe ; le contenu long défile dans sa propre zone. Sur téléphone portrait, l’aventure sépare Adversaires et Mon héros, et les portraits remplacent les grandes illustrations secondaires. La composition fonctionne par appui, avec une croix pour retirer les coéquipiers.
 
 Les commandes tactiles acceptent déplacement et action simultanés. Le bouton plein écran apparaît si le navigateur le permet ; le paysage est recommandé pour agrandir le terrain. Vérifications en émulation Chrome : 320×568, 390×844, 844×390 et 768×1024 ; menus, aventure, équipement, composition, boss, résultats et options. Un essai sur de vrais appareils iOS/Android reste utile, notamment pour le plein écran propre à chaque navigateur.
+
+### Version 2.2 — pratique dans l’aventure
+
+La pratique s’ouvre depuis l’aventure et utilise son héros principal. Les récompenses et les exercices réussis sont sauvegardés dans cette aventure. Le retour recharge sa progression à jour. Le magasin compare les bonus avec l’objet équipé, et la visée automatique ou manuelle se choisit dans les options ou la pause.

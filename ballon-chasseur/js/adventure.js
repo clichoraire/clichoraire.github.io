@@ -43,7 +43,8 @@
   };
   A.statsMap = s => Object.fromEntries(Object.entries(s.chars).map(([pid, c]) => [pid, c.stats]));
   A.level = c => 1 + Math.max(0, Number(c?.earned) || 0);
-  A.statCap=(pid,c,key)=>Math.max(BC.PLAYERS[pid]?.stats[key]||0,Math.min(18,10+Math.floor(A.level(c)/5)));
+  A.statCap=()=>BC.MAX_STAT;
+  A.upgradeCost=(c,key)=>!BC.STAT_KEYS.includes(key)||c.stats[key]>=BC.MAX_STAT?Infinity:[1,1,1,1,2,2,3,3,5,5,8,8,12,12,18,18,25,25][c.stats[key]];
   A.normalizeStats=(pid,c)=>{if(!BC.PLAYERS[pid]||!c?.stats)return false;let migrated=false;if(!Number.isFinite(c.stats.precision)){c.stats.precision=BC.PLAYERS[pid].stats.precision??6;migrated=true;}let refund=0;for(const key of BC.STAT_KEYS){const cap=A.statCap(pid,c,key);if(c.stats[key]>cap){refund+=c.stats[key]-cap;c.stats[key]=cap;}}if(refund)c.points=(c.points||0)+refund;return migrated||refund>0;};
   A.nextCost = c => BC.xpForPoint(c.earned);
   // Ajoute de l'expérience ; à chaque palier, un point à placer. Renvoie le nombre de points gagnés.
@@ -52,7 +53,7 @@
     while (c.xp >= A.nextCost(c)) { c.xp -= A.nextCost(c); c.earned++; c.points++; gained++; }
     return gained;
   };
-  A.spend = (s, pid, key) => { const c = A.char(s, pid); if (!BC.STAT_KEYS.includes(key)||c.points <= 0 || c.stats[key] >= A.statCap(pid,c,key)) return false; c.stats[key]++; c.points--; A.save(s); return true; };
+  A.spend = (s, pid, key) => { const c = A.char(s, pid); const cost=A.upgradeCost(c,key); if (!Number.isFinite(cost)||c.points < cost) return false; c.stats[key]++; c.points-=cost; A.save(s); return true; };
   A.allIds = () => [...new Set(BC.TEAMS.flatMap(t => t.players))].filter(id => !BC.PLAYERS[id].monster);
   A.familyOf = pid => BC.TEAMS.find(t => t.players.includes(pid));
   // Douze rencontres par chapitre ; difficulté choisie séparément pour chaque match.
@@ -69,6 +70,8 @@
   };
   // Toute la famille peut jouer ensemble ; aucun cousin n'est prêté aux monstres.
   A.beaten=(s,team)=>Object.keys(s.clears?.[team.id]||{}).length>0 || (team.boss ? (s.bosses||0)>BC.BOSS_TEAMS.indexOf(team) : s.match>BC.MONSTER_TEAMS.indexOf(team));
+  A.difficultyUnlocked=(s,difficulty)=>difficulty<3 || [...BC.MONSTER_TEAMS,...BC.BOSS_TEAMS].every(team=>(s.clears?.[team.id]?.[difficulty-1]||0)>0);
+  A.difficultyRequirement=difficulty=>'Gagne les 12 équipes et les 4 boss en '+A.DIFFICULTIES[difficulty-1]+'.';
   A.resolve=(s,choice={})=>{
     const next=A.next(s),team=choice.teamId?[...BC.MONSTER_TEAMS,...BC.BOSS_TEAMS].find(t=>t.id===choice.teamId):next.team;
     if(!team)throw new Error('Adversaire inconnu.');
@@ -77,6 +80,7 @@
     if(!replay&&team.id!==next.team.id)throw new Error('Rencontre indisponible.');
     const difficulty=choice.difficulty??0;
     if(!Number.isInteger(difficulty)||difficulty<0||difficulty>4)throw new Error('Difficulté invalide.');
+    if(!A.difficultyUnlocked(s,difficulty))throw new Error(A.difficultyRequirement(difficulty));
     return {teamId:team.id,team,replay,difficulty,xpMultiplier:A.XP_MULTIPLIERS[difficulty],revealed:A.beaten(s,team),frontierMatch:s.match,frontierBosses:s.bosses||0};
   };
   A.buildMatch = (s,choice={}) => {
@@ -125,6 +129,7 @@
     BC.ArcadeUI.pick({title:'Sélectionne ton joueur !',ids:A.allIds(),label:'Commencer l’aventure',level:id=>A.level(A.load(id)?.chars[id]),stats:id=>A.load(id)?.chars[id]?.stats,back:()=>app().show('menu'),badge:id=>A.load(id)?'Aventure en cours':'',confirm:id=>{state=A.load(id)||A.start(id);A.save(state);U.hub();}});
   };
 
+  U.resume = leader => { state=A.load(leader); U.hub(); };
   U.hub = () => {
     if (!state) state = A.load();
     if (!state) { U.pickLeader(); return; }

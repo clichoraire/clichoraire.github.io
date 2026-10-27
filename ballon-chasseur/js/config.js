@@ -1,7 +1,7 @@
 // Ballon chasseur — constantes, personnages, équipes, lancers spéciaux et terrains.
 // Tout est dans l'espace de noms BC. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BC = window.BC || {};
-window.BC.VERSION = '2.1';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BC.VERSION = '2.2';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BC) {
   'use strict';
   BC.W = 1280; BC.H = 720;              // canevas logique
@@ -149,7 +149,7 @@ window.BC.VERSION = '2.1';   // à augmenter à chaque mise en ligne (affichée 
   };
 
   for (const d of Object.values(BC.PLAYERS)) d.stats.precision ??= 6;
-  BC.aimSpread = value => 6 * Math.PI / 180 * (1 - Math.max(0, Math.min(18, value ?? 6)) / 18) ** 2;
+  BC.aimSpread = value => 16 * Math.PI / 180 * (1 - Math.max(0, Math.min(18, value ?? 6)) / 18) ** 2;
 
   // Conversion des stats (0 à 18) en valeurs physiques. stats : celles du personnage, ou celles de l'aventure.
   BC.phys = function (d, stats) {

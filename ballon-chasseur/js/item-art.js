@@ -1,13 +1,13 @@
 // Small illustrated equipment pieces: shaded materials, seams, clasps and magic gems.
 (function(B){const E=B.Equipment;let serial=0;
-E.art=function(item){const id='gear-'+(++serial),c=E.categories[item.element].color,metal=item.tier>1?'#ffe19a':'#c4d5e8',gem=item.effect==='heal'||item.effect==='vitality'?'#ff5b86':c;
+E.art=function(item){if(item.shopRolled&&item.artSource)item=E.items.find(i=>i.id===item.artSource)||item;const id='gear-'+(++serial),c=E.categories[item.element].color,metal=item.tier>1?'#ffe19a':'#c4d5e8',gem=item.effect==='heal'||item.effect==='vitality'?'#ff5b86':c;
 const shapes={
  gloves:'<path d="M31 93 26 60Q23 46 30 45L35 62 30 32Q30 23 37 27L46 57 43 22Q44 14 51 20L56 55 60 25Q64 18 68 26L66 61 74 46Q82 38 86 46L77 76Q73 91 61 96Z"/><path d="M29 88 65 88 69 113 33 116Z"/><path d="M42 55 50 76M57 56 61 73M32 97 65 96" class="seam"/>',
  boots:'<path d="M40 19 82 22 78 77Q80 86 96 94L99 108Q72 120 21 110L23 97 44 80Z"/><path d="M22 104Q57 115 99 103L100 114Q59 125 21 115Z" fill="#29304c"/><path d="M41 22 41 34 82 37 84 23Z"/><path d="M47 44 70 47M46 55 69 58M45 66 68 69" class="seam"/><path d="M35 93Q59 86 79 97" class="seam"/>',
  armor:'<path d="M42 20Q60 31 78 20L100 35 91 59 82 56 86 104Q60 121 34 104L38 56 28 59 20 35Z"/><path d="M42 20Q60 45 78 20L73 43 47 43Z" fill="#17213e"/><path d="M60 43 60 100M38 72 82 72M34 96 86 96" class="seam"/><path d="M20 35 38 30 43 48 28 59ZM100 35 82 30 77 48 91 59Z" fill="url(#METAL)"/>',
  charm:'<path d="M39 22C7 60 30 89 60 93C90 89 113 60 81 22" fill="none" stroke="url(#METAL)" stroke-width="9"/><path d="M37 22Q60 5 83 22" fill="none" stroke="url(#METAL)" stroke-width="7"/><path d="M60 66 84 88 60 120 36 88Z" fill="url(#METAL)"/>'};
 // Each catalog entry receives a stable silhouette and material construction.
-const ordinal=item.lootOnly?item.artVariant:item.id?.startsWith('rare-')?24+Number(item.id.split('-').at(-1)):Math.max(0,E.items.filter(x=>x.slot===item.slot&&!x.id.startsWith('rare-')).findIndex(x=>x.id===item.id));
+const ordinal=(item.lootOnly||item.shopRolled)?item.artVariant:item.id?.startsWith('rare-')?24+Number(item.id.split('-').at(-1)):Math.max(0,E.items.filter(x=>x.slot===item.slot&&!x.id.startsWith('rare-')).findIndex(x=>x.id===item.id));
 const rare=item.id?.startsWith('rare-'),silhouette=rare?Number(item.id.split('-').at(-1)):ordinal%8,construction=Math.floor(ordinal/8);
 const outlines={
  gloves:[

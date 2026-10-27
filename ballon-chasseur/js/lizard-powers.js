@@ -3,7 +3,7 @@
 'use strict';
 const P=B.Game.prototype,E=B.Equipment,C=B.COURT,clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const dist=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,k=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(p.x-a.x-k*dx,p.y-a.y-k*dy);};
-B.SKELETON_REVIVE_SECONDS=8;
+B.SKELETON_REVIVE_SECONDS=30;
 E.elements.poison={name:'Poison',icon:'☠️',color:'#a0e34f'};E.categories.poison=E.elements.poison;
 const element=E.element;E.element=id=>['venomshot','venom','poison-pool'].includes(id)?'poison':element(id);
 const names={gloves:['Gants de l’alchimiste','Gantelets antidote'],boots:['Bottes de marécage','Cuissardes hermétiques'],armor:['Gilet antitoxique','Cuirasse de basilic'],charm:['Fiole purifiante','Cœur de mandragore']};
@@ -63,7 +63,7 @@ P.hurt=function(p,dmg,o={}){
   p.moltCooldown=15;p.moltSpeed=2.5;p.fx.ghostT=Math.max(p.fx.ghostT,.45);(this.lizardMolts??=[]).push({x:p.x,y:p.y,t:0,def:p.def,team:this.teams[p.team]});this.stats[p.team].supers++;this.emit('ghost',{p});return true;
  }
  const alive=p.alive,result=hurt.call(this,p,dmg,o);
- if(alive&&!p.alive&&p.def.monster==='skeleton'&&p.zone==='in'){p.skeletonRevive=B.SKELETON_REVIVE_SECONDS;p.z=0;p.vz=0;p.ko=0;p.state='ko';this.fx.push({kind:'pow',x:p.x,y:p.y,z:52,text:'TAS D’OS · 8 s',color:'#e7e0c2',t:0,dur:1.2});}
+ if(alive&&!p.alive&&p.def.monster==='skeleton'&&p.zone==='in'){p.skeletonRevive=B.SKELETON_REVIVE_SECONDS;p.z=0;p.vz=0;p.ko=0;p.state='ko';this.fx.push({kind:'pow',x:p.x,y:p.y,z:52,text:'TAS D’OS · '+B.SKELETON_REVIVE_SECONDS+' s',color:'#e7e0c2',t:0,dur:1.2});}
  return result;
 };
 P.reflectLizard=function(p,b){

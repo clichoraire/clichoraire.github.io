@@ -16,7 +16,8 @@
     sky.addColorStop(0, theme.sky); sky.addColorStop(1, S.shade(theme.sky, 0.78));
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, C.top + 10);
     const GROUND = 190;   // au-dessus : décor ; en dessous : sol hors terrain où marchent les extérieurs
-    if (theme.monster) {
+    if(id==='halloween'&&BC.drawWitchBackdrop){BC.drawWitchBackdrop(ctx,g,t);
+    } else if (theme.monster) {
       const accent=theme.accent, biome=theme.biome;
       ctx.fillStyle='#efe8c7'; circle(ctx,1030,60,30);ctx.fill();
       ctx.fillStyle=theme.sky;circle(ctx,1044,52,28);ctx.fill();
@@ -132,14 +133,15 @@
     BC.drawBossArena?.(ctx,g,'front');
     BC.drawSkeletonEffects?.(ctx,g);
     BC.drawLizardEffects?.(ctx,g);
+    BC.Practice?.draw(ctx,g);
     drawFx(ctx, g);
     ctx.restore();
     if (g.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${g.flash})`; ctx.fillRect(0, 0, W, H); }
     const blind=(g.blindness||[]).some((left,team)=>left>0&&g.isHuman(team));
     if(blind){ctx.fillStyle='rgba(2,0,12,.94)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#c7b9e9';ctx.textAlign='center';ctx.font='bold 17px Arial';ctx.fillText('NUIT GOBLINE · '+Math.ceil(Math.max(...g.blindness))+' s',W/2,145);}
-    drawHud(ctx, g, ui);
+    if(!g.practice)drawHud(ctx, g, ui);
     drawMessages(ctx, g);
-    drawMatchRules(ctx,g);
+    if(!g.practice)drawMatchRules(ctx,g);
   };
 
   function drawPlayer(ctx, g, p, ui, t) {
@@ -210,18 +212,16 @@
     const a = g.aimDir(p, p.lastMove), z = p.z + 30, len = p.zone === 'in' ? 460 : 320;
     ctx.save();
     const spread=p.power.armed&&p.power.id==='licorne'?0:p.phys.aimSpread;
-    if(spread>0){const angle=Math.atan2(a.y,a.x);ctx.fillStyle='rgba(255,225,120,.10)';ctx.beginPath();ctx.moveTo(p.x,p.y-z);ctx.arc(p.x,p.y-z,len,angle-spread,angle+spread);ctx.closePath();ctx.fill();}
-    ctx.globalAlpha = 0.85; ctx.setLineDash([7, 11]); ctx.lineWidth = 2.5;
-    ctx.strokeStyle = a.manual ? '#ffd166' : a.assisted ? '#7dffa0' : 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.moveTo(p.x + a.x * 26, p.y + a.y * 26 - z); ctx.lineTo(p.x + a.x * len, p.y + a.y * len - z); ctx.stroke();
-    ctx.setLineDash([]);
-    if (a.target && !a.manual) { ctx.strokeStyle = a.assisted ? '#7dffa0' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(a.target.x, a.target.y + 2, 20, 8, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.lineWidth=2;ctx.strokeStyle='#ffe178';
+    if(spread>0){const angle=Math.atan2(a.y,a.x);ctx.fillStyle='rgba(255,225,120,.20)';ctx.beginPath();ctx.moveTo(p.x,p.y-z);ctx.arc(p.x,p.y-z,len,angle-spread,angle+spread);ctx.closePath();ctx.fill();ctx.stroke();}
+    else {ctx.beginPath();ctx.moveTo(p.x+a.x*26,p.y+a.y*26-z);ctx.lineTo(p.x+a.x*len,p.y+a.y*len-z);ctx.stroke();}
     ctx.restore();
   }
   function drawBall(ctx, g, b) {
     if(BC.drawLizardBall?.(ctx,g,b))return;
     if(BC.drawSkeletonBall?.(ctx,g,b))return;
     if (!b.visible) return;
+    if(b.power==='witchtempo'){ctx.save();ctx.strokeStyle=b.t<.72?'#d699ff':'#fff0b0';ctx.lineWidth=3;ctx.shadowColor='#bc6eff';ctx.shadowBlur=16;ctx.beginPath();ctx.ellipse(b.x,b.y-b.z,b.r+8+Math.sin(g.time*20)*3,b.r+5,g.time*5,0,Math.PI*2);ctx.stroke();ctx.restore();}
     const P = b.power ? BC.POWERS[b.power] : null, pw = b.power;
     const element=b.element||BC.Equipment?.element(pw);
     if(element&&S.drawElementProjectile&&pw!=='goblinbomb'){S.drawElementProjectile(ctx,b.x,b.y-b.z,b.r,{element,t:g.time,vx:b.vx,vy:b.vy,alpha:b.alpha,moving:b.state==='live',trail:b.trail});return;}

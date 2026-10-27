@@ -1,7 +1,21 @@
 const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');let saved={};global.window={};global.localStorage={getItem:k=>saved[k]||null,setItem:(k,v)=>saved[k]=v};
 for(const f of ['config','monsters','game','powers','ai','match-rules','skeleton-powers','equipment','magic-items','rare-items','lizard-powers','item-art'])require('../js/'+f+'.js');const B=window.BC,E=B.Equipment;B.ArcadeUI={finish(){}};require('../js/victory-loot');
-const make=()=>new B.Game({teams:[B.TEAMS[0],B.MONSTER_TEAMS[0]],ctrl:['p1','cpu'],intro:false});
-for(const team of [...B.MONSTER_TEAMS,...B.BOSS_TEAMS]){let previous=0;for(let d=0;d<5;d++){const x=B.Loot.roll(team,d,()=>.1),sum=Object.values(x.bonuses).reduce((a,b)=>a+b,0);assert.ok(sum>previous);previous=sum;assert.ok(x.source.includes(team.name));assert.ok(E.art(x).includes('<svg'));assert.equal(x.lootOnly,true);}}
+const make=()=>new B.Game({teams:[B.TEAMS[0],B.MONSTER_TEAMS[0]],ctrl:['p1','cpu'],difficulty:3,intro:false});
+for(const team of [...B.MONSTER_TEAMS,...B.BOSS_TEAMS]){for(let d=0;d<5;d++){const x=B.Loot.roll(team,d,()=>.1);if(d<3){assert.deepEqual(x.bonuses,{});assert.equal(Object.values(x.percentBonuses)[0],[.05,.07,.10][d]);assert.equal(x.active,false);assert.equal(x.tier,0);assert.ok(B.Loot.bonusText(x)[0].includes('%'));}else{assert.ok(Object.values(x.bonuses).reduce((a,b)=>a+b,0)>=12);assert.equal(x.percentBonuses,undefined);}assert.ok(x.source.includes(team.name));assert.ok(E.art(x).includes('<svg'));assert.equal(x.lootOnly,true);}}
+
 const g=make();assert.equal(B.Loot.award(g),null);g.phase='end';g.winner=1;assert.equal(B.Loot.award(g),null);g.winner=0;g.difficulty=4;const reward=B.Loot.award(g),count=E.state.loot.length;assert.equal(B.Loot.award(g),reward);assert.equal(E.state.loot.length,count);assert.ok(E.hero(reward.owner).owned.includes(reward.item.id));E.state.gold=99999;assert.equal(E.buy('josee',reward.item.id),false);assert.ok(B.Loot.giveTo(reward,'josee',true));assert.equal(E.hero('josee').equipped[reward.item.slot],reward.item.id);assert.ok(!E.hero('matthieu').owned.includes(reward.item.id));assert.equal(B.Loot.giveTo(reward,'monster-goblin-1'),false);assert.ok(JSON.parse(saved['bc.equipment']).loot.some(i=>i.id===reward.item.id));
 for(const effect of ['loot-sanctuary','loot-tempest','loot-pulse']){const item={...B.Loot.roll(B.MONSTER_TEAMS[0],4,()=>.1),effect};E.items.push(item);E.hero('matthieu').owned.push(item.id);E.hero('matthieu').equipped[item.slot]=item.id;const m=make(),p=m.inner(0)[0];m.lock[0]=p;p.hp-=15;assert.ok(m.useItemMagic(p,item.slot),effect);assert.ok(!m.useItemMagic(p,item.slot),'cooldown');if(effect==='loot-sanctuary'){assert.equal(p.magicShield,3);assert.equal(p.hp,p.maxHp-5);}if(effect==='loot-tempest')assert.equal(p.magicHasteMul,1.6);if(effect==='loot-pulse')assert.equal(p.hp,p.maxHp-3);m.paused=true;p.itemCooldowns[item.id]=0;assert.ok(!m.useItemMagic(p,item.slot));}
 const data=fs.readFileSync(require.resolve('../js/victory-loot'),'utf8'),persisted=JSON.parse(saved['bc.equipment']);const mock={Equipment:{state:persisted,items:[],buy(){},hero(){}},Game:function(){},ArcadeUI:{finish(){}}};mock.Game.prototype={};vm.runInNewContext(data,{window:{BC:mock}});assert.ok(mock.Equipment.items.some(i=>i.id===reward.item.id));assert.deepEqual(mock.Equipment.items.find(i=>i.id===reward.item.id).bonuses,reward.item.bonuses);console.log('OK: 80 enemy/difficulty rolls, tier budgets, victory only, idempotence, persistence, transfer, shop exclusion, 3 exclusive spells and cooldowns.');
+// Butin et petits bonus utilisables dans les cinq difficultés, sans points de stats.
+for(let difficulty=0;difficulty<5;difficulty++){
+ const speed=B.Loot.roll(B.MONSTER_TEAMS[0],0,()=>0),hp=B.Loot.roll(B.MONSTER_TEAMS[1],0,()=>0);
+ E.items.push(speed,hp);E.hero('matthieu').equipped={boots:speed.id,armor:hp.id};
+ const match=new B.Game({teams:[B.TEAMS[0],B.MONSTER_TEAMS[0]],ctrl:['p1','cpu'],intro:false,difficulty}),p=match.inner(0)[0],base=B.phys(p.def,p.def.stats);
+ assert.deepEqual(p.stats,{precision:6,...p.def.stats});assert.equal(p.phys.maxSpeed,base.maxSpeed*1.05);
+ assert.equal(p.maxHp,Math.round(base.maxHp*1.05));assert.equal(p.maxHp,E.maxHp(p.def,p.def.stats));assert.equal(p.phys.dmg,base.dmg);
+ assert.equal(E.rank(p,'boots','fire'),0);assert.equal(match.useItemMagic(p,'boots'),false);
+ match.phase='end';match.winner=0;const before=E.state.loot.length,reward=B.Loot.award(match);
+ assert.ok(reward);assert.equal(E.state.loot.length,before+1);assert.equal(B.Loot.award(match),reward);
+ assert.equal(E.state.loot.length,before+1);
+}
+console.log('OK : butin sur les 5 difficultés, petits bonus en pourcentage, PV affichés cohérents, aucune protection ou magie cachée.');

@@ -20,8 +20,8 @@
     "localChangesIncluded": false
   },
   "ballon": {
-    "version": "2.1",
-    "commit": "6a4d59d2d1c2e02500b9500391b1ecf2ba2633bc",
-    "localChangesIncluded": true
+    "version": "2.2",
+    "commit": "eea892905ba100f599bb2e463b835acd82ed4f53",
+    "localChangesIncluded": false
   }
 }
