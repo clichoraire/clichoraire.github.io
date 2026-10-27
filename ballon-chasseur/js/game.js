@@ -478,7 +478,7 @@
       for (const p of this.aliveInner(1 - b.team)) {
         if (!HITTABLE[p.state] || p.fx.ghostT > 0) continue;   // un fantôme laisse passer la balle
         const h = this.heightOf(p), zOk = b.z + b.r > p.z && b.z - b.r < p.z + h;
-        if (Math.abs(p.x - b.x) < (p.def.boss?48:15) + b.r && Math.abs(p.y - b.y) < (p.def.boss?40:17) + b.r && zOk) { this.contact(p, b); return; }
+        if (Math.abs(p.x - b.x) < (p.def.boss?48:p.orcStage===2?32:p.orcRole==='berserker'?22:15) + b.r && Math.abs(p.y - b.y) < (p.def.boss?40:p.orcStage===2?28:17) + b.r && zOk) { this.contact(p, b); return; }
       }
       if (b.z <= 0) { this.kill(b, 0.35); return; }     // au sol : la balle est morte
       // sortie par le fond du camp adverse, ou retour dans son propre camp (balle d'un extérieur du fond ou d'un téléporté)

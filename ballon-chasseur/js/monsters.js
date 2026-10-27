@@ -66,8 +66,16 @@
   BC.MONSTER_LEVEL_BONUSES=[0,5,10,22,35];
   BC.MONSTER_STAT_BONUSES=[0,2,4,8,14];
   BC.monsterLevel=(pid,difficulty=0)=>(BC.PLAYERS[pid].encounterLevel||1)+BC.MONSTER_LEVEL_BONUSES[difficulty];
-  BC.monsterStats=(pid,difficulty=0)=>{const d=BC.PLAYERS[pid],bonus=BC.MONSTER_STAT_BONUSES[difficulty];return {...Object.fromEntries(BC.STAT_KEYS.map(k=>[k,Math.min(BC.MAX_STAT,(d.stats[k]??6)+bonus)])),lifeBonus:d.boss?0:Math.max(0,BC.MONSTER_LEVEL_BONUSES[difficulty]-10)*2};};
+  BC.HORDE_HP={orc:[100,130,170,240,320],harpy:[80,110,150,220,300]};
+  BC.monsterStats=(pid,difficulty=0)=>{const d=BC.PLAYERS[pid],bonus=BC.MONSTER_STAT_BONUSES[difficulty],stats=Object.fromEntries(BC.STAT_KEYS.map(k=>[k,Math.min(BC.MAX_STAT,(d.stats[k]??6)+bonus)]));stats.lifeBonus=d.boss?0:BC.HORDE_HP[d.monster]?BC.HORDE_HP[d.monster][difficulty]-Math.round(22+3.5*stats.hp):Math.max(0,BC.MONSTER_LEVEL_BONUSES[difficulty]-10)*2;return stats;};
   // Les renforts ont leurs propres identifiants ; les trois extérieurs restent en place.
   for(const team of BC.MONSTER_TEAMS)for(let i=0;i<2;i++){const source=BC.PLAYERS[team.players[i+3]],id='monster-'+team.species+'-'+(7+i);BC.PLAYERS[id]={...source,id,name:source.name.replace(/\d+$/,String(7+i)),number:7+i,reinforcement:true};}
+  // Rôles propres à la horde : Gorak conserve sa fiche et ses pouvoirs de boss.
+  for(const d of Object.values(BC.PLAYERS))if(d.monster==='orc'&&!d.boss){
+    d.orcRole=d.number===1?'shaman':'berserker';d.name=d.number===1?'Shaman des os':'Berzerker '+(d.number-1);
+    if(d.orcRole==='shaman'){d.stats={...d.stats,power:3};d.size=.95;}
+    else d.size=1.35;
+    d.description=d.orcRole==='shaman'?'Protégé derrière la horde, il renforce ses alliés et réanime les Berzerkers à mi-vie. Élimine-le en premier !':'Sa rage augmente avec les blessures. Le dernier devient un colosse : utilise un pouvoir ou un lancer parfait !';
+  }
   BC.monsterRoster=(team,difficulty=0)=>{if(!team.species)return team;const base=[...BC.MONSTER_TEAMS,...BC.BOSS_TEAMS].find(t=>t.id===team.id)||team,extra=[0,0,1,1,2][difficulty],reinforcements=Array.from({length:extra},(_,i)=>'monster-'+team.species+'-'+(7+i)),innerCount=(team.boss?1:3)+extra;return {...base,players:team.boss?[...base.players,...reinforcements]:[...base.players.slice(0,3),...reinforcements,...base.players.slice(3)],innerCount};};
 })(window.BC);

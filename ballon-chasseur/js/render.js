@@ -153,6 +153,7 @@
 
     BC.drawSkeletonEffects?.(ctx,g);
     BC.drawLizardEffects?.(ctx,g);
+    BC.drawOrcHorde?.(ctx,g);
     BC.Practice?.draw(ctx,g);
     drawFx(ctx, g);
     ctx.restore();
