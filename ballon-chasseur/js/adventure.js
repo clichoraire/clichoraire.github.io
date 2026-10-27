@@ -44,7 +44,7 @@
   A.statsMap = s => Object.fromEntries(Object.entries(s.chars).map(([pid, c]) => [pid, c.stats]));
   A.level = c => 1 + Math.max(0, Number(c?.earned) || 0);
   A.statCap=()=>BC.MAX_STAT;
-  A.upgradeCost=(c,key)=>!BC.STAT_KEYS.includes(key)||c.stats[key]>=BC.MAX_STAT?Infinity:[1,1,1,1,2,2,3,3,5,5,8,8,12,12,18,18,25,25][c.stats[key]];
+  A.upgradeCost=(c,key)=>key==='life'?1+Math.floor((c.stats.lifeBonus||0)/10):!BC.STAT_KEYS.includes(key)||c.stats[key]>=BC.MAX_STAT?Infinity:[1,1,1,1,2,2,3,3,5,5,8,8,12,12,18,18,25,25][c.stats[key]];
   A.normalizeStats=(pid,c)=>{if(!BC.PLAYERS[pid]||!c?.stats)return false;let migrated=false;if(!Number.isFinite(c.stats.precision)){c.stats.precision=BC.PLAYERS[pid].stats.precision??6;migrated=true;}let refund=0;for(const key of BC.STAT_KEYS){const cap=A.statCap(pid,c,key);if(c.stats[key]>cap){refund+=c.stats[key]-cap;c.stats[key]=cap;}}if(refund)c.points=(c.points||0)+refund;return migrated||refund>0;};
   A.nextCost = c => BC.xpForPoint(c.earned);
   // Ajoute de l'expérience ; à chaque palier, un point à placer. Renvoie le nombre de points gagnés.
@@ -53,7 +53,7 @@
     while (c.xp >= A.nextCost(c)) { c.xp -= A.nextCost(c); c.earned++; c.points++; gained++; }
     return gained;
   };
-  A.spend = (s, pid, key) => { const c = A.char(s, pid); const cost=A.upgradeCost(c,key); if (!Number.isFinite(cost)||c.points < cost) return false; c.stats[key]++; c.points-=cost; A.save(s); return true; };
+  A.spend = (s, pid, key) => { const c = A.char(s, pid); const cost=A.upgradeCost(c,key); if (!Number.isFinite(cost)||c.points < cost) return false; if(key==='life')c.stats.lifeBonus=(c.stats.lifeBonus||0)+1;else c.stats[key]++; c.points-=cost; A.save(s); return true; };
   A.allIds = () => [...new Set(BC.TEAMS.flatMap(t => t.players))].filter(id => !BC.PLAYERS[id].monster);
   A.familyOf = pid => BC.TEAMS.find(t => t.players.includes(pid));
   // Douze rencontres par chapitre ; difficulté choisie séparément pour chaque match.

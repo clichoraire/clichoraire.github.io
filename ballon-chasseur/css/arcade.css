@@ -214,3 +214,12 @@ html,body{overflow:hidden}#app{position:relative;width:100vw;height:100svh;overf
 #game{touch-action:none}
 /* Equipment replacement: signed differences stay readable without color alone. */
 .item-inspect{max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box}.item-inspect .item-preview svg{height:140px}.item-comparison{margin:16px 0;padding:14px;background:#0b152c99;border-radius:10px;text-align:left}.item-comparison h3{margin:0;color:#fff;font-size:18px}.item-comparison p{font-size:14px;margin:8px 0;color:#d0dbee}.item-comparison ul{list-style:none;margin:0;padding:0}.item-comparison li{display:grid;grid-template-columns:1fr auto;gap:3px 12px;padding:8px 0;border-top:1px solid #ffffff1f;font-size:14px}.item-comparison small{grid-column:1/-1;color:#d0dbee}.item-gain{color:#86f5a6}.item-loss{color:#ff929d}.item-equal{color:#ccd6e6}
+
+/* Vies sans plafond : badge dans l’en-tête et points sous les statistiques. */
+.campaign-hero .campaign-profile-top{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.campaign-hero .campaign-profile-top .health-upgradable{grid-column:2;grid-row:1;grid-template-columns:auto 32px;gap:4px 8px;width:auto;margin:0;align-self:center}
+.campaign-hero .campaign-profile-top .health-upgradable .stat-plus{grid-column:2;grid-row:1}
+.campaign-hero .campaign-profile-top .health-upgradable>.upgrade-cost{grid-column:2;grid-row:2}
+.campaign-points-total{display:block;margin:16px 0 0;text-align:right;color:#ffe25b;font:900 20px Arial}
+.campaign-profile-top h2{overflow-wrap:anywhere}
+@media(max-width:680px){.campaign-hero .campaign-profile-top{grid-template-columns:1fr}.campaign-hero .campaign-profile-top .health-upgradable{grid-column:1;grid-row:2;justify-self:end}}

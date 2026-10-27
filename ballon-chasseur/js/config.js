@@ -1,7 +1,7 @@
 // Ballon chasseur — constantes, personnages, équipes, lancers spéciaux et terrains.
 // Tout est dans l'espace de noms BC. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BC = window.BC || {};
-window.BC.VERSION = '2.15';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BC.VERSION = '2.16';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BC) {
   'use strict';
   BC.W = 1280; BC.H = 720;              // canevas logique
@@ -164,7 +164,7 @@ window.BC.VERSION = '2.15';   // à augmenter à chaque mise en ligne (affichée
       catchSkill: 0.12 + 0.045 * s.catch,    // probabilité de base pour l'ordi, fenêtre pour l'humain
       catchWin: s.catch >= 11 ? 1.6 : 1,     // Mains collantes
       chargeMax: s.catch >= 12 ? 2 : BC.CHARGE_MAX,   // Réflexes
-      maxHp: d.boss ? d.bossHp : Math.round(22 + 3.5 * s.hp),
+      maxHp: d.boss ? d.bossHp : Math.round(22 + 3.5 * s.hp) + (s.lifeBonus || 0),
       regen: s.hp >= 11 || d.monster === 'troll',
       regenAmount: d.monster === 'troll' ? 3 : 1,                     // Coriace
       revive: s.hp >= 12,                    // Increvable
