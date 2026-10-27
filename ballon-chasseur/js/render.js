@@ -159,6 +159,7 @@
     if (F.horseT > 0) drawHorse(ctx, p, t, dir);
     ctx.save(); ctx.translate(0, -p.z - (F.horseT > 0 ? 18 : 0));
     if(!BC.drawSkeletonPile?.(ctx,g,p)) S.drawPerson(ctx, p.x, p.y, p.def, team, {headless:(p.skullAway||0)>0,  dir, face:p.visualView||'front', frame: p.frame, moving: p.moving, walkBlend:laughing?0:p.walkBlend, dash: p.dash.active, pose, ball: p.hasBall && pose !== 'hit', t: laughing?g.endT:p.state === 'ko' ? p.ko : p.stateT, alpha });
+    BC.drawIceCube?.(ctx,p);
     if(laughing){const beat=Math.floor(g.endT/.32)%3;ctx.save();ctx.font='italic 900 27px Arial';ctx.textAlign='center';ctx.lineWidth=5;ctx.strokeStyle='#16102d';ctx.fillStyle='#ffe477';const label=['HA !','HA HA !','MOUAHAHA !'][beat],ly=Math.max(48,p.y-p.z-65*p.def.size-12);ctx.strokeText(label,p.x,ly);ctx.fillText(label,p.x,ly);ctx.restore();}
     if(p.burn){for(let i=0;i<5;i++){const x=p.x-16+i*8,y=p.y-8-Math.sin(t*13+i)*5;ctx.fillStyle=i%2?'#ffe66a':'#ff682d';ctx.beginPath();ctx.moveTo(x-5,y);ctx.quadraticCurveTo(x-8,y-15,x+Math.sin(t*16+i)*5,y-32);ctx.quadraticCurveTo(x+10,y-11,x+5,y);ctx.fill();}}
     if(p.enemyGroundTime>0){ctx.save();ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.fillStyle=p.enemyGroundTime>=2?'#ff6b60':'#ffe073';ctx.fillText(p.enemyGroundTime>=2?'REVIENS ! −2/s':'RETOUR : '+Math.max(0,2-p.enemyGroundTime).toFixed(1)+' s',p.x,p.y-hgt-18);ctx.restore();}
@@ -166,7 +167,7 @@
     if (F.magnetT > 0) { const mx = p.x + dir * 22, my = p.y - 30; ctx.save(); ctx.translate(mx, my); ctx.rotate(dir > 0 ? -Math.PI / 2 : Math.PI / 2); ctx.lineWidth = 7; ctx.strokeStyle = '#d33'; ctx.beginPath(); ctx.arc(0, 0, 9, Math.PI, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = '#ccc'; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-9, 8); ctx.moveTo(9, 0); ctx.lineTo(9, 8); ctx.stroke(); ctx.restore();
       const bb = g.ball; if (bb.state === 'magnet') { ctx.strokeStyle = `rgba(255,120,255,${0.5 + Math.sin(t * 20) * 0.3})`; ctx.lineWidth = 2; ctx.setLineDash([4, 8]); for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(mx, my); ctx.quadraticCurveTo((mx + bb.x) / 2, (my + bb.y - bb.z) / 2 + k * 30, bb.x, bb.y - bb.z); ctx.stroke(); } ctx.setLineDash([]); } }
     // figé par l'électricité
-    if (p.state === 'stun') { ctx.strokeStyle = `rgba(255,255,120,${0.6 + Math.sin(t * 30) * 0.4})`; ctx.lineWidth = 2; for (let i = 0; i < 4; i++) { const a = t * 9 + i * 1.6, cx = p.x + Math.cos(a) * 18, cy = p.y - hgt * 0.6 + Math.sin(a * 1.3) * 16; ctx.beginPath(); ctx.moveTo(cx - 5, cy - 6); ctx.lineTo(cx + 1, cy - 1); ctx.lineTo(cx - 2, cy + 1); ctx.lineTo(cx + 5, cy + 7); ctx.stroke(); } }
+    if (p.state === 'stun'&&!(p.iceCubeT>0)) { ctx.strokeStyle = `rgba(255,255,120,${0.6 + Math.sin(t * 30) * 0.4})`; ctx.lineWidth = 2; for (let i = 0; i < 4; i++) { const a = t * 9 + i * 1.6, cx = p.x + Math.cos(a) * 18, cy = p.y - hgt * 0.6 + Math.sin(a * 1.3) * 16; ctx.beginPath(); ctx.moveTo(cx - 5, cy - 6); ctx.lineTo(cx + 1, cy - 1); ctx.lineTo(cx - 2, cy + 1); ctx.lineTo(cx + 5, cy + 7); ctx.stroke(); } }
     // ralenti par le blizzard : flocons sur la tête
     if (F.slowT > 0 && p.alive) { ctx.fillStyle = 'rgba(220,240,255,0.9)'; for (let i = 0; i < 3; i++) circle(ctx, p.x - 10 + i * 10, p.y - hgt - 6 + Math.sin(t * 4 + i) * 3, 2.2), ctx.fill(); }
     // toupie d'Edison
