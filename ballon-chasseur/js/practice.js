@@ -11,12 +11,22 @@ T.attach=(g,opts)=>{const mission=T.missions.find(m=>m.id===opts.id);if(!mission
 T.finish=(g,won)=>{if(!g.practice||g.practice.finished)return;g.practice.finished=true;g.practice.won=won;g.phase='end';g.phaseT=0;g.endT=0;g.winner=won?0:1;g.emit(won?'win':'whistle');};
 T.award=g=>{const r=g.practice;if(!r?.finished||g.phase!=='end')return null;if(r.reward)return r.reward;if(!r.won)return r.reward={xp:0,gold:0,first:false};const s=A.load(r.leader);if(!s)throw Error('Aventure introuvable');s.practice??={};const records=s.practice[r.pid]??=( {} ),first=!records[r.id],prize=T.prize(r.mission,first);A.addXp(s,r.pid,prize.xp);records[r.id]={wins:(records[r.id]?.wins||0)+1,best:Math.max(records[r.id]?.best||0,r.score)};A.save(s);E.state.gold+=prize.gold;E.save();return r.reward={...prize,first};};
 // Practice targets are not opponents: include them in automatic aiming explicitly.
-const aim=P.aimDir;P.aimDir=function(p,move){const r=this.practice;if(r&&r.mission.group!=='catch'&&p===r.player&&B.app?.settings?.aimMode==='auto'){const dx=r.target.x-p.x,dy=r.target.y-p.y,length=Math.hypot(dx,dy);if(length>0)return {x:dx/length,y:dy/length,assisted:true};}return aim.call(this,p,move);};
+// Match the normal throw's acceleration, speed cap, charge and running/jumping bonuses.
+T.travelTime=(distance,speed,fullStart=false)=>{const initial=speed*(fullStart ? .9 : .6),acceleration=speed*1.8,cap=speed*1.4,ramp=(cap-initial)/acceleration,rampDistance=(initial+cap)*ramp/2;return distance<=rampDistance?(Math.sqrt(initial*initial+2*acceleration*distance)-initial)/acceleration:ramp+(distance-rampDistance)/cap;};
+const aim=P.aimDir;P.aimDir=function(p,move){const r=this.practice;if(r&&r.mission.group!=='catch'&&p===r.player&&B.app?.settings?.aimMode==='auto'){
+ let x=r.target.x,y=r.target.y,originX=p.x;
+ if(r.mission.group==='moving'){
+  const o=r.shotOptions||{...p.pending,charge:p.charge||0},charge=Math.max(0,Math.min(1,o.charge||0)),apex=o.jump&&Math.abs(p.vz)<170,speed=p.phys.throwSpeed*(.85+.45*charge)*(o.run?1.12:1)*(o.jump?(apex?1.3:1.2):1);
+  originX+=this.fwdOf(p)*12;
+  for(let i=0;i<8;i++){const flight=T.travelTime(Math.hypot(x-originX,y-p.y),speed,p.phys.fullStart);y=450+Math.sin((this.time+flight)*(.65+r.mission.level*.3))*105;}
+ }
+ const dx=x-originX,dy=y-p.y,length=Math.hypot(dx,dy);if(length>0)return {x:dx/length,y:dy/length,assisted:true};
+ }return aim.call(this,p,move);};
 const magic=P.useItemMagic;P.useItemMagic=function(...args){if(this.practice)return false;return magic.apply(this,args);};
 const check=P.usePower;P.usePower=function(p){if(this.practice)return false;return check.call(this,p);};
 const hurt=P.hurt;P.hurt=function(p,dmg,o){if(this.practice){if(p===this.practice.player&&this.practice.shot){this.practice.shot=false;this.practice.feed=.8;this.say('Encore ! C juste avant le contact.',1);}return false;}return hurt.call(this,p,dmg,o);};
 const caught=P.caught;P.caught=function(p,o){const r=this.practice,valid=r&&r.mission.group==='catch'&&r.shot&&p===r.player;caught.call(this,p,o);if(valid){r.score++;r.shot=false;r.feed=.9;this.say('BIEN ATTRAPÉ !',.7);}};
-const throwBall=P.throwBall;P.throwBall=function(p,o){if(this.practice&&p===this.practice.player)p.power.armed=false;return throwBall.call(this,p,o);};
+const throwBall=P.throwBall;P.throwBall=function(p,o){const r=this.practice;if(!r||p!==r.player)return throwBall.call(this,p,o);p.power.armed=false;r.shotOptions=o;try{return throwBall.call(this,p,o);}finally{delete r.shotOptions;}};
 const ball=P.updateBall;P.updateBall=function(dt){const b=this.ball,ax=b.x,ay=b.y;ball.call(this,dt);const r=this.practice;if(!r||this.phase!=='play'||r.mission.group==='catch'||b.team!==0||!['live','dead'].includes(b.state)||!b.thrower||r.scoredBall===b.trail)return;const q=r.target,dx=b.x-ax,dy=b.y-ay,n=dx*dx+dy*dy,k=Math.max(0,Math.min(1,((q.x-ax)*dx+(q.y-ay)*dy)/(n||1)));if(n&&Math.hypot(q.x-ax-k*dx,q.y-ay-k*dy)<r.mission.radius&&Math.abs(b.z-30)<65){r.score++;r.scoredBall=b.trail;r.index++;q.y=[370,530,430,560,340,470,400][r.index%7];this.fx.push({kind:'pow',x:q.x,y:q.y,z:60,text:'DANS LE MILLE !',color:'#ffe16b',t:0,dur:.8});this.kill(b,0);r.feed=.45;}};
 const update=P.update;P.update=function(dt,inputs){const r=this.practice;if(!r)return update.call(this,dt,inputs);if(this.paused)return;this.possession=null;const was=this.phase;update.call(this,dt,inputs);this.possession=null;if(was!=='play'||this.phase!=='play')return;r.left=Math.max(0,r.left-dt);if(r.score>=r.mission.goal){T.finish(this,true);return;}if(r.left<=0){T.finish(this,false);return;}r.feed-=dt;
  if(r.mission.group==='moving')r.target.y=450+Math.sin(this.time*(.65+r.mission.level*.3))*105;
