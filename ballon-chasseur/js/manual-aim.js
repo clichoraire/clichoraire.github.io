@@ -9,10 +9,14 @@ const contact=P.contact;P.contact=function(p,b){touch(this,p);return contact.cal
 const give=P.give;P.give=function(p){const enemyTouches=this.aimTouches?.[1-p.team]||0;if(enemyTouches>(p.aimEnemyTouches||0)){p.manualAngle=forwardAngle(p);if(this.isHuman(p.team))clearPointer();}p.aimEnemyTouches=enemyTouches;touch(this,p);return give.call(this,p);};
 const automatic=()=>B.app?.settings?.aimMode==='auto';
 const aiming=B.Aiming={};
+aiming.perfect=(g,p)=>!!p.perfectRelease||!!p.charging&&p.charge>=1&&p.fullAt!=null&&g.time-p.fullAt>=0&&g.time-p.fullAt<=(B.PERFECT_WINDOW||.18);
+aiming.spread=(g,p)=>p.phys.aimSpread*(automatic()&&g.isPlayerControlled(p)&&aiming.perfect(g,p) ? .2 : 1);
+aiming.speedBonus=(g,p)=>(1+.22*(g.quickLevel?.(p)||0))*(aiming.perfect(g,p)?1.5:1);
+
 aiming.travelTime=(distance,speed,fullStart=false)=>{const initial=speed*(fullStart ? .9 : .6),acceleration=speed*1.8,cap=speed*1.4,ramp=(cap-initial)/acceleration,rampDistance=(initial+cap)*ramp/2;return distance<=rampDistance?(Math.sqrt(initial*initial+2*acceleration*distance)-initial)/acceleration:ramp+(distance-rampDistance)/cap;};
 aiming.lead=(g,p,target)=>{const o=p.aimShotOptions||{...p.pending,charge:p.charge||0},charge=Math.max(0,Math.min(1,o.charge||0)),apex=o.jump&&Math.abs(p.vz)<170;
  const speed=p.zone==='in'?p.phys.throwSpeed*(.85+.45*charge)*(o.run?1.12:1)*(o.jump?(apex?1.3:1.2):1):p.phys.throwSpeed*.8*(.85+.3*charge),originX=p.x+g.fwdOf(p)*12,C=B.COURT,clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
- let x=target.x,y=target.y;for(let i=0;i<10;i++){const flight=aiming.travelTime(Math.hypot(x-originX,y-p.y),speed,p.zone==='in'&&p.phys.fullStart);x=target.x+(target.mx||0)*flight;y=target.y+(target.my||0)*flight;
+ let x=target.x,y=target.y;for(let i=0;i<10;i++){const flight=aiming.travelTime(Math.hypot(x-originX,y-p.y),speed*aiming.speedBonus(g,p),p.zone==='in'&&p.phys.fullStart);x=target.x+(target.mx||0)*flight;y=target.y+(target.my||0)*flight;
  if(target.zone==='in'){const air=target.z>0||target.state==='return'||target.tele;x=clamp(x,Math.min(target.x,air||target.team===0?C.left+14:C.mid-50),Math.max(target.x,air||target.team===1?C.right-14:C.mid+50));y=clamp(y,Math.min(target.y,C.top+8),Math.max(target.y,C.bottom-8));}}
  const dx=x-originX,dy=y-p.y,length=Math.hypot(dx,dy)||1;return {x:dx/length,y:dy/length,target,assisted:true};};
 const throwBall=P.throwBall;P.throwBall=function(p,o){p.aimShotOptions=o;try{return throwBall.call(this,p,o);}finally{delete p.aimShotOptions;}};

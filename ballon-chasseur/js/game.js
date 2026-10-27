@@ -336,7 +336,7 @@
       const aim = this.aimDir(p, o.move);
       // One error sample on release; aiming previews never consume randomness.
       if (!(p.power.armed && p.power.id === 'licorne')) {
-        const error=(Math.random()*2-1)*ph.aimSpread, x=aim.x, y=aim.y;
+        const error=(Math.random()*2-1)*(BC.Aiming?.spread(this,p)??ph.aimSpread), x=aim.x, y=aim.y;
         aim.x=x*Math.cos(error)-y*Math.sin(error);aim.y=x*Math.sin(error)+y*Math.cos(error);
       }
       const target = aim.target || foes.slice().sort((a, c) => Math.abs(a.y - p.y) - Math.abs(c.y - p.y))[0] || null;

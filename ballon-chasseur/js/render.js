@@ -213,7 +213,7 @@
   function drawAim(ctx, g, p) {
     const a = g.aimDir(p, p.lastMove), z = p.z + 30, len = p.zone === 'in' ? 460 : 320;
     ctx.save();
-    const spread=p.power.armed&&p.power.id==='licorne'?0:p.phys.aimSpread;
+    const spread=p.power.armed&&p.power.id==='licorne'?0:(BC.Aiming?.spread(g,p)??p.phys.aimSpread);
     ctx.lineWidth=2;ctx.strokeStyle='#ffe178';
     if(spread>0){const angle=Math.atan2(a.y,a.x);ctx.fillStyle='rgba(255,225,120,.20)';ctx.beginPath();ctx.moveTo(p.x,p.y-z);ctx.arc(p.x,p.y-z,len,angle-spread,angle+spread);ctx.closePath();ctx.fill();ctx.stroke();}
     else {ctx.beginPath();ctx.moveTo(p.x+a.x*26,p.y+a.y*26-z);ctx.lineTo(p.x+a.x*len,p.y+a.y*len-z);ctx.stroke();}
