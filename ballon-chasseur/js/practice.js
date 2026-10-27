@@ -12,7 +12,7 @@ T.finish=(g,won)=>{if(!g.practice||g.practice.finished)return;g.practice.finishe
 T.award=g=>{const r=g.practice;if(!r?.finished||g.phase!=='end')return null;if(r.reward)return r.reward;if(!r.won)return r.reward={xp:0,gold:0,first:false};const s=A.load(r.leader);if(!s)throw Error('Aventure introuvable');s.practice??={};const records=s.practice[r.pid]??=( {} ),first=!records[r.id],prize=T.prize(r.mission,first);A.addXp(s,r.pid,prize.xp);records[r.id]={wins:(records[r.id]?.wins||0)+1,best:Math.max(records[r.id]?.best||0,r.score)};A.save(s);E.state.gold+=prize.gold;E.save();return r.reward={...prize,first};};
 // Practice targets are not opponents: include them in automatic aiming explicitly.
 // Match the normal throw's acceleration, speed cap, charge and running/jumping bonuses.
-T.travelTime=(distance,speed,fullStart=false)=>{const initial=speed*(fullStart ? .9 : .6),acceleration=speed*1.8,cap=speed*1.4,ramp=(cap-initial)/acceleration,rampDistance=(initial+cap)*ramp/2;return distance<=rampDistance?(Math.sqrt(initial*initial+2*acceleration*distance)-initial)/acceleration:ramp+(distance-rampDistance)/cap;};
+T.travelTime=B.Aiming.travelTime;
 const aim=P.aimDir;P.aimDir=function(p,move){const r=this.practice;if(r&&r.mission.group!=='catch'&&p===r.player&&B.app?.settings?.aimMode==='auto'){
  let x=r.target.x,y=r.target.y,originX=p.x;
  if(r.mission.group==='moving'){
