@@ -35,6 +35,6 @@
       a = a || bt(0); b = b || bt(1); p = p || bt(2) || bt(3); cycle = bt(4) || bt(5);
       if (bt(9) && !I.padStart) { I.padStart = true; I.pressed.Escape = true; } else if (!bt(9)) I.padStart = false;
     }
-    return { dx, dy, a, b, p, sel, cycle };
+    return { dx, dy, a, b, p, sel, cycle, targetCycle: !!k.KeyT || !!g?.buttons[11]?.pressed };
   };
 })(window.BC);
