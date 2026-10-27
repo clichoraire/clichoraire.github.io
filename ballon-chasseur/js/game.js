@@ -155,8 +155,8 @@
         if (human) {
           const e = ins[p.team]; move = { dx: e.dx, dy: e.dy };
           if (e.leftDown || e.rightDown) this.tap(p, e.leftDown ? -1 : 1);
-          if (e.aDown) act = 'a'; else if (e.bDown) act = 'b'; else if (e.pDown) act = 'p';
-          if (e.aUp && p.charging) { p.lastMove=move; this.release(p); }
+          if (e.bDown && p.charging) act = 'b'; else if (e.aDown) act = 'a'; else if (e.bDown) act = 'b'; else if (e.pDown) act = 'p';
+          if (e.aUp && p.charging && !e.bDown) { p.lastMove=move; this.release(p); }
         } else { move = p.ai.move || move; act = p.ai.act || null; p.ai.act = null; }
         this.stepPlayer(p, dt, move, act);
       }
@@ -208,7 +208,7 @@
         }
       }
       // déplacement
-      const canMove = (s === 'idle' || s === 'jump' || s === 'catch' && p.stateT > 0.2) && p.alive;
+      const canMove = (s === 'idle' || s === 'jump' || s === 'windup' && p.charging && this.isPlayerControlled(p) || s === 'catch' && p.stateT > 0.2) && p.alive;
       const sm = this.speedMul(p);
       let mx = 0, my = 0;
       const inFlight = p.airborneJump && p.z > 0 && ['jump', 'windup', 'throw', 'idle'].includes(p.state);
@@ -281,6 +281,7 @@
           if (p.power.armed && this.powerThrowStart(p, move)) return;   // téléportation, tornade : séquence spéciale
           this.startCharge(p, move);
         } else if (act === 'b') {
+          if(p.charging){this.pass(p,move);return;}
           if (p.z > 0 && (p.state === 'jump' || p.state === 'windup' && p.pending?.jump)) { this.pass(p, move); return; }
           if (p.state !== 'idle') return;
           if (p.zone === 'in' && this.recentDash(p)) { this.jump(p, move); p.dash.fromJump = true; this.stopDash(p); return; }   // saut en course avec la balle
@@ -387,7 +388,7 @@
       const dx = target.x - p.x, dy = target.y - p.y, L = Math.hypot(dx, dy), T = clamp(L / 620, 0.35, 0.9);
       b.x = p.x; b.y = p.y; b.z = (p.z || 0) + CHEST; b.landX = target.x; b.landY = target.y;
       b.vx = dx / T; b.vy = dy / T; b.vz = (CHEST - b.z) / T + 0.5 * G * T * 0.55; b.g = G * 0.55;
-      p.pending = null; p.charging = false; p.charge = 0;
+      p.pending = null; p.charging = false; p.charge = 0;p.chargeGoal=null;p.fullAt=null;
       this.setState(p, airborne ? 'jump' : 'throw');
       this.emit('pass', { p });
     }

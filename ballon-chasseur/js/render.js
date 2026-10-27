@@ -106,6 +106,7 @@
     ctx.save();
     if (g.shake > 0) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
     drawBackground(ctx, g, t);
+    BC.Practice?.drawGround(ctx,g);
     BC.drawBossArena?.(ctx,g,'ground');
     drawRainbow(ctx,g,t);
     BC.drawElementZones?.(ctx,g);
