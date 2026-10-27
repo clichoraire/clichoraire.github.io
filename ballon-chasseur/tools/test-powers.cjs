@@ -109,8 +109,10 @@ for (const team of [0, 1]) {
   step(g, N);
   ok(g.ball.state === 'live' && g.ball.smash, 'X relâché en l’air : smash');
   // la course vient de s'arrêter à la ligne : C fait quand même sauter (pas une passe)
-  const g2 = game(); const q = holder(g2); q.x = C.mid - 60; step(g2, { dx: 1, dy: 0 }); step(g2, N, 2); step(g2, { dx: 1, dy: 0 }, 8);
-  ok(!q.dash.active && g2.time - q.dash.endedAt < 0.3, 'course coupée par la ligne du centre');
+  const g2 = game(); const q = holder(g2); q.x = C.mid + 4; step(g2, { dx: 1, dy: 0 }); step(g2, N, 2); step(g2, { dx: 1, dy: 0 }, 8);
+  for(let frames=0;q.dash.active&&frames<60;frames++)step(g2,{dx:1,dy:0});
+  ok(q.x>=C.mid+50,'la course atteint la limite malgré l’accélération progressive');
+  ok(!q.dash.active && g2.time - q.dash.endedAt < 0.3, 'course coupée à la limite de la bande adverse');
   g2.update(BC.STEP, [{ dx: 1, dy: 0, b: true }, null]); ok(q.state === 'jump', 'C juste après la course : saut en course, pas une passe');
 }
 // --- interception d'une passe adverse ---
@@ -262,9 +264,12 @@ function throwPower(id, prep) {
 }
 // --- matchs complets ordi contre ordi, toutes les paires : aucune erreur, aucune balle éternelle ---
 {
+  let seed=20261026;Math.random=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;};
+  // Les matchs complets incluent le chrono de possession et les règles actuelles.
+  require('../js/monsters.js');require('../js/match-rules.js');
   for (const a of BC.TEAMS) for (const b of BC.TEAMS) if (a !== b) {
     const g = new BC.Game({ teams: [a, b], ctrl: ['cpu', 'cpu'], difficulty: 2, intro: false }); let t = 0, live = 0;
-    while (g.phase !== 'end' && t < 300) { g.update(BC.STEP); t += BC.STEP; live = g.ball.state === 'live' ? live + 1 : 0; assert.ok(live < 400, 'balle vivante trop longtemps ' + g.ball.power); }
+    while (g.phase !== 'end' && t < 600) { g.update(BC.STEP); t += BC.STEP; live = g.ball.state === 'live' ? live + 1 : 0; assert.ok(live < 400, 'balle vivante trop longtemps ' + g.ball.power); }
     ok(g.phase === 'end', a.id + ' vs ' + b.id + ' terminé en ' + Math.round(t) + ' s, pouvoirs ' + (g.stats[0].supers + g.stats[1].supers));
   }
 }

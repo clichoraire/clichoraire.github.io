@@ -1,12 +1,13 @@
 // Snow Kids — constantes, personnages, planches, objets et pistes.
 // Tout est dans l'espace de noms SK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.SK = window.SK || {};
-window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.SK.VERSION = '1.55';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (SK) {
   'use strict';
   SK.W = 1280; SK.H = 720;          // canevas logique
   SK.STEP = 1 / 60;                 // pas de simulation
   SK.SEG = 5;                       // longueur d'un segment de piste (m)
+  SK.HURDLE_HEIGHT = 2.4;
   SK.GRAVITY = 14;
   SK.SLOPE = 0.07;                  // pente de base (m de dénivelé par m parcouru)
   SK.LIFT_INTERVAL = 2;             // une chaise de remontée part toutes les 2 s (une place par chaise)
@@ -41,10 +42,12 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     { id: 'edison', gender: 'boy', name: 'Edison', birth: '2023-02-08', family: 'Jay', size: 0.5, speed: 2, corner: 4, acceleration: 4, jump: 3, strength: 2, hairStyle: 'curly', hat: 'none', weight: 1, pacifier: true, cheeks: true,
       colors: { jacket: '#1e88e5', pants: '#1e3a8a', hat: '#1565c0', hair: '#2b1d12', skin: '#eec49b', board: '#ffb323' },
       desc: 'Famille Jay — Le champion de la glissade, avec sa chevelure blonde et son grand sourire.' },
-    { id: 'shinobin', gender: 'boy', name: 'Shinobin', speed: 5, corner: 5, acceleration: 5, jump: 5, strength: 5, hairStyle: 'short', hat: 'hood', weight: 3, age: '?', hidden: true,
+    { id: 'shinobin', gender: 'boy', name: 'Ninja', speed: 5, corner: 5, acceleration: 5, jump: 5, strength: 5, hairStyle: 'short', hat: 'hood', weight: 3, age: '?', hidden: true,
       colors: { jacket: '#212121', pants: '#212121', hat: '#212121', hair: '#212121', skin: '#f3c9a3', board: '#b71c1c', scarf: '#d32f2f' },
       desc: 'Le ninja mystérieux qui hante le Pays des Ninjas. Parfait partout. Il faut le battre pour le débloquer.' },
   ];
+  for(const [id,name,jacket,skin,unlockItem] of [['santa','Père Noël','#c72e37','#f6d2b5','teteNoel'],['robot','Robot','#7296ac','#b3cad9','teteRobot']]) SK.CHARACTERS.push({id,name,gender:'boy',hidden:true,unlockItem,hat:'none',hairStyle:'bald',speed:3,corner:3,acceleration:3,jump:3,strength:3,weight:3,colors:{jacket,pants:id==='santa'?'#a62029':'#3c526a',hat:jacket,hair:'#ffffff',skin,board:'#efbc45'},desc:'Personnage à débloquer au magasin.'});
+  SK.characterUnlocked=(c,save)=>!c.hidden||[save,...Object.values(save.profiles||{})].some(s=>c.id==='shinobin'?s.shinobin||s.gear?.includes('masque'):s.gear?.includes(c.unlockItem));
   SK.LEGACY_CHARACTERS = { slash: 'zach', nancy: 'eliott', jam: 'alexie', linda: 'adam', tommy: 'edison', wendy: 'milo' };
   SK.migrateCharacters = function (save) {
     for (const key of ['char', 'char2', 'advChar']) save[key] = SK.LEGACY_CHARACTERS[save[key]] || save[key];
@@ -166,7 +169,7 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     outline();c.strokeStyle=palette[0];c.lineWidth=.15;c.lineJoin='round';c.stroke();c.restore();
     outline();c.strokeStyle='#263545';c.lineWidth=.025;c.stroke();c.restore();
   };
-  SK.HELMETS={casque:'#afc7df',casqueForet:'#315b53',casqueCorail:'#db756a',casqueNoir:'#46515c'};
+  SK.HELMETS={casque:'#afc7df',casqueForet:'#315b53',casqueCorail:'#db756a',casqueNoir:'#46515c',casqueAero:'#42a9cc'};
   SK.isHelmet=id=>Object.prototype.hasOwnProperty.call(SK.HELMETS,id);
   SK.GEAR = [
     {id:'lunettesNeige',cat:'equip',name:'Lunettes bleutées',price:250,desc:'Moins de neige dans le visage.'},
@@ -183,7 +186,7 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     { id: 'fusee', cat: 'gadget', name: 'Sac à dos fusée', price: 800, unlock: { wins: 4 }, desc: 'Un sac à dos propulseur à porter : un turbo automatique au GO.' },
     { id: 'sac', cat: 'gadget', name: 'Cadeau de Noël', price: 700, unlock: { wins: 5 }, desc: 'Tu commences chaque course avec un objet au hasard.' },
     { id: 'vip', cat: 'other', name: 'Carte VIP du télésiège', price: 900, unlock: { wins: 3 }, desc: 'Ta chaise monte 1,5 seconde plus vite que les autres.' },
-    { id: 'masque', cat: 'other', name: 'Masque de ninja', price: 5000, unlock: { course: 'ninja' }, desc: 'Débloque Shinobin comme personnage sans avoir à le battre.' },
+    { id: 'masque', cat: 'other', name: 'Masque de ninja', price: 5000, unlock: { course: 'ninja' }, desc: 'Débloque Ninja, un personnage dont le visage reste toujours masqué.' },
   ];
   SK.gearById = id => SK.GEAR.find(g => g.id === id);
   // Garde-robe : vêtements et coiffure (achat unique, puis équipé par personnage dans save.look[charId])
@@ -358,6 +361,19 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     SK.WARDROBE.push({ id: 'hairColor-' + i, cat: 'coiffure', slot: 'hairColor', name: 'Cheveux ' + n, price: i < 4 ? 40 : 80, value: c, desc: 'Teinture : cheveux ' + n + '.' }));
   [['#f6d2b5', 'très claire'], ['#f3c9a3', 'claire'], ['#d9a37a', 'dorée'], ['#b07a4a', 'mate'], ['#8d5a3b', 'foncée'], ['#5d3a1f', 'très foncée']].forEach(([c, n], i) =>
     SK.WARDROBE.push({ id: 'skin-' + i, cat: 'coiffure', slot: 'skin', name: 'Peau ' + n, price: 0, value: c, desc: 'Gratuit : chacun sa peau.' }));
+  // Coordinated winter collection; the same headwear and coat drawings are used when worn.
+  SK.KNIT_STYLES={
+    'beanie-glacier':{color:'#365c76',accent:'#d4ebed',pattern:'peaks'},
+    'beanie-berry':{color:'#914f73',accent:'#f0d5dc',pattern:'snow'},
+    'beanie-pine':{color:'#356c64',accent:'#e9d8ad',pattern:'peaks'},
+    'beanie-midnight':{color:'#323c65',accent:'#eac87d',pattern:'stars'}
+  };
+  for(const [id,name] of [['glacier','Tuque Glacier'],['berry','Tuque Baies givrées'],['pine','Tuque Sapins'],['midnight','Tuque Nuit étoilée']])SK.WARDROBE.push({id:'hat-'+id,cat:'linge',slot:'hat',value:'beanie-'+id,name,price:160,newCollection:true,desc:'Tuque en maille à pompon, motif brodé et revers épais. Couleurs assorties à la collection alpine.'});
+  for(const [id,name,color]of [['glacier','Pantalon Glacier','#486d80'],['berry','Pantalon Baies givrées','#825773'],['pine','Pantalon Sapins','#3b6259']])SK.WARDROBE.push({id:'pants-'+id,cat:'linge',slot:'pants',value:color,name,price:160,newCollection:true,desc:'Pantalon de neige aux couleurs douces, avec poches et coutures contrastées.'});
+  for(const [id,name,color,panel,trim]of [['glacier','Manteau Glacier','#52788e','#d6e9e7','#293f54'],['berry','Manteau Baies givrées','#995b78','#edd9dd','#53364c'],['pine','Manteau Sapins','#48776c','#eadab5','#293f3c']]){
+    SK.JACKET_STYLES[color]={style:'alpine',main:color,panel,trim};
+    SK.WARDROBE.push({id:'jacket-'+id,cat:'linge',slot:'jacket',value:color,name,price:260,newCollection:true,desc:'Manteau alpin à empiècements en chevrons, fermeture et poches contrastées. À assortir à sa tuque et son pantalon.'});
+  }
   SK.wardrobeById = id => SK.WARDROBE.find(w => w.id === id);
   // Apparence d'un personnage = ses couleurs d'origine + ce qui est équipé dans save.look[charId]
   // Shared propeller backpack: no flame while displayed or worn at rest.
@@ -365,8 +381,9 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     c.save();c.translate(x,y);c.scale(s,s);
     c.lineJoin='round';c.lineCap='round';
     if(view==='front'){
-      c.strokeStyle='#304952';c.lineWidth=.12;
-      for(const a of [-1,1]){c.beginPath();c.moveTo(a*.30,-.65);c.quadraticCurveTo(a*.38,-.2,a*.30,.56);c.stroke();}
+      c.strokeStyle='#304952';c.lineWidth=.17;
+      for(const a of [-1,1]){c.beginPath();c.moveTo(a*.55,-.80);c.bezierCurveTo(a*.69,-.63,a*.49,-.22,a*.59,.02);c.quadraticCurveTo(a*.69,.16,a*.84,-.10);c.stroke();}
+      c.strokeStyle='#7799a3';c.lineWidth=.055;c.beginPath();c.moveTo(-.58,-.30);c.lineTo(.58,-.30);c.stroke();c.fillStyle='#d6aa59';c.fillRect(-.09,-.36,.18,.12);
       c.restore();return;
     }
     const box=(x,y,w,h,r,color)=>{c.fillStyle=color;c.beginPath();c.roundRect(x,y,w,h,r);c.fill();};
@@ -378,11 +395,36 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     for(const a of [-1,1]){c.beginPath();c.moveTo(a*.23,.13);c.lineTo(a*.44,.53);c.lineTo(a*.22,.44);c.closePath();c.fill();}
     box(-.20,.39,.40,.25,.05,'#263238');
     c.fillStyle='#47c5eb';c.beginPath();c.arc(0,-.38,.12,0,Math.PI*2);c.fill();
+    box(-.49,-.05,.98,.70,.13,'#50818d');box(-.40,.12,.80,.40,.08,'#335f70');box(-.39,.10,.78,.045,.01,'#e9bd6d');c.strokeStyle='#99b7c0';c.lineWidth=.035;c.strokeRect(-.44,-.56,.88,.40);
     c.restore();
   };
+  SK.drawWhistle=function(c,x,y,s,necklace=false){
+    c.save();c.translate(x,y);c.scale(s,s);c.lineJoin='round';
+    if(necklace){c.strokeStyle='#929da5';c.lineWidth=.055;c.beginPath();c.moveTo(-.42,-.05);c.bezierCurveTo(-1.25,-1.40,.95,-1.46,.32,-.02);c.stroke();c.strokeStyle='#dbe1e4';c.lineWidth=.018;c.stroke();}
+    c.strokeStyle='#ad7e24';c.lineWidth=.045;const gold=c.createLinearGradient(0,-.2,0,.6);gold.addColorStop(0,'#fff0a0');gold.addColorStop(.42,'#edbd42');gold.addColorStop(1,'#b47c1e');
+    c.fillStyle=gold;c.beginPath();c.moveTo(-.5,-.1);c.lineTo(.65,-.1);c.lineTo(.84,.02);c.lineTo(.77,.23);c.lineTo(.12,.23);c.bezierCurveTo(.1,.68,-.68,.69,-.7,.25);c.quadraticCurveTo(-.74,-.03,-.5,-.1);c.fill();c.stroke();
+    c.fillStyle='#ffde6a';c.beginPath();c.ellipse(-.32,.25,.23,.24,0,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#544738';c.fillRect(.27,-.105,.22,.065);c.fillStyle='#fdf1b8';c.fillRect(.1,.02,.57,.045);c.strokeStyle='#c99835';c.lineWidth=.04;c.beginPath();c.ellipse(-.62,-.12,.12,.12,0,0,Math.PI*2);c.stroke();c.restore();
+  };
+  SK.drawWornTorso=function(c,L,x,y,s,view='front'){
+    c.save();c.translate(x,y);c.scale(s,s);const side=view==='side',w=side?.48:.82;
+    if(L.paddedVest){
+      c.fillStyle='#d74b54';c.beginPath();c.moveTo(-w,-.70);c.lineTo(-w*.45,-.82);c.quadraticCurveTo(0,-.53,w*.45,-.82);c.lineTo(w,-.70);c.lineTo(w,.76);c.quadraticCurveTo(0,.86,-w,.76);c.closePath();c.fill();
+      c.strokeStyle='#983547';c.lineWidth=.035;for(const yy of [-.35,0,.35,.67]){c.beginPath();c.moveTo(-w*.9,yy);c.quadraticCurveTo(0,yy+.10,w*.9,yy);c.stroke();}
+      if(view!=='back'){c.strokeStyle='#f6c1a5';c.lineWidth=.04;c.beginPath();c.moveTo(side?w*.5:0,-.65);c.lineTo(side?w*.5:0,.76);c.stroke();}
+    }
+    if(L.whistle&&view!=='back'){
+      c.strokeStyle='#a9b2bb';c.lineWidth=.045;c.beginPath();c.moveTo(-w*.58,-.78);c.quadraticCurveTo(-w*.65,-.12,side?w*.7:0,.04);c.quadraticCurveTo(w*.7,-.12,w*.58,-.78);c.stroke();
+      const xx=side?w*.55:0;SK.drawWhistle(c,xx,.08,.26);
+    }c.restore();
+  };
   // Headwear shares the same shape in the shop and on every head angle.
-  SK.drawHeadwear=function(c,kind,color,x,y,w,h,view='front'){
-    if(!kind||kind==='none')return;c.save();c.translate(x,y);c.fillStyle=color;
+  SK.drawHeadwear=function(c,kind,color,x,y,w,h,view='front',worn=false){
+    if(!kind||kind==='none')return;const knit=SK.KNIT_STYLES?.[kind];if(knit)color=knit.color;c.save();c.translate(x,y);c.fillStyle=color;
+    if(kind==='crown'){
+      const g=c.createLinearGradient(-w*.5,0,w*.5,h);g.addColorStop(0,'#b77920');g.addColorStop(.4,'#ffe788');g.addColorStop(.7,'#e7b638');g.addColorStop(1,'#a96e1e');c.fillStyle=g;
+      c.beginPath();c.moveTo(-w*.5,h*.55);c.lineTo(-w*.58,-h*.03);c.lineTo(-w*.28,h*.16);c.lineTo(0,-h*.25);c.lineTo(w*.28,h*.16);c.lineTo(w*.58,-h*.03);c.lineTo(w*.5,h*.55);c.closePath();c.fill();c.strokeStyle='#956421';c.lineWidth=w*.025;c.stroke();
+      c.fillStyle='#f5d373';c.fillRect(-w*.5,h*.41,w,h*.14);for(const xx of [-.3,0,.3]){c.fillStyle=xx===0?'#d84355':'#43aacc';c.beginPath();c.ellipse(xx*w,h*.38,w*.045,h*.075,0,0,Math.PI*2);c.fill();}c.restore();return;
+    }
     if(kind==='band'){c.fillRect(-w*.5,h*.45,w,h*.18);c.restore();return;}
     c.beginPath();c.moveTo(-w*.5,h*.62);c.bezierCurveTo(-w*.5,-h*.18,w*.5,-h*.18,w*.5,h*.62);c.closePath();c.fill();
     if(kind==='cap'){
@@ -393,8 +435,25 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
       c.fillStyle=color;c.fillRect(-w*.51,h*.45,w*1.02,h*.23);
       c.strokeStyle='#142c4560';c.lineWidth=Math.max(1,w*.018);
       for(let i=-4;i<=4;i++){c.beginPath();c.moveTo(i*w*.11,h*.46);c.lineTo(i*w*.11,h*.67);c.stroke();}
+      // Patterns follow the actual knitted dome, including its curved sides.
+      c.save();c.beginPath();c.moveTo(-w*.5,h*.62);c.bezierCurveTo(-w*.5,-h*.18,w*.5,-h*.18,w*.5,h*.62);c.closePath();c.clip();
       if(kind==='beanie-stripes'){c.strokeStyle='#f6edcd';c.lineWidth=h*.09;for(const yy of [.22,.36]){c.beginPath();c.moveTo(-w*.44,h*yy);c.quadraticCurveTo(0,h*(yy+.1),w*.44,h*yy);c.stroke();}}
-      if(kind==='beanie'||kind==='beanie-pompom'){c.fillStyle='#f7f1df';c.beginPath();c.arc(0,-h*.06,w*.14,0,Math.PI*2);c.fill();}
+      if(knit){
+        c.save();c.beginPath();c.rect(-w*.45,h*.12,w*.9,h*.30);c.clip();
+        c.strokeStyle=knit.accent;c.lineWidth=Math.max(1,w*.022);
+        for(let i=-3;i<=3;i++){const xx=i*w*.15,yy=h*.28;
+          if(knit.pattern==='peaks'){c.beginPath();c.moveTo(xx-w*.07,yy+h*.05);c.lineTo(xx,yy-h*.08);c.lineTo(xx+w*.07,yy+h*.05);c.stroke();}
+          else{c.beginPath();c.moveTo(xx-w*.045,yy);c.lineTo(xx+w*.045,yy);c.moveTo(xx,yy-h*.07);c.lineTo(xx,yy+h*.07);if(knit.pattern==='snow'){c.moveTo(xx-w*.032,yy-h*.045);c.lineTo(xx+w*.032,yy+h*.045);c.moveTo(xx+w*.032,yy-h*.045);c.lineTo(xx-w*.032,yy+h*.045);}c.stroke();}
+        }c.restore();c.strokeStyle=knit.accent;c.lineWidth=h*.035;c.beginPath();c.moveTo(-w*.45,h*.39);c.lineTo(w*.45,h*.39);c.stroke();
+      }
+      c.restore();
+      if(knit){
+        if(view!=='back'){c.save();if(view==='side'){c.translate(w*.34,0);c.scale(.6,1);}
+        c.fillStyle=knit.accent;c.beginPath();c.roundRect(-w*.09,h*.49,w*.18,h*.13,w*.025);c.fill();c.strokeStyle=color;c.lineWidth=w*.016;c.beginPath();c.moveTo(-w*.05,h*.59);c.lineTo(0,h*.52);c.lineTo(w*.05,h*.59);c.stroke();c.restore();}
+
+        c.fillStyle=knit.accent;c.beginPath();c.arc(0,worn?h*.05:-h*.06,w*(worn?.085:.14),0,Math.PI*2);c.fill();c.strokeStyle='#ffffff55';c.lineWidth=w*.014;for(let i=0;i<8;i++){const a=i*Math.PI/4;c.beginPath();c.moveTo(Math.cos(a)*w*.04,(worn?h*.05:-h*.06)+Math.sin(a)*w*.04);c.lineTo(Math.cos(a)*w*(worn?.07:.12),(worn?h*.05:-h*.06)+Math.sin(a)*w*(worn?.07:.12));c.stroke();}
+      }
+      if(kind==='beanie'||kind==='beanie-pompom'){c.fillStyle='#f7f1df';c.beginPath();c.arc(0,worn?h*.05:-h*.06,w*(worn?.085:.14),0,Math.PI*2);c.fill();}
     }c.restore();
   };
   SK.drawPants=function(c,color,x,y,s){
@@ -408,8 +467,11 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
   };
   SK.equippedGear=function(save,charId){
     const gear=Object.fromEntries((save.gear||[]).map(id=>[id,true]));
-    const look=SK.lookOf(SK.charById(charId||save.advChar||save.char),save);
-    if(!look.springBoots)delete gear.ressort;if(!look.gripBoots)delete gear.bottes;
+    const look=SK.lookOf(SK.charById(charId||save.advChar||save.char)||SK.CHARACTERS[0],save);
+    if(look.helmet!=='couronne')delete gear.couronne;if(!look.springBoots)delete gear.ressort;if(!look.gripBoots)delete gear.bottes;
+    for(const [id,slot] of [['veste','paddedVest'],['sifflet','whistle'],['fusee','rocketPack']])if(!look[slot])delete gear[id];
+    for(const id of Object.keys(SK.HELMETS))if(look.helmet!==id)delete gear[id];
+    delete gear.gants;delete gear.gantsMauves;if(look.gloves)gear.gants=true;
     return gear;
   };
   SK.lookOf = function (def, save) {
@@ -417,12 +479,15 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     const l = save && save.look && save.look[def.id];
     const look = l ? Object.assign(base, l) : base;
     look.goggles = l && Object.prototype.hasOwnProperty.call(l,'goggles') ? (save?.gear?.includes(l.goggles) ? l.goggles : null) : ['lunettesMiroir','lunettesTricolores','lunettesNeige','lunettesForet','lunettes'].find(id=>save?.gear?.includes(id)) || null;
-    const ownedHelmets=(save?.gear||[]).filter(SK.isHelmet),selected=l?.helmet===true?'casque':l?.helmet;
+    const ownedHelmets=(save?.gear||[]).filter(id=>SK.isHelmet(id)||id==='couronne'),selected=l?.helmet===true?'casque':l?.helmet;
     look.helmet=l?.helmet===false?false:ownedHelmets.includes(selected)?selected:ownedHelmets[0]||false;
     look.boots=l?.boots??(save?.gear?.includes('ressort')?'ressort':save?.gear?.includes('bottes')?'bottes':'normal');
     if(look.boots!=='normal'&&!save?.gear?.includes(look.boots))look.boots='normal';
     look.springBoots=look.boots==='ressort';
     look.gripBoots=look.boots==='bottes';
+    look.paddedVest=!!save?.gear?.includes('veste')&&l?.paddedVest!==false;
+    look.whistle=!!save?.gear?.includes('sifflet')&&l?.whistle!==false;
+    look.gloves=l?.gloves===false?false:(['gants','gantsMauves'].includes(l?.gloves)&&save?.gear?.includes(l.gloves)?l.gloves:['gants','gantsMauves'].find(id=>save?.gear?.includes(id))||false);
     look.rocketPack = !!save?.gear?.includes('fusee') && l?.rocketPack !== false;
     return look;
   };
@@ -436,13 +501,19 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
     if (unlock.finalBoss && !save.trophies?.shadowKing) return 'Bats le boss final dans la salle du trône';
     const wins = Object.keys(save.won || {}).length;
     if (unlock.wins != null && wins < unlock.wins) return `Gagne ${unlock.wins} piste${unlock.wins > 1 ? 's' : ''} dans l'aventure (${wins} / ${unlock.wins})`;
-    if (unlock.course && !(save.won || {})[unlock.course]) { const c = SK.courseById(unlock.course); return 'Gagne la course « ' + c.name + ' »' + (c.boss ? ' en battant Shinobin' : ''); }
+    if (unlock.course && !(save.won || {})[unlock.course]) { const c = SK.courseById(unlock.course); return 'Gagne la course « ' + c.name + ' »' + (c.boss ? ' en battant Ninja' : ''); }
     return null;
   };
   SK.townWalkSpeed=level=>255*(1+Math.max(0,Math.min(5,level||0))*.15);
   SK.STAT_MAX = 50; SK.capStat=n=>Math.max(0,Math.min(SK.STAT_MAX,Number(n)||0)); SK.UPGRADE_MAX = 50; SK.upgradeCost = lvl => 400 * (lvl + 1);
+  SK.trainingLevels=function(save){
+    if(!save)return {};
+    if(!save.characterStatsMigrated){const levels={...(save.characterStats||{})};for(const u of Object.values(save.upgrades||{}))for(const key of ['speed','corner','acceleration','jump'])levels[key]=(levels[key]||0)+(u[key]??(key==='acceleration'?u.trick:0)??0);save.characterStats=levels;save.characterStatsMigrated=true;}
+    return save.characterStats||(save.characterStats={});
+  };
+  SK.trainedCharacter=(id,save)=>{const ch=SK.charById(id)||SK.CHARACTERS[0],levels=SK.trainingLevels(save),def={...ch};for(const key of ['speed','corner','acceleration','jump'])def[key]=(ch[key]||0)+(levels[key]||0);return def;};
   // Planche avec ses améliorations achetées (save.upgrades[boardId] = { speed, corner, acceleration })
-  SK.effectiveBoard = function (id, save) { const b = SK.boardById(id), u = (save && save.upgrades && save.upgrades[b.id]) || {}; return Object.assign({}, b, { color: SK.boardSkin(id,save).color, pattern: SK.boardSkin(id,save).pattern, skinId: SK.boardSkin(id,save).id, speed: b.speed + (u.speed || 0), corner: b.corner + (u.corner || 0), acceleration: b.acceleration + (u.acceleration ?? u.trick ?? 0), jump: (b.jump || 0) + (u.jump || 0), base: b }); };
+  SK.effectiveBoard = function(id,save){const b=SK.boardById(id),skin=SK.boardSkin(id,save);return {...b,color:skin.color,pattern:skin.pattern,skinId:skin.id,base:b};};
 
   // ------------------------------------------------------------------ tirs (boîtes rouges) et objets (boîtes bleues)
   SK.SHOTS = {
@@ -594,7 +665,7 @@ window.SK.VERSION = '1.54';   // à augmenter à chaque mise en ligne (affichée
         { t: 'r', n: 5, h: 4.5 }, { t: 's', n: 25, w: 13, coins: 6 },
       ] },
     { id: 'ninja', name: 'Pays des Ninjas', original: 'Ninja Land', theme: 'ninja', surface: 'stone', laps: 3, boss: 'shinobin',
-      desc: 'Un château japonais au crépuscule. Shinobin, le ninja mystérieux, s\'invite dans la course.',
+      desc: 'Un château japonais au crépuscule. Ninja, le ninja mystérieux, s\'invite dans la course.',
       sections: [
         { t: 's', n: 25, w: 11, coins: 5 }, { t: 'c', n: 35, c: 0.085, w: 10, boxes: 'rb' }, { t: 'c', n: 35, c: -0.085, w: 10, obst: 3 },
         { t: 'x', s: 'grass' }, { t: 'b', n: 40, a: 1.5, w: 12, coins: 6, obst: 2 }, { t: 'x', s: 'stone' }, { t: 'r', n: 5, h: 4.5 },

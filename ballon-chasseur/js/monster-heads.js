@@ -6,7 +6,9 @@
   const img=new Image();let ready=false;
   const F=root.MonsterHeads={has:id=>ready&&!!bounds[id]};
   F.ready=new Promise(resolve=>{let settled=false;const finish=ok=>{if(settled)return;settled=true;clearTimeout(timer);ready=ok;resolve(ok);};const timer=setTimeout(()=>finish(false),10000);img.onload=()=>finish(true);img.onerror=()=>finish(false);img.src=root.MONSTER_HEAD_SOURCE;});
-  F.draw=(ctx,id,x,y,r)=>{if(!F.has(id))return false;const [sx,sy,sw,sh]=bounds[id],[bw,bh]=dimensions[id],scale=r/12,w=bw*scale,h=bh*scale;
+  const variants=(root.MONSTER_VARIANT_ATLASES||[]).map(a=>{const image=new Image(),v={image,bounds:a.bounds,ready:false};v.promise=new Promise(resolve=>{image.onload=()=>{v.ready=true;resolve(true);};image.onerror=()=>resolve(false);image.src=a.source;});return v;});
+  F.ready=Promise.all([F.ready,...variants.map(v=>v.promise)]);
+  F.draw=(ctx,id,x,y,r,variant=0)=>{if(!F.has(id))return false;const v=variants[variant-1],atlas=v?.ready?v:null,[sx,sy,sw,sh]=(atlas?.bounds||bounds)[id],[bw,bh]=dimensions[id],scale=r/12,w=bw*scale,h=bh*scale;
     // Tous les mentons restent sur le col ; les coiffures montent au-dessus.
-    const bottom=y+(id==='slime'?18:12)*scale;ctx.drawImage(img,sx,sy,sw,sh,x-w/2,bottom-h,w,h);return true;};
+    const bottom=y+(id==='slime'?18:12)*scale;ctx.drawImage(atlas?.image||img,sx,sy,sw,sh,x-w/2,bottom-h,w,h);return true;};
 })(window);

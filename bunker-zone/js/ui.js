@@ -4,7 +4,7 @@
 (function (ZC) {
   'use strict';
 
-  const CONSOLE_H = 164;
+  const CONSOLE_H = 300;
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   function opt(values, labels, current) {
@@ -108,7 +108,7 @@
       this.buildMenus();
     }
 
-    consoleHeight() { return this.hud.style.display === 'none' ? 0 : CONSOLE_H; }
+    consoleHeight() { return this.hud.style.display === 'none' ? 0 : Math.min(CONSOLE_H, Math.max(170, window.innerHeight * 0.5)); }
 
     // ------------------------------------------------------------ HUD
     buildHud() {
@@ -135,7 +135,7 @@
         <div id="leaderboard"><div class="lb-title" id="lb-title">Zones contrôlées</div><div id="lb-rows"></div></div>
         <div id="messages"></div>
         <div id="announce"><div id="announce-main"></div><div id="announce-sub"></div></div>
-        <div id="console" style="height:${CONSOLE_H}px">
+        <div id="console" style="height:min(${CONSOLE_H}px, max(170px, 50vh))">
           <div id="minimap-wrap"><canvas id="minimap" width="150" height="150"></canvas></div>
           <div id="infopanel"><div class="info-empty">BUNKER ZONE</div></div>
           <div id="cmdcard"></div>
@@ -462,7 +462,7 @@
         info.innerHTML = `
           <div class="single">
             <div class="portrait-wrap"><canvas id="portrait" width="72" height="72"></canvas><div id="portrait-hp" class="pbar"></div></div>
-            <div class="details">
+            <div class="details${u.def.structure && !u.def.tower && !u.def.extractor && !u.def.addon ? ' building-details' : ''}">
               <div class="uname" style="color:${p.hex}">${esc(u.def.extractor ? ZC.RACES[p.race].extractor : u.def.name)}</div>
               <div class="owner">${esc(p.name)}</div>
               <div class="line" id="u-hp"></div>
@@ -510,9 +510,17 @@
         else if (k && u.def.worker) k.textContent = (u.order.type === 'gather' ? (u.slot ? 'Récolte en cours' : u.carry >= ZC.MINERALS.carry ? 'Rapporte ' + u.carry + ' minerais' : 'En route vers le gisement') : u.order.type === 'repair' ? 'Réparation' + (u.repairing ? ' en cours (' + ZC.REPAIR.costPerSec + ' minerais/s)' : '') : 'Inactif') + (u.carry > 0 && u.order.type !== 'gather' ? ' · transporte ' + u.carry + ' minerais' : '');
         else if (k) k.textContent = (u.def.hero ? 'Héros · Niveau ' + u.heroLevel + ' · ' + Math.floor(u.xp) + ' / ' + ZC.heroXpFor(u.heroLevel + 1) + ' XP · Flux ' + Math.floor(u.flux) + '/' + u.fluxMax + ' · ' : '') + 'Kills : ' + u.kills + (u.stimT > 0 ? ' · Stimulé (' + Math.ceil(u.stimT) + ' s)' : '');
         const ex = info.querySelector('#u-extra');
-        if (ex && u.zone) ex.textContent = (u.def.hq ? 'QG · Travailleurs ' + g.workers(u.owner).length + '/' + g.workerCap(u.owner) + ' · ' : '') + 'Armure ' + u.armor + ' · Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + (u.zone.super ? ' (centrale x' + g.settings.superZoneMult + ')' : '') + (u.zone.minerals ? ' · Gisement : ' + Math.round(u.zone.minerals.amount) : '') + ' · Prochaine vague dans ' + Math.ceil(g.spawnTimer) + ' s' + (u.rally ? ' · Ralliement défini' : '');
+        const tile = (label, value, color = '#80d8ff') => '<div class="status-tile" style="--accent:' + color + '"><span>' + label + '</span><strong>' + value + '</strong></div>';
+        if (ex && u.zone) ex.innerHTML =
+          (u.def.hq ? tile('Travailleurs', g.workers(u.owner).length + '<small> / ' + g.workerCap(u.owner) + '</small>', '#ffd166') : '') +
+          tile('Garnison', u.garrison.length + '<small> / ' + ZC.capacity(u) + '</small>') +
+          tile('Troupes', g.bunkerTroops(u).length) +
+          tile('Vague dans', Math.ceil(g.spawnTimer) + '<small> s</small>', '#8ce6b1') +
+          (u.zone.minerals ? tile('Gisement', Math.round(u.zone.minerals.amount), '#8ce6b1') : '');
         const upl = info.querySelector('#u-up');
-        if (upl) upl.textContent = (u.building && u.buildTotal ? 'EN CONSTRUCTION : ' + Math.round(Math.min(100, u.buildT / u.buildTotal * 100)) + ' % · ' + Math.ceil(u.buildTotal - u.buildT) + ' s · ' : '') + (g.groupKeysOf(u) ? 'Groupe ' + g.groupKeysOf(u) + ' · ' : '') + 'Garnison ' + u.garrison.length + '/' + ZC.capacity(u) + (u.garrison.length ? '' : ' (ne tire pas)') + ' · Troupes en vie : ' + g.bunkerTroops(u).length + ' · Armes +' + u.up.weapons + ' · Armure +' + u.up.armor + ' · Portée +' + u.up.range + (u.up.siege ? ' · Démolition +' + u.up.siege : '');
+        if (upl) upl.textContent = (u.building && u.buildTotal ? 'Construction ' + Math.round(u.buildT / u.buildTotal * 100) + '% · ' : '') +
+          'Zone ' + (u.zone.ix + 1) + '-' + (u.zone.iy + 1) + ' · Armure ' + u.armor + ' · Armes +' + u.up.weapons + ' · Blindage +' + u.up.armor + ' · Portée +' + u.up.range +
+          (u.up.siege ? ' · Démolition +' + u.up.siege : '') + (g.groupKeysOf(u) ? ' · Groupe ' + g.groupKeysOf(u) : '') + (u.rally ? ' · Ralliement ✓' : '');
         // Files d'attente en icônes : le premier élément porte sa barre de progression, les suivants attendent
         const qIcon = (cmd, key, pct, title, gold, kind, i) => '<span class="qi' + (pct !== undefined ? ' cur' : '') + '" data-q="' + kind + '" data-i="' + i + '" title="' + esc(title) + ' — clic : annuler (même en cours) et rembourser">' + (ICONS[cmd] || '') + '<i>' + key + '</i>' + (pct !== undefined ? '<b class="' + (gold ? 'gold' : '') + '" style="width:' + pct.toFixed(0) + '%"></b>' : '') + '</span>';
         const rd = info.querySelector('#u-research');
@@ -588,8 +596,8 @@
         <div id="menu-campaign" class="screen hidden">
           <canvas id="adv-planet"></canvas>
           <div class="adv-top">
-            <div class="adv-title" id="adv-title">AVENTURE</div>
-            <div class="adv-points">★ <b id="adv-points">0</b> points <span class="adv-stats" id="adv-stats"></span></div>
+            <div class="adv-title" id="adv-title">MONDE 1</div>
+            <div class="adv-counters"><div class="adv-counter available"><span class="counter-label">★ Points disponibles</span><strong id="adv-points">0</strong><span class="counter-note">À dépenser en boutique</span></div><div id="adv-stats"></div></div>
             <div class="adv-btns"><button id="btn-shop">Boutique</button><button id="btn-heroes">Héros</button><button id="btn-adv-reset" class="danger" title="Efface toute la progression de l'aventure : missions, points, boutique, héros">Effacer la partie</button><button id="btn-adv-back">Retour</button></div>
           </div>
           <div class="adv-worlds" id="adv-worlds"></div>
@@ -814,7 +822,7 @@
       if (!c.worldUnlocked(c.data.world)) c.selectWorld('w1');
       const w = c.world(c.data.world), wi = ZC.WORLDS.indexOf(w), wp = c.worldPoints(w.id);
       q('#adv-points').textContent = String(c.points);
-      q('#adv-title').textContent = 'AVENTURE · MONDE ' + (wi + 1) + ' : ' + w.name.toUpperCase();
+      q('#adv-title').textContent = 'MONDE ' + (wi + 1) + ' : ' + w.name.toUpperCase();
       q('#adv-title').style.color = w.color;
       // onglets des mondes
       q('#adv-worlds').innerHTML = ZC.WORLDS.map((ww, i) => {
@@ -867,7 +875,8 @@
       select(prev || ms.find(m => c.unlocked(m.id) && !c.completed(m.id)) || ms.filter(m => c.unlocked(m.id)).pop() || ms[0], true);
       // races : seule la race humaine est jouable dans l'aventure
       q('#adv-races').innerHTML = '<span class="rl">Votre race :</span>' + Object.keys(ZC.RACES).map(k => '<span class="race' + (k === ZC.ADVENTURE_RACE ? ' sel' : ' locked') + '" title="' + esc(ZC.RACES[k].desc) + '">' + (k === ZC.ADVENTURE_RACE ? '✓ ' : '🔒 ') + esc(ZC.RACES[k].name) + '</span>').join('');
-      q('#adv-stats').textContent = '· Monde ' + (wi + 1) + ' : ' + wp.earned + ' / ' + wp.total + ' ★ · Total : ' + c.data.earned + ' / ' + c.totalPoints() + ' ★';
+      const counter = (label, earned, total, cls) => '<div class="adv-counter ' + cls + '"><span class="counter-label">' + label + '</span><strong>' + earned + ' <small>/ ' + total + '</small></strong><div class="counter-progress" role="progressbar" aria-label="' + label + '" aria-valuenow="' + earned + '" aria-valuemin="0" aria-valuemax="' + total + '"><i style="width:' + Math.min(100, earned / Math.max(1,total) * 100) + '%"></i></div></div>';
+      q('#adv-stats').innerHTML = counter('Monde ' + (wi + 1), wp.earned, wp.total, 'world') + counter('Total des mondes', c.data.earned, c.totalPoints(), 'total');
       this.m.campaign.classList.remove('hidden');
     }
 
@@ -930,7 +939,7 @@
       q('#mis-brief').textContent = m.brief;
       const o = m.objective;
       const st = m.settings, allies = st.teams ? st.teams.filter(t => t === 0).length - 1 : 0;
-      q('#mis-obj').textContent = 'Objectif : ' + ZC.objectiveText(o) + ' · Carte ' + st.mapZones + 'x' + (st.mapZonesY || st.mapZones) + ' · ' + (st.aiCount - allies) + ' IA ennemie' + (st.aiCount - allies > 1 ? 's' : '') + (allies ? ' + ' + allies + ' allié' + (allies > 1 ? 's' : '') : '') + ' (une ennemie de plus en difficile)' + (st.mode === 'evolution' ? ' · mode évolution' : st.mode === 'rounds' ? ' · tournoi' : '') + (st.humanStart === 'center' ? ' · départ au centre' : '') + (st.extraZones ? ' · ' + st.extraZones + ' zones d\'avance' : '');
+      q('#mis-obj').textContent = 'Objectif : ' + ZC.objectiveText(o) + ' · Carte ' + st.mapZones + 'x' + (st.mapZonesY || st.mapZones) + ' · ' + (st.aiCount - allies) + ' IA ennemie' + (st.aiCount - allies > 1 ? 's' : '') + (allies ? ' + ' + allies + ' allié' + (allies > 1 ? 's' : '') : '') + ' (ennemis alliés et un renfort en difficile)' + (m.scenario === 'corridor' ? ' · Difficile : couloir de 6 zones, avec une zone au-dessus et au-dessous de chaque extrémité' : '') + (st.mode === 'evolution' ? ' · mode évolution' : st.mode === 'rounds' ? ' · tournoi' : '') + (st.humanStart === 'center' ? ' · départ au centre' : '') + (st.extraZones ? ' · ' + st.extraZones + ' zones d\'avance' : '');
       q('#mis-sheet').classList.add('hidden'); q('#mis-dialog').classList.remove('hidden');
       this.m.mission.classList.remove('hidden');
       this.dialogShow();
@@ -1010,7 +1019,7 @@
       q('#sh-unspent').textContent = b.unspent ? '· ' + b.unspent + ' point' + (b.unspent > 1 ? 's' : '') + ' à répartir' : '';
       q('#sh-statrows').innerHTML = Object.keys(ZC.HERO_STATS).map(k => {
         const d = ZC.HERO_STATS[k], gearPart = b.totals[k] - st.points[k];
-        return '<div class="strow"><span class="stn" style="color:' + d.color + '">' + esc(d.name) + '</span><span class="stv">' + b.totals[k] + (gearPart ? ' <small>(' + st.points[k] + ' + ' + gearPart + ' équip.)</small>' : '') + '</span><button class="stplus" data-stat="' + k + '"' + (b.unspent ? '' : ' disabled') + ' title="' + esc(d.desc) + '">+</button><div class="std">' + esc(d.desc) + '</div></div>';
+        return '<div class="strow"><span class="stn" tabindex="0" title="' + esc(d.desc) + '" style="color:' + d.color + '">' + esc(d.name) + '</span><span class="stv">' + b.totals[k] + (gearPart ? ' <small>(' + st.points[k] + ' + ' + gearPart + ' équip.)</small>' : '') + '</span><button class="stplus" data-stat="' + k + '"' + (b.unspent ? '' : ' disabled') + ' title="' + esc(d.desc) + '">+</button></div>';
       }).join('') + (b.spent ? '<button class="streset" id="sh-reset" title="Remet tous les points à répartir (gratuit)">Réinitialiser les points</button>' : '');
       q('#sh-statrows').querySelectorAll('.stplus').forEach(bt => bt.addEventListener('click', () => { if (c.spendPoint(S.id, bt.dataset.stat)) { ZC.Audio.play('upgrade', 0); this.renderSheet(); } }));
       const rs = q('#sh-reset'); if (rs) rs.addEventListener('click', () => { c.resetPoints(S.id); ZC.Audio.play('click', 0); this.renderSheet(); });

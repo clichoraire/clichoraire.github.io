@@ -9,6 +9,8 @@
     { react: 0.55, catchMul: 0.55, superP: 0.12, dodge: 0.35, aim: 14, charge: 0.35, powerRate: 0.1 },
     { react: 0.35, catchMul: 0.8, superP: 0.3, dodge: 0.6, aim: 8, charge: 0.6, powerRate: 0.22 },
     { react: 0.2, catchMul: 0.9, superP: 0.5, dodge: 0.85, aim: 4, charge: 0.85, powerRate: 0.4 },
+    { react: 0.13, catchMul: 1.05, superP: 0.7, dodge: 0.93, aim: 2, charge: 0.95, powerRate: 0.65 },
+    { react: 0.08, catchMul: 1.2, superP: 0.85, dodge: 0.98, aim: 1, charge: 1, powerRate: 0.85 },
   ];
 
   BC.AI = class AI {
@@ -31,6 +33,7 @@
       for (const p of g.aliveInner(1 - b.team)) {
         const d = this.D;
         let hard = b.power === 'boulet' ? 0.15 : b.power === 'triche' || b.power === 'licorne' ? 0 : b.power ? 0.5 : b.smash ? 0.6 : 1;
+        if(['goblinbomb','fireball','skullbomb'].includes(b.power))hard=0;
         if (b.power === 'fusee') hard = g.difficulty === 0 ? 0.4 : 0;   // la fusée explose dans les mains : on l'évite
         const skill = p.phys.catchSkill * d.catchMul * hard;
         p.ai.willCatch = Math.random() < skill; p.ai.decided = Math.random(); p.ai.reactT = d.react * (0.6 + Math.random() * 0.8);
@@ -49,7 +52,15 @@
       const foesHold = b.holder && b.holder.team !== p.team, weHold = b.holder && b.holder.team === p.team, foes = g.opponentsOf(p);
       let want = false, rate = D.powerRate;
       switch (id) {
-        case 'hex': case 'venom': case 'screech': case 'rootcry': case 'laser': case 'pikachu': case 'blizzard': case 'bulles': want = foes.length >= 2 || foesHold; break;
+        case 'tongue': want = foesHold && Math.hypot(b.holder.x-p.x,b.holder.y-p.y)<360; rate=1; break;
+        case 'camouflage': want = !p.charging; break;
+        case 'carapace': want = b.state==='live' && b.team!==p.team && Math.hypot(b.x-p.x,b.y-p.y)<280; rate=1; break;
+        case 'coldregency': want = true; break;
+        case 'ribwall': want = foesHold || b.state==='live' && b.team!==p.team; break;
+        case 'bonehand': want = foesHold || b.state==='dead'; break;
+        case 'marrow': want = foes.length>0; break;
+        case 'icepatch': case 'hex': case 'venom': case 'screech': case 'rootcry': case 'laser': case 'pikachu': case 'blizzard': case 'bulles': want = foes.length >= 2 || foesHold; break;
+        case 'priere': want = g.players.some(q=>q.team===p.team&&q.alive&&q.hp<=q.maxHp*.6); break;
         case 'cri': want = weHold || foes.length === 3; break;
         case 'zoom': want = !weHold; rate *= 0.6; break;
         case 'aimant': want = foesHold || (b.state === 'dead' && g.sideOf(b.x) !== p.team); rate *= 2; break;
@@ -165,6 +176,7 @@
     outer(p, dt) {
       const g = this.g, b = g.ball, ai = p.ai, foes = g.aliveInner(1 - p.team);
       if (!(p.state === 'idle')) { ai.move = { dx: 0, dy: 0 }; return; }
+      if(['goblin','skeleton','lizard'].includes(p.def.monster)&&this.power(p,dt))return;
       if (p.hasBall) {
         ai.hold = (ai.hold == null) ? 0.5 + Math.random() * 0.5 : ai.hold - dt;
         if (ai.charge == null) ai.charge = clamp(this.D.charge * (0.5 + Math.random()), 0.1, 1);

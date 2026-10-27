@@ -1,0 +1,7 @@
+Music: Juhani Junkala / SubspaceAudio — 5 Chiptunes (Action), CC0.
+https://opengameart.org/content/5-chiptunes-action
+Title Screen, Level 1, Level 3, Ending. Converted WAV to MP3.
+
+Sound effects: Kenney — Impact Sounds, CC0.
+https://kenney.nl/assets/impact-sounds
+Original filenames mapped in tools/import-audio.py. Converted OGG to MP3.

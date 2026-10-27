@@ -502,6 +502,7 @@
     }
 
     moveTo(x, y, dt) {
+      const via = this.game.map.waypoint(this.x, this.y, x, y); x = via.x; y = via.y;
       const dx = x - this.x, dy = y - this.y;
       const d = Math.hypot(dx, dy);
       this.wantMove = true;

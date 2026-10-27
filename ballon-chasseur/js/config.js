@@ -1,7 +1,7 @@
 // Ballon chasseur — constantes, personnages, équipes, lancers spéciaux et terrains.
 // Tout est dans l'espace de noms BC. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BC = window.BC || {};
-window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BC.VERSION = '2.1';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BC) {
   'use strict';
   BC.W = 1280; BC.H = 720;              // canevas logique
@@ -11,7 +11,8 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
   BC.LANE = 46;                          // distance des couloirs extérieurs par rapport au terrain
   BC.GRAVITY = 1500;
   BC.BALL_R = 11;
-  BC.DIFFICULTIES = ['Facile', 'Normal', 'Difficile'];
+  BC.DIFFICULTIES = ['Facile', 'Moyen', 'Difficile', 'Dangereux', 'Impossible'];
+  BC.BOSS_HP_MULTIPLIERS=[1,1.15,1.35,1.65,2];
   BC.INNER = 3;                          // joueurs intérieurs par équipe (ceux qu'on peut toucher)
   BC.OUTER = 3;                          // joueurs extérieurs (haut, bas, fond) : ils ne peuvent pas être touchés
 
@@ -34,6 +35,7 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
   BC.CHARGE_MAX = 3;
   BC.POWERS = {
     triche:   { name: 'Code de triche',      icon: '🕹️', kind: 'throw',   color: '#8f8', desc: 'La balle suit sa cible où qu\'elle aille et personne ne peut l\'attraper. Elle fait un peu moins mal… c\'est lui qui a programmé le jeu !' },
+    priere: { name: 'Prière de Josée', icon: '🙏', kind: 'instant', color: '#ffe8a0', desc: 'Josée fait une prière : chaque coéquipier encore en jeu récupère 50 % de sa vie maximale, sans dépasser son maximum.' },
     biscuit:  { name: 'Biscuit chaud',       icon: '🍪', kind: 'throw',   color: '#fc8', desc: 'Si la balle touche quelqu\'un, des biscuits partent dans tous les sens et frappent toute l\'équipe adverse pour la moitié des dégâts. Impossible d\'y échapper !' },
     boulet:   { name: 'Boulet du vétéran',   icon: '💥', kind: 'throw',   color: '#aaa', desc: 'Lente, lourde, légendaire : presque impossible à attraper et ça fait très, très mal.' },
     laser:    { name: 'Lunettes laser',      icon: '👓', kind: 'instant', color: '#8ff', desc: 'Un laser traverse toute l\'équipe adverse : tout le monde est figé par l\'électricité. À lui de lancer !' },
@@ -53,9 +55,10 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
 
   // Stats de 0 à 18 : 1–10 normales, 11–15 dorées, 16–18 rouges. Les effets spéciaux 11/12 sont conservés.
   BC.MAX_STAT = 18;
-  BC.STAT_KEYS = ['speed', 'power', 'catch', 'hp'];
-  BC.STAT_NAMES = { speed: 'Vitesse', power: 'Lancer', catch: 'Attrapé', hp: 'Endurance' };
+  BC.STAT_KEYS = ['speed', 'power', 'catch', 'hp', 'precision'];
+  BC.STAT_NAMES = { speed: 'Vitesse', power: 'Lancer', catch: 'Attrapé', hp: 'Endurance', precision: 'Précision' };
   BC.PERKS = {
+    precision: {},
     speed: { 11: { name: 'Turbo', desc: 'Court encore plus vite.' }, 12: { name: 'Fusée', desc: 'Saute beaucoup plus haut.' } },
     power: { 11: { name: 'Bras canon', desc: '+3 dégâts à chaque lancer.' }, 12: { name: 'Boulet', desc: 'La balle part déjà à pleine vitesse.' } },
     catch: { 11: { name: 'Mains collantes', desc: 'La fenêtre pour attraper est bien plus grande.' }, 12: { name: 'Réflexes', desc: 'Le pouvoir se recharge avec 2 attrapés au lieu de 3.' } },
@@ -67,7 +70,7 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
     matthieu: { name: 'Matthieu', birth: '1990-01-15', role: 'mononcle', size: 1.0, power: 'triche',
       stats: { speed: 6, power: 6, catch: 8, hp: 6 },
       look: { skin: '#f0c8a0', hair: '#4a2f1b', hairStyle: 'short', beard: '#3d2616' } },
-    josee: { name: 'Josée', birth: '1960-06-29', role: 'grandmaman', size: 0.92, power: 'biscuit',
+    josee: { bodyType:'female', name: 'Josée', birth: '1960-06-29', role: 'grandmaman', size: 0.92, power: 'priere',
       stats: { speed: 4, power: 4, catch: 10, hp: 6 },
       look: { skin: '#f3d2b4', hair: '#d8d2c8', hairStyle: 'bun', lipstick: true, earrings: true, wrinkles: true } },
     richard: { name: 'Richard', birth: '1956-03-15', role: 'grandpapa', size: 0.92, power: 'boulet',
@@ -77,7 +80,7 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
     mickael: { name: 'Mickael', birth: '1993-01-04', role: 'papa', size: 0.98, power: 'laser',
       stats: { speed: 6, power: 8, catch: 6, hp: 8 },
       look: { skin: '#f3d2b4', hair: '#3b2614', hairStyle: 'swept', glasses: 'round', beard: '#6b4a2b', grin: true } },
-    marie: { name: 'Marie', birth: '1994-01-06', role: 'maman', size: 0.92, power: 'bulles',
+    marie: { bodyType:'female', name: 'Marie', birth: '1994-01-06', role: 'maman', size: 0.92, power: 'bulles',
       stats: { speed: 8, power: 6, catch: 8, hp: 6 },
       look: { skin: '#f6d6bd', hair: '#5a3a22', hairStyle: 'long', lipstick: true } },
     adam: { name: 'Adam', birth: '2021-09-11', role: 'enfant', size: 0.6, power: 'pikachu',
@@ -90,7 +93,7 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
     jeremie: { name: 'Jérémie', birth: '1988-03-06', role: 'papa', size: 1.0, power: 'teleport',
       stats: { speed: 8, power: 8, catch: 6, hp: 8 },
       look: { skin: '#f0c8a0', hair: '#8a6a3e', hairStyle: 'quiff', beard: '#7a5a35', eyes: '#4a7fb5' } },
-    jessica: { name: 'Jessica', birth: '1991-07-01', role: 'maman', size: 0.92, power: 'aimant',
+    jessica: { bodyType:'female', name: 'Jessica', birth: '1991-07-01', role: 'maman', size: 0.92, power: 'aimant',
       stats: { speed: 8, power: 6, catch: 10, hp: 6 },
       look: { skin: '#f6d6bd', hair: '#e5c06b', hairStyle: 'ponytail', lipstick: true, earrings: true } },
     edison: { name: 'Edison', birth: '2023-02-08', role: 'toutpetit', size: 0.5, power: 'tornade',
@@ -100,13 +103,13 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
     josue: { name: 'Josué', birth: '1985-10-29', role: 'papa', size: 0.98, power: 'cri',
       stats: { speed: 6, power: 10, catch: 6, hp: 10 },
       look: { skin: '#e8b98f', hair: '#1b1b1b', hairStyle: 'buzz', beard: '#1b1b1b', squint: true, grin: true } },
-    emily: { name: 'Émily', birth: '1984-12-25', role: 'maman', size: 0.94, power: 'blizzard',
+    emily: { bodyType:'female', name: 'Émily', birth: '1984-12-25', role: 'maman', size: 0.94, power: 'blizzard',
       stats: { speed: 6, power: 6, catch: 8, hp: 6 },
       look: { skin: '#f6d6bd', hair: '#b5452a', hairStyle: 'long', lipstick: true, earrings: true } },
     eliott: { name: 'Eliott', birth: '2016-10-06', role: 'enfant', size: 0.78, power: 'fantome',
       stats: { speed: 8, power: 4, catch: 6, hp: 4 },
       look: { skin: '#f0c8a0', hair: '#3b2a1a', hairStyle: 'short', cheeks: true, freckles: true } },
-    alexie: { name: 'Alexie', birth: '2014-11-01', role: 'enfant', size: 0.82, power: 'licorne',
+    alexie: { bodyType:'female', name: 'Alexie', birth: '2014-11-01', role: 'enfant', size: 0.82, power: 'licorne',
       stats: { speed: 8, power: 4, catch: 8, hp: 4 },
       look: { skin: '#f6d6bd', hair: '#5a3a22', hairStyle: 'ponytail', cheeks: true, freckles: true } },
     zachary: { name: 'Zachary', birth: '2007-08-02', role: 'ado', size: 1.05, power: 'fusee',
@@ -119,7 +122,7 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
   // Une équipe de moins de six personnes emprunte des cousins aux familles qui ne jouent pas ce match (BC.squad).
   BC.TEAMS = [
     { id: 'matt', name: 'Les Matt', short: 'MATT', color: '#1e5bd8', color2: '#ffffff', dark: '#0f2f73', players: ['matthieu', 'josee', 'richard'], court: 'gym' },
-    { id: 'bibi', name: 'Les Bibi', short: 'BIBI', color: '#af1e2d', color2: '#ffffff', stripe: '#192168', dark: '#192168', players: ['mickael', 'marie', 'adam', 'milo'], court: 'parc' },
+    { id: 'bibi', name: 'Les Bibi', short: 'BIBI', color: '#f4c430', color2: '#192168', stripe: '#ffffff', dark: '#192168', players: ['mickael', 'marie', 'adam', 'milo'], court: 'parc' },
     { id: 'jay',  name: 'Les Jay',  short: 'JAY',  color: '#d9342b', color2: '#ffffff', stripe: '#1b1b1b', dark: '#1b1b1b', players: ['jeremie', 'jessica', 'edison'], court: 'ruelle' },
     { id: 'jo',   name: 'Les Jo',   short: 'JO',   color: '#1f9d4a', color2: '#ffffff', dark: '#0f5a2a', players: ['josue', 'zachary', 'emily', 'alexie', 'eliott'], court: 'plage' },
   ];
@@ -138,16 +141,21 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
   BC.squads = function (a, b) {
     const pool = BC.TEAMS.filter(t => t !== a && t !== b).flatMap(t => t.players).sort((x, y) => BC.PLAYERS[y].size - BC.PLAYERS[x].size);
     return [a, b].map(team => {
+      if(team.boss)return {inner:team.players.slice(0,1),outer:[],lent:[]};
       const own = team.players.slice(0, BC.INNER + BC.OUTER), lent = [];
       while (own.length + lent.length < BC.INNER + BC.OUTER && pool.length) lent.push(pool.shift());
       return { inner: own.slice(0, BC.INNER), outer: own.slice(BC.INNER).concat(lent), lent };
     });
   };
 
+  for (const d of Object.values(BC.PLAYERS)) d.stats.precision ??= 6;
+  BC.aimSpread = value => 6 * Math.PI / 180 * (1 - Math.max(0, Math.min(18, value ?? 6)) / 18) ** 2;
+
   // Conversion des stats (0 à 18) en valeurs physiques. stats : celles du personnage, ou celles de l'aventure.
   BC.phys = function (d, stats) {
     const s = stats || d.stats;
     return {
+      aimSpread: BC.aimSpread(s.precision ?? d.stats.precision),
       maxSpeed: 160 + 13 * s.speed,          // marche
       dashMul: s.speed >= 11 ? 2.05 : 1.75,  // course (double appui) ; Turbo
       throwSpeed: 540 + 32 * s.power,        // lancer normal
@@ -156,7 +164,7 @@ window.BC.VERSION = '2.0';   // à augmenter à chaque mise en ligne (affichée 
       catchSkill: 0.12 + 0.045 * s.catch,    // probabilité de base pour l'ordi, fenêtre pour l'humain
       catchWin: s.catch >= 11 ? 1.6 : 1,     // Mains collantes
       chargeMax: s.catch >= 12 ? 2 : BC.CHARGE_MAX,   // Réflexes
-      maxHp: Math.round(22 + 3.5 * s.hp),
+      maxHp: d.boss ? d.bossHp : Math.round(22 + 3.5 * s.hp),
       regen: s.hp >= 11 || d.monster === 'troll',
       regenAmount: d.monster === 'troll' ? 3 : 1,                     // Coriace
       revive: s.hp >= 12,                    // Increvable

@@ -78,17 +78,19 @@
     updateIntro(dt) {
       const I = this.intro; I.t += dt;
       if (I.part === 'entrance') {
-        const rx = R.w / 4 - 95, ry = R.h / 2 - 75, w = 1.25;
         for (const T of this.teams) {
-          const cx = T.introCx, list = T.skaters.concat([T.goalie]);
+          const list = T.skaters.concat([T.goalie]);
           for (const s of list) {
             const tt = I.t - s.introDelay; if (tt < 0) continue;
             const px = s.x, py = s.y; let x, y;
-            if (tt < 1.2) { const k = tt / 1.2; const top = { x: cx, y: CY - ry }; x = (CX + T.side * 90) + (top.x - (CX + T.side * 90)) * k; y = (R.y - 30) + (top.y - (R.y - 30)) * k; }
-            else {
-              const ang = -Math.PI / 2 + (tt - 1.2) * w * (T.side < 0 ? -1 : 1);
-              x = cx + Math.cos(ang) * rx; y = CY + Math.sin(ang) * ry;
-              if (s === T.goalie && tt > 1.2 + Math.PI * 2 / w) { const gx = HK.goalX(T.side) - T.side * 12; x = gx; y = CY; }
+            const top = HK.warmupPoint(T.side, 0);
+            if (tt < 1.2) {
+              const k = tt / 1.2;
+              x = CX + T.side * 90 + (top.x - (CX + T.side * 90)) * k;
+              y = R.y - 30 + (top.y - (R.y - 30)) * k;
+            } else {
+              const point = HK.warmupPoint(T.side, (tt - 1.2) * 180);
+              x = point.x; y = point.y;
             }
             s.introOn = true; s.vx = (x - px) / dt; s.vy = (y - py) / dt; s.x = x; s.y = y; s.anim = (s.anim || 0) + dt * 8;
             if (Math.abs(s.vx) > 10) s.dir = s.vx > 0 ? 1 : -1; s.face = Math.atan2(s.vy, s.vx);

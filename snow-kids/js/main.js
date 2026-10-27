@@ -40,7 +40,7 @@
     $('btn-time').onclick = () => { flow = { mode: 'time', players: 1, picks: [] }; A.sfx('click'); openSelect(0); };
     $('btn-help').onclick = () => { A.sfx('click'); $('howto').classList.toggle('hidden'); };
     $('btn-help-close').onclick = () => { A.sfx('click'); $('howto').classList.add('hidden'); };
-    $('btn-reset').onclick = () => { if (confirm('Effacer toute la progression (pièces, planches, pistes débloquées, Shinobin) ?')) { save = SK.Profiles.init({}, DEFAULT_SAVE); SK.Town._streetX = undefined; A.setEnabled(save.sound); A.setMusic(save.music); store(); refreshMenu(); toast('Sauvegarde effacée'); } };
+    $('btn-reset').onclick = () => { if (confirm('Effacer toute la progression (pièces, planches, pistes débloquées, Ninja) ?')) { save = SK.Profiles.init({}, DEFAULT_SAVE); SK.Town._streetX = undefined; A.setEnabled(save.sound); A.setMusic(save.music); store(); refreshMenu(); toast('Sauvegarde effacée'); } };
     $('howto-grid').innerHTML = `
       <div><h3>Le but</h3><p>Descends la piste plus vite que les autres. Au bas de la piste, la <b>remontée mécanique</b> te ramène au sommet pour le tour suivant : une chaise part toutes les ${SK.LIFT_INTERVAL} secondes, une place par chaise. Au dernier tour, la ligne d'arrivée remplace la remontée.</p>
       <p class="touch-help"><b>Sur tablette ou cellulaire :</b> utilise les gros boutons en bas de l’écran. Maintiens Sauter pour charger et relâche pour sauter. Tu peux tourner avec un autre doigt. Dans le village, touche le sol pour marcher et une maison pour y entrer. Tourne la tablette à l’horizontale pour mieux voir la piste.</p><h3>Commandes (joueur 1)</h3><ul><li><kbd>←</kbd> <kbd>→</kbd> diriger · <kbd>↑</kbd> se pencher en avant (un peu plus de vitesse) · <kbd>↓</kbd> freiner (utile dans les virages serrés)</li><li><kbd>X</kbd> maintenir pour charger le saut (genoux fléchis), puis relâcher pour sauter. Charge maximale en 0,9 seconde.</li><li>Plus les genoux sont pliés au relâchement, plus le saut est haut. Une flexion complète ajoute aussi une petite poussée sous 70 km/h.</li><li>En l'air, <kbd>C</kbd> + direction : Grab (seul), <kbd>↑</kbd> salto arrière, <kbd>↓</kbd> salto avant, <kbd>←</kbd>/<kbd>→</kbd> vrille 360</li><li>En l'air, <kbd>X</kbd> + direction : Method (seul), <kbd>↑</kbd> Rodéo, <kbd>↓</kbd> Tornade, <kbd>←</kbd>/<kbd>→</kbd> vrille 720 — plus longues, mieux payées</li><li><kbd>V</kbd> tirer · <kbd>B</kbd> utiliser l'objet · <kbd>Échap</kbd> pause</li></ul>
@@ -60,7 +60,7 @@
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(W, 130); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
     ctx.fillStyle = '#e6f0fa'; ctx.beginPath(); ctx.moveTo(0, 75); ctx.lineTo(W, 142); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
     for (let i = 0; i < 6; i++) R.drawProp(ctx, i % 2 ? 'pine' : 'fir', ((i * 190 + t * 60) % (W + 100)) - 50, 65 + (((i * 190 + t * 60) % (W + 100)) - 50) / W * 70 - 2, 7, i / 6, t, {});
-    const chars = SK.CHARACTERS.filter(c => !c.hidden || save.shinobin);
+    const chars = SK.CHARACTERS.filter(c => SK.characterUnlocked(c,save));
     chars.forEach((c, i) => { const x = ((i * 150 + t * 90 + Math.sin(t + i) * 10) % (W + 160)) - 80, y = 70 + x / W * 70 - 5; const fr = fakeRacer(c.id); fr.input.steer = Math.sin(t * 2 + i) * 0.5; if (Math.sin(t * 1.3 + i * 2) > 0.8) { fr.state = 'air'; fr.h = (Math.sin(t * 1.3 + i * 2) - 0.8) * 8; } R.drawRacer(ctx, fr, x, y, 34, t, false); });
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; for (let i = 0; i < 40; i++) ctx.fillRect((i * 97.3 + t * 20) % W, (i * 61.7 + t * 50) % H, 3, 3);
   }
@@ -71,7 +71,7 @@
     show('advselect'); A.music('select');
     const info = $('adv-info'); let current = save.advChar || 'zach';
     SK.Town.select({
-      canvas: $('adv-canvas'), info, unlocked: save.shinobin, current, lookFor: id=>SK.lookOf(SK.charById(id),SK.Profiles.peek(save,id)),
+      canvas: $('adv-canvas'), info, unlocked: save.shinobin, save, current, lookFor: id=>SK.lookOf(SK.charById(id),SK.Profiles.peek(save,id)),
       onChange: c => { current = c.id; $('btn-adv-ok').textContent = c.gender==='girl' ? "C’est elle !" : "C’est lui !"; let bars = ''; for (const [k, lab, icon] of [['speed','Vitesse','ϟ'],['corner','Virage','↝'],['acceleration','Accélération','»'],['jump','Saut','↟'],['strength','Force','✊']]) { bars += `<div class="kid-stat"><span class="stat-icon stat-${k}" aria-hidden="true"><svg viewBox="0 0 32 34">${SK.STAT_ICONS[k]}</svg></span><span>${lab}</span><span class="kid-meter">`; for(let i=1;i<=5;i++)bars+=`<i class="${i<=c[k]?'on':''}"></i>`;bars+=`</span><strong>${c[k]}</strong></div>`; } const profile=SK.Profiles.peek(save,c.id);info.innerHTML=`<b>${c.name}</b>${bars}<div class="kid-progress">Niv. ${SK.Progression.info(profile).level} · 🏆 ${Object.values(profile.cups||{}).filter(x=>x.won).length} / 15 · ${gold(profile.gold)}</div><div class="kid-playtime" data-play-time="${c.id}">⏱ Temps de jeu : ${SK.Session.format(profile.playSeconds)}</div>`; },
       onPick: id => { A.sfx('box'); chooseAdventure(id); },
       onBack,
@@ -121,7 +121,7 @@
   function openRecords() {
     show('records'); A.music('results');
     const won = Object.keys(save.won).length, done = Object.keys(save.missions || {}).length;
-    $('records-sub').innerHTML = `${gold(save.gold)} · ${won} trophée${won > 1 ? 's' : ''} sur ${SK.COURSES.length} · ${done} mission${done > 1 ? 's' : ''} réussie${done > 1 ? 's' : ''} sur ${SK.MISSIONS.length} · ${save.boards.length} planche${save.boards.length > 1 ? 's' : ''}` + (save.shinobin ? ' · Shinobin débloqué 🥷' : '');
+    $('records-sub').innerHTML = `${gold(save.gold)} · ${won} trophée${won > 1 ? 's' : ''} sur ${SK.COURSES.length} · ${done} mission${done > 1 ? 's' : ''} réussie${done > 1 ? 's' : ''} sur ${SK.MISSIONS.length} · ${save.boards.length} planche${save.boards.length > 1 ? 's' : ''}` + (save.shinobin ? ' · Ninja débloqué 🥷' : '');
     let html = '<div class="trophies">' + SK.COURSES.map((c, i) => `<div class="trophy${save.won[c.id] ? '' : ' locked'}"><span class="cup">🏆</span><b>${i < save.unlocked || !c.hidden ? c.name : '???'}</b>${save.won[c.id] ? 'gagnée' : '—'}</div>`).join('') + '</div>';
     html += '<table class="results"><tr><th>Piste</th><th>État</th><th class="num">Record</th></tr>';
     SK.COURSES.forEach((c, i) => { const unlocked = i < save.unlocked; html += `<tr><td>${i + 1}. ${unlocked || !c.hidden ? c.name : '???'}</td><td>${save.won[c.id] ? '🏆 gagnée' : unlocked ? 'débloquée' : '🔒'}</td><td class="num">${SK.fmtTime(save.best[c.id])}</td></tr>`; });
@@ -145,7 +145,7 @@
     if (!save.boards.includes(boardId)) boardId = 'freestyle';
     const other = two && player === 1 ? flow.picks[0].charId : null;
     const cards = $('char-cards'); cards.innerHTML = '';
-    const list = SK.CHARACTERS.filter(c => !c.hidden || save.shinobin);
+    const list = SK.CHARACTERS.filter(c => SK.characterUnlocked(c,save));
     if (!save.shinobin) list.push({ id: 'locked', name: '???', locked: true });
     const draw = () => {
       cards.querySelectorAll('.card').forEach(el => { el.classList.toggle('selected', el.dataset.id === charId); el.classList.toggle('p2', player === 1); });
@@ -280,7 +280,7 @@
   }
   function startCupStage(){const cup=SK.cupById(flow.cup.id);flow.course=SK.cupCourse(cup,flow.cup.stage);flow.laps=cup.laps;startRace();}
 
-  // ---- histoire (Shinobin)
+  // ---- histoire (Ninja)
   function story(which, next) {
     show('story'); A.music(which==='ending'?'credits':'ninja');
     const cv = $('story-canvas'), ctx = cv.getContext('2d');
@@ -291,9 +291,9 @@
     R.drawRacer(ctx, me, 300, 205, 60, 0, false); if (which !== 'ending') { sh.state = 'air'; sh.h = 0.6; } R.drawRacer(ctx, sh, 600, 205, 60, 0, false);
     const myName = me.def.name;
     const texts = {
-      ninja: ['Le Pays des Ninjas', `<p>Au moment du départ, une ombre bondit du haut du château et atterrit sur la ligne, planche aux pieds.</p><p><b>Shinobin</b> : « Vous êtes sur mes terres, petits. Personne ne descend cette montagne plus vite qu'un ninja. »</p><p><b>${myName}</b> : « On va voir ça ! »</p><p>Shinobin participe à la course : il est rapide, précis et doué partout. Finis <b>1er</b> pour débloquer la piste cachée.</p>`],
-      dizzy: ['Le Pays Vertige', `<p>Le parc d'attractions est ouvert rien que pour vous… et Shinobin est déjà sur la ligne de départ.</p><p><b>Shinobin</b> : « Tu as eu de la chance au château. Ici, les virages n'en finissent plus. Bats-moi encore et je t'apprendrai mes secrets. »</p><p>Gagne cette dernière course et <b>Shinobin devient jouable</b>.</p>`],
-      ending: ['Champion des Snow Kids !', `<p><b>Shinobin</b> retire son masque : « Tu m'as battu partout. Tu es digne de l'art du ninja. » Il te tend sa planche rouge.</p><p>Toutes les pistes sont gagnées. <b>Shinobin est maintenant jouable</b> dans tous les modes, et tu peux continuer à collectionner les pièces pour la planche Dorée.</p><p>Merci d'avoir joué à Snow Kids !</p>`],
+      ninja: ['Le Pays des Ninjas', `<p>Au moment du départ, une ombre bondit du haut du château et atterrit sur la ligne, planche aux pieds.</p><p><b>Ninja</b> : « Vous êtes sur mes terres, petits. Personne ne descend cette montagne plus vite qu'un ninja. »</p><p><b>${myName}</b> : « On va voir ça ! »</p><p>Ninja participe à la course : il est rapide, précis et doué partout. Finis <b>1er</b> pour débloquer la piste cachée.</p>`],
+      dizzy: ['Le Pays Vertige', `<p>Le parc d'attractions est ouvert rien que pour vous… et Ninja est déjà sur la ligne de départ.</p><p><b>Ninja</b> : « Tu as eu de la chance au château. Ici, les virages n'en finissent plus. Bats-moi encore et je t'apprendrai mes secrets. »</p><p>Gagne cette dernière course et <b>Ninja devient jouable</b>.</p>`],
+      ending: ['Champion des Snow Kids !', `<p><b>Ninja</b> garde son masque et déclare : « Tu m'as battu partout. Tu es digne de l'art du ninja. » Il te tend sa planche rouge.</p><p>Toutes les pistes sont gagnées. <b>Ninja est maintenant jouable</b> dans tous les modes, et tu peux continuer à collectionner les pièces pour la planche Dorée.</p><p>Merci d'avoir joué à Snow Kids !</p>`],
     };
     $('story-title').textContent = texts[which][0]; $('story-text').innerHTML = texts[which][1];
     $('btn-story-ok').onclick = () => { A.sfx('click'); next(); };
@@ -313,8 +313,8 @@
 
   // ------------------------------------------------------------------ course
   let race = null, raf = 0, paused = false, acc = 0, last = 0, overAt = 0, canvas, ctx;
-  function pickAI(count, taken, allowShinobin) {
-    const pool = SK.CHARACTERS.filter(c => !taken.includes(c.id) && (!c.hidden || (allowShinobin && save.shinobin)));
+  function pickAI(count, taken, allowNinja) {
+    const pool = SK.CHARACTERS.filter(c => !taken.includes(c.id) && (!c.hidden || (allowNinja && SK.characterUnlocked(c,save))));
     const rng = SK.rng(flow.seed || (Date.now() & 0xffff)), out = [];
     while (out.length < count && pool.length) out.push(pool.splice(rng.int(pool.length), 1)[0]);
     const boardsByDiff = [['freestyle'], ['freestyle', 'fusee', 'virage', 'acrobate'], ['fusee', 'virage', 'acrobate', 'pro']];
@@ -324,7 +324,7 @@
     if(!confirmed&&!flow.cup&&!flow.debug&&!new URLSearchParams(location.search).has('demo')&&!new URLSearchParams(location.search).has('mission')){chooseBoard(()=>startRace(true),false);return;}
     show('race'); A.init(); A.music('start');
     canvas = $('game'); ctx = canvas.getContext('2d');
-    const racers = flow.picks.map((p, i) => ({ charId: p.charId, boardId: p.boardId, board: effectiveBoard(p.boardId), gear: gearObj(p.charId), powerLevels:save.powerLevels, strengthLevel:save.strengthLevel, look: lookFor(p.charId), ctrl: 'human', player: i }));
+    const racers = flow.picks.map((p, i) => ({ charId: p.charId, def:SK.trainedCharacter(p.charId,save), boardId: p.boardId, board: effectiveBoard(p.boardId), gear: gearObj(p.charId), powerLevels:save.powerLevels, strengthLevel:save.strengthLevel, look: lookFor(p.charId), ctrl: 'human', player: i }));
     if(flow.finalBoss){racers.push({charId:'shinobin',def:{...SK.charById('shinobin'),id:'matthieuboss',name:'Matthieu',hat:'crown',colors:{jacket:'#101018',pants:'#0b0b13',hat:'#8f7132',hair:'#07070d',skin:'#07070d',board:'#382e43'}},boardId:'pro',ctrl:'cpu',boss:true});}
     else if (flow.mode === 'practice') { if (['hits','pushes'].includes(flow.mission.type)) racers.push(...pickAI(3, racers.map(r => r.charId), false)); }
     else if (flow.mode !== 'time') {
@@ -367,6 +367,9 @@
     }
   }
   function updatePauseMission(){
+    const directions={none:'Sans flèche',left:'←',right:'→',up:'↑',down:'↓'};
+    $('pause-tricks').querySelector('summary').textContent='Toutes les figures · '+Object.keys(SK.TRICKS).length+' moves';
+    $('pause-trick-list').innerHTML=Object.values(SK.TRICKS).map(trick=>'<tr><th scope="row">'+trick.name+'</th><td><kbd>'+(trick.btn==='trick'?'C':'X')+'</kbd> + '+directions[trick.dir]+'</td><td>'+trick.coins+'</td><td>'+trick.dur.toLocaleString('fr-CA')+' s</td></tr>').join('');
     const panel=$('pause-mission'),m=race?.mission;panel.hidden=!m;$('pause-help').open=!m;
     if(!m){panel.replaceChildren();return;}
     const r=race.racers.find(r=>r.ctrl==='human'),outcome=SK.missionOutcome(race,r);
@@ -422,7 +425,7 @@
     if(flow.debug){openDebug();return;}
     show('result'); if(flow.mode!=='practice'&&A.cur!=='goal') A.music('results');
     const res = race.results(), champ = flow.mode === 'champ', practice = flow.mode === 'practice', me = res.find(x => x.r.ctrl === 'human');
-    let earned = 0, unlockedNew = null, gotShinobin = false, trophy = false, missionOk = null, unlockedMission = null;
+    let earned = 0, unlockedNew = null, gotNinja = false, trophy = false, missionOk = null, unlockedMission = null;
     for (const x of res) if (x.r.ctrl === 'human') earned += x.coins + (practice ? 0 : x.prize);
     if (practice && me) { // évaluation de la mission
       const m = flow.mission, r = me.r;
@@ -439,7 +442,7 @@
       save.won[flow.course.id] = true;
       const idx = SK.COURSES.findIndex(c=>c.id===flow.course.id);
       if (idx + 1 < SK.COURSES.length && save.unlocked < idx + 2) { save.unlocked = idx + 2; unlockedNew = SK.COURSES[idx + 1]; }
-      if (flow.course.id === 'dizzy' && !save.shinobin) { save.shinobin = true; gotShinobin = true; }
+      if (flow.course.id === 'dizzy' && !save.shinobin) { save.shinobin = true; gotNinja = true; }
     }
     let cupOutcome=null;
     if(flow.cup){SK.scoreCupRace(flow.cup,res);if(flow.cup.finished&&flow.mode!=='time'){cupOutcome=SK.recordCup(save,flow.cup);if(cupOutcome.firstWin){trophy=true;earned+=SK.TROPHY_GOLD;save.gold+=SK.TROPHY_GOLD;}}}
@@ -492,7 +495,7 @@
     if (champ||flow.cup) mk('Retour au village', 'gold', openTown); else if (flow.mode !== 'time') mk('Boutique', 'gold', () => openShop(() => show('menu')));
     if(!flow.cup)mk('Menu', 'ghost', () => show('menu'));
     if (me && me.rank === 0) A.sfx('win');
-    if (gotShinobin && !flow.cup) setTimeout(() => { A.sfx('unlock'); story('ending', () => { save.ending = true; store(); openTown(); }); }, 900);
+    if (gotNinja && !flow.cup) setTimeout(() => { A.sfx('unlock'); story('ending', () => { save.ending = true; store(); openTown(); }); }, 900);
     else if (unlockedNew) setTimeout(() => A.sfx('unlock'), 600);
   }
 

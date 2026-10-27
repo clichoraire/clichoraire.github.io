@@ -17,7 +17,7 @@ A.save(A.load('matthieu'));
 assert.equal(A.load().leader, 'matthieu');
 assert.equal(A.load('milo').wins, 2);
 // Chaque stat passe au-delà de 12, atteint 18 et ne consomme plus de point ensuite.
-const s = A.load('matthieu'), c = A.char(s, 'matthieu');
+const s = A.load('matthieu'), c = A.char(s, 'matthieu');c.earned=39;
 for (const key of BC.STAT_KEYS) {
   c.stats[key] = 12; c.points = 10;
   for (let level = 13; level <= 18; level++) { assert.equal(A.spend(s, 'matthieu', key), true); assert.equal(c.stats[key], level); }

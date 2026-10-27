@@ -5,11 +5,12 @@
 const path = require('path');
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] === undefined ? true : m[2]] : [a, true]; }));
 global.window = {}; global.performance = { now: () => Date.now() };
-for (const f of ['config', 'game', 'powers', 'ai']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['config', 'monsters', 'game', 'powers', 'ai', 'match-rules', 'boss-arena', 'equipment', 'magic-items']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const BC = window.BC;
 
+const teamById=id=>BC.teamById(id)||BC.MONSTER_TEAMS.find(t=>t.id===id)||BC.BOSS_TEAMS.find(t=>t.id===id);
 function play(aId, bId, diff, verbose) {
-  const g = new BC.Game({ teams: [BC.teamById(aId), BC.teamById(bId)], ctrl: ['cpu', 'cpu'], difficulty: diff, intro: false });
+  const g = new BC.Game({ teams: [teamById(aId), teamById(bId)], ctrl: ['cpu', 'cpu'], difficulty: diff, intro: false });
   let t = 0; const log = [];
   while (g.phase !== 'end' && t < 300) {
     g.update(BC.STEP); t += BC.STEP;
@@ -31,7 +32,7 @@ if (args.all) {
     const r = play(a, b, diff, args.verbose);
     if (args.verbose) { console.log(r.log.join('\n')); console.log('  PV finaux :', r.hp.join(' | ')); }
     if (r.winner === 0) wa++; else if (r.winner === 1) wb++; tt += r.time;
-    console.log(`Match ${i + 1} : ${r.winner === 0 ? BC.teamById(a).name : r.winner === 1 ? BC.teamById(b).name : 'aucun (limite de temps)'} en ${r.time.toFixed(0)} s · lancers ${r.stats[0].throws}/${r.stats[1].throws} · spéciaux ${r.stats[0].supers}/${r.stats[1].supers} · attrapés ${r.stats[0].catches}/${r.stats[1].catches}`);
+    console.log(`Match ${i + 1} : ${r.winner === 0 ? teamById(a).name : r.winner === 1 ? teamById(b).name : 'aucun (limite de temps)'} en ${r.time.toFixed(0)} s · lancers ${r.stats[0].throws}/${r.stats[1].throws} · spéciaux ${r.stats[0].supers}/${r.stats[1].supers} · attrapés ${r.stats[0].catches}/${r.stats[1].catches}`);
   }
-  console.log(`${BC.teamById(a).name} ${wa} – ${wb} ${BC.teamById(b).name} · durée moyenne ${(tt / games).toFixed(0)} s`);
+  console.log(`${teamById(a).name} ${wa} – ${wb} ${teamById(b).name} · durée moyenne ${(tt / games).toFixed(0)} s`);
 }

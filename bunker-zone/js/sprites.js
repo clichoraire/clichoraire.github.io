@@ -42,11 +42,12 @@
     archonmech: { idle: 'archon_idle', walk: ['archon_walk1', 'archon_walk2'], fire: 'archon_fire', h: 46, feet: 12 },
     scoutbot:   { idle: 'scout_idle',  walk: ['scout_walk1', 'scout_walk2', 'scout_walk3'], fire: 'scout_fire', h: 28, feet: 7 },
     siegemech:  { idle: 'siege_idle',  walk: ['siege_walk1', 'siege_walk2'],   fire: 'siege_fire',  h: 48, feet: 13 },
-    // Niveau 3 : mêmes cadres que le niveau 2, plus grands, avec une parure de rang 3 dessinée par-dessus (tier3)
-    colossus:   { idle: 'exo_idle',    walk: ['exo_walk1', 'exo_walk2'],       fire: 'exo_fire',    h: 50, feet: 13, tier3: 'human',  tint: 'rgba(20,30,60,0.5)' },    // acier sombre
-    ravager:    { idle: 'beast_idle',  walk: ['beast_walk1', 'beast_walk2'],   fire: 'beast_fire',  h: 58, feet: 15, tier3: 'insect', tint: 'rgba(50,0,25,0.45)' },    // chitine noire et pourpre
-    avatar:     { idle: 'archon_idle', walk: ['archon_walk1', 'archon_walk2'], fire: 'archon_fire', h: 58, feet: 15, tier3: 'energy', tint: 'rgba(255,235,170,0.35)' }, // or et lumière
-    fortress:   { idle: 'siege_idle',  walk: ['siege_walk1', 'siege_walk2'],   fire: 'siege_fire',  h: 60, feet: 16, tier3: 'mecha',  tint: 'rgba(30,15,15,0.45)' },   // bronze de guerre sombre
+    // Niveau 3 : mêmes cadres que le niveau 2, plus grands, recolorés (hue : décalage de teinte qui garde les volumes et
+    // les plaques du dessin ; tint : léger voile) avec un fin contour sombre (edge, qui bouche aussi les petits trous du dessin) et une parure de rang 3 dessinée par-dessus (tier3)
+    colossus:   { idle: 'exo_idle',    walk: ['exo_walk1', 'exo_walk2'],       fire: 'exo_fire',    h: 50, feet: 13, tier3: 'human',  hue: '#4a78c8', tint: 'rgba(20,40,90,0.2)',   edge: 'rgba(8,12,28,0.75)' },   // acier bleuté
+    ravager:    { idle: 'beast_idle',  walk: ['beast_walk1', 'beast_walk2'],   fire: 'beast_fire',  h: 58, feet: 15, tier3: 'insect', hue: '#b02070', tint: 'rgba(50,0,25,0.22)',   edge: 'rgba(20,4,14,0.75)' }, // chitine pourpre
+    avatar:     { idle: 'archon_idle', walk: ['archon_walk1', 'archon_walk2'], fire: 'archon_fire', h: 58, feet: 15, tier3: 'energy', hue: '#ffc840', tint: 'rgba(255,235,170,0.25)', edge: 'rgba(60,40,10,0.6)' }, // or et lumière
+    fortress:   { idle: 'siege_idle',  walk: ['siege_walk1', 'siege_walk2'],   fire: 'siege_fire',  h: 60, feet: 16, tier3: 'mecha',  hue: '#c07030', tint: 'rgba(40,20,10,0.22)',   edge: 'rgba(20,10,6,0.75)' },   // bronze de guerre
   };
   // Parure de rang 3 : repères visuels forts pour reconnaître d'un coup d'œil l'unité la plus puissante de chaque race
   function tier3Deco(ctx, kind, spec, c, t, flip) {
@@ -88,28 +89,44 @@
 
   // Dessine un cadre : le sprite est mis à l'échelle sur sa hauteur de référence (rh) et son sommet
   // est placé en (feet - h) pour que tous les cadres d'une unité s'alignent.
-  // Cadres teintés (unités de niveau 3) : le cadre est recopié dans un canvas hors écran puis voilé de la teinte, une seule fois
+  // Cadres recolorés (unités de niveau 3), préparés une seule fois dans un canvas hors écran : décalage de teinte (hue, qui
+  // garde la luminosité donc les plaques et les ombres du dessin), léger voile (tint), et une silhouette pour le contour (edge).
+  // Un simple voile sombre à 50 % faisait disparaître les formes claires de l'armure à la taille du jeu.
   const tinted = new Map();
-  function tintedFrame(f, tint) {
-    const key = f.x + ',' + f.y + tint;
-    let cv = tinted.get(key);
-    if (!cv) {
-      cv = document.createElement('canvas'); cv.width = f.w; cv.height = f.h;
+  function tintedFrame(f, spec) {
+    const key = f.x + ',' + f.y + (spec.hue || '') + (spec.tint || '') + (spec.edge || '');
+    let e = tinted.get(key);
+    if (!e) {
+      const cv = document.createElement('canvas'); cv.width = f.w; cv.height = f.h;
       const c2 = cv.getContext('2d');
       c2.drawImage(sheet.img, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
-      c2.globalCompositeOperation = 'source-atop'; c2.fillStyle = tint; c2.fillRect(0, 0, f.w, f.h);
-      tinted.set(key, cv);
+      if (spec.hue) {
+        c2.globalCompositeOperation = 'hue'; c2.fillStyle = spec.hue; c2.fillRect(0, 0, f.w, f.h);
+        c2.globalCompositeOperation = 'destination-in'; c2.drawImage(sheet.img, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);   // on rend la transparence d'origine
+      }
+      if (spec.tint) { c2.globalCompositeOperation = 'source-atop'; c2.fillStyle = spec.tint; c2.fillRect(0, 0, f.w, f.h); }
+      let edge = null;
+      if (spec.edge) {
+        edge = document.createElement('canvas'); edge.width = f.w; edge.height = f.h;
+        const c3 = edge.getContext('2d');
+        c3.drawImage(sheet.img, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
+        c3.globalCompositeOperation = 'source-in'; c3.fillStyle = spec.edge; c3.fillRect(0, 0, f.w, f.h);
+      }
+      e = { cv, edge }; tinted.set(key, e);
     }
-    return cv;
+    return e;
   }
-  function frame(ctx, name, h, feet, flip, alpha, tint) {
+  function frame(ctx, name, h, feet, flip, alpha, spec) {
     const f = sheet.frames[name]; if (!f) return;
-    const k = h / (f.rh || f.bh || f.h);
+    const k = h / (f.rh || f.bh || f.h), dx = -(f.bx + f.bw / 2) * k, dy = (feet - h) - f.by * k, dw = f.w * k, dh = f.h * k;
     ctx.save();
     if (alpha !== undefined) ctx.globalAlpha *= alpha;
     if (flip) ctx.scale(-1, 1);
-    if (tint && typeof document !== 'undefined') ctx.drawImage(tintedFrame(f, tint), 0, 0, f.w, f.h, -(f.bx + f.bw / 2) * k, (feet - h) - f.by * k, f.w * k, f.h * k);
-    else ctx.drawImage(sheet.img, f.x, f.y, f.w, f.h, -(f.bx + f.bw / 2) * k, (feet - h) - f.by * k, f.w * k, f.h * k);
+    if (spec && (spec.hue || spec.tint) && typeof document !== 'undefined') {
+      const e = tintedFrame(f, spec);
+      if (e.edge) for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(e.edge, 0, 0, f.w, f.h, dx + ox, dy + oy, dw, dh);   // contour d'un pixel d'écran
+      ctx.drawImage(e.cv, 0, 0, f.w, f.h, dx, dy, dw, dh);
+    } else ctx.drawImage(sheet.img, f.x, f.y, f.w, f.h, dx, dy, dw, dh);
     ctx.restore();
   }
   // Direction (0 = est, 2 = sud, 4 = ouest, 6 = nord) à partir de l'angle de l'unité
@@ -122,7 +139,7 @@
     const flip = d >= 3 && d <= 5;
     if (death !== undefined) { // cadavre : s'affaisse et s'assombrit
       ctx.save(); ctx.translate(0, spec.feet); ctx.scale(1, Math.max(0.25, 1 - death * 0.75)); ctx.translate(0, -spec.feet);
-      frame(ctx, spec.idle, spec.h, spec.feet, flip, 1 - death * 0.5, spec.tint);
+      frame(ctx, spec.idle, spec.h, spec.feet, flip, 1 - death * 0.5, spec);
       ctx.restore();
       return;
     }
@@ -137,7 +154,7 @@
     else if (m) name = spec.walk[Math.floor(a / 1.5) % spec.walk.length];
     else name = spec.idle;
     const bob = m && (d === 2 || d === 6) ? Math.sin(a) : 0;
-    frame(ctx, name, spec.h, spec.feet + bob, flip, undefined, spec.tint);
+    frame(ctx, name, spec.h, spec.feet + bob, flip, undefined, spec);
     if (spec.tier3) tier3Deco(ctx, spec.tier3, spec, c, t || 0, flip);
   }
   // Secours quand la feuille n'est pas chargée : silhouette simple

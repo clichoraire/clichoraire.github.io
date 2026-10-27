@@ -10,7 +10,7 @@
       const s = this.settings;
       ZC.ZONE_TILES = s.zoneTiles || 12;
       ZC.ZONE_PX = ZC.TILE * ZC.ZONE_TILES;
-      this.map = new ZC.GameMap(s.mapZones, s.mapZonesY || s.mapZones);
+      this.map = new ZC.GameMap(s.mapZones, s.mapZonesY || s.mapZones, s.mapShape);
       for (const z of this.map.zones) { z.bunker = null; z.ruined = false; }
       this.players = [];
       this.units = [];
@@ -448,7 +448,7 @@
     placeStart() {
       const s = this.settings, map = this.map;
       const based = this.players.filter(p => !p.invader);
-      const starts = ZC.shuffle(map.startPositions(based.length));
+      const starts = map.shape === 'corridor' ? [map.zone(0, 1), map.zone(5, 0), map.zone(5, 2)] : ZC.shuffle(map.startPositions(based.length));
       // Départ au centre : le joueur humain prend la zone centrale, les autres gardent les coins
       const center = map.zone(Math.floor(map.zx / 2), Math.floor(map.zy / 2));
       if (s.humanStart === 'center' && this.human) { starts.splice(this.human.id, 0, center); }
@@ -903,6 +903,11 @@
         const u = units[i];
         u.x = ZC.clamp(u.x, u.radius, W - u.radius);
         u.y = ZC.clamp(u.y, u.radius, H - u.radius);
+        if (this.map.shape && !this.map.zoneAt(u.x, u.y)) {
+          const z = this.map.nearest(u.x, u.y);
+          u.x = ZC.clamp(u.x, z.x + u.radius, z.x + ZC.ZONE_PX - u.radius);
+          u.y = ZC.clamp(u.y, z.y + u.radius, z.y + ZC.ZONE_PX - u.radius);
+        }
       }
     }
 

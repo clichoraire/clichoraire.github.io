@@ -6,7 +6,7 @@
   function polygon(c,points,color){c.fillStyle=color;c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();}
   function line(c,pts,color,w){c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();}
   S.drawMonsterHead=function(c,d,x,y,r){
-    if(window.MonsterHeads && window.MonsterHeads.draw(c,d.monster,x,y,r))return;
+    if(window.MonsterHeads && window.MonsterHeads.draw(c,d.monster,x,y,r,d.portraitVariant||0))return;
     c.save();c.translate(x,y);c.scale(r/12,r/12);
     const k=d.monster,skin=d.look.skin,ink='#1c2631';
     if(['goblin','lizard','orc'].includes(k))for(const side of [-1,1])polygon(c,[[side*7,-5],[side*20,-10],[side*12,2]],skin);
@@ -28,16 +28,17 @@
     c.restore();
   };
   S.drawIllustratedMonster=function(c,x,y,d,team,o){
-    const k=d.monster,pose=o.pose||'idle',t=o.t||0,frame=o.frame||0,dir=o.dir||1,s=d.size*(o.scale||1);
+    const k=d.monster,pose=o.pose||'idle',t=o.t||0,frame=o.frame||0,walk=o.walkBlend??(o.moving?1:0),dir=o.dir||1,s=d.size*(o.scale||1);
     const width=['orc','troll'].includes(k)?34:k==='harpy'?33:30,height=40;
     c.save();c.translate(x,y);c.scale(dir*s,s);if(o.alpha!=null)c.globalAlpha=o.alpha;
+    if(pose==='laugh'){const beat=Math.max(0,Math.sin(t*11));c.scale(1+beat*.035,1-beat*.045);c.rotate(Math.sin(t*5)*.025);}
     if(pose==='down')c.rotate(1.3);else if(pose==='hit')c.rotate(-.14);else if(pose==='throw')c.rotate(.07);else if(pose==='windup')c.rotate(-.035);
     if(k==='specter')c.translate(0,Math.sin(t*3)*2-2);
-    if(o.moving)c.translate(0,-Math.abs(Math.sin(frame))*1.2);
+    if(walk)c.translate(0,-Math.abs(Math.sin(frame))*.8*walk);
     const arms=[];
     for(const side of [-1,1]){
       const shoulder=[side*(width*.34),-31];let upper=-side*.12,lower=-side*.06;
-      if(o.moving){upper+=Math.sin(frame)*side*.45;lower=upper-side*.15;}
+      if(walk){upper+=Math.sin(frame)*side*.28*walk;lower=upper-side*.15;}
       if(side>0){
         if(pose==='windup'){upper=-1.7;lower=-2.85;}
         else if(pose==='throw'){upper=-1.55;lower=-1.72;}
@@ -50,6 +51,7 @@
         else if(pose==='catch'){upper=-.6;lower=-1.6;}
         else if(pose==='jump'||pose==='angel'){upper=2.2;lower=2.6;}
       }
+      if(pose==='laugh'){upper=-side*.75;lower=side*.85;}
       const elbow=[shoulder[0]-Math.sin(upper)*8.5,shoulder[1]+Math.cos(upper)*8.5];
       const wrist=[elbow[0]-Math.sin(lower)*8.5,elbow[1]+Math.cos(lower)*8.5];
       arms.push({shoulder,elbow,wrist,side});
@@ -59,8 +61,11 @@
     const back=arms[0],front=arms[1];art.arm(c,k,back.shoulder,back.elbow,back.wrist,back.side);
     art.body(c,k,width,height,!!o.moving,frame,pose);
     art.arm(c,k,front.shoulder,front.elbow,front.wrist,front.side);
-    if(o.ball){const br=BC.BALL_R,bx=front.wrist[0]+(pose==='throw'?br*2:br*.7),by=front.wrist[1]-br*.65;S.drawBall(c,bx,by,br,{});art.arm(c,k,front.shoulder,front.elbow,front.wrist,front.side,true);}
-    S.drawMonsterHead(c,d,0,k==='slime'?-53:-47,12);
+    if(o.ball){const br=BC.BALL_R/d.size,bx=front.wrist[0]+(pose==='throw'?br*2:br*.7),by=front.wrist[1]-br*.65;S.drawBall(c,bx,by,br,{});art.arm(c,k,front.shoulder,front.elbow,front.wrist,front.side,true);}
+    // Le menton chevauche légèrement le col, sans tête flottante.
+    c.save();if(pose==='laugh'){c.translate(0,-43.5);c.rotate(-.1+Math.sin(t*11)*.045);c.translate(0,43.5);}
+    if(!o.headless)S.drawMonsterHead(c,d,0,k==='slime'?-51:-43.5,12);
+    c.restore();
     if(k==='slime'&&pose==='hit')for(const side of [-1,1])S.drawMonsterHead(c,d,side*25,-7,3.5);
     if(pose==='angel'){c.strokeStyle='#ffe493';c.lineWidth=1.7;c.beginPath();c.ellipse(0,-78,10,3,0,0,Math.PI*2);c.stroke();}
     c.restore();
@@ -75,6 +80,7 @@
     const rivet=(x,y)=>{ellipse(c,x,y,.85,.85,'#e5c488');ellipse(c,x+.2,y+.3,.35,.35,'#8d643b');};
     const limb=(points,color,width)=>{line(c,points,S.shade(color,.65),width+.8);line(c,points,color,width);line(c,points.map(([x,y])=>[x-.6,y]),S.shade(color,1.12),width*.35);};
     c.save();c.translate(x,y);c.scale((o.dir||1)*s,s);if(o.alpha!=null)c.globalAlpha=o.alpha;
+    if(pose==='laugh'){const beat=Math.max(0,Math.sin(t*11));c.scale(1+beat*.035,1-beat*.045);c.rotate(Math.sin(t*5)*.025);}
     if(pose==='down')c.rotate(1.3);if(pose==='hit')c.rotate(-.14);if(pose==='throw')c.rotate(.08);if(k==='specter')c.translate(0,Math.sin(t*3)*2-3);
     const swing=o.moving?Math.sin(o.frame||0)*3:0;
     if(k==='skeleton'){limb([[-14,-12],[16,-52]],'#a5abb0',3);line(c,[[-16,-18],[-9,-12]],'#bf8b46',3);line(c,[[3,-36],[7,-39]],'#8e5b3a',1.3);}
@@ -141,7 +147,7 @@
       oval(xx,yy,3,3.6,skin);oval(xx-side*2.3,yy-1,1.4,1.8,skin);
       if(k==='lizard'||k==='beast'||k==='gnoll')for(let i=-1;i<=1;i++)line(c,[[xx+i*1.5,yy+2.3],[xx+i*1.5,yy+3.5]],'#e7dfc1',.7);
     }
-    if(o.ball)S.drawBall(c,hx+7,hy-6,BC.BALL_R,{});
+    if(o.ball)S.drawBall(c,hx+7,hy-6,BC.BALL_R/d.size,{});
     S.drawMonsterHead(c,d,0,k==='slime'?-22:-47,12);
     if(pose==='angel'){c.strokeStyle='#ffe493';c.lineWidth=2;c.beginPath();c.ellipse(0,-77,10,3,0,0,Math.PI*2);c.stroke();}
     c.restore();

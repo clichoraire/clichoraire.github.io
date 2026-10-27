@@ -7,7 +7,7 @@
   const room=document.createElement('section');room.id='screen-debug';room.className='screen hidden debug-room';document.body.appendChild(room);
   function button(parent,text,fn){const b=document.createElement('button');b.textContent=text;b.onclick=fn;parent.appendChild(b);return b;}
   D.open=function(save,launch,back){
-    D.close();const ch=SK.charById(save.advChar||save.char),b=SK.effectiveBoard(save.advBoard,save);
+    D.close();const ch=SK.trainedCharacter(save.advChar||save.char,save),b=SK.effectiveBoard(save.advBoard,save);
     if(!settings)settings={stats:Object.fromEntries(keys.map(([k])=>[k,(ch[k]||0)+(b[k]||0)])),curve:0,slope:4,width:12,auto:false,loop:true};
     room.innerHTML='<div class="debug-room-content"><h1>La cabane des essais</h1><p>Plancher qui craque, expériences qui dérapent…</p><p>Les essais ne donnent ni argent, ni trophée, ni record.</p><div class="debug-room-buttons"></div></div>';
     const list=room.querySelector('.debug-room-buttons');

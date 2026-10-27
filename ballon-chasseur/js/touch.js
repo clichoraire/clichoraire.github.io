@@ -3,8 +3,9 @@
   'use strict';
   const I=G.input, state={}, held=new Map();
   const bar=document.createElement('nav');bar.id='touch-controls';bar.setAttribute('aria-label','Commandes tactiles');
-  bar.innerHTML='<div class="touch-stick" role="button" aria-label="Direction : glisse le doigt"><span>▲</span><span>◀　●　▶</span><span>▼</span></div><div class="touch-actions"></div><button class="touch-pause" aria-label="Pause">Ⅱ</button>';
+  bar.innerHTML='<div class="touch-stick" role="button" aria-label="Direction : glisse le doigt"><span>▲</span><span>◀　●　▶</span><span>▼</span></div><div class="touch-actions"></div><button class="touch-pause" aria-label="Pause">Ⅱ</button><button class="touch-fullscreen" aria-label="Plein écran">⛶</button>';
   document.getElementById('screen-match').appendChild(bar);
+  const fullscreen=bar.querySelector('.touch-fullscreen');fullscreen.hidden=!document.documentElement.requestFullscreen;fullscreen.onclick=async()=>{reset();try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{}};
   const actions=[['a','Lancer /<br>sauter'],['b','Passe /<br>attraper'],['p','Pouvoir ✨'],['cycle','Joueur ↻']];
   bar.querySelector('.touch-actions').innerHTML=actions.map(([key,label])=>'<button data-touch="'+key+'">'+label+'</button>').join('');
   const stick=bar.querySelector('.touch-stick');let stickId=null;
@@ -22,5 +23,5 @@
   function layout(){reset();const enabled=media.matches&&G.app.screen==='match';document.body.classList.toggle('touch-match',enabled);bar.hidden=!active();const stage=document.querySelector('.stage');if(!enabled){stage.style.width='';stage.style.height='';return;}const w=document.documentElement.clientWidth,h=window.innerHeight,side=w>h&&h<=500;const availableW=w-(side?252:16),availableH=h-(side?8:(w>=600?210:170));const width=Math.max(1,Math.min(availableW,availableH*16/9));stage.style.width=width+'px';stage.style.height=width*9/16+'px';}
   new MutationObserver(layout).observe(document.getElementById('screen-match'),{attributes:true,attributeFilter:['class']});
   new MutationObserver(layout).observe(document.getElementById('pause'),{attributes:true,attributeFilter:['class']});
-  addEventListener('resize',layout);media.addEventListener('change',layout);addEventListener('blur',reset);document.addEventListener('visibilitychange',reset);layout();
+  addEventListener('resize',layout);window.visualViewport?.addEventListener('resize',layout);document.addEventListener('fullscreenchange',layout);media.addEventListener('change',layout);addEventListener('blur',reset);document.addEventListener('visibilitychange',reset);layout();
 })(window.BC);

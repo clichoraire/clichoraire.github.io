@@ -8,7 +8,7 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const P = BC.Game.prototype;
 
-  P.powerReady = function (p) { return p.alive && p.zone === 'in' && !!p.power.id && p.power.kind !== 'passive' && p.power.charge >= p.power.max && !p.power.armed; };
+  P.powerReady = function (p) { return p.alive && (p.zone === 'in'||['goblin','skeleton','lizard'].includes(p.def.monster)) && !!p.power.id && p.power.kind !== 'passive' && p.power.charge >= p.power.max && !p.power.armed; };
   P.consumePower = function (p) {
     const def = BC.POWERS[p.power.id]; p.power.armed = false; p.power.charge = 0; this.stats[p.team].supers++;
     this.say(def.icon + ' ' + def.name + ' !', 1.1, p.def.name); this.emit('power', { p, power: p.power.id });
@@ -17,7 +17,7 @@
   // ---------- Bouton V ----------
   P.usePower = function (p) {
     const pw = p.power, def = BC.POWERS[pw.id];
-    if (!def || p.zone !== 'in' || !p.alive || def.kind === 'passive' || pw.armed) return false;
+    if (!def || (p.zone !== 'in'&&!['goblin','skeleton','lizard'].includes(p.def.monster)) || !p.alive || def.kind === 'passive' || pw.armed) return false;
     if (!(p.state === 'idle' || p.state === 'jump')) return false;
     if (pw.charge < pw.max) { this.emit('bad', { p }); this.fx.push({ kind: 'pow', x: p.x, y: p.y, z: p.z + 60, text: 'PAS PRÊT', color: '#ff8a7a', t: 0, dur: 0.6 }); return false; }
     if (def.kind === 'throw') {
@@ -34,6 +34,20 @@
   P.powerInstant = function (p, id) {
     const foes = this.opponentsOf(p), fwd = p.team === 0 ? 1 : -1, b = this.ball;
     switch (id) {
+      case 'priere': {
+        const allies=this.players.filter(q=>q.team===p.team&&q.alive&&q.hp<q.maxHp);
+        if(!allies.length)return false;
+        for(const q of allies){const gain=Math.min(q.maxHp-q.hp,Math.ceil(q.maxHp*.5));q.hp+=gain;
+          this.fx.push({kind:'pow',x:q.x,y:q.y,z:q.z+55,text:'♥ +'+gain,color:'#b8ffb1',t:0,dur:1.8});
+          this.fx.push({kind:'spark',x:q.x,y:q.y,z:q.z+25,color:'#fff1a8',t:0,dur:1.2});}
+        this.fx.push({kind:'pow',x:p.x,y:p.y,z:p.z+80,text:'🙏 PRIÈRE',color:'#fff0b0',t:0,dur:1.8});
+        return true;
+      }
+      case 'icepatch': {
+        this.icePatches=this.icePatches||[];const left=p.team===0?C.mid:C.left;
+        for(let i=0;i<6;i++){let patch;for(let attempt=0;attempt<30;attempt++){patch={team:1-p.team,x:left+rnd(65,C.mid-C.left-65),y:rnd(C.top+48,C.bottom-48),rx:rnd(43,64),ry:rnd(28,40),left:15};if(!this.icePatches.some(q=>q.team===patch.team&&Math.hypot(q.x-patch.x,(q.y-patch.y)*1.4)<95))break;}this.icePatches.push(patch);}
+        return true;
+      }
       case 'laser': {                                   // Mickael : tout le monde en face est figé par l'électricité
         if (!foes.length) return false;
         const foeBack = p.team === 0 ? C.right + 60 : C.left - 60;
@@ -106,6 +120,13 @@
     const id = p.power.id, dir = Math.sign(b.vx) || this.fwdOf(p);
     this.consumePower(p); b.power = id;
     switch (id) {
+      case 'locusts':
+        for(let i=0;i<20;i++)this.projectiles.push({kind:'locust',team:p.team,from:p,x:b.x-dir*(i%5)*24,y:b.y,laneY:C.top+18+(i*73%(C.bottom-C.top-36)),z:4,vx:dir*(170+i%4*22),t:0,dur:8,hit:new Set()});
+        break;
+      case 'blindness': this.blindness=this.blindness||[0,0];this.blindness[1-p.team]=10;break;
+      case 'bossmeteor': b.dmg+=8;b.speed*=1.25;b.r=b.r0;break;
+      case 'bossstorm': b.speed*=1.5;b.vx*=1.25;b.vy*=1.25;b.dmg+=3;break;
+      case 'bossshadow': b.speed*=1.15;b.dmg+=4;break;
       case 'triche': b.dmg = Math.max(2, Math.round(b.dmg * 0.6)); b.speed *= 1.1; b.vx = dir * b.speed * 0.8; b.vy = 0; b.airShot = false; break;
       case 'biscuit': b.speed *= 1.05; break;
       case 'boulet': b.speed *= 0.8; b.vx *= 0.8; b.vy *= 0.8; b.dmg = Math.round(b.dmg * 1.8) + 4; break;
@@ -118,7 +139,9 @@
   // Balle spéciale gérée image par image. Renvoie true si tout est fait ici (déplacement, contact, fin).
   P.powerLive = function (b, dt) {
     const dir = Math.sign(b.vx) || 1, foes = this.aliveInner(1 - b.team);
-    if (b.power === 'boulet') b.r = b.r0 * 1.3;
+    if(b.power==='bossmeteor')b.r=b.r0;
+    if(b.power==='bossshadow')b.vy+=Math.cos(b.t*16)*280*dt;
+    if (b.power === 'boulet') b.r = b.r0;
     if (b.power === 'triche') {                         // Matthieu : la balle suit sa cible, personne ne peut l'attraper ni sauter par-dessus
       let tg = b.target && b.target.alive ? b.target : foes.slice().sort((a, c) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(c.x - b.x, c.y - b.y))[0];
       if (!tg || b.t > 4) { this.kill(b, 0.3); return true; }
@@ -208,12 +231,25 @@
     this.retargetAll();
   };
 
+  P.ignite=function(p,from){p.burn={left:4,tick:1,from};};
+  P.updateGoblinEffects=function(dt){
+    this.icePatches=(this.icePatches||[]).filter(q=>(q.left-=dt)>0);
+    if(this.blindness)this.blindness=this.blindness.map(t=>Math.max(0,t-dt));
+    for(const p of this.players){if(!p.alive){p.burn=null;continue;}if(p.burn){const burn=p.burn;burn.left-=dt;burn.tick-=dt;if(burn.tick<=.000001){burn.tick+=1;this.hurt(p,1,{from:burn.from,power:'fireball',dot:true});}if(burn.left<=.000001)p.burn=null;}}
+  };
+  P.iceAt=function(p){return p.z<2&&(this.icePatches||[]).find(q=>q.team===p.team&&((p.x-q.x)/q.rx)**2+((p.y-q.y)/q.ry)**2<1);};
+  P.onIce=function(p){return !!this.iceAt(p);};
+  P.iceDrop=function(p){const b=this.ball;if(b.holder!==p)return;p.hasBall=false;p.pending=null;p.charging=false;p.charge=0;this.stopDash(p);this.setState(p,'down');Object.assign(b,{holder:null,state:'dead',x:p.x,y:p.y,z:18,vx:(p.mx||p.facing*100)*1.3,vy:p.my||60,vz:180,power:null,combo:0,perfect:false});this.say('ÇA GLISSE !',.8,p.def.name);this.retargetAll();};
   // ---------- Projectiles : bulles de Marie, biscuits de Josée ----------
   P.updateProjectiles = function (dt) {
     const keep = [];
     for (const q of this.projectiles) {
       q.t += dt;
-      if (q.kind === 'bubble') {
+      if(q.kind==='locust'){
+        q.x+=q.vx*dt;if(q.laneY!=null)q.y+=(q.laneY-q.y)*Math.min(1,dt*4);q.z=4+Math.abs(Math.sin(q.t*13))*5;
+        for(const f of this.aliveInner(1-q.team))if(!q.hit.has(f)&&f.z<16&&Math.abs(f.x-q.x)<22&&Math.abs(f.y-q.y)<18){q.hit.add(f);this.hurt(f,1,{from:q.from,power:'locusts',dot:true});}
+        if(q.t<q.dur&&q.x>C.left-90&&q.x<C.right+90)keep.push(q);
+      }else if (q.kind === 'bubble') {
         q.x += q.vx * dt; q.y += q.vy * dt; q.z += Math.sin(q.t * 5 + q.ph) * 14 * dt;
         const fwd = q.team === 0 ? 1 : -1, out = fwd > 0 ? q.x > C.right - 10 : q.x < C.left + 10;
         if (q.t > q.dur || out || q.y < C.top - 20 || q.y > C.bottom + 20) { this.fx.push({ kind: 'pop', x: q.x, y: q.y, z: q.z, t: 0, dur: 0.3 }); continue; }

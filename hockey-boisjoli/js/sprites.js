@@ -85,6 +85,10 @@
     ctx.fillStyle = o.goalie ? '#f1e2b8' : look.skin; if (o.goalie) { rr(ctx, -6 * s, armL * 0.9 - 5 * s, 12 * s, 12 * s, 3 * s); ctx.fill(); } else { circle(ctx, 0, armL * 0.9, 3.2 * s); ctx.fill(); }
     ctx.restore();
 
+    // Les portraits sont aussi utilisés sur la glace, avec les mêmes proportions.
+    if (window.FamilyHeads?.has(d.familyPortrait)) {
+      window.FamilyHeads.draw(ctx,d.familyPortrait,o.moving && Math.abs(Math.cos(o.face || 0)) > 0.45 ? 'side' : 'front',-headR*1.22,hy-headR*1.35,headR*2.44,headR*2.4);
+    } else {
     // --- tête ---
     const skin = look.skin, hair = look.hair || '#333';
     const long = look.hairStyle === 'long';
@@ -94,12 +98,12 @@
     if (look.earrings) { ctx.fillStyle = '#ffd700'; if (look.earrings !== 'one') { circle(ctx, -headR * 0.97, hy + headR * 0.34, headR * 0.1); ctx.fill(); } circle(ctx, headR * 0.97, hy + headR * 0.34, headR * 0.1); ctx.fill(); }
     circle(ctx, 0, hy, headR); ctx.fillStyle = skin; ctx.fill(); ctx.strokeStyle = shade(skin, 0.8); ctx.lineWidth = 1; ctx.stroke();
     if (o.goalie) S.drawGoalieHead(ctx, hy, headR, team, d); else S.drawFace(ctx, d, hy, headR, o);
+    }
     if (o.frozen) { ctx.fillStyle = 'rgba(120,200,255,0.45)'; rr(ctx, -bodyW / 2 - 6 * s, hy - headR - 4 * s, bodyW + 12 * s, H + 6 * s, 6 * s); ctx.fill(); }
     ctx.restore();
   };
 
   S.drawFace = function (ctx, d, hy, R, o) {
-    if(window.FamilyHeads?.has(d.familyPortrait)){window.FamilyHeads.draw(ctx,d.familyPortrait,'front',-R*1.22,hy-R*1.35,R*2.44,R*2.4);return;}
     const look = d.look, hair = look.hair || '#333', kid = d.size < 0.8;
     const ex = R * 0.12;   // les yeux regardent vers l'avant (vue 3/4)
     // cheveux

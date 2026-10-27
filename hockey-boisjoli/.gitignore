@@ -1,0 +1,10 @@
+
+
+# Fichiers locaux non versionnés
+.DS_Store
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.claude/settings.local.json

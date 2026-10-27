@@ -15,7 +15,8 @@
     // opts : { teams: [A, B], ctrl: ['p1'|'cpu', …], difficulty: 0..2, intro: bool, stats: { pid: stats } (aventure), mode: 'adventure' }
     constructor(opts) {
       this.teams = opts.teams; this.ctrl = opts.ctrl; this.difficulty = opts.difficulty || 0; this.mode = opts.mode || 'match';
-      this.statsOf = opts.stats || {};
+      this.controlMode=opts.controlMode==='fixed'?'fixed':'auto';
+      this.statsOf = opts.stats || {};this.adventure=opts.adventure||null;
       this.court = BC.COURTS[this.teams[1].court] || BC.COURTS.gym; this.courtId = this.teams[1].court;
       this.time = 0; this.phase = opts.intro === false ? 'play' : 'ready'; this.phaseT = 0;
       this.events = []; this.fx = []; this.messages = []; this.projectiles = []; this.delayed = [];
@@ -40,6 +41,7 @@
       }
       this.ball = { x: C.mid, y: (C.top + C.bottom) / 2, z: 230, vx: rnd(-1, 1) < 0 ? -35 : 35, vy: 0, vz: 0, holder: null, state: 'dead', team: -1, thrower: null, dmg: 0, power: null, t: 0, r: BC.BALL_R, trail: [], alpha: 1, visible: true, smash: false };
       this.ball.r0 = BC.BALL_R;
+      if(this.controlMode==='fixed')for(let t=0;t<2;t++)this.lock[t]=this.inner(t)[0];
       this.ai = new BC.AI(this);
       if (this.phase === 'ready') this.say('PRÊTS ?', 1.3);
     }
@@ -47,7 +49,8 @@
       const def = BC.PLAYERS[pid];
       let stats = this.statsOf[pid] || def.stats;
       if (def.custom && !this.statsOf[pid]) stats = Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, Math.min(BC.MAX_STAT, v * 2)]));   // personnages du catalogue : échelle 0-5 → 0-12
-      const ph = BC.phys(def, stats), P = BC.POWERS[def.power] || null;
+      if(BC.Equipment?.effectiveStats)stats=BC.Equipment.effectiveStats(pid,stats);
+      const ph = BC.phys(def, stats);if(def.boss&&this.adventure)ph.maxHp=Math.round(ph.maxHp*BC.BOSS_HP_MULTIPLIERS[this.difficulty]);const P = BC.POWERS[def.power] || null;
       return { id: pid, def, stats, phys: ph, team: t, zone, lane, x, y, z: 0, vz: 0, vx: 0, vy: 0, hp: ph.maxHp, maxHp: ph.maxHp,
         state: 'idle', stateT: 0, facing: dir, frame: 0, moving: false, dash: { lastTap: -9, dir: 0, active: false, t: 0, fromJump: false, endedAt: -9 },
         hasBall: false, alive: true, knock: 0, knockDir: 1, ko: 0, aiT: rnd(0, 1), ai: {}, lent: this.squads[t].lent.includes(pid), home: { x, y }, mx: 0, my: 0, lastMove: null,
@@ -63,6 +66,12 @@
     outer(t) { return this.players.filter(p => p.team === t && p.zone === 'out'); }
     opponentsOf(p) { return this.aliveInner(1 - p.team); }
     isHuman(t) { return this.ctrl[t] !== 'cpu'; }
+    isPlayerControlled(p) { return this.isHuman(p.team) && this.controlled(p.team)===p; }
+    setControlMode(mode) {
+      const selected=[this.controlled(0),this.controlled(1)];
+      this.controlMode=mode==='fixed'?'fixed':'auto';
+      if(this.controlMode==='fixed')this.lock=selected.map((p,t)=>p?.zone==='in'&&p.alive?p:this.aliveInner(t)[0]);else this.retargetAll();
+    }
     sideOf(x) { return x < C.mid ? 0 : 1; }           // moitié du terrain : 0 = gauche
     heightOf(p) { return 50 * Math.max(0.55, p.def.size); }
     fwdOf(p) { const d = p.team === 0 ? 1 : -1; return p.tele ? -d : d; }   // téléporté derrière l'adversaire : on lance vers l'arrière
@@ -71,6 +80,7 @@
 
     // ---------- Contrôle : qui le joueur humain dirige ----------
     controlled(t) {
+      if(this.controlMode==='fixed'){const holder=this.ball.holder;if(holder?.alive&&holder.team===t&&holder.zone==='out')return holder;return this.lock[t]?.alive?this.lock[t]:null;}
       const b = this.ball;
       if (b.holder && b.holder.team === t) return b.holder;
       const lock = this.lock[t]; if (lock && lock.alive && (lock.zone === 'in' || lock.zone === 'out')) return lock;
@@ -79,6 +89,7 @@
     // Choisit (et mémorise) le joueur contrôlé : le joueur visé par une balle adverse, sinon le plus proche d'une balle morte.
     // Appelé seulement aux événements (lancer, balle morte, possession), jamais à chaque image : le contrôle ne saute pas.
     retarget(t) {
+      if(this.controlMode==='fixed')return this.lock[t]?.alive?this.lock[t]:null;
       const b = this.ball, mine = this.aliveInner(t); if (!mine.length) return null;
       let pick = null;
       if (b.state === 'live' && b.team !== t) pick = mine.slice().sort((a, c) => Math.abs(a.y - this.ballYAt(a.x)) - Math.abs(c.y - this.ballYAt(c.x)))[0];
@@ -130,6 +141,7 @@
     }
 
     updatePlayers(dt, ins) {
+      this.updateGoblinEffects(dt);
       for (const p of this.players) {
         p.stateT += dt;
         if (!p.alive) { if (p.state === 'ko') { p.z += 55 * dt; p.ko += dt; if (p.ko > 2.6) p.state = 'gone'; } continue; }
@@ -140,7 +152,7 @@
           const e = ins[p.team]; move = { dx: e.dx, dy: e.dy };
           if (e.leftDown || e.rightDown) this.tap(p, e.leftDown ? -1 : 1);
           if (e.aDown) act = 'a'; else if (e.bDown) act = 'b'; else if (e.pDown) act = 'p';
-          if (e.aUp && p.charging) this.release(p);
+          if (e.aUp && p.charging) { p.lastMove=move; this.release(p); }
         } else { move = p.ai.move || move; act = p.ai.act || null; p.ai.act = null; }
         this.stepPlayer(p, dt, move, act);
       }
@@ -185,6 +197,7 @@
         const floatDown = p.airborneJump && p.vz <= 0 && ['jump', 'windup', 'throw', 'idle'].includes(p.state);
         p.vz -= G * dt * (floatDown ? 0.45 : 1); p.z += p.vz * dt;
         if (p.z <= 0) {
+          if(this.enemyJumpLanding)this.enemyJumpLanding(p);
           p.z = 0; p.vz = 0; p.dash.fromJump = false; p.airborneJump = false;
           const over = p.zone === 'in' && !p.tele && (p.team === 0 ? p.x > C.mid - 14 : p.x < C.mid + 14);
           if (s === 'jump') this.setState(p, over ? 'return' : 'idle'); else if (over && s !== 'return') { p.pending = null; p.charge = 0; this.setState(p, 'return'); }
@@ -208,12 +221,33 @@
           if (Math.abs(move.dx) > 0.3) p.facing = move.dx > 0 ? 1 : -1;
         }
       } else if (s === 'jump') { mx = p.vx; my = p.vy; }
+      const ice=this.iceAt(p);p.iceFallCooldown=Math.max(0,(p.iceFallCooldown||0)-dt);if(!ice)p.iceVisit=null;
+      if(canMove&&!inFlight&&s!=='jump'&&!ice){
+        const oldX=p.groundVX||0,oldY=p.groundVY||0,stopping=Math.hypot(mx,my)<.01;
+        const reversing=oldX*mx+oldY*my<0;
+        const seconds=stopping?.12:reversing?.18:p.dash.active?.18:.28;
+        const limit=ph.maxSpeed*Math.max(.35,sm)*(p.dash.active?ph.dashMul:1)*dt/seconds;
+        const dx=mx-oldX,dy=my-oldY,distance=Math.hypot(dx,dy),k=distance?Math.min(1,limit/distance):1;
+        mx=oldX+dx*k;my=oldY+dy*k;p.groundVX=mx;p.groundVY=my;
+      }else{p.groundVX=p.groundVY=0;}
+      if(canMove&&!inFlight&&s!=='jump'&&ice){const k=Math.min(1,dt*2);p.iceVX=(p.iceVX??p.mx??0)+(mx*.48-(p.iceVX??p.mx??0))*k;p.iceVY=(p.iceVY??p.my??0)+(my*.48-(p.iceVY??p.my??0))*k;mx=p.iceVX;my=p.iceVY;if(Math.hypot(mx,my)>10&&p.iceVisit!==ice){p.iceVisit=ice;if(p.hasBall&&!p.iceFallCooldown&&Math.random()<.35){p.iceFallCooldown=4;this.iceDrop(p);mx=my=0;act=null;}}}else{p.iceVX=null;p.iceVY=null;}
+
       p.moving = Math.abs(mx) + Math.abs(my) > 10; p.mx = mx; p.my = my; p.lastMove = move;
-      if (p.moving) p.frame += dt * (p.dash.active ? 22 : 14) * sm;
+      p.walkBlend=(p.walkBlend||0)+((p.moving?1:0)-(p.walkBlend||0))*Math.min(1,dt*9);
+      if(p.walkBlend>.001)p.frame+=dt*Math.min(11,5+Math.hypot(mx,my)/Math.max(1,ph.maxSpeed)*3)*p.walkBlend;
       if (p.moving && F.fastT > 0 && Math.random() < 0.5) this.fx.push({ kind: 'speed', x: p.x - Math.sign(mx || p.facing) * 14, y: p.y + rnd(-8, 8), z: rnd(8, 40), t: 0, dur: 0.25 });
       p.x += mx * dt; p.y += my * dt;
       this.confine(p);
       if (p.zone === 'in' && !p.dash.active && s === 'idle' && !p.moving) p.facing = this.fwdOf(p);   // au repos on regarde l'adversaire
+      // Stable visual orientation: small AI corrections must not flip the portrait every frame.
+      const visualTarget=Math.abs(mx)>ph.maxSpeed*.18?Math.sign(mx):p.facing;
+      p.visualFacing ??= p.facing;
+      if(p.visualCandidate!==visualTarget){p.visualCandidate=visualTarget;p.visualTurnTime=0;}
+      p.visualTurnTime=(p.visualTurnTime||0)+dt;
+      if(p.visualTurnTime>=.18)p.visualFacing=visualTarget;
+      p.visualView ??= 'front';
+      if(p.walkBlend>.7)p.visualView='side';
+      else if(p.walkBlend<.12)p.visualView='front';
       // actions
       if (act && p.alive && this.phase === 'play') this.action(p, act, move);
     }
@@ -221,8 +255,8 @@
       if (p.zone === 'in') {
         const pad = 14, air = p.z > 0 || p.state === 'return' || p.tele;   // en l'air (ou en train de revenir, ou téléporté) : la ligne du centre ne retient pas
         if (air) p.x = clamp(p.x, C.left + pad, C.right - pad);
-        else if (p.team === 0) p.x = clamp(p.x, C.left + pad, C.mid - pad); else p.x = clamp(p.x, C.mid + pad, C.right - pad);
-        if (!air && ((p.team === 0 && p.x >= C.mid - pad) || (p.team === 1 && p.x <= C.mid + pad))) this.stopDash(p);
+        else if (p.team === 0) p.x = clamp(p.x, C.left + pad, C.mid + 50); else p.x = clamp(p.x, C.mid - 50, C.right - pad);
+        if (!air && ((p.team === 0 && p.x >= C.mid + 50) || (p.team === 1 && p.x <= C.mid - 50))) this.stopDash(p);
         p.y = clamp(p.y, C.top + 8, C.bottom - 8);
       } else {
         // les couloirs se rejoignent dans les coins : aucune balle morte n'est hors de portée
@@ -259,7 +293,7 @@
     // X enfoncé : on arme le bras ; plus on tient, plus la balle partira vite et fort. L'ordi vise une charge (chargeGoal).
     startCharge(p, move, goal) {
       const run = p.dash.active, jump = p.z > 0; if (jump) p.airborneJump = true; this.stopDash(p);
-      this.setState(p, 'windup'); p.charging = true; p.charge = 0; p.chargeGoal = goal == null ? (this.isHuman(p.team) ? null : (p.ai.charge != null ? p.ai.charge : 0.4)) : goal;
+      this.setState(p, 'windup'); p.charging = true; p.charge = 0; p.chargeGoal = goal == null ? ((this.isHuman(p.team) && (this.controlMode!=='fixed' || this.isPlayerControlled(p))) ? null : (p.ai.charge != null ? p.ai.charge : 0.4)) : goal;
       p.pending = { run, move, jump };
     }
 
@@ -291,7 +325,7 @@
     // Fin de la charge (X relâché, charge pleine, ou fin de la tornade) : la balle part.
     release(p) {
       const pend = p.pending || {}; p.pending = null; p.charging = false;
-      this.throwBall(p, { run: pend.run, move: pend.move, charge: p.charge, jump: !!pend.jump && p.z > 0, tornade: pend.tornade });
+      this.throwBall(p, { run: pend.run, move: this.isPlayerControlled(p) ? (p.lastMove || pend.move) : pend.move, charge: p.charge, jump: !!pend.jump && p.z > 0, tornade: pend.tornade });
       p.charge = 0;
     }
     // Lancer : tout droit, en diagonale ou avec la visée assistée (aimDir), à hauteur de poitrine. La balle part lentement
@@ -300,6 +334,11 @@
       const b = this.ball; if (b.holder !== p) { this.setState(p, 'idle'); return; }
       const ph = p.phys, dir = this.fwdOf(p), foes = this.opponentsOf(p), ch = clamp(o.charge || 0, 0, 1);
       const aim = this.aimDir(p, o.move);
+      // One error sample on release; aiming previews never consume randomness.
+      if (!(p.power.armed && p.power.id === 'licorne')) {
+        const error=(Math.random()*2-1)*ph.aimSpread, x=aim.x, y=aim.y;
+        aim.x=x*Math.cos(error)-y*Math.sin(error);aim.y=x*Math.sin(error)+y*Math.cos(error);
+      }
       const target = aim.target || foes.slice().sort((a, c) => Math.abs(a.y - p.y) - Math.abs(c.y - p.y))[0] || null;
       const apex = o.jump && Math.abs(p.vz) < 170;
       p.hasBall = false; b.holder = null; b.state = 'live'; b.team = p.team; b.thrower = p; b.t = 0; b.trail = []; b.alpha = 1; b.visible = true; b.r = b.r0;
@@ -322,6 +361,7 @@
         // extérieur : vise l'adversaire intérieur le mieux placé devant son couloir (ou en diagonale si une direction est tenue)
         const speed = ph.throwSpeed * 0.8 * (0.85 + 0.3 * ch);
         b.vx = aim.x * speed * 0.6; b.vy = aim.y * speed * 0.6; b.vz = 0; b.dmg = Math.max(3, Math.round(ph.dmg * 0.65) + Math.round(2 * ch)); b.speed = speed; b.target = target;
+        if(['goblin','skeleton','lizard'].includes(p.def.monster)&&p.power.armed&&p.power.kind==='throw')this.powerThrow(p,b,o);
       }
       this.setState(p, 'throw'); this.stats[p.team].throws++;
       this.emit(b.power ? 'throwSuper' : 'throw', { p });
@@ -350,12 +390,12 @@
     }
     give(p) {                                        // le joueur prend la balle
       const b = this.ball; b.holder = p; b.state = 'held'; b.team = p.team; b.power = null; b.alpha = 1; b.visible = true; b.r = b.r0; b.vx = b.vy = b.vz = 0; b.magnetTo = null; b.quickReturn = false; p.hasBall = true;
-      this.lock[p.team] = null;
+      if(this.controlMode!=='fixed')this.lock[p.team] = null;
     }
     // Un attrapé (balle adverse ou passe interceptée) : statistiques, et toute l'équipe recharge un peu son pouvoir.
     caught(p, o) {
       this.give(p); this.stats[p.team].catches++;
-      for (const q of this.inner(p.team)) if (q.alive) q.power.charge = Math.min(q.power.max, q.power.charge + 1);
+      for (const q of this.players.filter(q=>q.team===p.team&&(q.zone==='in'||q.def.monster==='skeleton'))) if (q.alive) q.power.charge = Math.min(q.power.max, q.power.charge + 1);
       this.emit('catch', Object.assign({ p }, o || {}));
       this.say(o && o.intercept ? 'INTERCEPTÉ !' : 'ATTRAPÉ !', 0.8);
       this.fx.push({ kind: 'pow', x: p.x, y: p.y, z: p.z + 40, text: o && o.intercept ? 'INTERCEPTÉ' : 'ATTRAPÉ', color: '#7dffa0', t: 0, dur: 0.8 });
@@ -434,7 +474,7 @@
       for (const p of this.aliveInner(1 - b.team)) {
         if (!HITTABLE[p.state] || p.fx.ghostT > 0) continue;   // un fantôme laisse passer la balle
         const h = this.heightOf(p), zOk = b.z + b.r > p.z && b.z - b.r < p.z + h;
-        if (Math.abs(p.x - b.x) < 15 + b.r && Math.abs(p.y - b.y) < 17 + b.r && zOk) { this.contact(p, b); return; }
+        if (Math.abs(p.x - b.x) < (p.def.boss?48:15) + b.r && Math.abs(p.y - b.y) < (p.def.boss?40:17) + b.r && zOk) { this.contact(p, b); return; }
       }
       if (b.z <= 0) { this.kill(b, 0.35); return; }     // au sol : la balle est morte
       // sortie par le fond du camp adverse, ou retour dans son propre camp (balle d'un extérieur du fond ou d'un téléporté)
@@ -447,12 +487,14 @@
     // La balle arrive sur un joueur : attrapé (C au bon moment, en lui faisant face) ou touché.
     contact(p, b) {
       const P = b.power ? BC.POWERS[b.power] : null, dir = Math.sign(b.vx) || 1;
+      if(b.power==='goblinbomb'){this.powerExplode(p,b);return;}
+      if(b.power==='fireball')this.ignite(p,b.thrower);
       const uncatchable = b.power === 'triche' || b.power === 'licorne';
       if (p.state === 'catch' && !uncatchable) {
         const facing = Math.abs(b.vx) < Math.abs(b.vy) || p.facing === -dir;   // balle venant du haut ou du bas : pas besoin de lui faire face
-        const hard = b.power === 'boulet' ? 0.85 : b.smash ? 0.3 : b.power ? 0.4 : 0;
+        const hard = b.power?.startsWith('boss') ? 0.65 : b.power === 'boulet' ? 0.85 : b.smash ? 0.3 : b.power ? 0.4 : 0;
         const win = 0.2 * (1 - hard) * (0.8 + p.phys.catchSkill * 0.4) * p.phys.catchWin;
-        const ok = this.isHuman(p.team) ? facing && p.stateT <= win : p.ai.willCatch;
+        const ok = this.isHuman(p.team) && (this.controlMode!=='fixed' || this.isPlayerControlled(p)) ? facing && p.stateT <= win : p.ai.willCatch;
         if (ok) {
           if (b.power === 'fusee') { this.powerExplode(p, b); return; }   // la fusée explose dans les mains de celui qui l'attrape
           this.caught(p, { power: b.power }); return;
@@ -463,6 +505,7 @@
       if (absorbed) return;                             // fantôme : la balle continue comme si de rien n'était
       this.fx.push({ kind: 'burst', x: b.x, y: b.y, z: b.z, t: 0, dur: 0.35 });
       this.shake = b.power ? 10 : 5;
+      if(b.power==='bossshadow')p.fx.slowT=2;
       this.powerAfterHit(p, b, dmg);
       if (this.powerKeepsBall(b, p)) return;            // la tornade continue de rebondir après un touché
       b.state = 'dead'; b.power = null; b.visible = true; b.alpha = 1; b.r = b.r0; b.vx = -dir * 180; b.vy = rnd(-60, 60); b.vz = 240;
@@ -472,11 +515,12 @@
     // o : { from: lanceur (expérience), dir, knock, power, text }
     hurt(p, dmg, o) {
       o = o || {}; if (!p.alive) return true;
-      if (this.powerGuard(p, dmg, o)) return true;      // Fantôme
+      if (!o.penalty && this.powerGuard(p, dmg, o)) return true;      // Fantôme
       dmg = Math.max(1, Math.round(dmg));
       if (p.hp - dmg <= 0 && p.phys.revive && !p.fx.revived) { p.fx.revived = true; dmg = p.hp - 1; this.say('INCREVABLE !', 1, p.def.name); }
       const lost = Math.min(p.hp, dmg); p.hp -= lost;
       if (o.from) { this.stats[o.from.team].hits++; this.gainXp(o.from, lost); }   // XP = points de vie réellement enlevés
+      if(o.dot&&p.hp>0){this.fx.push({kind:'pow',x:p.x,y:p.y,z:p.z+45,text:'−'+lost,color:'#ffae46',t:0,dur:.6});this.emit('hit',{p,dmg:lost,power:o.power});return false;}
       p.knockDir = o.dir || (p.team === 0 ? -1 : 1); p.knock = (o.knock || 300) * (0.7 + 0.6 / Math.max(0.5, p.def.size));
       if (p.hasBall) { p.hasBall = false; if (this.ball.holder === p) { this.ball.holder = null; this.ball.state = 'dead'; this.ball.vz = 200; } }
       if (p.state === 'bubble') this.fx.push({ kind: 'pop', x: p.x, y: p.y, z: p.z + 25, t: 0, dur: 0.3 });
@@ -485,7 +529,7 @@
       this.fx.push({ kind: 'pow', x: p.x, y: p.y, z: p.z + 45, text: '-' + dmg, color: '#ff6b6b', t: 0, dur: 0.9 });
       this.emit('hit', { p, dmg, power: o.power, ko: p.hp <= 0 });
       this.retargetAll();
-      if (p.hp <= 0) { p.alive = false; p.state = 'ko'; p.ko = 0; p.hasBall = false; this.say('K.-O. !', 1.2, p.def.name); this.emit('ko', { p }); this.lock[p.team] = null; if (o.from) this.gainXp(o.from, BC.XP_KO); }
+      if (p.hp <= 0) { p.alive = false; p.state = 'ko'; p.ko = 0; p.hasBall = false; this.say('K.-O. !', 1.2, p.def.name); this.emit('ko', { p }); if(this.controlMode!=='fixed')this.lock[p.team] = null; if (o.from) this.gainXp(o.from, BC.XP_KO); }
       return false;
     }
     // Effets à retardement (biscuits qui arrivent, retour de téléportation…)

@@ -14,13 +14,16 @@
  ['couronne','Couronne du Champion',8000,4,'+1 à toutes les stats de course. Double pièces et prime si tu finis premier, dans la limite du portefeuille.','👑']
  ];
  for(const [id,name,price,rank,desc,icon] of additions)SK.GEAR.push({id,name,price,rank,desc,icon,cat:'gadget',unlock:rank>1?{wins:(rank-1)*2}:undefined});
- const ranks={portemonnaie:1,sac:1,casque:1,lunettesNeige:1,lunettesForet:1,aimant:2,bottes:2,veste:2,lunettes:2,lunettesMiroir:2,lunettesTricolores:2,fusee:3,gants:3,vip:3,masque:4};
+ const ranks={portemonnaie:1,sac:1,casque:1,lunettesNeige:1,lunettesForet:1,aimant:2,bottes:2,veste:2,lunettes:2,lunettesMiroir:2,lunettesTricolores:2,fusee:3,gants:1,vip:3,masque:4};
  for(const g of SK.GEAR){g.rank=g.rank||ranks[g.id]||1;
   if(g.id==='portemonnaie'){g.name='Portefeuille en cuir';g.desc='Augmente la capacité à 50 pièces par course.';}
   if(g.id==='sac'){g.name='Boîte Cadeau Surprise';delete g.unlock;g.desc='Commence chaque manche avec un objet aléatoire prêt à utiliser.';}
   if(g.id==='gants'){g.name='Gants adhérents Freestyle';g.desc='Figures 10 % plus rapides, gains acrobatiques ×1,5 et réceptions sauvées si la figure est presque terminée.';}
   if(g.id==='bottes'){g.name='Semelles cramponnées';g.desc='+1 en virage : meilleure accroche dans les courbes.';}
  }
+ const gloves=SK.gearById('gants');gloves.name='Gants adhérents Freestyle bleus';gloves.tint='#268be3';
+ SK.GEAR.push({...gloves,id:'gantsMauves',name:'Gants adhérents Freestyle mauves',tint:'#9957d4'});
+ SK.GEAR.push({id:'teteNoel',name:'Tête du Père Noël',cat:'other',rank:4,price:5000,desc:'Débloque le Père Noël jouable, avec son bonnet et sa barbe blanche.'},{id:'teteRobot',name:'Tête de Robot',cat:'other',rank:4,price:5000,desc:'Débloque Robot, avec sa tête métallique et ses yeux lumineux.'});
  SK.itemDuration=(r,seconds)=>seconds*(1+(r.gear.chrono?.15:0)+(r.gear.montreEtoiles?.35:0)+.1*(r.powerLevels?.item||0));
  SK.coinCapacity=g=>g.portefeuilleRoyal?500:g.portefeuilleOr?150:g.portemonnaie?50:20;
  SK.collectGold=(r,n)=>{const gained=Math.max(0,Math.min(Math.floor(n),r.coinCapacity-r.coinsTotal));r.coins+=gained;r.coinsTotal+=gained;return gained;};

@@ -31,6 +31,7 @@
   A.play = function (name) {
     if (!A.ctx || A.muted) return;
     switch (name) {
+      case 'boss-laugh': for(let i=0;i<8;i++){const when=.12+i*.32; tone(105+(i%3)*18,'sawtooth',.18,.12,.65,when);tone(240+(i%2)*45,'triangle',.15,.10,.72,when);noise(.09,.06,700,when);} break;
       case 'throw': noise(0.12, 0.7, 1200); tone(300, 'sine', 0.1, 0.15, 0.5); break;
       case 'super': for (let i = 0; i < 6; i++) tone(300 + i * 160, 'sawtooth', 0.1, 0.2, 1.3, i * 0.04); noise(0.3, 0.6, 2000, 0.2); break;
       case 'smash': noise(0.16, 0.9, 1500); tone(180, 'sine', 0.2, 0.35, 0.5); tone(640, 'sawtooth', 0.1, 0.15, 1.6); break;

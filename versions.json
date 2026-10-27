@@ -1,18 +1,27 @@
 {
   "bunker": {
-    "version": "3.1",
-    "commit": "e795a62294af39cd09420c1868aa57d2c167b9a5"
+    "version": "3.2",
+    "commit": "fc1d944bcee981abae9fa2e7b077158ec5dbf67c",
+    "localChangesIncluded": true
   },
   "hockey": {
-    "version": "1.7",
-    "commit": "000cd0b7cb9b8bfbbb28ec04be992468e756e244"
+    "version": "1.8",
+    "commit": "000cd0b7cb9b8bfbbb28ec04be992468e756e244",
+    "localChangesIncluded": true
   },
   "snow": {
-    "version": "1.54",
-    "commit": "f185de060588b3bde31a8c69ca74d1511657ef38"
+    "version": "1.55",
+    "commit": "f185de060588b3bde31a8c69ca74d1511657ef38",
+    "localChangesIncluded": true
+  },
+  "frigo": {
+    "version": "1.5",
+    "commit": "714533601c87e098c99cff507f7e661a6d3eed82",
+    "localChangesIncluded": false
   },
   "ballon": {
-    "version": "2.0",
-    "commit": "6a4d59d2d1c2e02500b9500391b1ecf2ba2633bc"
+    "version": "2.1",
+    "commit": "6a4d59d2d1c2e02500b9500391b1ecf2ba2633bc",
+    "localChangesIncluded": true
   }
 }

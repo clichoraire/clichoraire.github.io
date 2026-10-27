@@ -64,7 +64,7 @@
   ZC.DIFFICULTIES = {
     easy:   { key: 'easy',   label: 'Facile',    ai: 'easy',   desc: 'IA lentes et peu agressives.' },
     medium: { key: 'medium', label: 'Moyen',     ai: 'normal', desc: 'IA normales.' },
-    hard:   { key: 'hard',   label: 'Difficile', ai: 'hard',   desc: 'IA agressives et une IA ennemie de plus.' },
+    hard:   { key: 'hard',   label: 'Difficile', ai: 'hard',   desc: 'IA ennemies alliées entre elles et un renfort ennemi supplémentaire.' },
   };
 
   // ------------------------------------------------------------ Mondes (un par race) et scénarios
@@ -267,7 +267,11 @@
         const k = diff === 'easy' ? 0.7 : diff === 'hard' ? 1.5 : 1;
         s.invasion = Object.assign({}, s.invasion, { scale: (s.invasion.scale || 1) * k, min: diff === 'hard' ? 12 : s.invasion.min, max: diff === 'hard' ? 28 : s.invasion.max, name: (ZC.CHARACTERS[w.leader] || {}).name || 'Envahisseurs' });
       }
-      else if (diff === 'hard') { s.aiCount = Math.min(7, (s.aiCount || 1) + 1); if (s.teams) s.teams = s.teams.concat([1]); }
+      else if (diff === 'hard') {
+        s.aiCount = Math.min(7, (s.aiCount || 1) + 1);
+        s.teams = s.teams ? s.teams.concat([1]) : [0, ...Array(s.aiCount).fill(1)];
+        if (m.scenario === 'corridor') { s.mapZones = 6; s.mapZonesY = 3; s.mapShape = 'corridor'; }
+      }
       s.campaign = { mission: id, difficulty: diff, objective: m.objective, bonus: this.bonus(), hero: { id: h.id, level: h.level, xp: h.xp, unit: ZC.HEROES[h.id].unit, build: h.build } };
       return s;
     }

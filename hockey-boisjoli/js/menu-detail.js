@@ -1,0 +1,2 @@
+// Petit détail interactif du menu.
+(function(){const mark=document.getElementById('version');if(!mark)return;let taps=0,last=0;mark.style.cursor='pointer';mark.tabIndex=0;function tap(){if(document.getElementById('screen-menu').classList.contains('hidden'))return;const now=Date.now();taps=now-last<1800?taps+1:1;last=now;if(taps===5){taps=0;location.href='souvenirs.html';}}mark.addEventListener('click',tap);mark.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tap();}});})();

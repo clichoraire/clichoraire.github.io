@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');global.window={};for(const f of ['config','monsters','game','powers','ai','match-rules','skeleton-powers'])require('../js/'+f+'.js');const B=window.BC;
+const make=()=>{const g=new B.Game({teams:[B.TEAMS[0],B.MONSTER_TEAMS[3]],ctrl:['p1','cpu'],intro:false});g.ai.update=()=>{};return g;};
+const sk=(g,i)=>g.players.find(p=>p.id==='monster-skeleton-'+i);
+const cast=(g,i)=>{const p=sk(g,i);g.setState(p,'idle');p.power.charge=p.power.max;assert.equal(g.usePower(p),true);return p;};
+{const g=make(),p=sk(g,1);g.give(p);cast(g,1);g.throwBall(p,{charge:0});for(let i=0;i<210&&g.ball.state==='live';i++)g.updateBall(1/60);assert.equal(g.ball.holder,p,'boomerang returns');}
+{const g=make(),p=sk(g,1),q=g.inner(0)[0];g.give(p);cast(g,1);g.throwBall(p,{charge:0});q.state='catch';q.stateT=0;q.facing=-Math.sign(g.ball.vx);g.contact(q,g.ball);assert.equal(g.ball.holder,q,'bone can be caught');}
+{const g=make();cast(g,2);const w=g.boneWalls[0];g.updateSkeletonEffects(.5);const q=g.inner(0)[0];g.give(q);g.throwBall(q,{charge:0});Object.assign(g.ball,{x:w.x-20,y:w.y,z:30,vx:500,vy:0});const random=Math.random;Math.random=()=>0;g.updateBall(.1);Math.random=random;assert.equal(g.ball.state,'dead');g.updateSkeletonEffects(6);assert.equal(g.boneWalls.length,0);}
+{const g=make(),p=sk(g,3),q=g.inner(0)[0];g.give(q);g.throwBall(q,{charge:0});const hp=p.hp;g.contact(p,g.ball);assert.equal(p.hp,hp);assert.ok(p.boneScatter>0);g.updateSkeletonEffects(.7);g.contact(p,g.ball);assert.ok(p.hp<hp,'cooldown allows next hit');g.updateSkeletonEffects(8);g.setState(p,'idle');p.z=0;g.give(q);g.throwBall(q,{charge:0});const hp2=p.hp;g.contact(p,g.ball);assert.equal(p.hp,hp2);}
+{const g=make(),p=sk(g,4),q=g.inner(0)[0];g.give(p);cast(g,4);g.throwBall(p,{charge:0});assert.equal(g.ball.power,'skullbomb');Object.assign(g.ball,{x:q.x,y:q.y,z:0});g.armSkull(g.ball);const hp=q.hp;g.updateSkeletonEffects(1.4);assert.equal(q.hp,hp);g.updateSkeletonEffects(.11);assert.ok(q.hp<hp);assert.equal(g.ball.state,'dead');assert.equal(g.boneBombs.length,0);}
+{const g=make(),p=sk(g,4),q=g.inner(0)[0];g.give(p);cast(g,4);g.throwBall(p,{charge:0});Object.assign(g.ball,{x:q.x,y:q.y});g.contact(q,g.ball);assert.ok(q.hp<q.maxHp);assert.equal(g.boneBombs?.length||0,0,'direct impact must not explode twice');}
+{const g=make(),q=g.inner(0)[0];g.give(q);g.updateBall(0);const p=cast(g,5);for(let i=0;i<180&&!p.boneCounter;i++)g.updateSkeletonEffects(1/60);assert.equal(g.ball.state,'magnet');assert.equal(q.hasBall,false);for(let i=0;i<180&&g.ball.state==='magnet';i++)g.updateBall(1/60);assert.equal(g.ball.holder,p);g.updateSkeletonEffects(.01);assert.equal(g.ball.state,'live');assert.equal(g.ball.thrower,p);}
+{const g=make(),p=cast(g,6),q=g.inner(0)[0],w=g.boneWaves[0];Object.assign(w,{x:q.x,y:q.y,vx:0,vy:0});q.z=30;g.updateSkeletonEffects(.01);assert.equal(q.boneRoot,0);q.z=0;g.updateSkeletonEffects(.01);assert.equal(q.boneRoot,4);assert.equal(g.speedMul(q),.5);}
+console.log('OK : six pouvoirs, retour/attrapé, mur, recharge esquive, bombe différée sans double impact, vol/contre extérieur, saut et ralentissement.');
+
+{const g=make(),p=sk(g,2);g.give(g.inner(0)[0]);g.stepPlayer(p,.016,{dx:0,dy:0},'p');assert.equal(g.boneWalls.length,1,'player actions reach the core update');}

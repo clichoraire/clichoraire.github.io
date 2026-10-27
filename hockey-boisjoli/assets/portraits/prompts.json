@@ -1,0 +1,86 @@
+[
+  {
+    "person": "mickael",
+    "reference": "Mickael.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Production sprite head turn-around sheet for a friendly family sports videogame. Reference 1 is identity reference: depict the adult man, short dark brown side-swept hair, round black eyeglasses, short brown beard and mustache, friendly smile. Reference 2 is ONLY flat cartoon style reference, not identity. Draw exactly THREE isolated HEADS of this ONE person in a single HORIZONTAL ROW, evenly spaced in three equal square cells. LEFT: absolutely straight front view, eyes level, looking directly at viewer. CENTER: strict SIDE PROFILE facing RIGHT. RIGHT: BACK of head, no face visible. Each head entirely contained inside its own cell with generous transparent gutters. Same scale and hair colors in all three views. Heads only, cut at bottom of chin: NO NECK, shoulders, body, clothing, props, text, labels, numbers, borders or shadows. Preserve recognizable hairstyle, facial hair and glasses from photo, simplified into clean flat-color cartoon shapes matching reference 2. No photorealism, no 3D, no strong outlines. Hair visible; no hat except if specifically listed in identity description. Actual transparent background, crisp edges. Wide 3:1 composition."
+  },
+  {
+    "person": "marie",
+    "reference": "Mickael-Marie.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Production sprite head turn-around sheet for a friendly family sports videogame. Reference 1 is identity reference: depict ONLY the adult woman on the right, straight shoulder-length light brown hair with blond highlights, dark rectangular eyeglasses, friendly round face. Reference 2 is ONLY flat cartoon style reference, not identity. Draw exactly THREE isolated HEADS of this ONE person in a single HORIZONTAL ROW, evenly spaced in three equal square cells. LEFT: absolutely straight front view, eyes level, looking directly at viewer. CENTER: strict SIDE PROFILE facing RIGHT. RIGHT: BACK of head, no face visible. Each head entirely contained inside its own cell with generous transparent gutters. Same scale and hair colors in all three views. Heads only, cut at bottom of chin: NO NECK, shoulders, body, clothing, props, text, labels, numbers, borders or shadows. Preserve recognizable hairstyle, facial hair and glasses from photo, simplified into clean flat-color cartoon shapes matching reference 2. No photorealism, no 3D, no strong outlines. Hair visible; no hat except if specifically listed in identity description. Actual transparent background, crisp edges. Wide 3:1 composition."
+  },
+  {
+    "person": "jeremie",
+    "reference": "Jeremie-Edison.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Production sprite head turn-around sheet for a friendly family sports videogame. Reference 1 is identity reference: depict ONLY the adult man on the left, dark navy baseball cap with NO logo, short dark beard and mustache, smiling; NOT the baby. Reference 2 is ONLY flat cartoon style reference, not identity. Draw exactly THREE isolated HEADS of this ONE person in a single HORIZONTAL ROW, evenly spaced in three equal square cells. LEFT: absolutely straight front view, eyes level, looking directly at viewer. CENTER: strict SIDE PROFILE facing RIGHT. RIGHT: BACK of head, no face visible. Each head entirely contained inside its own cell with generous transparent gutters. Same scale and hair colors in all three views. Heads only, cut at bottom of chin: NO NECK, shoulders, body, clothing, props, text, labels, numbers, borders or shadows. Preserve recognizable hairstyle, facial hair and glasses from photo, simplified into clean flat-color cartoon shapes matching reference 2. No photorealism, no 3D, no strong outlines. Hair visible; no hat except if specifically listed in identity description. Actual transparent background, crisp edges. Wide 3:1 composition."
+  },
+  {
+    "person": "jessica",
+    "reference": "Jessica-Edison.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Production game sprite head turn-around. Reference photo identity: ONLY the adult woman on left, long straight golden blond hair, black sunglasses over eyes, subtle friendly smile; NOT the boy. Second reference is cartoon STYLE ONLY. Exactly THREE isolated heads of this SAME person in ONE horizontal row, one head centered in each third. LEFT strictly front facing; CENTER strict side profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, labels, text or props. Same size in all three cells, generous transparent gutters. Match simple friendly flat cartoon style of second reference, not photorealistic. Preserve distinctive hair, glasses, facial hair, face shape from photo. No caps unless specifically stated in identity. Real transparent background, no glow or shadow. Wide 3:1 sheet."
+  },
+  {
+    "person": "josue",
+    "reference": "Alexie-Josue.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Production game sprite head turn-around. Reference photo identity: ONLY the adult man in foreground on right, short dark brown hair with receding temples, neatly trimmed dark beard and mustache, broad warm smile; NOT the girl. Second reference is cartoon STYLE ONLY. Exactly THREE isolated heads of this SAME person in ONE horizontal row, one head centered in each third. LEFT strictly front facing; CENTER strict side profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, labels, text or props. Same size in all three cells, generous transparent gutters. Match simple friendly flat cartoon style of second reference, not photorealistic. Preserve distinctive hair, glasses, facial hair, face shape from photo. No caps unless specifically stated in identity. Real transparent background, no glow or shadow. Wide 3:1 sheet."
+  },
+  {
+    "person": "adam",
+    "reference": "Adam.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Production game sprite head turn-around. Reference photo identity: the young boy, very short sandy blond hair, blue eyes, rounded cheeks, small nose, little closed-mouth smile. Second reference is cartoon STYLE ONLY. Exactly THREE isolated heads of this SAME person in ONE horizontal row, one head centered in each third. LEFT strictly front facing; CENTER strict side profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, labels, text or props. Same size in all three cells, generous transparent gutters. Match simple friendly flat cartoon style of second reference, not photorealistic. Preserve distinctive hair, glasses, facial hair, face shape from photo. No caps unless specifically stated in identity. Real transparent background, no glow or shadow. Wide 3:1 sheet."
+  },
+  {
+    "person": "milo",
+    "reference": "Milo.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Production game sprite head turn-around. Reference photo identity: the toddler boy, fine sparse medium brown hair with a distinctive small side-swept fringe, large blue-gray eyes, very round cheeks, cheerful baby face. Second reference is cartoon STYLE ONLY. Exactly THREE isolated heads of this SAME person in ONE horizontal row, one head centered in each third. LEFT strictly front facing; CENTER strict side profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, labels, text or props. Same size in all three cells, generous transparent gutters. Match simple friendly flat cartoon style of second reference, not photorealistic. Preserve distinctive hair, glasses, facial hair, face shape from photo. No caps unless specifically stated in identity. Real transparent background, no glow or shadow. Wide 3:1 sheet."
+  },
+  {
+    "person": "edison",
+    "reference": "Edison.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Production game sprite head turn-around. Reference photo identity: the toddler boy, sandy blond medium-length tousled hair parted loosely sideways, blue-gray eyes, round cheeks and toothy smile. Second reference is cartoon STYLE ONLY. Exactly THREE isolated heads of this SAME person in ONE horizontal row, one head centered in each third. LEFT strictly front facing; CENTER strict side profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, labels, text or props. Same size in all three cells, generous transparent gutters. Match simple friendly flat cartoon style of second reference, not photorealistic. Preserve distinctive hair, glasses, facial hair, face shape from photo. No caps unless specifically stated in identity. Real transparent background, no glow or shadow. Wide 3:1 sheet."
+  },
+  {
+    "person": "emily",
+    "reference": "Emilie.JPG",
+    "tool": "built-in image_gen",
+    "prompt": "Production game sprite head turn-around. Reference photo identity: the adult woman, long wavy dark-blond/light-brown hair, wide friendly smile, sunglasses resting ON TOP of her head. Second reference is cartoon STYLE ONLY. Exactly THREE isolated heads of this SAME person in ONE horizontal row, one head centered in each third. LEFT strictly front facing; CENTER strict side profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, labels, text or props. Same size in all three cells, generous transparent gutters. Match simple friendly flat cartoon style of second reference, not photorealistic. Preserve distinctive hair, glasses, facial hair, face shape from photo. No caps unless specifically stated in identity. Real transparent background, no glow or shadow. Wide 3:1 sheet."
+  },
+  {
+    "person": "matthieu",
+    "reference": "/Users/matthieu/Documents/Work/Projects/ClicHoraire.com/ClicHoraire/public/matthieu-sq.jpg",
+    "tool": "built-in image_gen",
+    "prompt": "Production game sprite head turn-around. Reference photo identity: the adult man, dark brown hair swept up and back with short sides, short neatly groomed brown beard and mustache, blue-gray eyes, friendly subtle smile. Second reference is cartoon STYLE ONLY. Exactly THREE isolated heads of this SAME person in ONE horizontal row, one head centered in each third. LEFT strictly front facing; CENTER strict side profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, labels, text or props. Same size in all three cells, generous transparent gutters. Match simple friendly flat cartoon style of second reference, not photorealistic. Preserve distinctive hair, glasses, facial hair, face shape from photo. No caps unless specifically stated in identity. Real transparent background, no glow or shadow. Wide 3:1 sheet."
+  },
+  {
+    "person": "alexie",
+    "reference": "IMG_6798.JPG",
+    "prompt": "Use case: stylized-concept. Production game sprite head turnaround. First reference is identity: the girl in foreground, long dark brown hair half tied up on top, oval youthful face, dark eyes, gentle closed-mouth smile. Second reference is STYLE and sheet layout only, NOT identity. Exactly THREE isolated heads of the SAME person in ONE horizontal row, centered in each equal third. LEFT strictly front facing; CENTER strict profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, text, labels, props. Same scale, generous transparent gutters and margin. Friendly clean flat cartoon matching style reference, preserve photo hair color and hairstyle, face shape, age, glasses and beard if present. True transparent background, NO glow, shadow or background. Wide 3:1 sprite sheet.",
+    "tool": "built-in image_gen"
+  },
+  {
+    "person": "eliott",
+    "reference": "IMG_6800.PNG",
+    "prompt": "Use case: stylized-concept. Production game sprite head turnaround. First reference is identity: the boy in foreground, dark brown tousled fringe, short sides, round youthful face, smiling with visible teeth. Second reference is STYLE and sheet layout only, NOT identity. Exactly THREE isolated heads of the SAME person in ONE horizontal row, centered in each equal third. LEFT strictly front facing; CENTER strict profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, text, labels, props. Same scale, generous transparent gutters and margin. Friendly clean flat cartoon matching style reference, preserve photo hair color and hairstyle, face shape, age, glasses and beard if present. True transparent background, NO glow, shadow or background. Wide 3:1 sprite sheet.",
+    "tool": "built-in image_gen"
+  },
+  {
+    "person": "josee",
+    "reference": "IMG_6799.JPG",
+    "prompt": "Use case: stylized-concept. Production game sprite head turnaround. First reference is identity: ONLY the woman on LEFT, medium-long chestnut brown wavy layered hair, mature face, light eyes, gentle smile, no glasses. Second reference is STYLE and sheet layout only, NOT identity. Exactly THREE isolated heads of the SAME person in ONE horizontal row, centered in each equal third. LEFT strictly front facing; CENTER strict profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, text, labels, props. Same scale, generous transparent gutters and margin. Friendly clean flat cartoon matching style reference, preserve photo hair color and hairstyle, face shape, age, glasses and beard if present. True transparent background, NO glow, shadow or background. Wide 3:1 sprite sheet.",
+    "tool": "built-in image_gen"
+  },
+  {
+    "person": "richard",
+    "reference": "IMG_6799.JPG",
+    "prompt": "Use case: stylized-concept. Production game sprite head turnaround. First reference is identity: ONLY the man on RIGHT, older adult, balding with short gray hair on sides, rectangular black glasses, gray-white beard and mustache. Second reference is STYLE and sheet layout only, NOT identity. Exactly THREE isolated heads of the SAME person in ONE horizontal row, centered in each equal third. LEFT strictly front facing; CENTER strict profile facing RIGHT; RIGHT back of head with no face. Heads only cut at chin: NO neck, shoulders, clothes, bodies, text, labels, props. Same scale, generous transparent gutters and margin. Friendly clean flat cartoon matching style reference, preserve photo hair color and hairstyle, face shape, age, glasses and beard if present. True transparent background, NO glow, shadow or background. Wide 3:1 sprite sheet.",
+    "tool": "built-in image_gen"
+  }
+]

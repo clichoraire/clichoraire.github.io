@@ -2,9 +2,9 @@
 // Le mode Aventure (chef, équipe, expérience) est dans js/adventure.js.
 (async function (BC) {
   'use strict';
-  await Promise.all([window.FamilyHeads.ready, window.MonsterHeads.ready, window.MonsterBodyArt.ready]);
+  await Promise.all([window.FamilyHeads.ready, window.MonsterHeads.ready, window.MonsterBodyArt.ready, window.FamilyArmArt.ready]);
   const $ = s => document.querySelector(s), S = BC.sprites;
-  const app = BC.app = { screen: 'menu', settings: { difficulty: 1, sound: true }, game: null, cup: null, mode: 'solo' };
+  const app = BC.app = { screen: 'menu', settings: { difficulty: 1, sound: true, controlMode: 'auto' }, game: null, cup: null, mode: 'solo' };
   const P_COLOR = '#ffd166';
   try { Object.assign(app.settings, JSON.parse(localStorage.getItem('bc.settings') || '{}')); } catch (e) { }
   const save = () => { try { localStorage.setItem('bc.settings', JSON.stringify(app.settings)); } catch (e) { } };
@@ -13,7 +13,7 @@
   function show(id) {
     document.querySelectorAll('.screen').forEach(e => e.classList.add('hidden'));
     $('#screen-' + id).classList.remove('hidden'); app.screen = id; BC.input.capture = id === 'match';
-    hideCard(); window.scrollTo(0, 0);
+    hideCard(); window.scrollTo(0, 0); BC.audio.setMusicScene(id);
   }
   app.show = show;
   const roleOf = d => BC.ROLES[d.role] || d.role;
@@ -55,6 +55,7 @@
     const d = $('#opt-diff'); d.innerHTML = BC.DIFFICULTIES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
     d.value = app.settings.difficulty; d.onchange = () => { app.settings.difficulty = +d.value; save(); };
     const snd = $('#opt-sound'); snd.checked = app.settings.sound; snd.onchange = () => { app.settings.sound = snd.checked; BC.audio.setMuted(!snd.checked); save(); };
+    for(const id of ['opt-control','pause-control']){const select=$('#'+id);select.value=app.settings.controlMode==='fixed'?'fixed':'auto';select.onchange=()=>{app.settings.controlMode=select.value;for(const other of ['opt-control','pause-control'])$('#'+other).value=select.value;if(app.game)app.game.setControlMode(select.value);save();};}
     BC.audio.muted = !app.settings.sound;
     $('#btn-adventure').onclick = () => { BC.audio.init(); BC.audio.play('ui'); BC.AdventureUI.open(); };
     $('#btn-solo').onclick = () => startSelect('solo');
@@ -62,14 +63,14 @@
     $('#btn-family').onclick = () => { BC.audio.init(); BC.audio.play('ui'); openFamily(); };
     $('#btn-help').onclick = () => $('#howto').showModal();
     $('#btn-options').onclick = () => $('#menu-options').showModal();
-    const faces = $('#menu-faces');
-    for (const id of ['alexie', 'eliott', 'adam', 'milo', 'edison', 'zachary']) {
+    const faces = $('#menu-faces');faces.replaceChildren();
+    for (const id of ['josee', 'mickael', 'matthieu', 'jeremie', 'emily', 'alexie']) {
       const d = BC.PLAYERS[id], team = BC.TEAMS.find(t => t.players.includes(id));
       const button = document.createElement('button'); button.className = 'menu-face';
       button.setAttribute('aria-label', 'Rencontrer ' + d.name);
       button.style.setProperty('--team-color', team.color);
-      const portrait = document.createElement('canvas'); portrait.width = 150; portrait.height = 170;
-      S.drawBust(portrait.getContext('2d'), d, team, 150, 170);
+      const portrait = document.createElement('canvas'); portrait.width = 220; portrait.height = 310;
+      S.drawPerson(portrait.getContext('2d'),['matthieu','jeremie'].includes(id)?85:110,290,d,team,{scale:3.35,pose:['matthieu','jeremie'].includes(id)?'windup':'wave',ball:['matthieu','jeremie'].includes(id),dir:1,t:1});
       const label = document.createElement('span'); label.textContent = d.name;
       button.append(portrait, label); button.onclick = () => openFamily(); faces.appendChild(button);
     }
@@ -77,7 +78,7 @@
     buildHowto();
     // scène d'accueil : toute la famille lance des balles sur le terrain du parc
     const c = $('#menu-anim'), ctx = c.getContext('2d');
-    const actors = Object.values(BC.PLAYERS).filter(d => !d.monster).map((d, i) => { const team = BC.TEAMS.find(t => t.players.includes(d.id)); const left = i % 2 === 0; return { d, team, x: left ? 240 + (Math.floor(i / 2) % 4) * 85 : 1040 - (Math.floor(i / 2) % 4) * 85, y: 400 + Math.floor(i / 8) * 130 + (Math.floor(i / 2) % 2) * 60, dir: left ? 1 : -1, phase: i * 0.61 }; });
+    const actors = [];
     let hovered = null, mouse = null;
     c.addEventListener('mousemove', e => { const r = c.getBoundingClientRect(); const scale = Math.max(r.width / c.width, r.height / c.height); mouse = { x: (e.clientX - r.left + (c.width * scale - r.width) / 2) / scale, y: (e.clientY - r.top + (c.height * scale - r.height) / 2) / scale, cx: e.clientX, cy: e.clientY }; });
     c.addEventListener('mouseleave', () => { mouse = null; hovered = null; hideCard(); });
@@ -135,9 +136,9 @@
   function startMatchIds(aId, bId, ctrl) { startMatch({ teams: [BC.teamById(aId), BC.teamById(bId)], ctrl, difficulty: app.settings.difficulty }); }
   // o : { teams, ctrl, difficulty, stats (aventure), mode }
   function startMatch(o) {
-    if (!o.confirmed) { BC.ArcadeUI.versus(o,()=>startMatch({...o,confirmed:true}),()=>{if(o.mode==='adventure')BC.AdventureUI.pickTeam();else if(app.mode==='cup')startSelect('cup');else startSelect('solo');}); return; }
+    if (!o.confirmed) { BC.ArcadeUI.versus(o,()=>startMatch({...o,confirmed:true}),()=>{if(o.mode==='adventure')BC.AdventureUI.hub();else if(app.mode==='cup')startSelect('cup');else startSelect('solo');}); return; }
     BC.audio.init();
-    const g = new BC.Game({ teams: o.teams, ctrl: o.ctrl, difficulty: o.difficulty == null ? app.settings.difficulty : o.difficulty, intro: true, stats: o.stats, mode: o.mode });
+    const g = new BC.Game({ teams: o.teams, ctrl: o.ctrl, difficulty: o.difficulty == null ? app.settings.difficulty : o.difficulty, intro: true, controlMode:app.settings.controlMode, stats: o.stats, mode: o.mode, adventure:o.adventure });
     app.game = g; app.matchOpts = {...o, confirmed:false}; ui.humans = []; paused = false;
     o.ctrl.forEach((c, i) => { if (c === 'p1') ui.humans.push({ team: i, n: 1, label: 'TOI', color: P_COLOR }); });
     $('#pause').classList.add('hidden');
@@ -154,6 +155,7 @@
     let dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
     if (BC.input.consume('Escape') || BC.input.consume('KeyP')) { paused = !paused; $('#pause').classList.toggle('hidden', !paused); BC.input.flush(); }
     if (BC.input.consume('KeyM')) { app.settings.sound = !app.settings.sound; BC.audio.setMuted(!app.settings.sound); $('#opt-sound').checked = app.settings.sound; save(); }
+    g.paused=paused;BC.audio.pauseMusic(paused);BC.updateMagicBar(g,paused);
     if (paused) { BC.render.draw(ctx, g, ui); return; }
     acc += dt;
     const inputs = [null, null];
@@ -167,7 +169,9 @@
     }
     g.events.length = 0;
     BC.render.draw(ctx, g, ui);
-    if (g.phase === 'end' && g.endT > 3) showResult();
+    const bossWon=g.phase==='end'&&g.players.some(p=>p.def.boss&&p.team===g.winner);
+    if(bossWon&&!g.bossLaughPlayed){g.bossLaughPlayed=true;BC.audio.play('boss-laugh');}
+    if (g.phase === 'end' && g.endT > (bossWon?4.2:3)) showResult();
   }
   $('#btn-resume').onclick = () => { paused = false; $('#pause').classList.add('hidden'); BC.input.flush(); };
   $('#btn-quit').onclick = () => { paused = false; app.cup = null; if (app.matchOpts && app.matchOpts.mode === 'adventure') BC.AdventureUI.open(); else show('menu'); };
@@ -175,6 +179,7 @@
   // ----- Résultat -----
   function showResult() {
     const g = app.game, A = g.teams[0], B = g.teams[1], won = g.winner === 0, adventure = app.matchOpts && app.matchOpts.mode === 'adventure';
+    if(g.resultsShown)return;g.resultsShown=true;
     const box = $('#result'); let html = '';
     const cup = app.cup; let cupText = '';
     if (cup) {
@@ -183,23 +188,28 @@
       else cupText = 'Défaite… Tu peux réessayer ce match.';
     }
     const winner = g.teams[g.winner];
-    html += `<div class="final"><b style="color:${winner.color}">${winner.name}</b> gagne${winner.id === 'aventure' ? '' : 'nt'} !</div>`;
+    html += `<section class="finish-celebration"><div class="finish-banner"><span class="finish-kicker">FIN DU MATCH</span><h1>${won?'VICTOIRE !':'BIEN ESSAYÉ !'}</h1><p class="finish-winner"><strong>${winner.name} ${winner.name.startsWith('Les ')?'remportent':'remporte'} le match</strong></p><span class="finish-medal" aria-hidden="true">🏆</span></div><canvas id="finish-team" width="700" height="240" aria-label="L’équipe gagnante"></canvas></section>`;
+    const gold=BC.Equipment.award(g);html+=`<div class="result-gold"><i class="gold-coin">★</i> +${gold} pièces <small>Trésor : ${BC.Equipment.state.gold}</small></div>`;
     if (cupText) html += `<div class="cup-text">${cupText}</div>`;
     if (adventure) html += BC.AdventureUI.result(g);
-    html += '<div class="cols">';
+    html += '<h2 class="match-stats-title">Les statistiques de la partie</h2><div class="cols result-stats">';
     for (let t = 0; t < 2; t++) {
       const team = g.teams[t], st = g.stats[t];
-      html += `<div><h3 style="color:${team.color}">${team.name}</h3><table><tr><th>Joueur</th><th>Points de vie</th><th>XP</th></tr>`;
+      html += `<section class="result-team" style="--team-color:${team.color}"><h3>${team.name}${t===g.winner?' <span>GAGNANTS</span>':''}</h3><table><tr><th>Joueur</th><th>Points de vie</th><th>XP</th></tr>`;
       for (const p of g.inner(t)) html += `<tr><td>${p.def.name}</td><td>${p.alive ? p.hp + ' / ' + p.maxHp : '😇 K.-O.'}</td><td>${g.xp[p.id] || 0}</td></tr>`;
       for (const p of g.outer(t)) if (g.xp[p.id]) html += `<tr><td>${p.def.name} <small>(extérieur)</small></td><td>—</td><td>${g.xp[p.id]}</td></tr>`;
-      html += `<tr class="tot"><td>Lancers</td><td colspan="2">${st.throws}</td></tr><tr class="tot"><td>Pouvoirs</td><td colspan="2">${st.supers}</td></tr><tr class="tot"><td>Touchés</td><td colspan="2">${st.hits}</td></tr><tr class="tot"><td>Attrapés</td><td colspan="2">${st.catches}</td></tr></table></div>`;
+      html += `<tr class="tot"><td>Lancers</td><td colspan="2">${st.throws}</td></tr><tr class="tot"><td>Pouvoirs</td><td colspan="2">${st.supers}</td></tr><tr class="tot"><td>Touchés</td><td colspan="2">${st.hits}</td></tr><tr class="tot"><td>Attrapés</td><td colspan="2">${st.catches}</td></tr><tr class="tot"><td>Pénalités de possession</td><td colspan="2">${st.penalties||0}</td></tr></table></section>`;
     }
     html += '</div>';
     box.innerHTML = html;
+    const goldBadge=box.querySelector('.result-gold');box.querySelector('.finish-banner').append(goldBadge);
+    const details=document.createElement('div');details.className='result-match-details';
+    box.querySelectorAll('.cup-text,.result-story').forEach(note=>details.append(note));
+    box.querySelector('.match-stats-title').after(details);
     const b = $('#result-buttons'); b.innerHTML = '';
-    const btn = (label, fn, cls) => { const e = document.createElement('button'); e.textContent = label; if (cls) e.className = cls; e.onclick = fn; b.appendChild(e); };
+    const btn = (label, fn, cls) => { const e = document.createElement('button'); e.textContent = label;if(label.includes('🪙')){e.textContent=label.replace('🪙','');const coin=document.createElement('i');coin.className='gold-coin';coin.textContent='★';e.prepend(coin);} if (cls) e.className = cls; e.onclick = fn; b.appendChild(e); };
     if (adventure) {
-      btn('Continuer l\'aventure', () => BC.AdventureUI.open(), 'primary');
+      btn('Continuer l\'aventure', () => BC.AdventureUI.hub(), 'primary');
       btn('Menu', () => show('menu'));
     } else if (cup) {
       if (cup.index >= cup.opponents.length) btn('Retour au menu', () => { app.cup = null; show('menu'); buildMenu(); }, 'primary');
@@ -210,10 +220,12 @@
       btn('Changer d\'équipes', () => startSelect(app.mode));
       btn('Menu', () => show('menu'));
     }
+
     show('result');
+    BC.ArcadeUI.finish(g);
   }
   window.addEventListener('keydown', e => {
-    if (app.screen === 'result' && e.code === 'Enter') { const f = $('#result-buttons button'); if (f && document.activeElement !== f) f.click(); }
+    if (app.screen === 'result' && e.code === 'Enter' && !document.querySelector('dialog[open]')) { const f = $('#result-buttons button'); if (f && document.activeElement !== f) f.click(); }
   });
 
   // ----- Galerie : voir toute la famille côte à côte (pour faire des images) -----

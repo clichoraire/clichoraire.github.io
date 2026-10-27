@@ -1,12 +1,13 @@
 // Une aventure indépendante par personnage; préférences audio/difficulté partagées.
 (function(SK){
   'use strict';
-  const P=SK.Profiles={},fields=['missionMedals','missionPerfect','playSeconds','snowDig','strengthLevel','xp','trainingPoints','powerLevels','photoPieces','walkLevel','photoGoldAt','gold','boardSkins','ownedSkins','boards','unlocked','shinobin','won','best','board','advBoard','upgrades','gear','wardrobe','look','trophies','missions','cups','allCupsUnlocked','allMissionsUnlocked','ending'];
+  const P=SK.Profiles={},fields=['characterStats','characterStatsMigrated','missionMedals','missionPerfect','playSeconds','snowDig','strengthLevel','xp','trainingPoints','powerLevels','photoPieces','walkLevel','photoGoldAt','gold','boardSkins','ownedSkins','boards','unlocked','shinobin','won','best','board','advBoard','upgrades','gear','wardrobe','look','trophies','missions','cups','allCupsUnlocked','allMissionsUnlocked','ending'];
   const copy=v=>JSON.parse(JSON.stringify(v));
   const snapshot=s=>Object.fromEntries(fields.filter(k=>s[k]!==undefined).map(k=>[k,copy(s[k])]));
   let defaults;
   P.init=function(raw,base){defaults=copy(base);const s=Object.assign(copy(base),copy(raw||{}));s.profiles=s.profiles||{};s.activeProfile=s.activeProfile||s.advChar||s.char||'zach';
     for(const profile of [s,...Object.values(s.profiles)])for(const upgrade of Object.values(profile.upgrades||{})){if(upgrade.acceleration==null&&upgrade.trick!=null)upgrade.acceleration=upgrade.trick;delete upgrade.trick;}
+    for(const profile of [s,...Object.values(s.profiles)])SK.trainingLevels(profile);
     if(!s.profiles[s.activeProfile])s.profiles[s.activeProfile]=snapshot(s);
     for(const profile of [s,...Object.values(s.profiles)])if(profile.gear)profile.gear=profile.gear.filter(id=>id!=='fart');
     s.profileVersion=1;return s;

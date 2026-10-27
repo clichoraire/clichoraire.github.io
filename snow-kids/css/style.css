@@ -1062,3 +1062,10 @@ table.results td.num { text-align: right; font-family: monospace; }
 .gym-meter:has(i:nth-child(50)){display:grid;grid-template-columns:repeat(25,minmax(0,1fr));gap:2px;height:auto}.gym-meter:has(i:nth-child(50)) i{width:auto;min-width:0;height:8px}.gym-upgrade-value{white-space:nowrap}
 
 .stat-fifty,.board-total-meter:has(i:nth-child(50)){display:grid!important;grid-template-columns:repeat(25,minmax(0,1fr));gap:2px!important;height:auto!important}.stat-fifty i,.board-total-meter:has(i:nth-child(50)) i{width:auto!important;min-width:0!important;height:8px!important}
+
+#pause-tricks{margin:18px 0;text-align:left;background:#203e55;border:1px solid #6996ad;border-radius:14px;padding:14px 18px}#pause-tricks summary{cursor:pointer;font-weight:800;font-size:20px;color:#ffdf70;text-align:center}#pause-tricks p{font-size:15px;color:#e1edf4}.trick-table-scroll{overflow-x:auto}.trick-table{width:100%;border-collapse:collapse;font-size:16px;color:#f2f7fc}.trick-table th,.trick-table td{padding:10px 12px;text-align:left;border-bottom:1px solid #54748b}.trick-table thead{color:#8ed8ee}.trick-table tbody tr:nth-child(even){background:#ffffff08}.trick-table kbd{display:inline-block;background:#eff7fc;color:#203e55;border-radius:5px;padding:3px 8px;font-weight:bold}@media(max-width:600px){#pause-tricks{padding:12px 8px}.trick-table{font-size:13px}.trick-table th,.trick-table td{padding:8px 6px}}
+
+/* Clothing rests on the same wooden shelves as the other shop objects. */
+.shop-wall .wall-garment .product-price{top:calc(100% + 13px);font-size:10px;padding:2px 4px}
+.shop-wall .wall-garment .product-price img{width:12px;height:12px}
+.shop-wall .wall-garment .owned-check{width:16px;height:16px;font-size:11px;right:-4px;top:-5px}

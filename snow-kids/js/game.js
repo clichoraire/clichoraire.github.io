@@ -218,12 +218,15 @@
     r.crouch = (r.crouch || 0) + SK.clamp((inp.up && !inp.down && r.state === 'ride' && !stunned ? 1 : 0) - (r.crouch || 0), -5 * dt, 5 * dt); // penché en avant, genoux fléchis
     r.brake = (r.brake || 0) + SK.clamp((inp.down && r.state === 'ride' && !stunned ? 1 : 0) - (r.brake || 0), -5 * dt, 5 * dt);
     const station = r.z >= this.L; // zone de la gare au bas de la piste
-    if (!stunned && r.fx.snowman <= 0) {
-      const grip = (r.state === 'air' ? 0.35 : 1.25 * (1 - .48 * r.crouch)) * surf.grip;
-      r.x += r.steer * r.steerRate * (station ? 0.9 : Math.min(1, r.speed / 12)) * grip * dt;
-    }
+    const groundSteering=(!stunned&&r.fx.snowman<=0)?r.steer*r.steerRate*(station?.9:Math.min(1,r.speed/12))*1.25*(1-.48*r.crouch)*surf.grip:0;
+    if(r.state==='air'){
+      if(r.lateralVelocity==null)r.lateralVelocity=groundSteering;
+      // Keep the launch trajectory; allow gentle corrections without curve-driven reversal.
+      if(!stunned)r.lateralVelocity=SK.clamp(r.lateralVelocity+inp.steer*3*dt,-r.steerRate*1.5,r.steerRate*1.5);
+    }else r.lateralVelocity=groundSteering-centrifugal*(1-(r.cornerHold||0))*(s.surface==='ice'?1.25:1);
+    r.x+=r.lateralVelocity*dt;
     if (station && r.lap + 1 < this.laps) { r.speed = Math.max(6, Math.min(r.speed, 14) - 10 * dt); target = 0; }
-    r.x -= centrifugal * (r.state === 'air' ? 0.6 : 1-(r.cornerHold||0)) * (SK.SURFACES[s.surface] && s.surface === 'ice' ? 1.25 : 1) * dt;
+
     if((this.course.blizzard||this.course.strongWind)&&!station&&(r.state==='ride'||r.state==='air')&&r.speed>1){const gust=SK.stormAt(this.course,this.time,this.seed,r.z/this.L);r.x+=gust.force*(r.state==='air'?1.15:1)*dt;}
     r.x += (r.pushVelocity||0)*dt;
     r.pushVelocity *= Math.exp(-3*dt);
@@ -232,7 +235,7 @@
     if (r.x > lim || r.x < -lim) {
       if(r.pushImpactUntil>this.time&&Math.abs(r.pushVelocity)>2){this.daze(r,1.8);r.pushImpactUntil=0;r.pushVelocity=0;}
       if(!r.touchingEdge)r.stats.edges++;r.touchingEdge=true;
-      r.x = SK.clamp(r.x, -lim, lim);
+      r.x = SK.clamp(r.x, -lim, lim);r.lateralVelocity=0;
       if (r.wallT <= 0 && r.speed > 12 && !stunned) { this.emit({ type: 'wall', r }); r.wallT = 0.5; }
       if (r.gear.veste) { r.speed *= (1 - 0.7 * dt); if (r.speed > 24) r.speed = Math.max(24, r.speed - 10 * dt); }
       else { r.speed *= (1 - 1.8 * dt); if (r.speed > 18) r.speed = Math.max(18, r.speed - 25 * dt); }
@@ -297,6 +300,7 @@
         if (p.decor) continue;
         const pz = sg.z + (p.dz == null ? SEG / 2 : p.dz);
         if (pz >= zPrev && pz < r.z && Math.abs(r.x - p.x) < p.r + 0.7 && (p.type==='lowarch'||r.h < (p.clearance ?? 1.1)) && r.state !== 'fall') { // Les deux commandes plient les genoux : accélérer ou préparer le saut.
+          if(p.type==='lowarch'&&r.h>=(p.height??SK.HURDLE_HEIGHT)+.12)continue;
           if(p.type==='lowarch'&&r.state==='ride'&&(r.def.lowPassagePassive||inp.up||inp.jump))continue;
           if(!p.trainingBarrier&&!p.mandatory&&SK.GearEffects?.protect(r,p))continue;
           if(p.type==='lowarch'){this.daze(r,1.8);continue;}

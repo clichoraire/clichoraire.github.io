@@ -116,6 +116,11 @@
       g.fillStyle = 'rgba(0,0,0,0.18)'; g.beginPath(); g.arc(z.cx, z.cy, 40, 0, TAU); g.fill();
       g.strokeStyle = 'rgba(255,255,255,0.1)'; g.lineWidth = 2; g.setLineDash([6, 5]); g.beginPath(); g.arc(z.cx, z.cy, 38, 0, TAU); g.stroke(); g.setLineDash([]);
     }
+    if (map.shape) {
+      g.fillStyle = '#080d16';
+      for (let y=0;y<map.zy;y++) for (let x=0;x<map.zx;x++)
+        if (!map.zone(x,y)) g.fillRect(x*ZC.ZONE_PX,y*ZC.ZONE_PX,ZC.ZONE_PX,ZC.ZONE_PX);
+    }
     return c;
   }
 
@@ -156,10 +161,12 @@
       alpha = alpha === undefined ? 1 : alpha;
       this.clampCamera();
       const vx = this.viewX, vy = this.viewY, vw = this.vw, vh = this.vh;
+      // Repère écran imposé à chaque image (pas de save/restore autour du monde : une exception en plein dessin
+      // ne doit pas laisser une translation qui se cumule d'image en image et barbouille l'écran)
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.setLineDash([]);
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, vw, vh);
-      ctx.save();
-      ctx.translate(-vx, -vy);
+      ctx.setTransform(1, 0, 0, 1, -vx, -vy); // repère monde
 
       const sx = Math.max(0, vx), sy = Math.max(0, vy);
       const ex = Math.min(m.w, vx + vw), ey = Math.min(m.h, vy + vh);
@@ -168,7 +175,7 @@
       const z0x = ZC.clamp(Math.floor(vx / ZC.ZONE_PX), 0, m.zx - 1), z1x = ZC.clamp(Math.floor((vx + vw) / ZC.ZONE_PX), 0, m.zx - 1);
       const z0y = ZC.clamp(Math.floor(vy / ZC.ZONE_PX), 0, m.zy - 1), z1y = ZC.clamp(Math.floor((vy + vh) / ZC.ZONE_PX), 0, m.zy - 1);
       const visZones = [];
-      for (let iy = z0y; iy <= z1y; iy++) for (let ix = z0x; ix <= z1x; ix++) visZones.push(m.zones[iy * m.zx + ix]);
+      for (let iy = z0y; iy <= z1y; iy++) for (let ix = z0x; ix <= z1x; ix++) { const z = m.zone(ix, iy); if (z) visZones.push(z); }
       this.drawZoneTints(ctx, visZones, input);
       this.drawDecals(ctx, vx, vy, vw, vh);
       for (const z of visZones) this.drawZoneCenter(ctx, z, t);
@@ -194,12 +201,13 @@
         this.drawFlag(ctx, sb.rally.x, sb.rally.y, g.players[sb.owner].hex, t);
       }
 
-      // En mode « envoyer », on signale les troupes du bunker sélectionné
-      if (input && input.mode === 'send' && sb) {
+      // En mode « envoyer », on signale les troupes des bunkers sélectionnés
+      const sbs = g.selectedBunkers;
+      if (input && input.mode === 'send' && sbs.length) {
         ctx.strokeStyle = 'rgba(255,208,64,0.8)'; ctx.lineWidth = 1.2;
         for (let i = 0; i < ground.length; i++) {
           const u = ground[i];
-          if (u.home !== sb || u.def.structure) continue;
+          if (u.def.structure || !sbs.includes(u.home)) continue;
           ctx.beginPath(); ctx.ellipse(u.rx, u.ry + 3, u.radius + 4, (u.radius + 4) * 0.62, 0, 0, TAU); ctx.stroke();
         }
       }
@@ -318,7 +326,7 @@
         ctx.strokeStyle = '#18e818'; ctx.lineWidth = 1;
         ctx.strokeRect(Math.min(x0, mx) + 0.5, Math.min(y0, my) + 0.5, Math.abs(mx - x0), Math.abs(my - y0));
       }
-      ctx.restore();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // retour au repère écran
       ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
       ctx.strokeRect(-vx + 1, -vy + 1, m.w - 2, m.h - 2);
       if (g.settings.invasion && g.nextInvasion && g.state === 'playing') this.drawInvasionEdgeArrow(ctx, t);
@@ -868,6 +876,13 @@
         ctx.lineTo(-h * 0.24 - sx * wave, y1);
         ctx.quadraticCurveTo(-h * 0.28 - sx * wave * 0.5, (y0 + y1) / 2, -h * 0.2, y0); ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.fillStyle = ZC.rgba(col, 0.35); ctx.fillRect(-h * 0.2, y0, h * 0.4, 2);
+        // Les sprites détourés ont des trous transparents dans l'armure :
+        // une doublure opaque empêche la cape de transparaître sur le torse.
+        ctx.fillStyle = '#202b28';
+        ctx.beginPath(); ctx.moveTo(-h*.16, y0); ctx.lineTo(h*.16, y0);
+        ctx.lineTo(h*.18, top+h*.56); ctx.lineTo(h*.12, top+h*.66);
+        ctx.lineTo(-h*.12, top+h*.66); ctx.lineTo(-h*.18, top+h*.56);
+        ctx.closePath(); ctx.fill();
         break;
       }
       case 'helmet': { // crête / visière colorée sur le casque

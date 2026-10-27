@@ -174,7 +174,9 @@
         if (n === cap) this.acc = 0;
         this.input.update(dt);
       }
-      this.renderer.draw(this.input, this.paused ? 1 : this.acc / ZC.STEP, dt);
+      // Une erreur de rendu ne doit pas figer l'interface ni se répéter 60 fois par seconde dans la console
+      try { this.renderer.draw(this.input, this.paused ? 1 : this.acc / ZC.STEP, dt); }
+      catch (e) { if (!this.drawErrT || t - this.drawErrT > 5000) { this.drawErrT = t; console.error('Erreur de rendu :', e); } }
       this.ui.update(dt);
     }
 

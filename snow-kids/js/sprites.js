@@ -86,7 +86,7 @@
     // Zach conserve exactement les couleurs de la référence par défaut. Les achats restent visibles.
     const base=r.def.colors,custom=r.look||{},original=r.def.id==='zach';
     const colors={jacket:original&&(!custom.jacket||custom.jacket===base.jacket)?null:L.jacket,pants:original&&(!custom.pants||custom.pants===base.pants)?null:L.pants,hat:original&&(!custom.hatColor||custom.hatColor===base.hat)?null:L.hatColor,hair:original&&(!custom.hairColor||custom.hairColor===base.hair)?null:L.hairColor,skin:original&&(!custom.skin||custom.skin===base.skin)?null:L.skin,board:original&&(!r.board||r.board.id==='freestyle')?null:L.board};
-    const id=r.def.id+key+JSON.stringify(colors)+(L.helmet||'')+(L.goggles||'')+Boolean(L.rocketPack)+Boolean(L.gripBoots)+Boolean(L.springBoots)+(L.hat||'none');if(cache.has(id))return cache.get(id);
+    const id=r.def.id+key+JSON.stringify(colors)+(L.helmet||'')+(L.goggles||'')+Boolean(L.rocketPack)+Boolean(L.gripBoots)+Boolean(L.springBoots)+(L.hat||'none')+Boolean(L.paddedVest)+Boolean(L.whistle)+(L.gloves||'');if(cache.has(id))return cache.get(id);
     const c=canvas(source.width,source.height),ctx=c.getContext('2d');ctx.drawImage(source,0,0);const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;
     const coat=custom.jacket?SK.jacketPalette(L.jacket):null;
     const coatData=coat?fittedCoat(source,L.jacket,key):null;
@@ -117,11 +117,17 @@
       // Remove the detached source hands; the new mittens join the sleeve cuffs.
       for(let y=Math.floor(c.height*.60);y<c.height*.75;y++)for(let x=0;x<c.width;x++)if(x<c.width*.30||x>c.width*.70)d[(y*c.width+x)*4+3]=0;
       garment=()=>{const gx=c.width*.50,gy=c.height*.465,gw=c.width*.83,gh=c.height*.335;
-        ctx.save();ctx.translate(gx,gy);ctx.scale(gw/2,gh/2.29);SK.drawJacket(ctx,L.jacket,0,0,1);for(const sign of [-1,1]){ctx.save();ctx.scale(sign,1);ctx.fillStyle=coat.trim;ctx.beginPath();ctx.moveTo(.73,.88);ctx.lineTo(.96,.86);ctx.quadraticCurveTo(1.04,1.18,.91,1.21);ctx.quadraticCurveTo(.76,1.24,.74,1.07);ctx.quadraticCurveTo(.65,1.12,.67,1.01);ctx.closePath();ctx.fill();ctx.restore();}ctx.restore();};
+        ctx.save();ctx.translate(gx,gy);ctx.scale(gw/2,gh/2.29);SK.drawJacket(ctx,L.jacket,0,0,1);for(const sign of [-1,1]){ctx.save();ctx.scale(sign,1);ctx.fillStyle=SK.gearById(L.gloves)?.tint||coat.trim;ctx.beginPath();ctx.moveTo(.73,.88);ctx.lineTo(.96,.86);ctx.quadraticCurveTo(1.04,1.18,.91,1.21);ctx.quadraticCurveTo(.76,1.24,.74,1.07);ctx.quadraticCurveTo(.65,1.12,.67,1.01);ctx.closePath();ctx.fill();ctx.restore();}ctx.restore();};
     }
     ctx.putImageData(im,0,0);
     if(window.FamilyHeads?.has(r.def.id)) personalize(c,source,r,key,garment);
     else garment?.();
+    if(L.paddedVest||L.whistle){
+      const i=Number(key.match(/(\d+)$/)?.[1]||0),girl=r.def.gender==='girl',board=key.includes('Board');
+      const view=key.includes('Front')?'front':board?(i>=2?'back':i===0?'side':'front'):girl?(i===0||i>=5?'back':i===1||i===2?'side':'front'):(i===1||i>=6?'back':i===2||i===3?'side':'front');
+      ctx.save();ctx.translate(c.width*.5,c.height*.47);if(board&&i===0||!board&&!girl&&i===3)ctx.scale(-1,1);
+      SK.drawWornTorso(ctx,L,0,0,c.height*.16,view);ctx.restore();
+    }
     if(L.rocketPack){
       const girl=r.def.gender==='girl',board=key.includes('Board'),i=Number(key.match(/(\d+)$/)?.[1]||0);
       const view=key.includes('Front')?'front':board?(i>=2?'back':i===0?'side':'front'):girl?(i===0||i>=5?'back':i===1||i===2?'side':'front'):(i===1||i>=6?'back':i===2||i===3?'side':'front');
@@ -131,7 +137,7 @@
       SK.drawRocketPack(ctx,0,0,c.height*(view==='side'?.12:.16),view);ctx.restore();
     }
     if(L.gripBoots||L.springBoots) fittedBoots(c,source,key,L.springBoots);
-    if(L.helmet) helmet(c,r,key,L.helmet);else if(L.hat&&L.hat!=='none')headwear(c,r,key,L);
+    if(L.helmet==='couronne')headwear(c,r,key,{hat:'crown',hatColor:'#e6b33f'});else if(L.helmet) helmet(c,r,key,L.helmet);else if(!['shinobin','santa','robot'].includes(r.def.id)&&L.hat&&L.hat!=='none')headwear(c,r,key,L);
     if(L.goggles) goggles(c,r,key,L.goggles);
     if(cache.size>180)cache.clear();cache.set(id,c);return c;
   }
@@ -208,8 +214,11 @@
     const hh=c.height*(board?.32:.34),frame=window.FamilyHeads?.frame(r.def.id,view);
     const hw=frame?Math.min(hh*1.18,hh*frame.width/frame.height):c.width*.67;
     const actualH=frame?Math.min(hh,hh*1.18*frame.height/frame.width):hh,top=hh-actualH+headInset(c,r,key);
-    ctx.save();ctx.translate(c.width*.5,top+actualH*(r.def.id==='zach'?.68:.63));if(mirror)ctx.scale(-1,1);
-    SK.drawGoggles(ctx,id,0,0,hw*(view==='front'?.40:.46),view);ctx.restore();
+    // The masked and mechanical portraits have their eyes higher than the Kids.
+    const eyeLine={zach:.68,shinobin:.56,santa:.54,robot:.515}[r.def.id]??.63;
+    const compact=['shinobin','santa','robot'].includes(r.def.id);
+    ctx.save();ctx.translate(c.width*.5,top+actualH*eyeLine);if(mirror)ctx.scale(-1,1);
+    SK.drawGoggles(ctx,id,compact&&view==='side'?-hw*.04:0,0,hw*(compact?.34:view==='front'?.40:.46),view);ctx.restore();
   }
   function headwear(c,r,key,L){
     const ctx=c.getContext('2d'),girl=r.def.gender==='girl',board=key.includes('Board'),i=Number(key.match(/(\d+)$/)?.[1]||0);
@@ -218,7 +227,8 @@
     const hw=frame?Math.min(hh*1.18,hh*frame.width/frame.height):c.width*.67;
     const actualH=frame?Math.min(hh,hh*1.18*frame.height/frame.width):hh,top=hh-actualH+headInset(c,r,key);
     ctx.save();ctx.translate(c.width/2,top);if(board&&i===0||!board&&!girl&&i===3)ctx.scale(-1,1);
-    SK.drawHeadwear(ctx,L.hat,L.hatColor,0,-actualH*.02,hw*.88,actualH*.56,view);ctx.restore();
+    const knit=L.hat?.startsWith('beanie');
+    SK.drawHeadwear(ctx,L.hat,L.hatColor,0,actualH*(L.hat==='crown'?.04:-.02),hw*(knit?1.02:.88),actualH*(L.hat==='crown'?.40:knit?.62:.56),view,true);ctx.restore();
   }
   function helmet(c,r,key,id) {
     const ctx=c.getContext('2d'),girl=r.def.gender==='girl',board=key.includes('Board');
@@ -242,7 +252,8 @@
     const shellH=shellW*(view==='back'?.68:view==='side'?.67:.66);
     const brimY=actualH*(view==='back'?.48:view==='side'?.44:.43);
     const shellTop=Math.max(-top,brimY-shellH*(view==='side'?.78:.79));
-    if(view!=='back')ctx.clearRect(0,0,c.width,top+Math.min(brimY,actualH*.43));
+    // Hair and built-in head details above the brim are covered in every view.
+    ctx.clearRect(0,0,c.width,top+Math.min(brimY,actualH*.43));
     ctx.save();ctx.translate(c.width/2,top);if(mirror)ctx.scale(-1,1);
     SK.drawSnowHelmet(ctx,id===true?'casque':id,0,shellTop,shellW,shellH,view,true,{chinY:actualH*.97-shellTop});
     ctx.restore();
@@ -282,7 +293,7 @@
         const sx=side*w*.22,sy=-h*.24,ex=sx+side*s*(.12+.24*reach),ey=sy+s*(.27-.22*reach);
         const hx=sx+side*s*(.16+.62*reach),hy=sy+s*(.55-.55*reach);
         sleeve(ctx,L,sx,sy,ex,ey,hx,hy,s);
-        ctx.fillStyle=r.gear?.gants?'#263e48':L.skin;ctx.beginPath();ctx.arc(hx,hy,s*.10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=SK.gearById(L.gloves)?.tint||L.skin;ctx.beginPath();ctx.arc(hx,hy,s*.10,0,Math.PI*2);ctx.fill();
       }
     }else{
       ctx.drawImage(img,0,0,img.width,img.height*.61,-w/2,-h*.61,w,h*.61);
@@ -366,7 +377,7 @@
     return true;
   }
   S.draw=function(ctx,r,L,s,front,steer) {
-    if(r.def.hidden)return false;
+    if(r.def.hidden&&!window.FamilyHeads?.has(r.def.id))return false;
     if(r.state==='air')return aerialRider(ctx,r,L,s);
     const key=r.def.gender==='girl'?'girlBoard':'boyBoard';if(!frames[key])return false;
     if(r.state==='ride'&&!front&&!r.curTrick){
@@ -411,7 +422,7 @@
     for(const side of [-1,1]){
       const sy=hip-h*.23,sx=side*w*.22,ey=sy+s*.23,hx=side*s*.80,hy=sy-s*.04+Math.sin(t*1.7+side)*s*.05;
       sleeve(c,L,sx,sy,side*s*.60,ey,hx,hy,s);
-      c.fillStyle='#263e48';c.beginPath();c.arc(hx,hy,s*.10,0,Math.PI*2);c.fill();
+      c.fillStyle=SK.gearById(L.gloves)?.tint||'#263e48';c.beginPath();c.arc(hx,hy,s*.10,0,Math.PI*2);c.fill();
     }
   };
   S.seated=function(ctx,r,L,s){
@@ -424,7 +435,7 @@
     SK.drawBoard(ctx,r.board,0,s*.85,s*.4,s*2.05,Math.PI/2+.07,r.input?.steer||0);
   };
   S.face=function(ctx,r,L,x,y,rad) {
-    if(r.def.hidden)return false;
+    if(r.def.hidden&&!window.FamilyHeads?.has(r.def.id))return false;
     const key=r.def.gender==='girl'?'girlWalk':'boyWalk',index=r.def.gender==='girl'?3:0;
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index);
@@ -490,7 +501,7 @@
         ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=s*.19;ctx.strokeStyle=L.jacket;
         sleeve(ctx,L,sx,shoulderY,sx+handX*.45,shoulderY+s*.29,handX,handY,s);
         if(far){ctx.strokeStyle='rgba(15,25,45,.18)';ctx.stroke();}
-        ctx.fillStyle=SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.arc(handX,handY+s*.015,s*.080,0,Math.PI*2);ctx.fill();ctx.restore();
+        ctx.fillStyle=SK.gearById(L.gloves)?.tint||SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.arc(handX,handY+s*.015,s*.080,0,Math.PI*2);ctx.fill();ctx.restore();
       };
       if(L.rocketPack)SK.drawRocketPack(ctx,-s*.29,-height*.51+bob,s*.30);
       arm(Math.PI,true);
@@ -506,14 +517,14 @@
       const sx=width*.15,sy=-height*.59,ex=sx+s*.28,ey=sy-s*.18,angle=Math.sin(t*5)*.28;
       const hx=ex+Math.sin(angle)*s*.38,hy=ey-Math.cos(angle)*s*.43;
       sleeve(ctx,L,sx,sy,ex,ey,hx,hy,s);
-      ctx.fillStyle=SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.ellipse(hx,hy-s*.015,s*.08,s*.10,angle,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=SK.gearById(L.gloves)?.tint||SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.ellipse(hx,hy-s*.015,s*.08,s*.10,angle,0,Math.PI*2);ctx.fill();
       // Le torse recouvre la naissance du bras : épaule derrière le manteau.
       ctx.save();ctx.beginPath();ctx.rect(-width/2,-height,width,height);ctx.rect(width*.22,-height*.63,width*.28,height*.40);ctx.clip('evenodd');ctx.drawImage(img,-width/2,-height,width,height);ctx.restore();
     }else ctx.drawImage(img,-width/2,-height,width,height);
     if(frontLegs){
       ctx.restore();
       // Les mitaines passent devant le masque qui remplace les jambes.
-      for(const sign of [-1,1]){if(r.wave&&sign===1)continue;ctx.save();ctx.translate(sign*width*.35,-height*.37);ctx.scale(sign,1);ctx.fillStyle=SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.moveTo(-s*.075,-s*.09);ctx.lineTo(s*.075,-s*.09);ctx.bezierCurveTo(s*.12,s*.01,s*.11,s*.14,s*.025,s*.15);ctx.bezierCurveTo(-s*.05,s*.17,-s*.09,s*.11,-s*.085,s*.04);ctx.quadraticCurveTo(-s*.15,s*.06,-s*.12,-s*.015);ctx.closePath();ctx.fill();ctx.restore();}
+      for(const sign of [-1,1]){if(r.wave&&sign===1)continue;ctx.save();ctx.translate(sign*width*.35,-height*.37);ctx.scale(sign,1);ctx.fillStyle=SK.gearById(L.gloves)?.tint||SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.moveTo(-s*.075,-s*.09);ctx.lineTo(s*.075,-s*.09);ctx.bezierCurveTo(s*.12,s*.01,s*.11,s*.14,s*.025,s*.15);ctx.bezierCurveTo(-s*.05,s*.17,-s*.09,s*.11,-s*.085,s*.04);ctx.quadraticCurveTo(-s*.15,s*.06,-s*.12,-s*.015);ctx.closePath();ctx.fill();ctx.restore();}
     }
     ctx.restore();
   };

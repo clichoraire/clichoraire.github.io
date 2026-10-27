@@ -86,7 +86,7 @@
     if (s.magnet > 0) { ctx.strokeStyle = 'rgba(220,40,60,0.8)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s.x, s.y - 20 * size, 40 + 6 * Math.sin(now / 90), 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
     const scream = g.fx.some(f => f.kind === 'crise' && f.s === s);
     S.drawPerson(ctx, s.x, s.y, s.def, T, {
-      dir: s.dir, frame: s.anim, moving: v > 25, down: s.down > 0, slide: s.slide > 0,
+      dir: s.dir, face: Math.atan2(s.vy, s.vx), frame: s.anim, moving: v > 25, down: s.down > 0, slide: s.slide > 0,
       stunKind: s.stun > 0 ? s.stunKind : null, frozen: s.stun > 0 && s.stunKind === 'frozen', ghost: s.ghost > 0,
       charge: s.charge, scream,
     });
@@ -347,5 +347,10 @@
     ctx.fillStyle = '#242b40'; S.rr(ctx, x + w - 200, y + 36, 186, 10, 5); ctx.fill(); ctx.fillStyle = '#5ad66b'; S.rr(ctx, x + w - 200, y + 36, 186 * d.frac, 10, 5); ctx.fill();
     if (d.state === 'won' || d.state === 'lost') { ctx.save(); ctx.translate(CX(), CY() - 40); ctx.scale(1 + 0.04 * Math.sin(now / 90), 1 + 0.04 * Math.sin(now / 90)); bigText(ctx, d.state === 'won' ? 'RÉUSSI !' : 'RATÉ…', 0, 0, 64, d.state === 'won' ? '#5ad66b' : '#ff6b5e'); ctx.restore(); }
   }
+  HK.drawPracticeRink = function(ctx) {
+    if (!rink) buildRink();
+    ctx.drawImage(rink, 0, 0);
+    drawNet(ctx, -1, false); drawNet(ctx, 1, false);
+  };
   HK.renderReset = () => { rink = null; };
 })(window.HK);

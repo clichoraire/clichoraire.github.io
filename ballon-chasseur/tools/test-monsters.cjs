@@ -10,7 +10,7 @@ const s=A.start('matthieu');s.team={inner:family.slice(0,3),outer:family.slice(3
 assert.ok(A.teamComplete(s));
 const ids=new Set();
 for(let i=0;i<12;i++){
-  s.match=i;const m=A.buildMatch(s),team=m.teams[1];
+  s.match=i;s.bosses=Math.floor(i/3);const m=A.buildMatch(s),team=m.teams[1];
   assert.equal(m.next.stage,i+1);assert.equal(team.players.length,6);assert.ok(BC.COURTS[team.court].monster);
   const g=new BC.Game({...m,ctrl:['cpu','cpu'],intro:false,mode:'adventure'});
   assert.deepEqual(g.players.filter(p=>p.team===0).map(p=>p.id),family);
@@ -20,13 +20,13 @@ for(let i=0;i<12;i++){
   assert.ok(g.players.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.hp)));
 }
 assert.equal(ids.size,72);
-s.match=12;assert.equal(A.next(s).team,BC.MONSTER_TEAMS[0]);assert.equal(A.next(s).chapter,2);
-s.match=120;const high=A.buildMatch(s);assert.ok(Object.values(high.stats).every(st=>Object.values(st).every(v=>v<=18)));
+s.match=12;s.bosses=4;assert.equal(A.next(s).team,BC.MONSTER_TEAMS[0]);assert.equal(A.next(s).chapter,2);
+s.match=120;s.bosses=40;const high=A.buildMatch(s);assert.ok(Object.values(high.stats).every(st=>Object.values(st).every(v=>v<=18)));
 for(const id of ['hex','venom','screech','rootcry']){
   s.match=0;const m=A.buildMatch(s),g=new BC.Game({...m,ctrl:['cpu','cpu'],intro:false});const p=g.inner(1)[0];p.power.id=id;p.power.kind='instant';p.power.charge=p.power.max;
   assert.ok(g.usePower(p));
   assert.ok(g.inner(0).every(q=>id==='hex'?q.fx.slowT===6:id==='venom'?q.hp===q.maxHp-3&&q.fx.slowT===3:q.state==='stun'));
 }
-s.match=9;const troll=new BC.Game({...A.buildMatch(s),ctrl:['cpu','cpu'],intro:false}).inner(1)[0];assert.ok(troll.phys.regen);
+s.match=9;s.bosses=3;const troll=new BC.Game({...A.buildMatch(s),ctrl:['cpu','cpu'],intro:false}).inner(1)[0];assert.ok(troll.phys.regen);
 s.team.outer[0]=s.team.inner[0];assert.ok(!A.teamComplete(s));assert.throws(()=>A.buildMatch(s));
 console.log('12 campagnes jouables, 72 monstres distincts, équipe multifamille, capacités, progression et plafonds : OK.');
