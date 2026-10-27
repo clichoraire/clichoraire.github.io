@@ -2,7 +2,7 @@
 (function(B){
 'use strict';const E=B.Equipment,S=B.ShopStock={};
 const state=E.state.shopStock??={revision:0,offers:{},purchased:[]};
-const labels={speed:'vitesse de déplacement',hp:'vie maximale',throwSpeed:'vitesse du ballon',catch:'fenêtre d’attrapé',precision:'précision (dispersion réduite)',damage:'dégâts'};
+const labels={speed:'vitesse de déplacement',hp:'vie maximale',throwSpeed:'vitesse du ballon',catch:'fenêtre d’attrapé',precision:'précision (dispersion réduite)',damage:'dégâts',armor:'PV max en armure'};
 const templates=E.items.filter(i=>!i.lootOnly&&!i.shopRolled&&(i.effect||i.bonuses));
 const add=i=>{if(!E.items.some(x=>x.id===i.id))E.items.push(i);return i;};
 state.purchased.forEach(add);if(state.schema!==2){state.schema=2;state.revision++;state.offers={};}Object.values(state.offers).forEach(o=>o.items.forEach(add));
@@ -12,8 +12,9 @@ S.offers=pid=>{const key='common';if(state.offers[key]?.revision===state.revisio
  const leader=B.Adventure.load()?.leader||pid,level=S.level(leader),grade=Math.min(4,1+Math.floor((level-1)/10)),items=[],count=level>=30?3:level>=10?2:1;
  for(const slot of Object.keys(E.slots))for(const source of shuffle(templates.filter(i=>i.slot===slot&&(i.id.startsWith('magic-')?i.tier:(i.rarity||0)+1)<=grade)).slice(0,4)){
  const percentBonuses={};for(const key of shuffle(Object.keys(labels)).slice(0,count))percentBonuses[key]=(3+Math.floor(Math.random()*3)+Math.min(7,Math.floor((level-1)/5)))/100;
+ if(slot==='armor'&&!items.some(i=>i.slot==='armor')&&!percentBonuses.armor){const first=Object.keys(percentBonuses)[0],value=percentBonuses[first];delete percentBonuses[first];percentBonuses.armor=value;}
  const desc=Object.entries(percentBonuses).map(([k,v])=>'+'+Math.round(v*100)+' % '+labels[k]).join(' · ')+'.';
- const item={id:'shop-'+state.revision+'-common-'+items.length,shopRolled:true,artSource:source.id,name:source.name.replace(/\s+(?:IV|III|II|I)$/, '')+' '+['','I','II','III','IV'][grade],slot,element:'magic',tier:0,artVariant:source.artVariant??templates.indexOf(source)%16,price:Math.round((20+level*4+Object.entries(percentBonuses).reduce((sum,[k,v])=>sum+v*({hp:550,damage:800,precision:650,catch:450,throwSpeed:500,speed:600}[k]),0))*(.75+Math.random()*.7)),percentBonuses,bonuses:{},active:false,icon:source.icon||'✦',desc,level,grade};items.push(add(item));
+ const item={id:'shop-'+state.revision+'-common-'+items.length,shopRolled:true,artSource:source.id,name:source.name.replace(/\s+(?:IV|III|II|I)$/, '')+' '+['','I','II','III','IV'][grade],slot,element:'magic',tier:0,artVariant:source.artVariant??templates.indexOf(source)%16,price:Math.round((20+level*4+Object.entries(percentBonuses).reduce((sum,[k,v])=>sum+v*({hp:550,damage:800,armor:650,precision:650,catch:450,throwSpeed:500,speed:600}[k]),0))*(.75+Math.random()*.7)),percentBonuses,bonuses:{},active:false,icon:source.icon||'✦',desc,level,grade};items.push(add(item));
  }
  state.offers[key]={revision:state.revision,level,items:shuffle(items)};E.save();return state.offers[key].items;
 };

@@ -521,6 +521,8 @@
       o = o || {}; if (!p.alive) return true;
       if (!o.penalty && this.powerGuard(p, dmg, o)) return true;      // Fantôme
       dmg = Math.max(1, Math.round(dmg));
+      if(p.armor>0){const absorbed=Math.min(p.armor,dmg);p.armor-=absorbed;dmg-=absorbed;this.fx.push({kind:'pow',x:p.x,y:p.y,z:p.z+65,text:'−'+absorbed+' ARMURE',color:'#64d5ff',t:0,dur:1});if(dmg===0){this.emit('hit',{p,dmg:0,armor:absorbed,power:o.power});return false;}}
+
       if (p.hp - dmg <= 0 && p.phys.revive && !p.fx.revived) { p.fx.revived = true; dmg = p.hp - 1; this.say('INCREVABLE !', 1, p.def.name); }
       const lost = Math.min(p.hp, dmg); p.hp -= lost;
       if (o.from) { this.stats[o.from.team].hits++; this.gainXp(o.from, lost); }   // XP = points de vie réellement enlevés

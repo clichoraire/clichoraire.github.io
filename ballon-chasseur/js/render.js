@@ -123,6 +123,7 @@
     // auras (cri du capitaine) et ombres
     for (const p of g.players) {
       if (p.state === 'gone') continue;
+      if(p.fx.rageT>0&&p.alive){ctx.save();ctx.translate(p.x,p.y);ctx.scale(1,.38);ctx.rotate(t*1.8);ctx.strokeStyle='#ffcf64';ctx.lineWidth=3;ctx.setLineDash([14,7]);ctx.beginPath();ctx.arc(0,0,30*p.def.size+8,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);ctx.fillStyle='#ffdc77';ctx.fillRect(30*p.def.size+4,-3,7,7);}ctx.restore();}
       if (p.fx.rageT > 0 && p.alive) { ctx.fillStyle = `rgba(255,70,50,${0.22 + Math.sin(t * 8) * 0.08})`; ctx.beginPath(); ctx.ellipse(p.x, p.y, 26 * p.def.size + 6, 10, 0, 0, Math.PI * 2); ctx.fill(); }
       const k = 1 - Math.min(0.7, p.z / 260); ctx.fillStyle = `rgba(0,0,0,${0.25 * k})`; ctx.beginPath(); ctx.ellipse(p.x, p.y, 16 * p.def.size * k + 4, 6 * k + 2, 0, 0, Math.PI * 2); ctx.fill();
     }
@@ -138,6 +139,8 @@
       if (it.ball) { drawBall(ctx, g, b); continue; }
       if (it.proj) { drawProjectile(ctx, it.proj, t); continue; }
       drawPlayer(ctx, g, it.p, ui, t);
+      if(it.p.armor>0&&it.p.alive){const p=it.p;ctx.save();ctx.translate(p.x,p.y-p.z-25);for(let j=0;j<3;j++){const a=t*1.5+j*Math.PI*2/3,x=Math.cos(a)*30,y=Math.sin(a)*10;ctx.fillStyle='#46baff55';ctx.strokeStyle='#9bebff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-8,y-13);ctx.lineTo(x+8,y-13);ctx.lineTo(x+10,y+3);ctx.lineTo(x,y+12);ctx.lineTo(x-10,y+3);ctx.closePath();ctx.fill();ctx.stroke();}ctx.restore();}
+
     }
     // ligne de visée du porteur humain : jaune = diagonale choisie, vert = visée assistée sur un adversaire, blanc = tout droit
     const holder = b.holder;
@@ -146,6 +149,8 @@
     for(const a of g.anvils||[]){if(a.t<1.2||a.hit)continue;const fall=Math.min(1,(a.t-1.2)/1),y=a.y-340*(1-fall*fall);ctx.save();ctx.translate(a.x,y);ctx.fillStyle='#61758b';ctx.strokeStyle='#c3d8e8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-22,-24);ctx.lineTo(22,-24);ctx.lineTo(31,-18);ctx.lineTo(15,-12);ctx.lineTo(8,-12);ctx.lineTo(8,-4);ctx.lineTo(17,0);ctx.lineTo(-17,0);ctx.lineTo(-8,-4);ctx.lineTo(-8,-12);ctx.lineTo(-22,-17);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
     BC.drawBossArena?.(ctx,g,'front');
     BC.drawDifficultyEvent?.(ctx,g,'front');
+    for(const q of g.laserSweeps||[]){ctx.save();const warning=q.t<q.warning;ctx.strokeStyle=warning?'#ff646488':'#ff203f';ctx.lineWidth=warning?3:10;ctx.shadowColor='#ff153b';ctx.shadowBlur=warning?0:20;if(warning)ctx.setLineDash([9,7]);ctx.beginPath();ctx.moveTo(q.x,C.top-20);ctx.lineTo(q.x,C.bottom-20);ctx.stroke();if(!warning){ctx.lineWidth=3;ctx.strokeStyle='#fff0ef';ctx.stroke();}ctx.fillStyle='#ffb4bd';ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.fillText('LASER · SAUTE !',(q.lo+q.hi)/2,C.top-32);ctx.restore();}
+
     BC.drawSkeletonEffects?.(ctx,g);
     BC.drawLizardEffects?.(ctx,g);
     BC.Practice?.draw(ctx,g);
@@ -291,7 +296,7 @@
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; rr(ctx, W / 2 - 110, 12, 220, 40, 10); ctx.fill();
     ctx.fillStyle = '#ffd166'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText(g.court.name, W / 2, 37, 205);
     // bas : points de vie et pouvoir des trois joueurs intérieurs de chaque équipe
-    const ph = 66, y0 = H - ph - 10, gap = 8, tm = g.time;
+    const ph = 80, y0 = H - ph - 10, gap = 8, tm = g.time;
     for (let t = 0; t < 2; t++) {
       const team = g.teams[t], players = g.inner(t), human = ui && ui.humans.find(h => h.team === t),bw=Math.min(150,(W/2-40-(players.length-1)*gap)/players.length);
       players.forEach((p, i) => {
@@ -304,9 +309,10 @@
         ctx.fillStyle = '#1b1b1b'; rr(ctx, x + 52, y0 + 28, bw - 62, 12, 4); ctx.fill();
         const k = p.hp / p.maxHp; ctx.fillStyle = k > 0.5 ? '#5ad66b' : k > 0.25 ? '#ffd166' : '#ff5a5a'; if (k > 0) { rr(ctx, x + 52, y0 + 28, (bw - 62) * k, 12, 4); ctx.fill(); }
         ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'right'; ctx.fillText(p.hp + ' / ' + p.maxHp, x + bw - 10, y0 + 38);
+        if(p.maxArmor>0){ctx.fillStyle='#162e4a';ctx.fillRect(x+52,y0+43,bw-62,11);ctx.fillStyle='#39baff';ctx.fillRect(x+52,y0+43,(bw-62)*Math.max(0,p.armor/p.maxArmor),11);ctx.fillStyle='#e6faff';ctx.font='bold 10px Arial';ctx.textAlign='right';ctx.fillText('🛡 '+p.armor+' / '+p.maxArmor,x+bw-10,y0+52);}
         // pouvoir : icône + cases de recharge (un attrapé de l'équipe = une case)
         const P = BC.POWERS[p.power.id]; if (!P || !p.alive) return;
-        const ready = p.power.charge >= p.power.max, py = y0 + 54;
+        const ready = p.power.charge >= p.power.max, py = y0 + 68;
         ctx.save();
         if (p.power.armed) ctx.globalAlpha = 0.5 + Math.sin(tm * 14) * 0.5; else if (!ready) ctx.globalAlpha = 0.45;
         if (ready) { ctx.shadowColor = P.color; ctx.shadowBlur = 10; }

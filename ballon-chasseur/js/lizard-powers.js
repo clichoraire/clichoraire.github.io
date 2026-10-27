@@ -59,7 +59,7 @@ P.hurt=function(p,dmg,o={}){
  if(!o.penalty&&p.scaleShield>0){p.scaleShield=0;this.spark(p.x,p.y,30,'#ffe277');return true;}
  if(!o.penalty&&p.magicShield>0)return hurt.call(this,p,dmg,o);
  let lethalDamage=Math.max(1,Math.round(dmg*(1-(p.magicResistance||0))));const e=E.element(o.power);if(e){const reduction=E.rank(p,'armor',e)*.25+(E.rank(p,'gloves',e)===2?.25:0)+(E.rank(p,'boots',e)===2?.25:0);lethalDamage=Math.max(1,Math.round(lethalDamage*(1-Math.min(.8,reduction))));}
- if(p.power.id==='molt'&&p.alive&&!o.penalty&&!(p.moltCooldown>0)&&lethalDamage>=p.hp&&o.from){
+ if(p.power.id==='molt'&&p.alive&&!o.penalty&&!(p.moltCooldown>0)&&lethalDamage>=(p.hp+(p.armor||0))&&o.from){
   p.moltCooldown=15;p.moltSpeed=2.5;p.fx.ghostT=Math.max(p.fx.ghostT,.45);(this.lizardMolts??=[]).push({x:p.x,y:p.y,t:0,def:p.def,team:this.teams[p.team]});this.stats[p.team].supers++;this.emit('ghost',{p});return true;
  }
  const alive=p.alive,result=hurt.call(this,p,dmg,o);

@@ -1,7 +1,7 @@
 // Ballon chasseur — constantes, personnages, équipes, lancers spéciaux et terrains.
 // Tout est dans l'espace de noms BC. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BC = window.BC || {};
-window.BC.VERSION = '2.24';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BC.VERSION = '2.25';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BC) {
   'use strict';
   BC.W = 1280; BC.H = 720;              // canevas logique
@@ -34,22 +34,23 @@ window.BC.VERSION = '2.24';   // à augmenter à chaque mise en ligne (affichée
   // BC.CHARGE_MAX attrapés de l'équipe pour le recharger.
   BC.CHARGE_MAX = 3;
   BC.POWERS = {
-    triche:   { name: 'Code de triche',      icon: '🕹️', kind: 'throw',   color: '#8f8', desc: 'La balle suit sa cible où qu\'elle aille et personne ne peut l\'attraper. Elle fait un peu moins mal… c\'est lui qui a programmé le jeu !' },
-    priere: { name: 'Prière de Josée', icon: '🙏', kind: 'instant', color: '#ffe8a0', desc: 'Josée fait une prière : chaque coéquipier encore en jeu récupère 50 % de sa vie maximale, sans dépasser son maximum.' },
+    triche:   { name: 'Code de triche',      icon: '🕹️', kind: 'throw',   color: '#8f8', desc: 'Impossible de s’y échapper !' },
+    priere: { name: 'Prière', icon: '🙏', kind: 'instant', color: '#ffe8a0', desc: 'Une prière pour de la vie.' },
     biscuit:  { name: 'Biscuit chaud',       icon: '🍪', kind: 'throw',   color: '#fc8', desc: 'Si la balle touche quelqu\'un, des biscuits partent dans tous les sens et frappent toute l\'équipe adverse pour la moitié des dégâts. Impossible d\'y échapper !' },
-    boulet:   { name: 'Boulet du vétéran',   icon: '💥', kind: 'throw',   color: '#aaa', desc: 'Lente, lourde, légendaire : presque impossible à attraper et ça fait très, très mal.' },
-    laser:    { name: 'Lunettes laser',      icon: '👓', kind: 'instant', color: '#8ff', desc: 'Un laser traverse toute l\'équipe adverse : tout le monde est figé par l\'électricité. À lui de lancer !' },
+    boulet:   { name: 'Boulet du vétéran',   icon: '💥', kind: 'throw',   color: '#aaa', desc: 'Un vrai boulet de canon.' },
+    laser:    { name: 'Lunettes laser',      icon: '👓', kind: 'instant', color: '#8ff', desc: 'Le laser de Superman !' },
+    protection: {name:'Mère protectrice',icon:'🛡️',kind:'instant',color:'#65cfff',desc:'Une armure magique pour protéger l’équipe.'},
     bulles:   { name: 'Bulles de savon',     icon: '🫧', kind: 'instant', color: '#8cf', desc: 'Une nuée de bulles traverse le terrain. Celui qui en touche une flotte dans sa bulle sans pouvoir bouger.' },
     pikachu:  { name: 'Pika-choc',           icon: '⚡', kind: 'instant', color: '#ff8', desc: 'Un éclair électrise tous les adversaires d\'un coup !' },
-    zoom:     { name: 'Zoom-zoom',           icon: '🏎️', kind: 'instant', color: '#f66', desc: 'Court super vite pendant 10 secondes.' },
-    teleport: { name: 'Téléportation',       icon: '✨', kind: 'throw',   color: '#fff', desc: 'Se téléporte derrière l\'équipe adverse, lance la balle dans leur dos et revient à sa place.' },
-    aimant:   { name: 'Aimant à balle',      icon: '🧲', kind: 'instant', color: '#f8f', desc: 'Sort son aimant : la balle, même dans les mains de l\'adversaire, vient toute seule vers elle.' },
-    tornade:  { name: 'Tornade',             icon: '🌪️', kind: 'throw',   color: '#cfc', desc: 'Tourne super vite sur lui-même et lance une balle qui rebondit 5 fois dans le camp adverse en frappant tout ce qu\'elle touche.' },
-    cri:      { name: 'Cri du capitaine',    icon: '📣', kind: 'instant', color: '#f44', desc: 'Toute l\'équipe frappe 50 % plus fort pendant 30 secondes.' },
-    fusee:    { name: 'Fusée',               icon: '🚀', kind: 'throw',   color: '#f80', desc: 'La balle part sur une fusée et accélère. Si on l\'attrape, elle explose ! Il faut l\'éviter.' },
-    blizzard: { name: 'Blizzard',            icon: '❄️', kind: 'instant', color: '#cef', desc: 'Une tempête de neige ralentit toute l\'équipe adverse pendant 15 secondes.' },
-    licorne:  { name: 'Licorne',             icon: '🦄', kind: 'instant',   color: '#f9c', desc: 'Galope 35 % plus vite pendant 20 secondes. Sous un arc-en-ciel magique, tous les ballons lancés par l’équipe adverse sont ralentis de 40 % pendant 20 secondes.' },
-    fantome:  { name: 'Fantôme',             icon: '👻', kind: 'passive', color: '#ccf', desc: 'Pouvoir passif : quand la balle devrait le toucher, il devient transparent et ne perd rien. Se recharge avec 3 attrapés.' },
+    zoom:     { name: 'Zoom-zoom',           icon: '🏎️', kind: 'instant', color: '#f66', desc: 'Court super vite !' },
+    teleport: { name: 'Téléportation',       icon: '✨', kind: 'throw',   color: '#fff', desc: 'Se téléporte et attaque l’ennemi de derrière.' },
+    aimant:   { name: 'Aimant à balle',      icon: '🧲', kind: 'instant', color: '#f8f', desc: 'Viens à moi, petit ballon !' },
+    tornade:  { name: 'Tornade',             icon: '🌪️', kind: 'throw',   color: '#cfc', desc: 'Il peut tourner super, super vite !' },
+    cri:      { name: 'Cri du capitaine',    icon: '📣', kind: 'instant', color: '#f44', desc: 'Encourage les coéquipiers !' },
+    fusee:    { name: 'Fusée',               icon: '🚀', kind: 'throw',   color: '#f80', desc: 'Lancement de fusée dans 3… 2… 1…' },
+    blizzard: { name: 'Blizzard',            icon: '❄️', kind: 'instant', color: '#cef', desc: 'Une grosse tempête de neige ralentit l’équipe adverse.' },
+    licorne:  { name: 'Licorne',             icon: '🦄', kind: 'instant',   color: '#f9c', desc: 'Le monde magique de la licorne !' },
+    fantome:  { name: 'Fantôme',             icon: '👻', kind: 'passive', color: '#ccf', desc: 'Pouvoir passif : le ballon passe à travers nous.' },
   };
   BC.SUPERS = BC.POWERS;   // ancien nom
 
@@ -80,7 +81,7 @@ window.BC.VERSION = '2.24';   // à augmenter à chaque mise en ligne (affichée
     mickael: { name: 'Mickael', birth: '1993-01-04', role: 'papa', size: 0.98, power: 'laser',
       stats: { speed: 6, power: 8, catch: 6, hp: 8 },
       look: { skin: '#f3d2b4', hair: '#3b2614', hairStyle: 'swept', glasses: 'round', beard: '#6b4a2b', grin: true } },
-    marie: { bodyType:'female', name: 'Marie', birth: '1994-01-06', role: 'maman', size: 0.92, power: 'bulles',
+    marie: { bodyType:'female', name: 'Marie', birth: '1994-01-06', role: 'maman', size: 0.92, power: 'protection',
       stats: { speed: 8, power: 6, catch: 8, hp: 6 },
       look: { skin: '#f6d6bd', hair: '#5a3a22', hairStyle: 'long', lipstick: true } },
     adam: { name: 'Adam', birth: '2021-09-11', role: 'enfant', size: 0.6, power: 'pikachu',

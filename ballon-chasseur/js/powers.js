@@ -52,12 +52,12 @@
         for(let i=0;i<6;i++){let patch;for(let attempt=0;attempt<30;attempt++){patch={team:1-p.team,x:left+rnd(65,C.mid-C.left-65),y:rnd(C.top+48,C.bottom-48),rx:rnd(43,64),ry:rnd(28,40),left:15};if(!this.icePatches.some(q=>q.team===patch.team&&Math.hypot(q.x-patch.x,(q.y-patch.y)*1.4)<95))break;}this.icePatches.push(patch);}
         return true;
       }
-      case 'laser': {                                   // Mickael : tout le monde en face est figé par l'électricité
-        if (!foes.length) return false;
-        const foeBack = p.team === 0 ? C.right + 60 : C.left - 60;
-        this.fx.push({ kind: 'laser', x: p.x + fwd * 16, x2: foeBack, lines: foes.map(f => f.y), y: p.y, z: p.z + 42, t: 0, dur: 0.7 });
-        for (const f of foes) this.stunPlayer(f, 2.5);
-        this.flash = 0.5; this.shake = 6; return true;
+      case 'laser': {
+        if(!foes.length)return false;const team=1-p.team,lo=team===0?C.left:C.mid,hi=team===0?C.mid:C.right;
+        (this.laserSweeps??=[]).push({from:p,team,lo,hi,x:lo,t:0,warning:.6,duration:2.2,hit:new Set(),damage:Math.max(8,Math.min(18,Math.round(p.phys.dmg)))});return true;
+      }
+      case 'protection': {
+        for(const q of this.aliveInner(p.team)){const bonus=Math.ceil(q.maxHp*.4);q.maxArmor=(q.baseArmor||0)+bonus;q.armor=Math.max(q.armor||0,q.maxArmor);this.fx.push({kind:'pow',x:q.x,y:q.y,z:q.z+65,text:'+'+bonus+' ARMURE',color:'#72dfff',t:0,dur:1.2});}return true;
       }
       case 'pikachu': {                                 // Adam : un éclair électrise tous les adversaires
         if (!foes.length) return false;
@@ -245,6 +245,9 @@
   P.iceDrop=function(p){const b=this.ball;if(b.holder!==p)return;p.hasBall=false;p.pending=null;p.charging=false;p.charge=0;this.stopDash(p);this.setState(p,'down');Object.assign(b,{holder:null,state:'dead',x:p.x,y:p.y,z:18,vx:(p.mx||p.facing*100)*1.3,vy:p.my||60,vz:180,power:null,combo:0,perfect:false});this.say('ÇA GLISSE !',.8,p.def.name);this.retargetAll();};
   // ---------- Projectiles : bulles de Marie, biscuits de Josée ----------
   P.updateProjectiles = function (dt) {
+    this.laserSweeps=(this.laserSweeps||[]).filter(q=>q.t<q.warning+q.duration);
+    for(const q of this.laserSweeps){const old=q.x;q.t+=dt;q.x=q.lo+(q.hi-q.lo)*Math.max(0,Math.min(1,(q.t-q.warning)/q.duration));if(q.t<q.warning)continue;for(const f of this.aliveInner(q.team))if(!q.hit.has(f)&&f.z<28&&f.x>=old-15&&f.x<=q.x+15){q.hit.add(f);this.hurt(f,q.damage,{from:q.from,power:'laser',dir:1,knock:100});}}
+
     const keep = [];
     for (const q of this.projectiles) {
       q.t += dt;

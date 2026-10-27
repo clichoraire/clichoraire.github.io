@@ -26,6 +26,7 @@
         if (g.isHuman(p.team) && g.controlled(p.team) === p) { p.ai.move = null; continue; }
         p.aiT -= dt;
         if (p.zone === 'out') this.outer(p, dt); else this.inner(p, dt);
+        if(p.zone==='in'&&p.z===0&&['idle','windup'].includes(p.state))for(const beam of g.laserSweeps||[]){const ahead=p.x-beam.x;if(beam.team===p.team&&beam.t>=beam.warning&&ahead>15&&ahead<65){g.jump(p,{dx:0,dy:0});break;}}
       }
     }
     onThrow() {

@@ -1,7 +1,7 @@
 (function(B){
 'use strict';const E=B.Equipment;
 const labels={power:'Lancer',speed:'Vitesse',catch:'Attrapé',hp:'Endurance',precision:'Précision'};
-const percentages={speed:'Vitesse de déplacement',hp:'Vie maximale',throwSpeed:'Vitesse du ballon',catch:'Fenêtre d’attrapé',precision:'Réduction de dispersion',damage:'Dégâts'};
+const percentages={speed:'Vitesse de déplacement',hp:'Vie maximale',throwSpeed:'Vitesse du ballon',catch:'Fenêtre d’attrapé',precision:'Réduction de dispersion',damage:'Dégâts',armor:'PV max en armure'};
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const properties=item=>{const out={};if(!item)return out;
  for(const [key,value]of Object.entries(item.bonuses||{}))out['stat-'+key]={label:labels[key]||key,value,unit:' pts'};

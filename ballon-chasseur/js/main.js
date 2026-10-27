@@ -90,7 +90,7 @@
         for (const a of actors) if (mouse && Math.abs(mouse.x - a.x) < 28 && mouse.y < a.y + 8 && mouse.y > a.y - 90) hit = a;
         if (hit !== hovered) { hovered = hit; if (hit) showCard(hit.d, hit.team, mouse.cx, mouse.cy); else hideCard(); }
         c.style.cursor = hit ? 'pointer' : 'default';
-        lastMenuFrame=now;const menuTime=reducedMotion.matches?0:now/1000;BC.render.drawMenuScene(ctx, actors, menuTime, hovered);for(const a of menuPortraits)BC.render.drawMenuHero(a.canvas,a.d,a.team,menuTime,a.index,reducedMotion.matches);
+        lastMenuFrame=now;const menuTime=reducedMotion.matches?0:now/1000;BC.render.drawMenuScene(ctx, actors, menuTime, hovered);for(const a of menuPortraits){const active=!reducedMotion.matches&&Math.floor(a.index/2)===Math.floor(menuTime/11)%3;if(active||a.wasActive!==active){BC.render.drawMenuHero(a.canvas,a.d,a.team,active?menuTime:0,a.index,!active);a.wasActive=active;}}
 
       }
       requestAnimationFrame(loop);
@@ -193,7 +193,7 @@
       else cupText = 'Défaite… Tu peux réessayer ce match.';
     }
     const winner = g.teams[g.winner];
-    html += `<section class="finish-celebration"><div class="finish-banner"><span class="finish-kicker">FIN DU MATCH</span><h1>${won?'VICTOIRE !':'BIEN ESSAYÉ !'}</h1><p class="finish-winner"><strong>${winner.name} ${winner.name.startsWith('Les ')?'remportent':'remporte'} le match</strong></p>${won?'<span class="finish-medal" aria-hidden="true">🏆</span>':''}</div><canvas id="finish-team" width="700" height="240" aria-label="L’équipe gagnante"></canvas></section>`;
+    html += `<section class="finish-celebration"><div class="finish-banner"><span class="finish-kicker">FIN DU MATCH</span><h1>${won?'VICTOIRE !':'BIEN ESSAYÉ !'}</h1><p class="finish-winner"><strong><span class="${winner.species?'monster-winner-name':''}">${winner.name}</span> ${winner.name.startsWith('Les ')?'remportent':'remporte'} le match</strong></p>${won?'<span class="finish-medal" aria-hidden="true">🏆</span>':''}</div><canvas id="finish-team" width="700" height="240" aria-label="L’équipe gagnante"></canvas></section>`;
     const gold=BC.Equipment.award(g);html+=`<div class="result-gold"><i class="gold-coin">★</i> +${gold} pièces</div>`;
     if (cupText) html += `<div class="cup-text">${cupText}</div>`;
     if (adventure) html += BC.AdventureUI.result(g);
