@@ -341,13 +341,33 @@
   }
 
   // ---------- Écran d'accueil : la famille s'échauffe sur le terrain ----------
+  // Chaque vedette alterne salut, repos et acrobatie à son propre rythme.
+  R.drawMenuHero=function(canvas,d,team,t,index,reduced){
+    const c=canvas.getContext('2d'),phase=(t+index*2.35)%(13+index*.7),u=Math.max(0,Math.min(1,(phase-7)/3)),ease=v=>v*v*(3-2*v);
+    let pose='wave',angle=0,hop=0,sx=1,bob=reduced?0:Math.sin(t*2.2+index)*3;
+    if(!reduced){if(phase>=4&&phase<7)pose='idle';if(phase>=7&&phase<10){
+      if(index%3===0){pose='jump';angle=ease(u)*Math.PI*2;hop=Math.sin(u*Math.PI)*35;}
+      else if(index%3===1){pose='wave';angle=u<.3?Math.PI*ease(u/.3):u>.7?Math.PI+Math.PI*ease((u-.7)/.3):Math.PI+Math.sin(t*5)*.04;}
+      else{pose='jump';hop=Math.abs(Math.sin(u*Math.PI*3))*35;sx=1-.08*Math.sin(u*Math.PI*6);}
+    }}
+    c.clearRect(0,0,canvas.width,canvas.height);c.save();c.translate(150,230-hop+bob);c.rotate(angle);c.scale(sx,1);S.drawPerson(c,0,100,d,team,{scale:!reduced&&phase>=7&&phase<10?4.5-1.15*Math.sin(u*Math.PI):4.5,pose,ball:false,dir:1,t:reduced?0:t+index});c.restore();
+  };
   R.drawMenuScene = function (ctx, actors, t, hovered) {
     ctx.clearRect(0,0,W,H);const bg=ctx.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#154b72');bg.addColorStop(.5,'#183654');bg.addColorStop(1,'#47254d');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     const glow=ctx.createRadialGradient(W*.5,H*.6,10,W*.5,H*.6,540);glow.addColorStop(0,'#65daff55');glow.addColorStop(1,'#4794d000');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
-    ctx.save();ctx.translate(W*.5,H*.65);for(let i=0;i<24;i++){const a=i*Math.PI/12+.03*Math.sin(t*.12);ctx.fillStyle=i%2?'#98c9ff09':'#08172e12';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,1300,a,a+.08);ctx.closePath();ctx.fill();}ctx.restore();
-    ctx.strokeStyle='#6de3ff22';ctx.lineWidth=3;for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(-80,80+i*48);ctx.lineTo(340,200+i*15);ctx.stroke();ctx.beginPath();ctx.moveTo(W+80,100+i*55);ctx.lineTo(W-340,220+i*15);ctx.stroke();}
+    ctx.save();ctx.translate(W*.5,H*.65);for(let i=0;i<24;i++){const a=i*Math.PI/12+.07*Math.sin(t*.3);ctx.fillStyle=i%2?'#98c9ff09':'#08172e12';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,1300,a,a+.08);ctx.closePath();ctx.fill();}ctx.restore();
+    ctx.strokeStyle='#6de3ff22';ctx.lineWidth=3;for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(-80,80+i*48+Math.sin(t*.8+i)*14);ctx.lineTo(340+Math.sin(t*.6)*20,200+i*15+Math.sin(t*.8+i)*8);ctx.stroke();ctx.beginPath();ctx.moveTo(W+80,100+i*55+Math.cos(t*.7+i)*14);ctx.lineTo(W-340+Math.cos(t*.6)*20,220+i*15+Math.cos(t*.7+i)*8);ctx.stroke();}
     ctx.fillStyle='#d59749';ctx.beginPath();ctx.moveTo(0,H*.78);ctx.lineTo(W*.15,H*.65);ctx.lineTo(W*.85,H*.65);ctx.lineTo(W,H*.78);ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();ctx.save();ctx.globalAlpha=.15;ctx.fillStyle='#ffde80';for(let i=0;i<10;i++){ctx.beginPath();ctx.moveTo(W*.15+i*W*.07,H*.65);ctx.lineTo(W*.15+(i+.5)*W*.07,H*.65);ctx.lineTo((i+.5)*W*.1,H);ctx.lineTo(i*W*.1,H);ctx.fill();}ctx.restore();ctx.strokeStyle='#ffe9af88';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,H*.78);ctx.lineTo(W*.15,H*.65);ctx.lineTo(W*.85,H*.65);ctx.lineTo(W,H*.78);ctx.stroke();ctx.beginPath();ctx.ellipse(W/2,H*.83,190,60,0,0,Math.PI*2);ctx.stroke();
     for(let i=0;i<22;i++){const x=(i*157+53)%W,y=90+(i*83)%350,a=.25+.25*Math.sin(t*1.1+i);ctx.fillStyle='rgba(255,229,160,'+a+')';ctx.fillRect(x,y,2+(i%2),2+(i%2));}
+    // Ballons de démonstration : traversées espacées derrière l’interface.
+    if(t>0){const turn=Math.floor(t/3.1),age=t%3.1,duration=2.35;if(age<duration){
+      const u=age/duration,dir=turn%3===2?-1:1,type=[null,'fire',null,'ice','electric','earth'][turn%6],radius=type==='earth'?21:17;
+      const point=k=>({x:dir>0?-90+(W+180)*k:W+90-(W+180)*k,y:265+(turn%3)*37-Math.sin(k*Math.PI)*(38+turn%4*12)}),q=point(u),trail=Array.from({length:9},(_,i)=>{const p=point(Math.max(0,u-(9-i)*.009));return {...p,z:0};});
+      ctx.save();ctx.globalAlpha=.85;
+      if(type&&S.drawElementProjectile)S.drawElementProjectile(ctx,q.x,q.y,radius,{element:type,t:age,vx:dir*(W+180)/duration,vy:0,trail,alpha:.85});
+      else{ctx.strokeStyle='#fff4b844';ctx.lineWidth=3;ctx.beginPath();trail.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();S.drawBall(ctx,q.x,q.y,radius,{spin:age*12});}
+      ctx.restore();
+    }}
     for (const a of actors.slice().sort((x, y) => x.y - y.y)) {
       const ph = (t * 0.8 + a.phase) % 3;
       const pose = a === hovered ? 'wave' : ph < 0.5 ? 'windup' : ph < 0.8 ? 'throw' : 'idle';

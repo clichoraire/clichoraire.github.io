@@ -267,3 +267,9 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .monster-route .current { background: #ffe0a0; border-color: #ffe0a0; color: #18253a; font-weight: bold; }
 .monster-route .cleared { color: #8edcaf; border-color: #467458; }
 @media(max-width:600px){.monster-encounter { gap: 8px; padding: 10px; }.monster-encounter canvas { width: 84px; height: 100px; }.monster-encounter h3 { font-size: 21px; }.monster-encounter p { font-size: 13px; }.monster-encounter small { font-size: 11px; }}
+
+@keyframes menu-title-arrive{0%{opacity:0;transform:scale(.3) translateY(-25px)}45%{opacity:1;transform:scale(1.065)}65%{transform:scale(.97)}82%{transform:scale(1.025)}100%{transform:scale(1)}}
+@keyframes menu-subtitle-arrive{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+#screen-menu:not(.hidden) .menu-title h1{animation:menu-title-arrive 1.3s both;transform-origin:center}
+#screen-menu:not(.hidden) .menu-title .tagline{animation:menu-subtitle-arrive .65s .5s both}
+@media(prefers-reduced-motion:reduce){#screen-menu .menu-title h1,#screen-menu .menu-title .tagline{animation:none!important}}

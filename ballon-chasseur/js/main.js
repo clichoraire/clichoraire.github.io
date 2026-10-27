@@ -64,14 +64,14 @@
     $('#btn-family').onclick = () => { BC.audio.init(); BC.audio.play('ui'); openFamily(); };
     $('#btn-help').onclick = () => $('#howto').showModal();
     $('#btn-options').onclick = () => $('#menu-options').showModal();
-    const faces = $('#menu-faces');faces.replaceChildren();
+    const faces = $('#menu-faces'),menuPortraits=[];faces.replaceChildren();
     for (const id of ['josee', 'mickael', 'matthieu', 'jeremie', 'emily', 'alexie']) {
       const d = BC.PLAYERS[id], team = BC.TEAMS.find(t => t.players.includes(id));
       const button = document.createElement('button'); button.className = 'menu-face';
       button.setAttribute('aria-label', 'Rencontrer ' + d.name);
       button.style.setProperty('--team-color', team.color);
-      const portrait = document.createElement('canvas'); portrait.width = 220; portrait.height = 310;
-      S.drawPerson(portrait.getContext('2d'),['matthieu','jeremie'].includes(id)?85:110,290,d,team,{scale:3.35,pose:['matthieu','jeremie'].includes(id)?'windup':'wave',ball:['matthieu','jeremie'].includes(id),dir:1,t:1});
+      const portrait = document.createElement('canvas'); portrait.width = 300; portrait.height = 360;
+      menuPortraits.push({canvas:portrait,d,team,index:menuPortraits.length});BC.render.drawMenuHero(portrait,d,team,0,menuPortraits.length-1,true);
       const label = document.createElement('span'); label.textContent = d.name;
       button.append(portrait, label); button.onclick = () => openFamily(); faces.appendChild(button);
     }
@@ -83,13 +83,14 @@
     let hovered = null, mouse = null;
     c.addEventListener('mousemove', e => { const r = c.getBoundingClientRect(); const scale = Math.max(r.width / c.width, r.height / c.height); mouse = { x: (e.clientX - r.left + (c.width * scale - r.width) / 2) / scale, y: (e.clientY - r.top + (c.height * scale - r.height) / 2) / scale, cx: e.clientX, cy: e.clientY }; });
     c.addEventListener('mouseleave', () => { mouse = null; hovered = null; hideCard(); });
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');let lastMenuFrame=-Infinity;
     (function loop(now) {
-      if (app.screen === 'menu') {
+      if (app.screen === 'menu'&&now-lastMenuFrame>=32) {
         let hit = null;
         for (const a of actors) if (mouse && Math.abs(mouse.x - a.x) < 28 && mouse.y < a.y + 8 && mouse.y > a.y - 90) hit = a;
         if (hit !== hovered) { hovered = hit; if (hit) showCard(hit.d, hit.team, mouse.cx, mouse.cy); else hideCard(); }
         c.style.cursor = hit ? 'pointer' : 'default';
-        BC.render.drawMenuScene(ctx, actors, now / 1000, hovered);
+        lastMenuFrame=now;const menuTime=reducedMotion.matches?0:now/1000;BC.render.drawMenuScene(ctx, actors, menuTime, hovered);for(const a of menuPortraits)BC.render.drawMenuHero(a.canvas,a.d,a.team,menuTime,a.index,reducedMotion.matches);
 
       }
       requestAnimationFrame(loop);
