@@ -133,6 +133,9 @@ U.finish=function(g){
   const winners=g.inner(g.winner).slice(0,3);
   winners.forEach((p,i)=>{const x=350+(i-1)*175;ctx.fillStyle=i===1?'#e8b83d':'#5081a6';ctx.fillRect(x-65,210,130,30);BC.sprites.drawPerson(ctx,x,208,p.def,team,{scale:p.def.monster?2.35/Math.max(.55,p.def.size):2.35,pose:'wave',dir:i===2?-1:1,t:1});});
   root.querySelectorAll('[data-reward-face]').forEach(c=>{const id=c.dataset.rewardFace;BC.sprites.drawHead(c.getContext('2d'),BC.PLAYERS[id],45,44,76);});
+  U.animateRewards(root,'result',()=>U.celebrateLevels(root,g));
+};
+U.animateRewards=function(root,screen,onComplete=()=>{}){
   if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
     const timelines=[...root.querySelectorAll('[data-xp-gain]')].map(card=>{
       let xp=Number(card.dataset.xpBefore),earned=Number(card.dataset.earnedBefore),remaining=Number(card.dataset.xpGain),credited=0;const segments=[];
@@ -141,15 +144,15 @@ U.finish=function(g){
       return {card,segments,step:Math.max(140,Math.min(800,4200/segments.length)),lastLevel:segments[0].level};
     });
     const start=performance.now();
-    const tick=now=>{if(BC.app.screen!=='result')return;let running=false;
+    const tick=now=>{if(BC.app.screen!==screen)return;let running=false;
       for(const t of timelines){if(!t.card.isConnected)continue;const elapsed=Math.max(0,now-start-150),duration=t.step+140,index=Math.min(t.segments.length-1,Math.floor(elapsed/duration)),seg=t.segments[index],local=Math.min(1,(elapsed-index*duration)/t.step),ease=1-(1-local)**2,value=Math.round(seg.from+(seg.to-seg.from)*ease),bar=t.card.querySelector('progress');
         bar.max=seg.max;bar.value=value;t.card.querySelector('.reward-level').textContent='Niveau '+seg.level;t.card.querySelector('.reward-info small').textContent=value+' / '+seg.max+' XP · prochain point';t.card.querySelector('[data-earned]').textContent=seg.credited+Math.round(seg.gain*ease);
         if(seg.level!==t.lastLevel){t.card.classList.remove('xp-level-pop');void t.card.offsetWidth;t.card.classList.add('xp-level-pop');t.lastLevel=seg.level;}
         if(elapsed<t.segments.length*duration)running=true;
-      }if(running)requestAnimationFrame(tick);else U.celebrateLevels(root,g);
+      }if(running)requestAnimationFrame(tick);else onComplete();
     };tick(start);
 
-  }else U.celebrateLevels(root,g);
+  }else onComplete();
 };
 U.versus=function(o,play,back){const root=shell('Prépare ton affrontement !'),content=root.querySelector('.arcade-content');content.classList.add('arcade-versus');content.innerHTML='<div class="versus-side"></div><div class="versus-flash" aria-label="contre">VS</div><div class="versus-side enemy"></div>';o.teams.forEach((team,i)=>{const side=content.querySelectorAll('.versus-side')[i];side.innerHTML=`<p class="side-label">${i?'ADVERSAIRES':'TON ÉQUIPE'}</p><div class="versus-hero"></div><div class="versus-roster"></div>`;let active=team.players[0];if(team.species&&!o.adventure?.revealed){mystery(side.querySelector('.versus-hero'),team.boss,team);side.querySelector('.versus-roster').innerHTML=team.players.map(()=>'<div class="arcade-tile mystery-card" aria-label="Adversaire mystère"><span class="mystery-portrait">?</span><strong>???</strong></div>').join('');return;}const render=()=>{hero(side.querySelector('.versus-hero'),active,team,o.stats?.[active],team.boss&&o.adventure?Math.round(BC.PLAYERS[active].bossHp*BC.BOSS_HP_MULTIPLIERS[o.difficulty]):undefined);tiles(side.querySelector('.versus-roster'),team.players,active,id=>{active=id;render();},()=>'',team);};render();});const footer=root.querySelector('footer');button(footer,'← Retour',back);const info=document.createElement('p');info.className='versus-location';info.textContent=(o.teams[1].species?(o.teams[1].boss?'Boss mystère':'Arène mystère'):BC.COURTS[o.teams[1].court].name)+' · '+BC.DIFFICULTIES[o.difficulty??BC.app.settings.difficulty];footer.append(info);button(footer,'Commencer le match !',play,'arcade-go');};
 U.shop=function(back=()=>BC.app.show('menu'),initial){
