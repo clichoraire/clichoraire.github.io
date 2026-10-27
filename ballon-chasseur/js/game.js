@@ -75,7 +75,8 @@
     sideOf(x) { return x < C.mid ? 0 : 1; }           // moitié du terrain : 0 = gauche
     heightOf(p) { return 50 * Math.max(0.55, p.def.size); }
     fwdOf(p) { const d = p.team === 0 ? 1 : -1; return p.tele ? -d : d; }   // téléporté derrière l'adversaire : on lance vers l'arrière
-    speedMul(p) { return (p.fx.fastT > 0 ? 2 : 1) * (p.fx.slowT > 0 ? 0.5 : 1); }
+    rainbowBallRate(team) { return (this.rainbow?.[team]||0)>0 ? .6 : 1; }
+    speedMul(p) { return (p.fx.horseT > 0 ? 1.35 : 1) * (p.fx.fastT > 0 ? 2 : 1) * (p.fx.slowT > 0 ? 0.5 : 1); }
     gainXp(p, n) { if (!p || n <= 0) return; this.xp[p.id] = (this.xp[p.id] || 0) + n; if (this.mode === 'adventure' && this.isHuman(p.team)) this.fx.push({ kind: 'pow', x: p.x, y: p.y, z: p.z + 70, text: '+' + n + ' XP', color: '#9fd3ff', t: 0, dur: 1 }); }
 
     // ---------- Contrôle : qui le joueur humain dirige ----------
@@ -113,6 +114,9 @@
 
     // ---------- Boucle ----------
     update(dt, inputs) {
+      if(this.paused)return;
+      if(this.rainbow)for(let t=0;t<2;t++)this.rainbow[t]=this.phase==='end'?0:Math.max(0,this.rainbow[t]-(this.phase==='play'?dt:0));
+      if(this.phase==='end')for(const p of this.players)p.fx.horseT=0;
       this.time += dt; this.phaseT += dt;
       this.flash = Math.max(0, this.flash - dt * 3); this.shake = Math.max(0, this.shake - dt * 30);
       for (const m of this.messages) m.t += dt; this.messages = this.messages.filter(m => m.t < m.dur);
@@ -312,7 +316,6 @@
         if (ahead < 40) continue;
         const k = Math.abs(side) / ahead; if (k < best) { best = k; target = q; }
       }
-      if (p.power.armed && p.power.id === 'licorne') return norm(f.x, f.y, { target, straight: true });   // la licorne ne lance que tout droit
       if (Math.abs(lat || 0) > 0.5) { const k = Math.sign(lat) * 0.55; return norm(f.x + l.x * k, f.y + l.y * k, { target, manual: true }); }
       if (target && best <= 0.45) {
         const ahead = (target.x - p.x) * f.x + (target.y - p.y) * f.y, T = ahead / (p.phys.throwSpeed * 0.8);
@@ -335,7 +338,7 @@
       const ph = p.phys, dir = this.fwdOf(p), foes = this.opponentsOf(p), ch = clamp(o.charge || 0, 0, 1);
       const aim = this.aimDir(p, o.move);
       // One error sample on release; aiming previews never consume randomness.
-      if (!(p.power.armed && p.power.id === 'licorne')) {
+      {
         const error=(Math.random()*2-1)*(BC.Aiming?.spread(this,p)??ph.aimSpread), x=aim.x, y=aim.y;
         aim.x=x*Math.cos(error)-y*Math.sin(error);aim.y=x*Math.sin(error)+y*Math.cos(error);
       }
@@ -403,7 +406,7 @@
 
     // ---------- Balle ----------
     updateBall(dt) {
-      const b = this.ball; b.t += dt;
+      const b = this.ball; if(['live','pass'].includes(b.state))dt*=this.rainbowBallRate(b.team); b.t += dt;
       if (b.state === 'held') { const p = b.holder; if (!p || !p.alive) { b.state = 'dead'; b.holder = null; if (p) p.hasBall = false; return; } b.x = p.x + p.facing * 10; b.y = p.y; b.z = p.z + CHEST; return; }
       if (b.state === 'live') { this.updateLive(dt); return; }
       if (b.state === 'magnet') {                       // aimant de Jessica : la balle file vers elle
@@ -468,7 +471,7 @@
       b.x += b.vx * dt; b.y += b.vy * dt;
       if (b.airShot) { const flight = clamp((b.x - b.launchX) / (b.impactX - b.launchX || dir), 0, 1); b.z = b.launchZ + (b.impactZ - b.launchZ) * flight; }
       if ((b.y < C.top - 6 && b.vy < 0) || (b.y > C.bottom + 6 && b.vy > 0)) { this.kill(b, 0.5); return; }   // sortie par le haut ou le bas : les extérieurs la ramassent
-      if (b.power === 'fusee' || b.power === 'licorne' || b.power === 'boulet') { b.trail.push({ x: b.x, y: b.y, z: b.z }); if (b.trail.length > 12) b.trail.shift(); }
+      if (b.power === 'fusee' || b.power === 'boulet') { b.trail.push({ x: b.x, y: b.y, z: b.z }); if (b.trail.length > 12) b.trail.shift(); }
       if (b.power === 'fusee' && Math.random() < 0.8) this.fx.push({ kind: 'fire', x: b.x - dir * 12, y: b.y, z: b.z, t: 0, dur: 0.35 });
       // contact avec un joueur intérieur adverse
       for (const p of this.aliveInner(1 - b.team)) {
@@ -489,7 +492,7 @@
       const P = b.power ? BC.POWERS[b.power] : null, dir = Math.sign(b.vx) || 1;
       if(b.power==='goblinbomb'){this.powerExplode(p,b);return;}
       if(b.power==='fireball')this.ignite(p,b.thrower);
-      const uncatchable = b.power === 'triche' || b.power === 'licorne';
+      const uncatchable = b.power === 'triche';
       if (p.state === 'catch' && !uncatchable) {
         const facing = Math.abs(b.vx) < Math.abs(b.vy) || p.facing === -dir;   // balle venant du haut ou du bas : pas besoin de lui faire face
         const hard = b.power?.startsWith('boss') ? 0.65 : b.power === 'boulet' ? 0.85 : b.smash ? 0.3 : b.power ? 0.4 : 0;

@@ -90,6 +90,16 @@
   function cloud(ctx, x, y, s) { ctx.fillStyle = 'rgba(255,255,255,0.92)'; for (const [dx, dy, r] of [[0, 0, 22], [22, -6, 18], [-22, 2, 16], [8, 10, 15]]) { circle(ctx, x + dx * s, y + dy * s, r * s); ctx.fill(); } }
   function tree(ctx, x, y, s) { ctx.fillStyle = '#6b4a2b'; ctx.fillRect(x - 6 * s, y - 20 * s, 12 * s, 40 * s); ctx.fillStyle = '#2f7a2a'; circle(ctx, x, y - 42 * s, 34 * s); ctx.fill(); ctx.fillStyle = '#3f9a36'; circle(ctx, x - 14 * s, y - 32 * s, 22 * s); ctx.fill(); circle(ctx, x + 16 * s, y - 36 * s, 24 * s); ctx.fill(); }
 
+  function drawRainbow(ctx,g,t){
+    const left=Math.max(...(g.rainbow||[0,0]));if(left<=0||g.phase==='end')return;
+    const colors=['#ff697e','#ffb65e','#ffe879','#9ee786','#73e4f4','#9fa7ff','#e09cff'];ctx.save();ctx.globalAlpha=Math.min(1,left/1.2);
+    const glow=ctx.createLinearGradient(0,0,0,H);glow.addColorStop(0,'#e8a6ff42');glow.addColorStop(.65,'#8be5ff15');glow.addColorStop(1,'#ffa6dc22');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+    ctx.save();ctx.globalAlpha*=.55;ctx.lineWidth=15;colors.forEach((color,i)=>{ctx.strokeStyle=color;ctx.beginPath();ctx.ellipse(W/2,240,550-i*16,210-i*16,0,Math.PI,Math.PI*2);ctx.stroke();});ctx.restore();
+    for(let i=0;i<35;i++){const x=60+(i*173)%1160+Math.sin(t+i)*9,y=170+((i*79+t*18)%500),size=2+2*(.5+.5*Math.sin(t*3+i));ctx.fillStyle=colors[i%colors.length];ctx.beginPath();ctx.moveTo(x,y-size*2);ctx.lineTo(x+size,y);ctx.lineTo(x,y+size*2);ctx.lineTo(x-size,y);ctx.closePath();ctx.fill();}
+    for(const p of g.players)if(p.alive&&p.fx.horseT>0){colors.forEach((color,i)=>{ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x-p.facing*20,p.y+i*3-8);ctx.quadraticCurveTo(p.x-p.facing*45,p.y+i*3-8+Math.sin(t*8+i)*5,p.x-p.facing*70,p.y+i*3-8);ctx.stroke();});}
+    ctx.fillStyle='#14213edb';ctx.fillRect(W/2-225,178,450,34);ctx.fillStyle='#fff0b0';ctx.font='bold 16px Arial';ctx.textAlign='center';const teams=[0,1].filter(team=>g.rainbow[team]>0).map(team=>g.teams[team].name).join(' & ');ctx.fillText('🦄 '+teams+' : ballons −40 % · '+Math.ceil(left)+' s',W/2,200);ctx.restore();
+  }
+
   // ---------- Match ----------
   R.draw = function (ctx, g, ui) {
     const t = g.time;
@@ -97,6 +107,7 @@
     if (g.shake > 0) ctx.translate((Math.random() - 0.5) * g.shake, (Math.random() - 0.5) * g.shake);
     drawBackground(ctx, g, t);
     BC.drawBossArena?.(ctx,g,'ground');
+    drawRainbow(ctx,g,t);
     BC.drawElementZones?.(ctx,g);
     for(const ice of g.icePatches||[]){ctx.save();ctx.globalAlpha=Math.min(1,ice.left/2);ctx.fillStyle='#b7efff99';ctx.strokeStyle='#e0fcff';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(ice.x,ice.y,ice.rx,ice.ry,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='#ffffffb0';for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(ice.x-30+i*14,ice.y-17);ctx.lineTo(ice.x-9+i*14,ice.y+13);ctx.stroke();}ctx.restore();}
     for(const a of g.anvils||[]){if(a.hit)continue;ctx.save();ctx.strokeStyle=a.t<1.4?'#ffd164':'#ff584d';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(a.x,a.y,30,15,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(a.x-10,a.y-8);ctx.lineTo(a.x+10,a.y+8);ctx.moveTo(a.x+10,a.y-8);ctx.lineTo(a.x-10,a.y+8);ctx.stroke();ctx.restore();}
@@ -213,7 +224,7 @@
   function drawAim(ctx, g, p) {
     const a = g.aimDir(p, p.lastMove), z = p.z + 30, len = p.zone === 'in' ? 460 : 320;
     ctx.save();
-    const spread=p.power.armed&&p.power.id==='licorne'?0:(BC.Aiming?.spread(g,p)??p.phys.aimSpread);
+    const spread=(BC.Aiming?.spread(g,p)??p.phys.aimSpread);
     ctx.lineWidth=2;ctx.strokeStyle='#ffe178';
     if(spread>0){const angle=Math.atan2(a.y,a.x);ctx.fillStyle='rgba(255,225,120,.20)';ctx.beginPath();ctx.moveTo(p.x,p.y-z);ctx.arc(p.x,p.y-z,len,angle-spread,angle+spread);ctx.closePath();ctx.fill();ctx.stroke();}
     else {ctx.beginPath();ctx.moveTo(p.x+a.x*26,p.y+a.y*26-z);ctx.lineTo(p.x+a.x*len,p.y+a.y*len-z);ctx.stroke();}

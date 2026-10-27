@@ -1,7 +1,7 @@
 // Ballon chasseur — constantes, personnages, équipes, lancers spéciaux et terrains.
 // Tout est dans l'espace de noms BC. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BC = window.BC || {};
-window.BC.VERSION = '2.19';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BC.VERSION = '2.20';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BC) {
   'use strict';
   BC.W = 1280; BC.H = 720;              // canevas logique
@@ -48,7 +48,7 @@ window.BC.VERSION = '2.19';   // à augmenter à chaque mise en ligne (affichée
     cri:      { name: 'Cri du capitaine',    icon: '📣', kind: 'instant', color: '#f44', desc: 'Toute l\'équipe frappe 50 % plus fort pendant 30 secondes.' },
     fusee:    { name: 'Fusée',               icon: '🚀', kind: 'throw',   color: '#f80', desc: 'La balle part sur une fusée et accélère. Si on l\'attrape, elle explose ! Il faut l\'éviter.' },
     blizzard: { name: 'Blizzard',            icon: '❄️', kind: 'instant', color: '#cef', desc: 'Une tempête de neige ralentit toute l\'équipe adverse pendant 15 secondes.' },
-    licorne:  { name: 'Licorne',             icon: '🦄', kind: 'throw',   color: '#f9c', desc: 'Monte sur son cheval et lance avec sa licorne : tout droit seulement, mais ultra rapide et impossible à attraper.' },
+    licorne:  { name: 'Licorne',             icon: '🦄', kind: 'instant',   color: '#f9c', desc: 'Galope 35 % plus vite pendant 20 secondes. Sous un arc-en-ciel magique, tous les ballons lancés par l’équipe adverse sont ralentis de 40 % pendant 20 secondes.' },
     fantome:  { name: 'Fantôme',             icon: '👻', kind: 'passive', color: '#ccf', desc: 'Pouvoir passif : quand la balle devrait le toucher, il devient transparent et ne perd rien. Se recharge avec 3 attrapés.' },
   };
   BC.SUPERS = BC.POWERS;   // ancien nom

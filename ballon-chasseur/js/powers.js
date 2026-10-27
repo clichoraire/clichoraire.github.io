@@ -34,6 +34,10 @@
   P.powerInstant = function (p, id) {
     const foes = this.opponentsOf(p), fwd = p.team === 0 ? 1 : -1, b = this.ball;
     switch (id) {
+      case 'licorne': {
+        p.fx.horseT=20;this.rainbow??=[0,0];this.rainbow[1-p.team]=20;
+        return true;
+      }
       case 'priere': {
         const allies=this.players.filter(q=>q.team===p.team&&q.alive&&q.hp<q.maxHp);
         if(!allies.length)return false;
@@ -133,7 +137,6 @@
       case 'teleport': b.dmg += 2; b.speed *= 1.15; break;
       case 'tornade': b.z = CHEST; b.vz = 420; b.vx = dir * 300; b.vy = rnd(-120, 120); b.bounces = 0; b.dmg = Math.max(3, Math.round(b.dmg * 0.8)); b.airShot = false; break;
       case 'fusee': b.speed *= 1.1; b.vx = dir * b.speed * 0.5; b.vy *= 0.5; b.dmg += 2; break;
-      case 'licorne': b.speed *= 1.6; b.vx = dir * b.speed * 0.9; b.vy = 0; b.dmg += 2; b.airShot = false; b.z = CHEST + (p.z || 0); p.fx.horseT = 1.6; break;
     }
   };
   // Balle spéciale gérée image par image. Renvoie true si tout est fait ici (déplacement, contact, fin).

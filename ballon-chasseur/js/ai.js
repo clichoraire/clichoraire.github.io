@@ -32,7 +32,7 @@
       const g = this.g, b = g.ball;
       for (const p of g.aliveInner(1 - b.team)) {
         const d = this.D;
-        let hard = b.power === 'boulet' ? 0.15 : b.power === 'triche' || b.power === 'licorne' ? 0 : b.power ? 0.5 : b.smash ? 0.6 : 1;
+        let hard = b.power === 'boulet' ? 0.15 : b.power === 'triche' ? 0 : b.power ? 0.5 : b.smash ? 0.6 : 1;
         if(['goblinbomb','fireball','skullbomb'].includes(b.power))hard=0;
         if (b.power === 'fusee') hard = g.difficulty === 0 ? 0.4 : 0;   // la fusée explose dans les mains : on l'évite
         const skill = p.phys.catchSkill * d.catchMul * hard;
