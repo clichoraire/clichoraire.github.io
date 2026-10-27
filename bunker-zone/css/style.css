@@ -468,3 +468,21 @@ body { font-family: Verdana, Tahoma, Geneva, sans-serif; font-size: 12px; color:
 .counter-progress i { display:block; height:100%; border-radius:8px; background:var(--counter-color); }
 @media(max-width:850px) { #menu-campaign .adv-top { grid-template-columns:1fr; } #menu-campaign .adv-btns { justify-content:flex-start; grid-row:3; } .adv-counter { padding:10px; } }
 @media(max-width:480px) { .adv-counters { gap:5px; } .counter-label { font-size:10px; } .adv-counter strong small { display:block; font-size:12px; } .counter-note { font-size:10px; } }
+
+/* Compact battle console: reserve the height for the battlefield. */
+#infopanel{min-width:0;overflow:auto;scrollbar-width:thin}
+.building-details{gap:3px 8px}
+.building-details .uname{font-size:15px}
+#u-extra{gap:5px;margin:0}
+.status-tile{padding:3px 6px;display:flex;align-items:baseline;gap:6px}
+.status-tile span{line-height:13px}
+.status-tile strong{font-size:18px;line-height:22px;white-space:nowrap}
+.details .line.build{min-height:42px;padding:4px 6px;gap:4px}
+.details .line.build>.k{flex:0 0 auto;font-size:11px}
+.line.build .qi{width:30px;height:30px;flex-basis:30px}
+.line.build .qi svg{width:21px;height:21px}
+.line.build .qi i{font-size:9px;right:1px;bottom:4px}
+.line.build .bt{flex:1 1 100px;font-size:11px;line-height:14px}
+#minimap{max-width:calc(25vh - 18px);max-height:calc(25vh - 18px)}
+#cmdcard{max-height:100%;overflow:auto;flex-shrink:0}
+@media(max-height:650px){#cmdcard .cgrid{grid-auto-rows:32px;gap:3px}#cmdcard{padding:4px}#cmdcard .cgt{font-size:8px}.building-details>.sub:last-child{display:none}}

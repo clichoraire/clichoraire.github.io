@@ -4,7 +4,7 @@
 (function (ZC) {
   'use strict';
 
-  const CONSOLE_H = 300;
+  const CONSOLE_H = 200;
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   function opt(values, labels, current) {
@@ -108,7 +108,7 @@
       this.buildMenus();
     }
 
-    consoleHeight() { return this.hud.style.display === 'none' ? 0 : Math.min(CONSOLE_H, Math.max(170, window.innerHeight * 0.5)); }
+    consoleHeight() { return this.hud.style.display === 'none' ? 0 : Math.min(CONSOLE_H, Math.max(140, window.innerHeight * 0.25), window.innerHeight * 0.45); }
 
     // ------------------------------------------------------------ HUD
     buildHud() {
@@ -135,7 +135,7 @@
         <div id="leaderboard"><div class="lb-title" id="lb-title">Zones contrôlées</div><div id="lb-rows"></div></div>
         <div id="messages"></div>
         <div id="announce"><div id="announce-main"></div><div id="announce-sub"></div></div>
-        <div id="console" style="height:min(${CONSOLE_H}px, max(170px, 50vh))">
+        <div id="console" style="height:min(${CONSOLE_H}px, max(140px, 25vh), 45vh)">
           <div id="minimap-wrap"><canvas id="minimap" width="150" height="150"></canvas></div>
           <div id="infopanel"><div class="info-empty">BUNKER ZONE</div></div>
           <div id="cmdcard"></div>
