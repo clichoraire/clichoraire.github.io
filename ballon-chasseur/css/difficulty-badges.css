@@ -1,0 +1,17 @@
+/* Écussons de difficulté : cinq boutons illustrés, le choisi est mis en lumière. */
+.difficulty-badges{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:end}
+.difficulty-badge{position:relative;min-width:0;margin:0;padding:4px 2px 0;border:0;border-radius:12px;background:transparent;box-shadow:none;cursor:pointer;transform:none;transition:transform .15s,filter .15s}
+.difficulty-badge-art{display:block;width:100%;height:auto;filter:drop-shadow(0 5px 3px #06112a99)}
+.badge-name{font:italic 900 14px 'Arial Black',Arial,sans-serif;fill:#fff;letter-spacing:-.2px;paint-order:stroke fill;stroke:#0d132a;stroke-width:2.5px;stroke-linejoin:round}
+.badge-xp{font:900 11.5px Arial,sans-serif;fill:#fff6cf;paint-order:stroke fill;stroke:#0d132a;stroke-width:2px;stroke-linejoin:round}
+.difficulty-badge:hover:not(:disabled){transform:translateY(-4px);filter:brightness(1.1)}
+.difficulty-badge:not(.selected):not(:disabled){opacity:.78}
+.difficulty-badge.selected{opacity:1;transform:translateY(-6px) scale(1.08);z-index:1}
+.difficulty-badge.selected .difficulty-badge-art{filter:drop-shadow(0 0 7px #fff6a0) drop-shadow(0 0 16px #ffd94c99) drop-shadow(0 6px 3px #06112a99)}
+.difficulty-badge.selected:after{content:'';position:absolute;left:18%;right:18%;bottom:-6px;height:5px;border-radius:50%;background:#ffe36b;box-shadow:0 0 10px #ffe36b}
+.difficulty-badge:focus-visible{outline:3px solid #fff173;outline-offset:2px}
+.difficulty-badge.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.9)}
+.difficulty-badge.locked .badge-emblem{opacity:.6}
+.badge-mark{position:absolute;top:0;right:4%;font-size:clamp(14px,1.3vw,22px);line-height:1;filter:drop-shadow(0 2px 2px #06112a)}
+.badge-lock{top:28%;right:auto;left:50%;transform:translateX(-50%);font-size:clamp(18px,2vw,30px)}
+@media(max-width:600px){.difficulty-badges{gap:4px}.badge-name{font-size:16px}.badge-xp{font-size:13px}}

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Banque · Les jeux de Matthieu</title>
+<meta name="description" content="Tout l'or gagné dans les jeux, réuni dans un grand coffre-fort. Choisis ton personnage, ouvre la porte et admire tes pièces.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23f3c33a'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23a66a0a' stroke-width='2'/%3E%3Ctext x='16' y='21' font-size='13' text-anchor='middle' font-family='serif' font-weight='bold' fill='%23a66a0a'%3E$%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="banque.css">
+</head>
+<body>
+<div class="marquee" aria-hidden="true"></div>
+<header class="top">
+  <a class="back" href="../#jeux">← Tous les jeux</a>
+  <div class="sign"><span class="sign-star">★</span> LA BANQUE <span class="sign-star">★</span></div>
+  <a class="back" href="../families/member.html">Fiches des membres</a>
+</header>
+
+<!-- 1. choix du personnage -->
+<section id="choix" class="screen">
+  <p class="kicker">TOUT L'OR DES JEUX, RÉUNI EN UN SEUL COFFRE</p>
+  <h1>Qui vient voir <em>son coffre</em> ?</h1>
+  <p class="lead">Chaque personnage a son propre coffre-fort. L'or gagné dans Snow Kids et à la boutique du Ballon chasseur y est rangé. Reviens quand tu veux : plus tu gagnes, plus le coffre se remplit. Limite actuelle : <b>1 000 000</b> de pièces.</p>
+  <p id="statut" class="hint" role="status" aria-live="polite">Chargement des personnages…</p>
+  <div id="familles" class="familles"></div>
+</section>
+
+<!-- 2. la porte du coffre, puis la chambre forte derrière -->
+<section id="coffre" class="screen" hidden>
+  <div class="who"><canvas id="who-face" width="72" height="72"></canvas><div><p class="kicker" id="who-family"></p><h2 id="who-name"></h2></div><button type="button" class="ghost" id="changer">Changer de personnage</button></div>
+  <div class="scene" id="scene">
+    <canvas id="chambre"></canvas>
+    <div class="frame" aria-hidden="true"></div>
+    <div class="door" id="door">
+      <div class="door-face">
+        <div class="bolts" id="bolts"></div>
+        <div class="plate">COFFRE N° <span id="numero">000</span></div>
+        <div class="wheel" id="wheel"><div class="hub"></div></div>
+        <div class="handle"></div>
+      </div>
+      <div class="door-edge"></div>
+    </div>
+    <div class="hud" id="hud" hidden>
+      <div class="total"><span class="label">TOTAL DANS LE COFFRE</span><span class="amount"><span id="montant">0</span> <i class="c big" aria-label="pièces"></i></span><span id="delta" class="delta"></span></div>
+      <div class="jauge" title="Vers le million"><div id="jauge-fill"></div><span id="jauge-text">0 %</span></div>
+      <div class="sources" id="sources"></div>
+    </div>
+    <div class="ouvrir" id="ouvrir"><button type="button" class="gold-btn" id="btn-ouvrir">Tourner la roue et ouvrir</button><p class="hint">Un seul personnage à la fois devant la porte.</p></div>
+  </div>
+  <p class="hint">L'or est lu dans ce navigateur, sur cet appareil : une partie jouée ailleurs n'apparaît pas ici. Les montants viennent directement des sauvegardes des jeux.</p>
+</section>
+
+<script src="../config.js"></script>
+<script src="../snow-kids/js/config.js"></script><script src="../snow-kids/js/cups.js"></script>
+<script src="../hockey-boisjoli/js/config.js"></script>
+<script src="../ballon-chasseur/js/config.js"></script>
+<script src="../snow-kids/js/family-head-sources.js"></script><script src="../snow-kids/js/family-heads.js"></script><script src="../snow-kids/js/family-online.js"></script>
+<script src="../families/member-data.js"></script>
+<script src="chambre.js"></script>
+<script src="banque.js"></script>
+</body>
+</html>

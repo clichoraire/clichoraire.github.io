@@ -14,8 +14,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
-      - key: OPENAI_API_KEY
+      - key: FAMILY_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_IMAGE_MODEL
+        value: gemini-nano-banana-2.1
       - key: FAMILY_ADMIN_CODE
         generateValue: true
       - key: FAMILY_DATA_DIR
@@ -24,5 +28,3 @@ services:
         value: https://clichoraire.github.io
       - key: FAMILY_DAILY_LIMIT
         value: 10
-      - key: OPENAI_IMAGE_MODEL
-        value: gpt-image-1.5

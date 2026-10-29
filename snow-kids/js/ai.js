@@ -39,6 +39,7 @@
         let sc = -Math.abs(xl - r.x) * 0.6 - Math.pow(Math.abs(xl) / wmin, 4) * 15 + xl * inside * 0.5;
         ahead.forEach((sg, j) => {
           const dist = 1 / (1 + j / 5);
+          if(sg.forestPath)sc-=Math.min(...sg.forestPath.lanes.map(x=>Math.abs(xl-x)))*2*dist;
           for (const p of sg.props) if (!p.decor && Math.abs(xl - p.x) < p.r + 1.4) sc -= 70 * dist;
           for (const b of sg.boxes) if (b.taken <= race.time && Math.abs(xl - b.x) < 1.2 && ((b.kind === 'red' && wantRed) || (b.kind === 'blue' && wantBlue))) sc += 30 * dist;
           for (const c of sg.coins) if (c.taken <= race.time && Math.abs(xl - c.x) < 1.2) sc += 7 * dist;
@@ -53,7 +54,7 @@
     }
     if (r.lap + 1 < race.laps && r.z > race.L - 90) ai.lane = race.gateX; // le portail de la remontée est dans un coin
     // ---- direction : viser la voie, compenser la force centrifuge, freiner si ça dérape trop
-    const surf = SK.SURFACES[s.surface] || SK.SURFACES.snow, kappa = s.curve / (SEG * SEG), drift = kappa * r.speed * r.speed * 4.2 * (s.surface === 'ice' ? 1.25 : 1);
+    const surf = SK.SURFACES[s.surface] || SK.SURFACES.snow, drift = SK.curveDriftTarget(race.course,T,r.z,r.speed,r.cornerHold||0);
     const capacity = r.steerRate * surf.grip * Math.min(1, r.speed / 12);
     inp.steer = SK.clamp((ai.lane - r.x) / 1.6 + (capacity > 0 ? drift / capacity : 0), -1, 1);
     if (r.state === 'ride' && Math.abs(drift) > capacity * 0.8) inp.down = true;
@@ -72,11 +73,7 @@
     // ---- figures en l'air
     if (r.state === 'air' && !r.curTrick) {
       const g = SK.GRAVITY, vy = r.vy, h = r.h;
-      let tLeft = (vy + Math.sqrt(vy * vy + 2 * g * h)) / g; const gyNow = T.groundY(r.z);
-      for (let it = 0; it < 2; it++) { // le sol monte (tremplin) ou descend : corriger le temps de vol
-        const drop = h + gyNow - T.groundY(r.z + r.speed * tLeft);
-        tLeft = drop <= 0 ? 0 : (vy + Math.sqrt(Math.max(0, vy * vy + 2 * g * drop))) / g;
-      }
+      const tLeft = (vy + Math.sqrt(vy * vy + 2 * g * h)) / g;
       const margin = 1.15 + (1 - D.trickAmbition) * 0.3;
       const options = Object.keys(SK.TRICKS).filter(id => SK.TRICKS[id].dur / r.trickSpeed * (margin + 0.3 * SK.TRICKS[id].dur) + 0.1 < tLeft).sort((a, b) => SK.TRICKS[b].coins - SK.TRICKS[a].coins);
       let pick = options[0];
@@ -84,7 +81,7 @@
       if (pick && race.rng() < 0.9) {
         const d = SK.TRICKS[pick].dir; if (SK.TRICKS[pick].btn === 'jump') inp.jump = !wasJump; else inp.trick = true;
         inp.steer = 0; inp.up = inp.down = false; // la direction tenue ne doit pas changer la figure voulue
-        if (d === 'up') inp.up = true; else if (d === 'down') inp.down = true; else if (d === 'left') inp.steer = -1; else if (d === 'right') inp.steer = 1;
+        if(d==='downleft'){inp.down=true;inp.steer=-1;}else if (d === 'up') inp.up = true; else if (d === 'down') inp.down = true; else if (d === 'left') inp.steer = -1; else if (d === 'right') inp.steer = 1;
       }
     }
     // ---- tirs

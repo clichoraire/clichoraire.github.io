@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');global.window=global;global.localStorage={getItem:()=>null,setItem:()=>{}};
 const root=require('path').resolve(__dirname,'..');
-for(const f of ['config','utils','items','map','units','ai','game','campaign'])vm.runInThisContext(fs.readFileSync(root+'/js/'+f+'.js','utf8'));
+for(const f of ['config','utils','hero-progression','map','units','ai','game','campaign'])vm.runInThisContext(fs.readFileSync(root+'/js/'+f+'.js','utf8'));
 const c=new ZC.Campaign();
 for(const m of ZC.MISSIONS){const s=c.missionSettings(m.id,'hard');if(!s.invasion){assert.equal(s.teams.length,s.aiCount+1);assert.ok(s.teams.slice(1).filter(x=>x!==0).every(x=>x===1));}}
 const s=c.missionSettings('w1m2','hard'),g=new ZC.Game(s);assert.equal(g.map.zones.length,10);assert.ok(g.allied(1,2));assert.ok(!g.allied(0,1));assert.equal(g.human.hq.zone.ix,0);

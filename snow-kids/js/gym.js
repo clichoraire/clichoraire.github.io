@@ -34,7 +34,7 @@
  G.open=({save,store,onBack})=>{
   G.close();const canvas=document.getElementById('gym-scene'),c=canvas.getContext('2d'),panel=document.getElementById('gym-training'),talk=document.getElementById('gym-talk');
   const screen=document.getElementById('screen-gym'),statsBox=document.getElementById('gym-gold');
-  panel.hidden=true;talk.hidden=false;talk.textContent='Parler à Jessica';screen.classList.remove('gym-choosing');
+  panel.hidden=true;talk.hidden=false;talk.textContent='';talk.setAttribute('aria-expanded','false');screen.classList.remove('gym-choosing');
   const renderStats=(selected=null,confirmed=false)=>{
    const info=SK.Progression.info(save),values=G.stats(save),ch=SK.charById(save.advChar||save.char);
    statsBox.innerHTML='<strong class="gym-player-name">'+ch.name+'</strong><div class="gym-progress">Niveau '+info.level+' · '+info.current+' / '+info.needed+' XP<br>⭐ '+info.points+' point'+(info.points===1?'':'s')+' disponible'+(info.points===1?'':'s')+'</div><div class="gym-board-name">Planche '+SK.boardById(save.advBoard).name+'</div>';
@@ -42,14 +42,14 @@
     const value=values[key],active=selected===key,next=value+(active&&!confirmed?1:0),max=['shot','item'].includes(key)?3:key==='walk'?5:SK.STAT_MAX;
     const fmt=n=>key==='walk'?(100+n*15)+' %':['shot','item'].includes(key)?'+'+n*10+' %':n;
     const row=document.createElement('div');row.className='gym-overview-row'+(active?' previewing':'');
-    row.innerHTML='<span>'+label+'</span><div class="gym-meter" aria-label="'+label+' : '+fmt(value)+(active&&!confirmed?' vers '+fmt(next):'')+'">'+Array.from({length:max},(_,i)=>'<i class="'+(i<value?'filled ':'')+(active&&i===(confirmed?value-1:value)?'gain':'')+'"></i>').join('')+'</div><b>'+fmt(value)+(active&&!confirmed?' → '+fmt(next):'')+'</b>';statsBox.append(row);
+    row.innerHTML='<span>'+label+'</span><div class="gym-meter" aria-label="'+label+' : '+fmt(value)+(active&&!confirmed?' vers '+fmt(next):'')+'">'+SK.statTicks(active&&!confirmed?next:value,confirmed?value-1:value,max)+'</div><b>'+fmt(value)+(active&&!confirmed?' → '+fmt(next):'')+'</b>';statsBox.append(row);
    }
-   const hint=document.createElement('small');hint.className='gym-gain-hint';hint.textContent=confirmed?'✓ Amélioration obtenue !':selected?'La case verte montre le gain.':'Choisis une séance pour voir le gain.';statsBox.append(hint);
+   const hint=document.createElement('small');hint.className='gym-gain-hint';hint.textContent=confirmed?'✓ Amélioration obtenue !':selected?'La coche entourée montre le gain.':SK.STAT_LEGEND;statsBox.append(hint);
   };
 
   const refresh=(confirmedStat=null)=>{renderStats();
    const info=SK.Progression.info(save),ch=SK.charById(save.advChar||save.char),values=G.stats(save);
-   panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><header class="gym-unified-header"><h2>'+ch.name+'</h2><div>Niveau '+info.level+' · '+info.current+' / '+info.needed+' XP</div><strong>⭐ '+info.points+' point'+(info.points===1?'':'s')+' disponible'+(info.points===1?'':'s')+'</strong><small>Planche '+SK.boardById(save.advBoard).name+'</small></header>';
+   panel.innerHTML='<button class="gym-close" aria-label="Fermer">✕</button><header class="gym-unified-header"><h2>'+ch.name+'</h2><div>Niveau '+info.level+' · '+info.current+' / '+info.needed+' XP</div><strong>⭐ '+info.points+' point'+(info.points===1?'':'s')+' disponible'+(info.points===1?'':'s')+'</strong><small>Planche '+SK.boardById(save.advBoard).name+'</small><small class="stat-legend">'+SK.STAT_LEGEND+'</small></header>';
    const labels={speed:'Vitesse',corner:'Virage',acceleration:'Accélération',jump:'Saut',strength:'Force',walk:'Marche',shot:'Tirs',item:'Objets'};
    for(const offer of [...G.statOffers(save),G.strengthOffer(save),G.walkOffer(save),...G.powerOffers(save)]){
     const stat=offer.stat,value=values[stat],max=['shot','item'].includes(stat)?3:stat==='walk'?5:SK.STAT_MAX,unavailable=offer.action!=='buy'||(save.trainingPoints||0)<offer.price;
@@ -57,17 +57,17 @@
     const fmt=n=>stat==='walk'?(100+n*15)+' %':['shot','item'].includes(stat)?'+'+n*10+' %':n;
     row.innerHTML='<span class="stat-icon stat-'+stat+'"><svg viewBox="0 0 32 34">'+(SK.STAT_ICONS[stat]||SK.STAT_ICONS.speed)+'</svg></span><div class="gym-upgrade-detail"><b>'+labels[stat]+'</b><div class="gym-meter"></div><small>'+ (offer.action==='max'?'Maximum atteint':offer.lock||'⭐ '+offer.price+' point'+(offer.price===1?'':'s'))+'</small></div><strong class="gym-upgrade-value"></strong>';
     const button=document.createElement('button');button.type='button';button.className='gym-plus'+(unavailable?' unavailable':'');button.textContent=offer.action==='max'?'✓':offer.action==='locked'?'🔒':'+';button.setAttribute('aria-label','Augmenter '+labels[stat]+' : '+(offer.lock||offer.price+' points'));button.setAttribute('aria-disabled',String(unavailable));
-    const paint=(preview=false,confirmed=false)=>{preview=preview&&offer.action==='buy';const next=value+(preview?1:0);row.classList.toggle('previewing',preview);row.querySelector('.gym-meter').innerHTML=Array.from({length:max},(_,i)=>'<i class="'+(i<value?'filled ':'')+((preview&&i===value)||(confirmed&&i===value-1)?'gain':'')+'"></i>').join('');row.querySelector('.gym-meter').setAttribute('aria-label',labels[stat]+' : '+fmt(value)+(preview?' vers '+fmt(next):''));row.querySelector('.gym-upgrade-value').textContent=fmt(value)+(preview?' → '+fmt(next):'')+(['walk','shot','item'].includes(stat)?'':' / 50');};
+    const paint=(preview=false,confirmed=false)=>{preview=preview&&offer.action==='buy';const next=value+(preview?1:0);row.classList.toggle('previewing',preview);row.querySelector('.gym-meter').innerHTML=SK.statTicks(next,confirmed?value-1:value,max);row.querySelector('.gym-meter').setAttribute('aria-label',labels[stat]+' : '+fmt(value)+(preview?' vers '+fmt(next):''));row.querySelector('.gym-upgrade-value').textContent=fmt(value)+(preview?' → '+fmt(next):'')+(['walk','shot','item'].includes(stat)?'':' / 50');};
     row.onpointerenter=button.onfocus=()=>paint(true);row.onpointerleave=()=>paint(document.activeElement===button);button.onblur=()=>paint();
     button.onclick=()=>{if(!G.train(save,stat))return;const top=panel.scrollTop;store();SK.Audio.sfx('buy');refresh(stat);panel.querySelector('[data-stat="'+stat+'"] button')?.focus({preventScroll:true});panel.querySelector('[data-stat="'+stat+'"]')?.dispatchEvent(new Event('trained'));panel.scrollTop=top;};
     row.addEventListener('trained',()=>paint(false,true));row.append(button);panel.append(row);paint(false,confirmedStat===stat);
    }
    const status=document.createElement('div');status.className='gym-training-status';status.setAttribute('role','status');status.textContent=confirmedStat?'✓ Amélioration obtenue !':'';panel.append(status);
-   panel.querySelector('.gym-close').onclick=()=>{panel.hidden=true;talk.hidden=false;screen.classList.remove('gym-choosing');renderStats();talk.focus();};
+   panel.querySelector('.gym-close').onclick=()=>{panel.hidden=true;talk.hidden=false;talk.setAttribute('aria-expanded','false');screen.classList.remove('gym-choosing');renderStats();talk.focus();};
   };
-  const speak=()=>{refresh();panel.hidden=false;talk.hidden=true;screen.classList.add('gym-choosing');panel.querySelector('.gym-close').focus();SK.Audio.sfx('click');};
+  const speak=()=>{refresh();panel.hidden=false;talk.hidden=true;talk.setAttribute('aria-expanded','true');screen.classList.add('gym-choosing');panel.querySelector('.gym-close').focus();SK.Audio.sfx('click');};
   talk.onclick=speak;document.getElementById('gym-back').onclick=onBack;
-  key=e=>{if(e.code==='Escape'){if(!panel.hidden){panel.hidden=true;talk.hidden=false;screen.classList.remove('gym-choosing');renderStats();}else onBack();}else if(e.code==='Enter'&&e.target===document.body){e.preventDefault();speak();}};window.addEventListener('keydown',key);
+  key=e=>{if(e.code==='Escape'){if(!panel.hidden){panel.hidden=true;talk.hidden=false;talk.setAttribute('aria-expanded','false');screen.classList.remove('gym-choosing');renderStats();}else onBack();}else if(e.code==='Enter'&&e.target===document.body){e.preventDefault();speak();}};window.addEventListener('keydown',key);
   refresh();
   const oval=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
   const line=(pts,width,color)=>{c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();};

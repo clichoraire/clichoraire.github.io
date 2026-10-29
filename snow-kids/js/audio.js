@@ -14,12 +14,32 @@
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
     const s = c.createBufferSource(), g = c.createGain(); s.buffer = b; g.gain.value = vol || 0.3; s.connect(g); g.connect(A.master); s.start(c.currentTime + (when || 0));
   };
+  A.santaGreeting=function(){
+    if(!A.enabled)return;
+    A.init();const voice=A.santaVoice||(A.santaVoice=new Audio('assets/sounds/santa-greeting.wav'));
+    voice.pause();voice.currentTime=0;voice.volume=Math.min(1,(A.master?.gain.value??.5)*1.8);voice.play().catch(()=>{});
+  };
+  A.stopSanta=function(){if(A.santaVoice){A.santaVoice.pause();A.santaVoice.currentTime=0;}};
+  A.instrument=function(kind){
+    if(!A.enabled||!A.init())return;
+    if(A.ctx.state==='suspended')A.ctx.resume();
+    if(kind==='drum'){tone(150,42,.32,'sine',.65);noise(.12,.25);}
+    if(kind==='guitar')[196,247,294].forEach((f,i)=>{tone(f,f,.95,'triangle',.25,i*.045);tone(f*2,f*2,.35,'sine',.08,i*.045);});
+    if(kind==='xylophone')[523,659,784,1047].forEach((f,i)=>{tone(f,f,.45,'sine',.35,i*.12);tone(f*2.76,f*2.76,.15,'sine',.09,i*.12);});
+    if(kind==='trumpet')[392,523,659].forEach((f,i)=>{tone(f,f,.32,'triangle',.3,i*.17);tone(f,f,.25,'sawtooth',.06,i*.17);});
+    if(kind==='triangle')[1600,2263,3100,4211].forEach(f=>tone(f,f,1.2,'sine',.12));
+  };
   A.sfx = function (name) {
     if (!A.enabled || !A.ctx) return;
     if (A.ctx.state === 'suspended') A.ctx.resume();
     switch (name) {
+      case 'monkeyLaugh': for(let i=0;i<6;i++){const f=260+(i%3)*80;tone(f,f*1.7,.07,'triangle',.22,i*.16);tone(f*1.7,f*.72,.12,'triangle',.24,i*.16+.05);tone(f*3,f*2.2,.10,'sine',.065,i*.16+.02);}break;
+      case 'helmetSave': tone(1200,650,.16,'sine',.24);tone(1800,950,.3,'triangle',.13,.08);break;
+      case 'cannon': noise(.55,.4);tone(95,28,.65,'triangle',.4);tone(170,45,.3,'sawtooth',.12);break;
+      case 'moo': {const c=A.ctx,t=c.currentTime,o=c.createOscillator(),filter=c.createBiquadFilter(),g=c.createGain();o.type='sawtooth';o.frequency.setValueAtTime(115,t);o.frequency.linearRampToValueAtTime(145,t+.22);o.frequency.exponentialRampToValueAtTime(78,t+1.2);filter.type='lowpass';filter.frequency.setValueAtTime(480,t);filter.frequency.exponentialRampToValueAtTime(230,t+1.2);filter.Q.value=3;g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(.22,t+.12);g.gain.setValueAtTime(.18,t+.7);g.gain.exponentialRampToValueAtTime(.001,t+1.3);o.connect(filter);filter.connect(g);g.connect(A.master);o.start(t);o.stop(t+1.32);break;}
+      case 'schoolBell': for(let i=0;i<3;i++){tone(1047,1047,.75,'sine',.26,i*.34);tone(2094,2094,.5,'sine',.10,i*.34);tone(2830,2830,.3,'sine',.035,i*.34);} break;
       case 'emergency': tone(180,620,.09,'triangle',.2); tone(620,230,.16,'sine',.18,.07); break;
-      case 'coin': tone(1200, 1800, 0.08, 'square', 0.12); tone(1800, 2400, 0.12, 'square', 0.1, 0.07); break;
+      case 'coin': tone(988, 988, 0.09, 'triangle', 0.32); tone(1319, 1319, 0.3, 'triangle', 0.3, 0.09); tone(2637, 2637, 0.22, 'sine', 0.1, 0.09); break; // « ding » clair, nettement au-dessus de la musique
       case 'box': tone(500, 900, 0.12, 'triangle', 0.2); tone(900, 1300, 0.15, 'triangle', 0.15, 0.1); break;
       case 'jump': tone(300, 700, 0.18, 'sine', 0.2); break;
       case 'land': noise(0.08, 0.15); break;
@@ -62,6 +82,6 @@
   A.player.addEventListener('ended',()=>{if(A.next){const next=A.next;A.next=null;A.music(next);}});
   A.player.addEventListener('error',()=>console.warn('Musique indisponible : '+A.cur));
   A.stopMusic=function(){A.player.pause();A.cur=null;A.next=null;};
-  A.setEnabled=function(on){A.enabled=on;};
+  A.setEnabled=function(on){A.enabled=on;if(!on)A.stopSanta();};
   A.setMusic=function(on){A.musicOn=on;if(!on)A.player.pause();else if(A.cur)A.music(A.cur);};
 })(window.SK);

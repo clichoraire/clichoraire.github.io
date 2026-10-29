@@ -18,7 +18,7 @@
     { id: 'trophees', name: 'Musée', desc: 'Tes trophées, tes records et ta tirelire.', angle: 300 },
   ];
   let raf = 0, keyHandler = null, keyUpHandler = null, blurHandler = null, clickHandler = null, canvas = null, selectCleanup=null;
-  function stop() { if(selectCleanup){selectCleanup();selectCleanup=null;} if (keyUpHandler) window.removeEventListener('keyup', keyUpHandler); if (blurHandler) window.removeEventListener('blur', blurHandler); keyUpHandler = blurHandler = null; cancelAnimationFrame(raf); raf = 0; if (keyHandler) { window.removeEventListener('keydown', keyHandler); keyHandler = null; } if (clickHandler && canvas) { canvas.removeEventListener('click', clickHandler); clickHandler = null; } }
+  function stop() { T.paused=false;SK.Audio.stopSanta?.();if(SK.TownSurprises){SK.TownSurprises.santaPosition=null;SK.TownSurprises.santaGreetingUntil=0;} if(selectCleanup){selectCleanup();selectCleanup=null;} if (keyUpHandler) window.removeEventListener('keyup', keyUpHandler); if (blurHandler) window.removeEventListener('blur', blurHandler); keyUpHandler = blurHandler = null; cancelAnimationFrame(raf); raf = 0; if (keyHandler) { window.removeEventListener('keydown', keyHandler); keyHandler = null; } if (clickHandler && canvas) { canvas.removeEventListener('click', clickHandler); clickHandler = null; } }
   T.close = stop;
 
   // décor commun : ciel, montagnes, neige
@@ -132,7 +132,7 @@
   // Two adjoining shops share a party wall, but keep their own doors and identity.
   Object.assign(STREET.find(b=>b.id==='shop'),{x:700,w:330,h:330,label:'PLANCHES',door:.16});
   STREET.push({id:'clothes',x:1030,y:548,w:330,h:350,color:'#698c83',roof:'#51445b',label:'VÊTEMENTS',door:.84});
-  STREET.push({id:'gym',x:3900,y:548,w:350,h:350,color:'#778c82',roof:'#344c52',label:'GYM',door:.535});
+  STREET.push({id:'gym',x:3970,y:548,w:490,h:300,color:'#778c82',roof:'#344c52',label:'GYM',door:257.25/490});
   T.streetDoor=b=>b.x+b.w*(b.door??.535);
   T.STREET=STREET;
   T.drawTournamentSign=(ctx,t)=>{
@@ -170,6 +170,7 @@
     ctx.restore();
     ctx.fillStyle='#e4eff5';ctx.fillRect(0,355,1280,365);
     for(let i=0;i<24;i++) {const x=i*57;R.drawProp(ctx,'fir',x,355+(i%3)*7,11+(i%4)*2,0,t,{});}
+    SK.TownSurprises?.background(ctx,t,camera);
     // Trottoir enneigé et promenade horizontale devant les maisons.
     ctx.fillStyle='#f6fbff';ctx.fillRect(0,530,1280,35);
     ctx.fillStyle='#adc8d8';ctx.fillRect(0,565,1280,5);
@@ -196,9 +197,9 @@
       polygon(c,[[x-16,top-3],[x+w*.5,top-94],[x+w+3,top-5],[x+w,top+6],[x+w*.5,top-81],[x-10,top+9]],'#f4fbff');
     }
     // Lettered signs, distinct awnings, a generous shop window and adult-height door.
-    rect(x+19,top+18,w-38,44,trim);rect(x+24,top+23,w-48,34,clothes?'#f5e9d6':'#d3a265');
-    c.fillStyle=clothes?'#3c5f58':'#4d2b1c';c.font='900 23px "Trebuchet MS",sans-serif';c.textAlign='center';c.fillText(b.label,x+w/2,top+48);
+
     const doorX=T.streetDoor(b)-34,doorY=y-188;
+    SK.TownArchitecture?.plaque(c,b,doorX-8,doorY-63,84);
     rect(doorX-6,doorY-7,80,195,selected?'#ffdc77':trim);rect(doorX,doorY,68,188,clothes?'#345d58':'#4a3429');
     rect(doorX+8,doorY+12,52,116,'#add4db');rect(doorX+12,doorY+16,5,106,'#e9faf688');
     oval(c,doorX+55,y-36,4,4,'#f5c86d');rect(doorX-12,y,92,8,'#c8dce5');
@@ -278,10 +279,9 @@
       polygon(c,[[wx,wy],[wx+10,wy],[wx+14,wy+hh],[wx+4,wy+hh]],'#faad7355');polygon(c,[[wx+ww-12,wy],[wx+ww,wy],[wx+ww-2,wy+hh],[wx+ww-16,wy+hh]],'#f49a6944');
       rect(wx+ww/2-3,wy,6,hh,'#785735');rect(wx,wy+hh*.49,ww,5,'#785735');rect(wx-8,wy+hh+3,ww+16,6,'#543a24');
     }
-    // Broad cream sign and the original entry position for navigation.
-    box(5,120,340,40,2,'#6e5032');rect(9,124,332,31,'#c1ab83');rect(12,127,326,25,'#eee0c0');
-    c.fillStyle='#3a5a59';c.font='bold 21px "Trebuchet MS",sans-serif';c.textAlign='center';c.fillText('CHALET',175,148);
+    // Discreet plaque next to the original entrance.
     const dx=350*(b.door??.535)-38,dy=169,dw=76;
+    SK.TownArchitecture?.plaque(c,b,dx-111,dy+16);
     rect(dx-8,dy-8,dw+16,174,selected?'#d5b76d':'#503820');rect(dx-4,dy-4,dw+8,170,'#8b633a');rect(dx,dy,dw,166,'#6e4c2b');
     for(const py of [dy+12,dy+94])for(const px of [dx+10,dx+43]){rect(px-2,py-2,25,63,'#4d361f');rect(px,py,21,59,'#99703e');rect(px+3,py+3,17,56,'#72502c');}
     box(dx+dw-13,dy+78,5,18,2,'#bf8c3f');oval(c,dx+dw-10,dy+80,3,3,'#f1c45e');rect(dx-5,334,dw+10,5,'#c7d9dc');
@@ -294,6 +294,11 @@
     c.restore();
   }
   function streetHouse(ctx,b,t,selected) {
+    if(SK.TownArchitecture?.draw(ctx,b,t,selected))return;
+    baseStreetHouse(ctx,b,t,selected);SK.TownArchitecture?.polish(ctx,b);
+  }
+  T.drawBuilding=streetHouse;
+  function baseStreetHouse(ctx,b,t,selected) {
     if(b.id==='debug'){ctx.save();ctx.translate(b.x,b.y);ctx.fillStyle='#51473e';ctx.fillRect(0,-240,b.w,240);polygon(ctx,[[-18,-238],[75,-320],[130,-291],[190,-310],[b.w+15,-238]],'#302d29');ctx.strokeStyle='#292520';ctx.lineWidth=5;for(let y=-215;y<0;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(b.w,y+7);ctx.stroke();}ctx.fillStyle='#181b1d';ctx.fillRect(105,-165,70,165);ctx.fillRect(22,-195,55,65);ctx.save();ctx.translate(48,-165);ctx.rotate(.3);ctx.fillStyle='#917758';ctx.fillRect(-39,-7,78,14);ctx.restore();ctx.fillStyle='#b6a07b';ctx.fillRect(80,-226,145,33);ctx.fillStyle='#322b24';ctx.font='bold 19px Arial';ctx.textAlign='center';ctx.fillText('CABANE',152,-203);ctx.restore();return;}
     const {x,y,w,h}=b, top=y-h, side=x<600?1:-1, depth=w*0.16;
     const rect=(xx,yy,ww,hh,c)=>{ctx.fillStyle=c;ctx.fillRect(xx,yy,ww,hh);};
@@ -310,7 +315,7 @@
       const dx=x+w*.40,dw=w*.26,dy=y-h*.51;
       rect(dx-7,dy-8,dw+14,h*.51+8,selected?'#ffe295':'#606b74');rect(dx,dy,dw,h*.51,'#394b59');rect(dx+8,dy+8,dw-16,25,'#f5cf7b');rect(dx+dw*.5,dy,3,h*.51,'#1f303d');oval(ctx,dx+dw*.77,dy+55,3,3,'#e2b950');
       rect(x+w*.32,y,w*.43,7,'#758793');rect(x+w*.27,y+7,w*.53,7,'#a6b6bf');rect(x+w*.22,y+14,w*.63,7,'#f1f8fb');
-      rect(x+w*.27,top+42,w*.48,34,'#56616b');ctx.fillStyle='#f9e7ae';ctx.textAlign='center';ctx.font='900 23px Arial';ctx.fillText('MUSÉE',x+w*.51,top+67);
+      SK.TownArchitecture?.plaque(ctx,b,dx+dw/2-44,dy-65);
       oval(ctx,x+25,y+8,40,12,'#f7fcff');oval(ctx,x+w-18,y+5,36,12,'#f7fcff');
       if(selected)polygon(ctx,[[dx+dw/2,dy-14],[dx+dw/2-9,dy-28],[dx+dw/2+9,dy-28]],'#ffcd58');
       return;
@@ -325,7 +330,9 @@
       rect(x+16,top,13,h,'#35251b');rect(x+w-29,top,13,h,'#35251b');rect(x,top,w,14,'#302017');
     }
 
-    for(let j=top+14;j<y;j+=18){rect(x,j,w,2,'#ffffff18');}
+    for(let j=top+14;j<y;j+=18){rect(x,j,w,1,'#ffffff38');rect(x,j+15,w,2,'#24374728');
+      ctx.strokeStyle='#19373f12';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+9,j+6);ctx.bezierCurveTo(x+w*.28,j+2,x+w*.67,j+11,x+w-9,j+6);ctx.stroke();}
+    const facadeGlow=ctx.createLinearGradient(x,0,x+w,0);facadeGlow.addColorStop(0,'#fff4d416');facadeGlow.addColorStop(.6,'#ffffff00');facadeGlow.addColorStop(1,'#17333f25');rect(x,top,w,h,facadeGlow);
     // Pan du toit en perspective : même fuite que le mur latéral.
     const roofEdge=x+(side>0?w+16:-16),ridge=x+w*.30,ridgeY=top-h*.29,back=side*depth;
     polygon(ctx,[[ridge,ridgeY],[ridge+back,ridgeY-22],[roofEdge+back,top-22],[roofEdge,top+3]],b.id==='kids'?'#49392d':'#4b6576');
@@ -339,15 +346,16 @@
     // Fenêtres éclairées, cadres, volets et neige sur les appuis.
     for(const fx of [.13,.61]) {
       const wx=x+w*fx,wy=top+h*.10,ww=w*.23,hh=h*.22;
-      rect(wx-5,wy-5,ww+10,hh+10,'#f1dfbb');rect(wx,wy,ww,hh,'#ffdb8d');rect(wx+ww*.45,wy,ww*.1,hh,'#856d58');rect(wx,wy+hh*.48,ww,3,'#856d58');rect(wx-7,wy+hh+4,ww+14,7,'#edf7ff');
+      rect(wx-8,wy-7,ww+16,hh+16,'#34475466');rect(wx-5,wy-5,ww+10,hh+10,'#f1dfbb');
+      const glass=ctx.createLinearGradient(wx,wy,wx+ww,wy+hh);glass.addColorStop(0,'#fff2bd');glass.addColorStop(.6,'#f5cb82');glass.addColorStop(1,'#cf986b');rect(wx,wy,ww,hh,glass);
+      polygon(ctx,[[wx,wy],[wx+ww*.16,wy],[wx+ww*.24,wy+hh],[wx+ww*.04,wy+hh]],'#ffffff38');
+      for(const side of [-1,1]){const sx=side<0?wx-20:wx+ww+7;rect(sx,wy-1,13,hh+2,b.roof);for(let sy=wy+5;sy<wy+hh;sy+=9)rect(sx+2,sy,9,1,'#e6eddf55');}
+      rect(wx+ww*.45,wy,ww*.1,hh,'#856d58');rect(wx,wy+hh*.48,ww,3,'#856d58');rect(wx-7,wy+hh+4,ww+14,7,'#edf7ff');
     }
     const dx=x+w*.43,dy=y-h*.49,dw=w*.21;
     rect(dx-5,dy-5,dw+10,h*.49+5,selected?'#ffe295':'#e4d0aa');rect(dx,dy,dw,h*.49,'#314e60');rect(dx+dw*.14,dy+8,dw*.7,h*.12,'#e6bb74');oval(ctx,dx+dw*.8,dy+h*.22,2,2,'#ffdf81');
     rect(dx-12,y-1,dw+24,6,'#9fb8c5');rect(dx-18,y+5,dw+36,6,'#f7fcff');
-    // Enseigne propre à chaque adresse, lisible même au fond de la rue.
-    const sy=top+h*.36,sh=Math.max(23,h*.13);
-    rect(x+w*.035,sy-3,w*.93,sh+6,selected?'#ffd77c':'#604b40');rect(x+w*.045,sy,w*.91,sh,'#fff0cf');
-    ctx.fillStyle='#354c59';ctx.textAlign='center';ctx.font=`900 ${Math.max(12,Math.min(23,w*.073))}px Arial`;ctx.fillText(b.label,x+w/2,sy+sh*.73);
+    SK.TownArchitecture?.plaque(ctx,b,dx-108,dy+14);
     // Bancs de neige de part et d'autre de la porte, glaçons sous les corniches.
     oval(ctx,x+w*.15,y+4,w*.23,13,'#f6fbff');oval(ctx,x+w*.86,y+3,w*.19,11,'#f6fbff');
     for(let i=0;i<7;i++){const xx=x+12+i*w/7;polygon(ctx,[[xx,top+4],[xx+5,top+5],[xx+2,top+14+(i%3)*5]],'#d9edf7');}
@@ -452,24 +460,18 @@
     bubble.hidden=false;
   };
   T.snowDay=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();};
+  T.hasShovel=save=>!!save?.gear?.includes('pelle');
+  T.buyShovel=function(save){const price=SK.gearById('pelle').price;if(T.hasShovel(save)||!(save.gold>=price))return false;save.gold-=price;(save.gear??=[]).push('pelle');return true;};
   T.digSnow=function(save,id,random=Math.random){
-    if(!T.SNOWBANKS.some(b=>b.id===id))return null;
+    if(!T.hasShovel(save)||!T.SNOWBANKS.some(b=>b.id===id))return null;
     const day=T.snowDay();if(save.snowDig?.day!==day)save.snowDig={day,found:{}};
     if(Object.hasOwn(save.snowDig.found,id))return null;
-    const amount=random()<.55?5+Math.floor(random()*16):0;
+    const amount=5+Math.floor(SK.clamp(random(),0,.999999)*16);
     save.snowDig.found[id]=amount;save.gold=(save.gold||0)+amount;return amount;
   };
-  function drawVillageSnowman(c,x,y,s){
-    c.save();c.translate(x,y);c.scale(s,s);
-    const ball=(yy,r)=>{const g=c.createRadialGradient(-r*.3,yy-r*.4,2,0,yy,r);g.addColorStop(0,'#ffffff');g.addColorStop(.72,'#f4fafb');g.addColorStop(1,'#d8e9ee');oval(c,0,yy,r,r,g);};
-    oval(c,0,3,36,7,'#b4ced966');ball(-27,32);ball(-69,25);ball(-105,19);
-    c.fillStyle='#344f60';c.fillRect(-27,-122,54,7);c.beginPath();c.roundRect(-18,-149,36,29,3);c.fill();c.fillStyle='#627e88';c.fillRect(-18,-128,36,5);
-    for(const xx of [-7,7])oval(c,xx,-108,2.7,3,'#263d4b');
-    polygon(c,[[0,-102],[21,-98],[0,-95]],'#ec963c');for(const [xx,yy]of [[-8,-96],[-4,-92],[2,-91],[7,-94]])oval(c,xx,yy,1.4,1.4,'#46575d');
-    c.fillStyle='#cd4d58';c.fillRect(-21,-87,42,8);c.fillRect(13,-82,9,26);for(const yy of [-70,-57,-31,-17])oval(c,0,yy,3,3,'#344b56');c.restore();
-  }
-  function villageDecor(c){
-    drawVillageSnowman(c,627,551,.84);
+  function drawVillageSnowman(c,x,y,s,design){SK.Snowman.draw(c,x,y,s,design);}
+  function villageDecor(c,save){
+    drawVillageSnowman(c,627,551,.84,save?.snowmen?.['chalet']);
     for(const [i,x] of [600,1530,2520,3790,4400].entries()){
       if(i===0)continue; // The widened chalet occupies this former bench space.
       c.save();c.translate(x,535);
@@ -479,21 +481,21 @@
       c.strokeStyle='#5c3f2b';c.lineWidth=6;for(const dx of [30,104]){c.beginPath();c.moveTo(dx,-24);c.lineTo(dx,5);c.stroke();}
       c.fillStyle='#95623d';c.fillRect(20,-51,96,13);c.fillRect(20,-33,96,12);c.fillRect(17,-18,103,10);
       oval(c,67,-53,51,5,'#faffff');
-      if(i%2===0&&i!==0)drawVillageSnowman(c,-65,7,1);
+      if(i%2===0&&i!==0&&x!==2520)drawVillageSnowman(c,-65,7,1,save?.snowmen?.['museum']);
       c.restore();
     }
   }
-  function snowbank(c,b,dug,hover,progress,t){
+  function snowbank(c,b,dug,hover,progress,t,owned=false){
     c.save();c.translate(b.x,b.y);oval(c,0,5,66,12,'#afcbd966');
     if(dug){oval(c,0,-2,55,15,'#eaf5fa');oval(c,0,-5,34,10,'#91b5c9');oval(c,0,-2,25,6,'#b8d4e3');}
     else {
       const g=c.createLinearGradient(0,-43,0,8);g.addColorStop(0,'#ffffff');g.addColorStop(.65,'#eff9ff');g.addColorStop(1,'#c5dfec');c.fillStyle=g;
       c.beginPath();c.moveTo(-62,3);c.bezierCurveTo(-60,-10,-45,-19,-29,-20);c.bezierCurveTo(-19,-46,16,-48,32,-27);c.bezierCurveTo(49,-25,64,-13,65,3);c.bezierCurveTo(37,15,-39,15,-62,3);c.fill();
-      c.strokeStyle=hover?'#ffcf57':'#dfedf5';c.lineWidth=hover?3:1;c.stroke();
+      c.lineJoin='round';c.strokeStyle='#fff';c.lineWidth=7;c.stroke();c.strokeStyle=hover?'#ffcf57':'#70a8c4';c.lineWidth=hover?3.5:2.5;c.stroke();
       c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(-22,-24);c.bezierCurveTo(-8,-40,13,-39,26,-28);c.stroke();
-      c.fillStyle='#416b83';c.font='bold 16px "Trebuchet MS"';c.textAlign='center';c.fillText(hover?'Creuser !':'✦',0,-19);
+      if(hover||progress>0){oval(c,1,-58,25,25,'#28435455');oval(c,0,-61,24,24,owned?'#254f69':'#7d6745');c.strokeStyle=owned?'#a9ecff':'#ffda78';c.lineWidth=2;c.beginPath();c.arc(0,-61,24,0,TAU);c.stroke();SK.drawShovel(c,0,-61,22,-.35);if(!owned){c.fillStyle='#ffe7a0';c.font='bold 14px Arial';c.textAlign='center';c.fillText('+',17,-42);}}else{c.fillStyle='#96c9df';polygon(c,[[0,-30],[4,-24],[10,-21],[4,-18],[0,-12],[-4,-18],[-10,-21],[-4,-24]],'#74adc6');}
     }
-    if(progress>0){for(let i=0;i<9;i++){const a=i*2.4,phase=(progress*3+i/9)%1;oval(c,Math.cos(a)*phase*65,-18-Math.sin(phase*Math.PI)*65,3+i%3,3,'#ffffff');}c.strokeStyle='#efbf45';c.lineWidth=5;c.beginPath();c.arc(0,-64,12,-Math.PI/2,-Math.PI/2+TAU*progress);c.stroke();}
+    if(progress>0){for(let i=0;i<9;i++){const a=i*2.4,phase=(progress*3+i/9)%1;oval(c,Math.cos(a)*phase*65,-18-Math.sin(phase*Math.PI)*65,3+i%3,3,'#ffffff');}c.strokeStyle='#efbf45';c.lineWidth=5;c.beginPath();c.arc(0,-61,28,-Math.PI/2,-Math.PI/2+TAU*progress);c.stroke();}
     c.restore();
   }
   T.collectSquirrel=function(save,squirrel){
@@ -513,6 +515,8 @@
     c.restore();
   };
   // opts : { canvas, charId, boardId, look, labelEl, onEnter(houseId), onBack }
+  T.snowmen=()=>{const b=STREET.find(b=>b.id==='ecole');return [{id:'chalet',x:627,y:551,sx:.84,sy:.84},{id:'museum',x:4335,y:542,sx:1,sy:1},{id:'school',x:b.x+306*b.w/350,y:b.y-b.h+349*b.h/350,sx:b.w/350*.72,sy:b.h/350*.72}];};
+  T.hitSnowman=(x,y)=>T.snowmen().find(m=>Math.abs(x-m.x)<55*m.sx&&y>m.y-160*m.sy&&y<m.y+10*m.sy);
   T.open = function(opts) {
     stop();canvas=opts.canvas;const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
     let WORLD_WIDTH=STREET.some(b=>b.id==='debug')?5350:4860;
@@ -525,15 +529,21 @@
     const groups=[['matthieu'],...pairs,...residents.filter(ch=>ch.id!=='matthieu'&&!used.has(ch.id)).map(ch=>[ch.id])].map((ids,i)=>({ids,x:i===0?x+220:220+i*360,dir:i%2?-1:1,speed:46+i%3*4,walk:0,greeting:0,cooldown:0,near:false}));
     const locals=groups.flatMap(group=>group.ids.map((id,index)=>{const ch=residents.find(ch=>ch.id===id);const r=SK.fakeRacer(ch.id,'freestyle','ride',SK.lookOf(ch,{gear:[],look:{}}));r.def=ch;return {r,group,offset:index*76};}));
     const richardChat={remaining:0,cooldown:0,near:new Set()};
+    const surprises=SK.TownSurprises?.create();
     const held=new Set(),door=T.streetDoor;
     let pendingDig=null,digProgress=0,hoverSnow=null;
     let squirrel=null,squirrelWait=6,coinDrop=null;
     const catchSquirrel=()=>{const amount=T.collectSquirrel(opts.save,squirrel);if(amount){coinDrop={x:squirrel.x,at:performance.now(),amount};opts.onDig?.(amount);T.showGoldReward(bubble,amount);bubbleUntil=performance.now()+3500;SK.Audio.sfx('coin');}};
     const dug=b=>opts.save?.snowDig?.day===T.snowDay()&&Object.hasOwn(opts.save.snowDig.found,b.id);
-    const snowHit=(mx,my)=>T.SNOWBANKS.find(b=>Math.abs(mx-b.x)<65&&my>b.y-55&&my<b.y+17);
-    const snowMove=e=>{const box=canvas.getBoundingClientRect();hoverSnow=snowHit((e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height);canvas.style.cursor=hoverSnow&&!dug(hoverSnow)?'pointer':'default';};
+    const snowHit=(mx,my)=>T.SNOWBANKS.find(b=>Math.abs(mx-b.x)<65&&my>b.y-90&&my<b.y+17);
+    const snowMove=e=>{const box=canvas.getBoundingClientRect();hoverSnow=snowHit((e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height);canvas.style.cursor=(SK.CannonGame?.hit((e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height)||SK.TownSurprises?.hitSanta((e.clientX-box.left)*1280/box.width,(e.clientY-box.top)*720/box.height)||SK.TownMusic?.hit((e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height)||T.hitSnowman((e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height)||hoverSnow&&!dug(hoverSnow)||STREET.some(b=>SK.TownArchitecture?.hitBell(b,(e.clientX-box.left)*1280/box.width+camera,(e.clientY-box.top)*720/box.height)))?'pointer':'default';};
     canvas.addEventListener('pointermove',snowMove);
     const stage=canvas.parentElement,chat=document.createElement('form'),bubble=document.createElement('div');
+    const shovelDialog=document.createElement('dialog');shovelDialog.className='shovel-dialog';shovelDialog.setAttribute('aria-label','Pelle aux trésors');stage.append(shovelDialog);
+    const offerShovel=bank=>{held.clear();target=null;const price=SK.gearById('pelle').price;shovelDialog.innerHTML='<button class="shovel-close" aria-label="Fermer">×</button><canvas width="140" height="140" aria-hidden="true"></canvas><h2>Pelle aux trésors</h2><p>Déterre les pièces cachées dans la neige !</p><span class="shovel-permanent">À toi pour toujours</span><button class="shovel-buy">Acheter · '+price+' G</button><small>'+(opts.save.gold<price?'Il te manque '+(price-opts.save.gold)+' G':'Les trésors se renouvellent chaque jour.')+'</small>';
+      SK.drawShovel(shovelDialog.querySelector('canvas').getContext('2d'),70,70,65,-.3);shovelDialog.querySelector('.shovel-close').onclick=()=>shovelDialog.close();const buy=shovelDialog.querySelector('.shovel-buy');buy.disabled=opts.save.gold<price;buy.onclick=()=>{if(!T.buyShovel(opts.save))return;opts.onDig?.(0);SK.Audio.sfx('buy');shovelDialog.close();pendingDig=bank;digProgress=0;target=bank.x;held.clear();};SK.Touch.pause(true);shovelDialog.showModal();};
+    shovelDialog.addEventListener('close',()=>SK.Touch.pause(false));
+
     chat.id='town-chat';chat.hidden=true;chat.innerHTML='<label for="town-chat-input">Parler dans le village</label><div><input id="town-chat-input" maxlength="180" autocomplete="off" placeholder="Message ou code de triche…"><button type="submit">Envoyer</button><button type="button" aria-label="Fermer le chat">×</button></div>';
     bubble.id='town-player-speech';bubble.hidden=true;bubble.setAttribute('role','status');bubble.setAttribute('aria-live','polite');stage.append(chat,bubble);
     const chatButton=document.createElement('button');chatButton.id='town-chat-open';chatButton.type='button';chatButton.textContent='💬 Message';chatButton.setAttribute('aria-controls','town-chat');chatButton.setAttribute('aria-expanded','false');stage.append(chatButton);
@@ -549,28 +559,33 @@
       const result=opts.onChat?.(text);if(result){opts.look=result.look;WORLD_WIDTH=result.debugHouse?5350:4860;}
       input.value='';closeChat();
     };
-    selectCleanup=()=>{canvas.removeEventListener('pointermove',snowMove);canvas.style.cursor='default';chat.remove();bubble.remove();chatButton.remove();held.clear();SK.Input.keys={};SK.Input.pressed={};};
+    selectCleanup=()=>{SK.Snowman?.close();canvas.removeEventListener('pointermove',snowMove);canvas.style.cursor='default';if(shovelDialog.open)shovelDialog.close();shovelDialog.remove();chat.remove();bubble.remove();chatButton.remove();held.clear();SK.Input.keys={};SK.Input.pressed={};};
 
     const nearest=()=>STREET.findIndex(b=>Math.abs(door(b)-x)<115);
     const label=()=>{const h=near<0?null:T.HOUSES.find(h=>h.id===STREET[near].id);
       if(opts.labelEl)opts.labelEl.innerHTML=h?`<button type="button" class="n64-btn btn-depart town-enter" aria-label="Entrer : ${h.name}">Entrer</button>`:'';
       const button=opts.labelEl?.querySelector('.town-enter');if(button)button.onclick=()=>{held.clear();target=null;moving=false;enter();};};
     const enter=()=>{if(near>=0&&!moving){T._streetX=x;opts.onEnter(STREET[near].id);}};
-    keyHandler=e=>{if(!chat.hidden||e.target.closest?.('input,textarea,select,dialog'))return;if(e.code==='Enter'){e.preventDefault();if(!e.repeat){if(near>=0){held.clear();target=null;moving=false;enter();}else openChat();}return;}if(['ArrowLeft','KeyA','ArrowRight','KeyD','KeyX','Space','Escape'].includes(e.code))e.preventDefault();
+    keyHandler=e=>{if(T.paused||SK.Snowman?.isOpen())return;if(!chat.hidden||e.target.closest?.('input,textarea,select,dialog'))return;if(e.code==='Enter'){e.preventDefault();if(!e.repeat){if(near>=0){held.clear();target=null;moving=false;enter();}else openChat();}return;}if(['ArrowLeft','KeyA','ArrowRight','KeyD','KeyX','Space','Escape'].includes(e.code))e.preventDefault();
       if(['ArrowLeft','KeyA','ArrowRight','KeyD'].includes(e.code)){held.add(e.code);target=null;pendingDig=null;digProgress=0;}
-      else if(['KeyX','Space'].includes(e.code)&&!e.repeat)enter();else if(e.code==='Escape'&&opts.onBack)opts.onBack();};
+      else if(['KeyX','Space'].includes(e.code)&&!e.repeat)enter();else if(e.code==='Escape'&&!e.repeat){held.clear();target=null;moving=false;(opts.onPause||opts.onBack)?.();}};
     keyUpHandler=e=>held.delete(e.code);blurHandler=()=>{held.clear();target=null;};
     window.addEventListener('keydown',keyHandler);window.addEventListener('keyup',keyUpHandler);window.addEventListener('blur',blurHandler);
-    clickHandler=e=>{if(!chat.hidden)return;const bounds=canvas.getBoundingClientRect(),mx=(e.clientX-bounds.left)*1280/bounds.width+camera,my=(e.clientY-bounds.top)*720/bounds.height;
+    clickHandler=e=>{if(T.paused||!chat.hidden||SK.Snowman?.isOpen())return;const bounds=canvas.getBoundingClientRect(),mx=(e.clientX-bounds.left)*1280/bounds.width+camera,my=(e.clientY-bounds.top)*720/bounds.height;
+      if(SK.TownSurprises?.hitSanta(mx-camera,my)){held.clear();target=null;pendingDig=null;digProgress=0;SK.TownSurprises.greetSanta(performance.now()/1000);return;}
+      if(SK.CannonGame?.hit(mx,my)){held.clear();target=null;pendingDig=null;digProgress=0;opts.onCannon?.();return;}
+      const instrument=SK.TownMusic?.hit(mx,my);if(instrument){held.clear();target=null;pendingDig=null;digProgress=0;SK.TownMusic.play(instrument,performance.now()/1000);return;}
+      const snowman=T.hitSnowman(mx,my);if(snowman){held.clear();target=null;pendingDig=null;digProgress=0;SK.Input.keys={};SK.Input.pressed={};SK.Snowman.open({save:opts.save,id:snowman.id,origin:{x:e.clientX,y:e.clientY},onSave:()=>{opts.onDecorate?.();SK.Audio.sfx('buy');},onClose:()=>{held.clear();SK.Input.keys={};SK.Input.pressed={};last=performance.now();}});return;}
+      const bell=STREET.find(b=>SK.TownArchitecture?.hitBell(b,mx,my));if(bell){SK.TownArchitecture.ringBell(bell,performance.now()/1000);return;}
       if(squirrel&&!squirrel.collected&&mx>squirrel.x-30&&mx<squirrel.x+20&&my>508&&my<555){catchSquirrel();return;}
-      const bank=snowHit(mx,my);if(bank){if(!dug(bank)&&!pendingDig){pendingDig=bank;digProgress=0;target=bank.x;held.clear();}return;}
+      const bank=snowHit(mx,my);if(bank){if(!T.hasShovel(opts.save)){offerShovel(bank);return;}if(!dug(bank)&&!pendingDig){pendingDig=bank;digProgress=0;target=bank.x;held.clear();}return;}
       pendingDig=null;digProgress=0;
       if(mx<195&&my>255){target=100;return;}
       const hit=STREET.findIndex(b=>mx>=b.x&&mx<=b.x+b.w&&my>=b.y-b.h*1.3&&my<=b.y+15);
       if(hit>=0){if(hit===near&&!moving)enter();else target=door(STREET[hit]);}else if(my>420)target=clamp(mx);};
     canvas.addEventListener('click',clickHandler);near=nearest();label();
-    const frame=()=>{raf=requestAnimationFrame(frame);const now=performance.now(),dt=Math.min(.05,(now-last)/1000),t=now/1000;last=now;
-      let direction=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);const touch=SK.Touch?.held||{};if(touch.left||touch.right){target=null;direction=(touch.right?1:0)-(touch.left?1:0);}
+    const frame=()=>{raf=requestAnimationFrame(frame);const now=performance.now(),dt=Math.min(.05,(now-last)/1000),t=now/1000;last=now;if(T.paused){held.clear();target=null;moving=false;return;}if(SK.Snowman?.isOpen())return;
+      let direction=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);const touch=SK.Touch?.held||{};if(touch.left||touch.right){target=null;pendingDig=null;digProgress=0;direction=(touch.right?1:0)-(touch.left?1:0);}
       if(target!==null)direction=Math.sign(target-x);
       if(chat.hidden&&!document.hidden){
         squirrelWait-=dt;
@@ -583,24 +598,30 @@
       if(x>=WORLD_WIDTH-102&&direction>0){T._streetX=WORLD_WIDTH-300;opts.onEnter('throne');return;}
       moving=Math.abs(x-before)>.01;if(moving)walkTime+=Math.abs(x-before)/255;if(moving)facing=x>before?'right':'left';else facing='down';
       if(pendingDig&&Math.abs(x-pendingDig.x)<8&&!moving){
-        digProgress=Math.min(1,digProgress+dt/1.1);
-        if(digProgress>=1){const amount=T.digSnow(opts.save,pendingDig.id);if(amount!==null){opts.onDig?.(amount);if(amount)T.showGoldReward(bubble,amount);else{bubble.classList.remove('gold-reward');bubble.textContent='Juste de la neige… On cherche ailleurs ?';bubble.hidden=false;}bubbleUntil=now+3500;}pendingDig=null;digProgress=0;}
+        digProgress=Math.min(1,digProgress+dt/1.8);
+        if(digProgress>=1){const amount=T.digSnow(opts.save,pendingDig.id);if(amount!==null){opts.onDig?.(amount);if(amount){T.showGoldReward(bubble,amount);coinDrop={x:pendingDig.x,y:pendingDig.y,at:now,amount};SK.Audio.sfx('coin');}else{bubble.classList.remove('gold-reward');bubble.textContent='Juste de la neige… On cherche ailleurs ?';bubble.hidden=false;}bubbleUntil=now+3500;}pendingDig=null;digProgress=0;}
       }
       T._streetX=x;const next=nearest();if(next!==near){near=next;label();}
       const cameraTarget=Math.max(0,Math.min(WORLD_WIDTH-1280,x-640));camera+=(cameraTarget-camera)*(1-Math.exp(-dt*9));
       ctx.save();ctx.scale(W/1280,H/720);winterStreet(ctx,t,camera);
+      SK.TownSurprises?.sky(ctx,t);
+      if(surprises&&chat.hidden&&!document.hidden)SK.TownSurprises.update(surprises,dt,camera,STREET,opts.save);
       ctx.save();ctx.translate(-camera,0);
       T.drawTournamentSign(ctx,t);
-      STREET.forEach((b,i)=>{if(b.x+b.w+60>camera&&b.x-60<camera+1280){streetHouse(ctx,b,t,i===near);}});
+      SK.TownSurprises?.drawGuest(ctx,surprises?.active,t);
+      STREET.forEach((b,i)=>{if(b.x+b.w+60>camera&&b.x-60<camera+1280){b.snowmanDesign=opts.save?.snowmen?.school;streetHouse(ctx,b,t,i===near);SK.TownSurprises?.architecture(ctx,b,t);}});
 
-      villageDecor(ctx);
-      for(const bank of T.SNOWBANKS)if(bank.x>camera-80&&bank.x<camera+1360)snowbank(ctx,bank,dug(bank),hoverSnow===bank,pendingDig===bank?digProgress:0,t);
+      villageDecor(ctx,opts.save);
+      SK.TownSurprises?.decor(ctx,t,camera);
+      SK.TownMusic?.draw(ctx,t,camera);
+      SK.CannonGame?.drawTown(ctx,t);
+      for(const bank of T.SNOWBANKS)if(bank.x>camera-80&&bank.x<camera+1360)snowbank(ctx,bank,dug(bank),hoverSnow===bank,pendingDig===bank?digProgress:0,t,T.hasShovel(opts.save));
       ctx.save();ctx.globalAlpha=.38+.08*Math.sin(t*2);ctx.strokeStyle='#eaf7ff';ctx.lineWidth=9;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(WORLD_WIDTH-225,535);ctx.lineTo(WORLD_WIDTH-115,535);ctx.lineTo(WORLD_WIDTH-145,508);ctx.moveTo(WORLD_WIDTH-115,535);ctx.lineTo(WORLD_WIDTH-145,562);ctx.stroke();ctx.restore();
       if(squirrel&&!squirrel.collected)T.drawSquirrel(ctx,squirrel,t);
-      if(coinDrop){const age=(now-coinDrop.at)/1000;if(age<1.1){ctx.save();ctx.globalAlpha=Math.min(1,(1.1-age)*3);for(let i=0;i<coinDrop.amount;i++)SK.drawGoldCoin(ctx,coinDrop.x+(i-(coinDrop.amount-1)/2)*age*28,532-65*Math.sin(Math.min(1,age)*Math.PI)+age*14,6);ctx.restore();}else coinDrop=null;}
+      if(coinDrop){const age=(now-coinDrop.at)/1000;if(age<1.1){ctx.save();ctx.globalAlpha=Math.min(1,(1.1-age)*3);for(let i=0;i<coinDrop.amount;i++)SK.drawGoldCoin(ctx,coinDrop.x+(i-(coinDrop.amount-1)/2)*age*28,(coinDrop.y||532)-65*Math.sin(Math.min(1,age)*Math.PI)+age*14,6);ctx.restore();}else coinDrop=null;}
       for(const group of groups)T.updateResidentGroup(group,x,dt);
       T.updateRichardChat(richardChat,locals,dt,camera);
-      for(const local of locals){const g=local.group,lx=g.x+local.offset,walking=g.greeting<=0&&!(g.conversation>0);local.r.wave=g.greeting>0;
+      for(const local of locals){const g=local.group,lx=g.x+local.offset,walking=g.greeting<=0&&!(g.conversation>0);local.r.wave=g.greeting>0||!!(surprises?.active&&Math.abs(lx-surprises.active.edge)<430&&!local.r.def.adult);
         const laughing=richardChat.laugh>0&&(local===richardChat.richard||local===richardChat.listener);
         if(laughing)local.r.wave=false;
         if(lx>camera-100&&lx<camera+1380){
@@ -610,14 +631,18 @@
           if(laughing){ctx.save();ctx.font='bold 21px "Trebuchet MS",sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff5d8';ctx.beginPath();ctx.roundRect(lx-66,350,132,40,15);ctx.fill();ctx.fillStyle='#865123';ctx.fillText('Ha ha ha !',lx,377);ctx.restore();}
         }
       }
+      const cameo=surprises?.active;
+      if(cameo&&cameo.age>.28&&!cameo.announced){cameo.announced=true;if(now>=bubbleUntil){bubble.classList.remove('gold-reward');bubble.textContent='Aaaah ! C’est '+cameo.guest.name+' !';bubble.hidden=false;bubbleUntil=now+2600;}}
       canvas.dataset.villagers=locals.length;
+      canvas.dataset.cameo=cameo?.guest.id||'';
       if(now>=bubbleUntil)bubble.hidden=true;
       bubble.style.left=(SK.clamp(x-camera,145,1135)/12.8)+'%';bubble.style.top=((opts.charId==='milo'?475:opts.charId==='adam'||opts.charId==='edison'?440:410)/7.2)+'%';
       if(opts.labelEl)opts.labelEl.style.setProperty('--player-x',(SK.clamp(x-camera,150,1130)/12.8)+'%');
-      const r=SK.fakeRacer(opts.charId,opts.boardId,'ride',opts.look);R.drawWalker(ctx,r,x,610+(digProgress?Math.sin(digProgress*Math.PI*4)**2*13:0),65,walkTime,facing,moving);
+      const r=SK.fakeRacer(opts.charId,opts.boardId,'ride',opts.look);r.digProgress=digProgress;R.drawWalker(ctx,r,x,610+(digProgress?Math.sin(digProgress*Math.PI*4)**2*13:0),65,walkTime,facing,moving);
 
       for(const local of locals)T.drawParentGreeting(ctx,local,opts.charId,camera);
       T.drawRichardChat(ctx,richardChat,camera);
+      SK.TownSurprises?.drawGreeting(ctx,surprises?.active,camera);
       ctx.restore();
       for(let i=0;i<85;i++)oval(ctx,(i*173+t*(10+i%4*3))%1280,(i*79+t*(18+i%5*5))%720,1+i%3*.4,1+i%3*.4,'#ffffffb0');
       // Les indications latérales suivent les limites réelles de la rue.

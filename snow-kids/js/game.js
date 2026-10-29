@@ -13,7 +13,10 @@
     r.accelerationSeconds=15-7*Math.min(acceleration,16)/16-5*Math.max(0,acceleration-16)/34;
   };
   SK.speedFromStat=n=>27+.8*Math.min(SK.capStat(n),16)+.3*Math.max(0,SK.capStat(n)-16);
-  SK.jumpFromStat=n=>3.7+.32*Math.min(SK.capStat(n),16)+.07*Math.max(0,SK.capStat(n)-16);
+  // Progression gives more airtime for tricks, independently of downhill speed.
+  SK.jumpFromStat=n=>5.1+.24*Math.min(SK.capStat(n),16)+.12*Math.max(0,SK.capStat(n)-16);
+  // Small, continuous height bonus above 100 km/h, capped at +18%.
+  SK.jumpSpeedFactor=speed=>{const k=Math.max(0,speed*3.6),points=[[100,0],[120,.04],[150,.08],[200,.14],[250,.18]];let bonus=0;for(let i=1;i<points.length;i++){const [a,x]=points[i-1],[b,y]=points[i];if(k>a)bonus=x+(y-x)*SK.clamp((k-a)/(b-a),0,1);if(k<=b)break;}return Math.sqrt(1+bonus);};
   SK.coinSpeedBonus=r=>Math.max(0,Math.min(r.coinCapacity||20,r.coins||0));
   SK.raceTopSpeed=r=>r.maxSpeed+SK.coinSpeedBonus(r)/3.6;
   SK.accelerationStep=function(speed,target,seconds,dt){
@@ -38,14 +41,14 @@
     this.jumpPower = SK.jumpFromStat((d.jump||3)+(b.jump||0)); // vitesse verticale d'un saut au bouton
     this.strength = SK.capStat((d.strength||3)+(opts.strengthLevel||0)); this.pushCooldown=0; this.pushVelocity=0;
     this.stunFactor = 1 - 0.08 * (d.weight - 3);
-    this.gear = opts.gear || {}; this.powerLevels=opts.powerLevels||{};
+    this.helmetLost=false;this.helmetFlight=null;this.gear = opts.gear || {}; this.powerLevels=opts.powerLevels||{};
     if (Object.keys(this.gear).some(SK.isHelmet)) this.stunFactor *= 0.8;
     if (this.gear.gants) this.trickSpeed *= 1.1;
     SK.GearEffects?.init(this);
     this.x = 0; this.z = 0; this.lap = 0; this.yAbs = 0; this.h = 0; this.vy = 0; this.lastVy = 0; this.speed = 0; this.steer = 0;
     this.springReadyAt=0;
     this.state = 'ride'; this.stun = 0; this.flat = 0; this.wallT = 0;
-    this.shot = null; this.item = null; this.coins = 0; this.coinsTotal = 0; this.trackCoins = 0; this.tricksCoins = 0; this.tricksCount = 0;
+    this.shot = null; this.item = null; this.coins = 0; this.coinsTotal = 0; this.trackCoins = 0; this.tricksCoins = 0; this.tricksCount = 0;this.missionTricks=0;
     this.curTrick = null; this.tricksDone = []; this.airT = 0; this.trickRampJump = false; this.pending = null;
     this.fx = { parachute: 0, fan: 0, invisible: 0, slow: 0, snowman: 0 };
     this.rank = idx; this.finishTime = null; this.lift = null; this.lapTimes = []; this.lapStart = 0;
@@ -58,15 +61,18 @@
   // Shared deterministic weather: the warning cloud and lateral force use the same clock.
   SK.stormAt=function(course,time,seed=1,progress=0){
     if(!(course.blizzard||course.strongWind)||(!course.stormFromCountdown&&time<6))return {strength:0,force:0,direction:0,warning:false};
-    const elapsed=course.stormFromCountdown?Math.max(0,time+6.7):time-6,cycle=Math.floor(elapsed/12),phase=elapsed%12,direction=(cycle+(seed%2))%2?1:-1;
-    const warning=phase<1.4,strength=phase>=1.4&&phase<5.2?Math.sin((phase-1.4)/3.8*Math.PI):0;
+    const duration=course.gustDuration||3.8,period=12+duration-3.8;
+    const elapsed=course.stormFromCountdown?Math.max(0,time+6.7):time-6,cycle=Math.floor(elapsed/period),phase=elapsed%period,direction=(cycle+(seed%2))%2?1:-1;
+    const warning=phase<1.4,strength=phase>=1.4&&phase<1.4+duration?Math.sin((phase-1.4)/duration*Math.PI):0;
     const intensity=course.progressiveStorm?.08+.92*SK.clamp(progress,0,1):1;
     return {strength:strength*intensity,force:direction*(course.strongWind?3.5:2.7)*strength*intensity,direction,warning:warning&&intensity>.2,intensity};
   };
+  SK.cpuStartChances=index=>index>=1?{boost:Math.min(.85,.20+(index-1)*.045),big:Math.min(.4,.05+(index-1)*.025)}:{boost:0,big:0};
+  SK.cpuStartTurbo=(index,roll)=>{const p=SK.cpuStartChances(index);return roll<p.big?3:roll<p.boost?1.5:0;};
   SK.startTurboDuration=seconds=>seconds>=1.4-1e-8&&seconds<=1.6+1e-8?3:seconds>=1.2-1e-8&&seconds<=1.8+1e-8?1.5:0;
   SK.Race = function (opts) {
     this.course = opts.course; this.seed = opts.seed || 1; this.mission = opts.mission || null; const slalomLevel=this.mission?.type==='slalom'?this.mission.level:0;
-    this.track = SK.buildTrack(this.course, this.seed, { coinLevel:this.mission?.type==='coins'&&this.mission.level<=3?this.mission.level:0, boostPads: !this.mission, slalomLevel, deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
+    this.track = SK.buildTrack(this.course, this.seed, { coinLevel:this.mission?.type==='coins'?this.mission.level:0, shootingLevel:this.mission?.type==='hits'?this.mission.level:0, boostPads: !this.mission, slalomLevel, tricksLesson: this.mission?.type==='tricks'?this.mission.level||1:0, deadForest: this.mission?.id==='slalom3', slalom: this.mission && this.mission.type === 'slalom', rockBarriers: this.mission && this.mission.type === 'nofall' ? this.mission.level||1 : 0, edgeLesson: this.mission?.type === 'edges' ? this.mission.level || 1 : 0 });
     this.course=this.track.course;
     this.boostOnly = !!this.mission && this.mission.type !== 'hits' && !(this.mission.type==='coins'&&this.mission.level===3);
     if(this.boostOnly)for(const segment of this.track.segs)for(const box of segment.boxes)box.kind='blue';
@@ -74,11 +80,12 @@
     this.L = this.track.L; this.gateX = this.track.gateX; this.gateW = this.track.gateW; this.gateZ = this.track.gateZ; this.laps = opts.laps || this.course.laps || SK.DEFAULT_LAPS; this.mode = opts.mode || 'race';
     this.difficulty = opts.difficulty == null ? 1 : opts.difficulty; this.rng = SK.rng(this.seed * 31 + 7);
     this.time = -3.4; this.phase = 'count'; this.countShown = -4; this.events = []; this.rocks = []; this.shots = []; this.explosions=[]; this.nextChair = 0; this.lastFinish = 0;
-    this.racers = opts.racers.map((r, i) => new Racer(this, r, i));
+    this.racers = (this.mission?.type==='hits'?opts.racers.filter(r=>r.ctrl==='human').slice(0,1):opts.racers).map((r, i) => new Racer(this, r, i));
     const w0 = this.track.segs[0].w, n = this.racers.length;
     this.racers.forEach((r, i) => { r.x = n === 1 ? 0 : (-0.6 + 1.2 * i / (n - 1)) * w0; r.startX = r.x; r.z = 2 + i * 0.5; r.yAbs = this.track.groundY(r.z);
 
     });
+    for(const r of this.racers)if(r.ctrl==='cpu'&&this.course.cupIndex>=1)r.startTurbo=SK.cpuStartTurbo(this.course.cupIndex,this.rng());
     this.rankAll();
     for(const r of this.racers)if(r.gear.sac&&this.mode!=='time')r.item=this.rollPower(r,'blue');
     this.humans = this.racers.filter(r => r.ctrl === 'human');
@@ -86,12 +93,19 @@
   const P = SK.Race.prototype;
   SK.missionOutcome = function(race,r){
     const m=race.mission;if(!m)return null;
-    const value=m.type==='slalom'?race.gatesPassed:m.type==='coins'?r.trackCoins:m.type==='tricks'?r.tricksCoins:m.type==='hits'?r.stats.hits:m.type==='pushes'?r.stats.pushes:m.type==='time'?r.finishTime:m.type==='edges'?r.stats.edges:r.stats.falls;
+    const value=m.type==='slalom'?race.gatesPassed:m.type==='coins'?r.trackCoins:m.type==='tricks'?(r.missionTricks||0):m.type==='hits'?(r.targetScore||0):m.type==='pushes'?r.stats.pushes:m.type==='time'?r.finishTime:m.type==='edges'?r.stats.edges:r.stats.falls;
     const time=r.finishTime,medal=m.type==='coins'&&Number.isFinite(time)&&!r.estimated?['gold','silver','bronze'].find(k=>value>=m.medalCounts[k])||null:m.type==='slalom'&&value>=m.goal&&Number.isFinite(time)&&!r.estimated?['gold','silver','bronze'].find(k=>time<=m.medalTimes[k])||null:null;
     const ok=['slalom','coins'].includes(m.type)?!!medal:m.type==='time'?value!=null&&value<=m.goal:['nofall','edges'].includes(m.type)?value===0:value>=m.goal;
     const clean=(r.stats.falls||0)===0&&(r.stats.edges||0)===0;
     const perfect=ok&&clean&&(m.type==='coins'?medal==='gold':m.type==='slalom'?race.gatesTotal>0&&value===race.gatesTotal:m.type==='time'?value<=m.goal*.9:['nofall','edges'].includes(m.type)?true:value>=Math.ceil(m.goal*1.25));
     return {value,ok,perfect,medal,time};
+  };
+  P.redLineJump=function(r,previousZ){
+    const lo=Math.min(previousZ,r.z)-5,hi=Math.max(previousZ,r.z)+5;
+    for(let i=Math.max(0,Math.floor(lo/SEG)-1);i<=Math.min(this.track.segs.length-1,Math.floor(hi/SEG));i++){
+      const q=this.track.segs[i],line=q.z+SEG;
+      if(q.ramp&&q.jump&&line>=lo&&line<=hi){r.vy=Math.max(r.vy,r.jumpPower*.85)+4.2;r.trickRampJump=true;r.redLineBoostAt=this.time;return true;}
+    }return false;
   };
   P.springJump=function(r,charge){
     if(!r.gear.ressort||charge<.95||this.time<(r.springReadyAt||0))return false;
@@ -103,6 +117,25 @@
   P.racerAhead = function (r) { return this.racers.find(o => o.rank === r.rank - 1) || null; };
   P.racerBehind = function (r) { return this.racers.find(o => o.rank === r.rank + 1) || null; };
 
+  P.countdownPose=function(r,dt){
+    const inp=r.input,previous=r.prev||{},ground=this.track.groundY(r.z);
+    r.speed=0;r.lateralVelocity=0;r.steer=0;r.visualTurn=0;
+    const crouch=inp.up&&r.state==='ride'?1:0;
+    r.crouch=(r.crouch||0)+SK.clamp(crouch-(r.crouch||0),-5*dt,5*dt);
+    if(r.state==='ride'){
+      if(inp.jump)r.jumpCharge=Math.min(1,(r.jumpCharge||0)+dt/.9);
+      r.pumpPose=r.jumpCharge||0;
+      if(previous.jump&&!inp.jump&&(r.jumpCharge||0)>0){
+        r.vy=r.jumpPower*(.4+.6*r.jumpCharge);r.state='air';r.airT=0;r.airYaw=0;r.jumpCharge=0;r.pumpPose=0;
+        this.emit({type:'jump',r,big:false});
+      }
+    }
+    if(r.state==='air'){
+      r.airT+=dt;r.vy-=SK.GRAVITY*dt;r.h=Math.max(0,r.h+r.vy*dt);
+      if(r.h<=0){r.state='ride';r.vy=0;r.airT=0;this.emit({type:'land',r});}
+    }
+    r.yAbs=ground+r.h;r.prev={...inp};
+  };
   P.update = function (dt) {
     if (this.phase === 'over') return;
     if(this.phase==='race'&&SK.GearEffects)dt*=SK.GearEffects.timeScale(this,dt);
@@ -110,22 +143,29 @@
     if (this.phase === 'count') {
       for(const r of this.humans){
         const held=!!r.input.up;
-        if(held&&!r.startHeld)r.startTurbo=SK.startTurboDuration(-this.time);
-        if(!held)r.startTurbo=0;
+        if(held&&!r.startHeld){r.startTurbo=SK.startTurboDuration(-this.time);if(r.startTurbo){r.startTurboCueAt=this.time;this.emit({type:'starttiming',r,long:r.startTurbo===3});}}
+        if(!held){r.startTurbo=0;r.startTurboCueAt=null;}
         r.startHeld=held;
+        this.countdownPose(r,dt);
       }
       const c = Math.min(3, Math.ceil(-this.time));
       if (c !== this.countShown && c <= 3) { this.countShown = c; this.emit({ type: 'count', n: c }); }
-      if (this.time >= 0) { this.phase = 'race'; this.emit({ type: 'go' }); for(const r of this.humans)if(r.startTurbo){r.fx.fan=Math.max(r.fx.fan||0,r.startTurbo);r.speed=SK.raceTopSpeed(r)*1.1;this.emit({type:'startturbo',r,long:r.startTurbo===3});} for (const r of this.racers) if (r.gear.fusee) SK.GearEffects?SK.GearEffects.boost(r,3):r.fx.fan=3; } else { this.rankAll(); return; }
+      if (this.time >= 0) { this.phase = 'race'; this.emit({ type: 'go' }); for(const r of this.racers)if(r.startTurbo){r.startTurboAt=this.time;r.fx.fan=Math.max(r.fx.fan||0,r.startTurbo);r.speed=Math.max(r.speed,SK.raceTopSpeed(r)*.35); /* le ventilateur fait le reste : on sent l’accélération */this.emit({type:'startturbo',r,long:r.startTurbo===3});} for (const r of this.racers) if (r.gear.fusee) SK.GearEffects?SK.GearEffects.boost(r,3):r.fx.fan=3; } else { this.rankAll(); return; }
+    }
+    for(const entry of this.track.cows||[]){const cow=entry.cow;cow.mooPose=Math.max(0,(cow.mooUntil||0)-this.time);
+      const nearby=this.humans.find(r=>r.state!=='done'&&r.state!=='lift'&&entry.z-r.z>-5&&entry.z-r.z<75&&cow.mooLap!==r.lap);
+      if(nearby&&this.time>=(this.nextMooAt||0)){cow.mooLap=nearby.lap;cow.mooUntil=this.time+1.3;this.nextMooAt=this.time+1.4;this.emit({type:'moo',r:nearby});}
     }
     for(const cow of this.track.walkers||[]){
       const a=this.time*cow.walk.rate+cow.walk.phase;
       cow.x=Math.sin(a)*cow.walk.range;cow.facing=Math.cos(a)>=0?1:-1;
       cow.walkTime=this.time;
     }
+    SK.ForestLife?.update(this,dt);
     SK.CoinWildlife?.update(this,dt);
     for (const r of this.racers) if (r.ctrl === 'cpu' && SK.AI) SK.AI.drive(this, r, dt);
     for (const r of this.racers){r.snowPrevious={x:r.x,z:r.z};this.updateRacer(r, dt);}
+    SK.MagicBoards?.update(this,dt);
     this.updateSnowGuards(dt);
     this.updatePolarBears(dt);
     SK.LensSnow.update(this,dt);
@@ -134,7 +174,9 @@
     this.explosions=this.explosions.filter(e=>this.time-e.at<1.2);
     this.rocks = this.rocks.filter(k => k.until > this.time);
     this.rankAll();
-    if (this.racers.every(r => r.state === 'done')) this.finish();
+    // Missions end with the player; opponents are practice partners, not finish requirements.
+    if (this.mission && this.humans.length && this.humans.every(r => r.state === 'done')) this.finish();
+    else if (this.racers.every(r => r.state === 'done')) this.finish();
     else if (this.humans.length && this.humans.every(r => r.state === 'done') && this.time > this.lastFinish + 6) {
       for (const r of this.racers) if (r.state !== 'done') {
         const remaining = this.laps * this.L - r.progress(), liftsLeft = this.laps - 1 - r.lap - (r.state === 'lift' ? 0 : 0);
@@ -159,28 +201,32 @@
 
   // ------------------------------------------------------------------ un coureur
   P.updateRacer = function (r, dt) {
-    const inp = r.input, prev = r.prev, T = this.track;
+    const takeoffSpeed=r.speed,inp = r.input, prev = r.prev, T = this.track;
     r.pushCooldown=Math.max(0,(r.pushCooldown||0)-dt);
     const edge = k => inp[k] && !prev[k];
     for (const k in r.fx) if (r.fx[k] > 0) r.fx[k] = Math.max(0, r.fx[k] - dt);
     r.pumpPose=Math.max(0,(r.pumpPose||0)-dt*4);
     if (r.flat > 0) r.flat -= dt;
+    if(r.fx.snowBuried>0){r.speed=0;r.h=0;r.yAbs=T.groundY(r.z);r.stun=.35;r.prev=Object.assign({},inp);return;}
     if (r.state === 'done') { r.prev = Object.assign({}, inp); return; }
     if (r.state === 'lift') {
       if (this.time >= r.lift.end) { // la chaise arrive en haut : on voit le coureur descendre du siège sur la piste
-        r.lap++; if(r.gear.sac&&this.mode!=='time'&&!r.item)r.item=this.rollPower(r,'blue'); r.z = 2; r.x = r.startX; r.yAbs = T.groundY(r.z) + 4; r.h = 4; r.speed = 5; r.state = 'drop'; r.lift = null; r.lapStart = this.time; r.steer = 0;
+        r.lap++; if(r.gear.sac&&this.mode!=='time'&&!r.item)r.item=this.rollPower(r,'blue'); r.z = 2; r.x = r.startX; r.yAbs = T.groundY(r.z) + 4; r.h = 4; r.speed = 5; r.state = 'drop'; r.liftPressAt=null; r.liftLandingAt=null; r.lift = null; r.lapStart = this.time; r.steer = 0;
       }
       r.prev = Object.assign({}, inp); return;
     }
     if (r.state === 'drop') { // suspendu à la chaise, on descend doucement jusqu'à la neige
+      if(edge('up')&&r.h<=.75)r.liftPressAt=this.time;
       r.h = Math.max(0, r.h - 3.4 * dt); r.z += r.speed * dt; r.yAbs = T.groundY(r.z) + r.h;
-      if (r.h <= 0) { r.state = 'ride'; r.speed = 8; this.emit({ type: 'lapstart', r }); }
+      if (r.h <= 0) { r.state = 'ride'; r.speed = 8; r.liftLandingAt=this.time; if(inp.up&&r.liftPressAt!=null&&this.time-r.liftPressAt<=.24)this.liftBoost(r); this.emit({ type: 'lapstart', r }); }
       r.prev = Object.assign({}, inp); return;
     }
+    if(edge('up')&&r.liftLandingAt!=null&&this.time-r.liftLandingAt<=.16)this.liftBoost(r);
     const s = T.segAt(r.z), surf = SK.SURFACES[s.surface] || SK.SURFACES.snow;
     if(r.speed>=70/3.6)r.recovering=false;
-    if(r.recovering && edge('up')) {
-      if(r.state==='fall'){r.stun=Math.max(0,r.stun-.22);r.flat=Math.min(r.flat,r.stun);}
+    // Tapoter ↑ donne un coup de pied à tout moment sous 70 km/h ; au sol après une chute, ça abrège l’étourdissement.
+    if(edge('up') && r.speed<70/3.6) {
+      if(r.state==='fall'&&r.recovering){r.stun=Math.max(0,r.stun-.22);r.flat=Math.min(r.flat,r.stun);}
       else if(r.state==='ride'){r.speed=Math.min(70/3.6, r.speed+8/3.6);r.fx.pump=.25;}
     }
     if(r.speed>=70/3.6)r.recovering=false;
@@ -188,7 +234,7 @@
     if (stunned) {
       r.stun -= dt; r.speed = Math.max(0, r.speed - 20 * dt);
       if (r.state === 'frozen') r.speed = 0;
-      if (r.stun <= 0) { r.state = 'ride'; }
+      if (r.stun <= 0 && r.h <= 0) { r.state = 'ride'; }
     }
     // ---- vitesse
     let target = 0;
@@ -199,7 +245,7 @@
       // Le laboratoire isole l’effet de la pente, sans modifier les courses normales.
       if(this.debugLab){const angle=Math.atan2(s.y1-s.y2,SEG);f*=Math.max(0,1+Math.sin(angle)-Math.sin(Math.atan(SK.SLOPE)));}
       if(r.state==='ride')f*=1-.12*Math.pow(Math.abs(r.visualTurn||0),1.4);
-      if(r.gear.casqueAero&&Math.abs(r.steer)<.15&&Math.abs(s.curve)<.3)f*=1.1;
+      if(!r.helmetLost&&r.gear.casqueAero&&Math.abs(r.steer)<.15&&Math.abs(s.curve)<.3)f*=1.1;
       target = SK.raceTopSpeed(r) * f;
     }
     if (r.state === 'air') { /* en l'air : la vitesse se conserve (légère perte) */ r.speed = Math.max(0, r.speed - 0.6 * dt); }
@@ -210,7 +256,7 @@
       }else r.speed=Math.max(target,r.speed-(inp.down?12:1.5)*dt);
     }
     // ---- latéral : direction, force centrifuge, murs
-    const kappa = s.curve / (SEG * SEG), centrifugal = kappa * r.speed * r.speed * 4.2;
+
     r.steer += SK.clamp((r.fx.oilSpin>0?Math.sin(this.time*12):inp.steer) - r.steer, -7/1.3 * dt, 7/1.3 * dt); // la direction se prend progressivement (inclinaison)
     // L'inclinaison visuelle suit la direction sans changement instantané de pose.
     r.turnCharge = (r.turnCharge || 0) + SK.clamp(inp.steer - (r.turnCharge || 0), -1.8/1.3 * dt, 1.8/1.3 * dt);
@@ -223,7 +269,13 @@
       if(r.lateralVelocity==null)r.lateralVelocity=groundSteering;
       // Keep the launch trajectory; allow gentle corrections without curve-driven reversal.
       if(!stunned)r.lateralVelocity=SK.clamp(r.lateralVelocity+inp.steer*3*dt,-r.steerRate*1.5,r.steerRate*1.5);
-    }else r.lateralVelocity=groundSteering-centrifugal*(1-(r.cornerHold||0))*(s.surface==='ice'?1.25:1);
+    }else {
+      const desired=SK.curveDriftTarget(this.course,T,r.z,r.speed,r.cornerHold||0);
+      const previous=r.curveDrift||0,step=this.course.cornerDriftAcceleration*dt;
+      r.curveDrift=previous+SK.clamp(desired-previous,-step,step);
+      const drift=r.curveDrift;
+      r.lateralVelocity=groundSteering-drift;
+    }
     r.x+=r.lateralVelocity*dt;
     if (station && r.lap + 1 < this.laps) { r.speed = Math.max(6, Math.min(r.speed, 14) - 10 * dt); target = 0; }
 
@@ -245,33 +297,43 @@
     // ---- avance
     const zPrev = r.z; r.z += r.speed * dt;
     // X plie les genoux ; seul le relâchement déclenche le saut chargé.
+    const advanced=['ride','air'].includes(r.state)?SK.AdvancedTricks?.input(r,dt):false;
     const releasedJump=prev.jump&&!inp.jump;
     if(r.state==='ride'&&!stunned&&inp.jump){r.jumpCharge=Math.min(1,(r.jumpCharge||0)+dt/.9);r.pumpPose=r.jumpCharge;}
     else if(r.state!=='ride'||stunned)r.jumpCharge=0;
     if(releasedJump&&!stunned&&SK.pumpKick(r))this.emit({type:'pump',r});
 
     // ---- relief, sauts, figures
-    const gy = T.groundY(r.z);if(r.state==='ride')r.ceilingHit=false;
+    const wasAir=r.state==='air',gy = T.groundY(r.z);if(r.state==='ride')r.ceilingHit=false;
     if (r.state === 'ride' || (stunned && r.h <= 0)) {
       if (gy < r.yAbs - 1.0 && r.speed > 5 && !stunned) { // le sol se dérobe d'un coup (falaise) : envol
-        r.trickRampJump = [T.segAt(zPrev),T.segAt(r.z)].some(q=>q.ramp&&!q.down); r.state = 'air'; r.vy = Math.max(0.5, r.lastVy) + (inp.jump ? r.jumpPower * .6 * (r.jumpCharge||0) : 0) + 1; r.airT = 0; r.tricksDone = []; r.h = r.yAbs - gy; if(inp.jump)this.springJump(r,r.jumpCharge||0);this.emit({ type: 'jump', r, big: true });
+        r.trickRampJump = [T.segAt(zPrev),T.segAt(r.z)].some(q=>q.ramp&&!q.down); r.state = 'air'; r.vy = r.jumpPower * (inp.jump ? .6+.4*(r.jumpCharge||0) : .6); r.airT = 0; r.airYaw=0; r.tricksDone = []; r.h = r.yAbs - gy; if(inp.jump)this.springJump(r,r.jumpCharge||0);r.vy*=SK.jumpSpeedFactor(takeoffSpeed);this.emit({ type: 'jump', r, big: true });
       } else {
         r.lastVy = dt > 0 ? (gy - r.yAbs) / dt : 0; r.yAbs = gy; r.h = 0;
-        if (!stunned && releasedJump && (r.jumpCharge||0)>0) { r.trickRampJump = [T.segAt(zPrev),T.segAt(r.z)].some(q=>q.ramp&&!q.down); r.state = 'air'; r.vy = r.jumpPower * (.4+.6*r.jumpCharge) + Math.max(0, r.lastVy); const superJump=this.springJump(r,r.jumpCharge);r.jumpCharge=0; r.airT = 0; r.tricksDone = []; this.emit({ type: 'jump', r, big: superJump }); }
+        if (!stunned && releasedJump && (r.jumpCharge||0)>0) { r.trickRampJump = [T.segAt(zPrev),T.segAt(r.z)].some(q=>q.ramp&&!q.down); r.state = 'air'; r.vy = r.jumpPower * (.6+.4*r.jumpCharge); const lineJump=this.redLineJump(r,zPrev),superJump=this.springJump(r,r.jumpCharge)||lineJump;r.vy*=SK.jumpSpeedFactor(takeoffSpeed);r.jumpCharge=0; r.airT = 0; r.airYaw=0; r.tricksDone = []; this.emit({ type: 'jump', r, big: superJump }); }
       }
     }
+    if(stunned&&r.h>0){r.vy-=SK.GRAVITY*dt;r.h=Math.max(0,r.h+r.vy*dt);r.yAbs=gy+r.h;if(!r.h){r.vy=0;r.stun=Math.max(r.stun,.35);}}
     if(releasedJump||r.state!=='ride')r.jumpCharge=0;
     if (r.state === 'air') {
-      r.airT += dt; r.vy -= SK.GRAVITY * dt; r.yAbs += r.vy * dt; r.h = Math.max(0, r.yAbs - gy);
+      // Integrate above the piste: terrain never amplifies the takeoff impulse.
+      const heightBefore=wasAir?Math.max(0,r.yAbs-T.groundY(zPrev)):0;
+      r.airT += dt; r.vy -= SK.GRAVITY * dt; r.h = Math.max(0,heightBefore+r.vy*dt); r.yAbs=gy+r.h;
       if(T.segAt(r.z).ceiling&&r.h>T.segAt(r.z).ceiling){r.h=T.segAt(r.z).ceiling;r.yAbs=gy+r.h;r.vy=-2;if(!r.ceilingHit){r.ceilingHit=true;this.fall(r,1.2,false);this.emit({type:'obstacle',r,kind:'ceiling'});}}
-      if (r.curTrick) { r.curTrick.t += dt * r.trickSpeed; if (r.curTrick.t >= r.curTrick.def.dur) { r.tricksDone.push(r.curTrick.def); r.curTrick = null; } }
-      else if (edge('trick') || (edge('jump') && r.airT > 0.08)) { // C ou X en l'air + direction = une des huit figures
-        const dir = inp.up ? 'up' : inp.down ? 'down' : inp.steer < -0.3 ? 'left' : inp.steer > 0.3 ? 'right' : 'none';
-        const id = SK.trickFor(edge('trick') ? 'trick' : 'jump', dir);
-        if (id) { r.curTrick = { id, def: SK.TRICKS[id], t: 0 }; this.emit({ type: 'trickstart', r, id }); }
+      if(r.trickQueue){r.trickQueue.ttl-=dt;if(r.trickQueue.ttl<=0)r.trickQueue=null;}
+      if(!advanced&&r.state==='air'&&(edge('trick')||(edge('jump')&&r.airT>.08))){
+        // A held accelerator must not hide left/right trick directions.
+        const dir=inp.down&&inp.steer<-.3?'downleft':inp.steer<-.3?'left':inp.steer>.3?'right':inp.down?'down':inp.up?'up':'none';
+        const id=SK.trickFor(edge('trick')?'trick':'jump',dir);
+        if(id)r.trickQueue={id,ttl:.45};
+      }
+      if(r.curTrick){r.curTrick.t+=dt*r.trickSpeed;if(r.curTrick.t>=r.curTrick.def.dur){r.tricksDone.push(r.curTrick.def);if(r.curTrick.def.anim==='spin')r.airYaw=(r.airYaw||0)+Math.PI*2*(r.curTrick.def.turns||1)*(r.curTrick.def.sign||1);r.curTrick=null;}}
+      if(!r.curTrick&&r.trickQueue){
+        const id=r.trickQueue.id;r.trickQueue=null;
+        r.curTrick={id,def:SK.TRICKS[id],t:0};this.emit({type:'trickstart',r,id});
       }
       if (r.yAbs <= gy) { // atterrissage
-        r.yAbs = gy; r.h = 0; r.vy = 0; r.lastVy = 0; r.state = 'ride';
+        r.yAbs = gy; r.h = 0; r.vy = 0; r.lastVy = 0; r.state = 'ride';r.advancedCombo=null;r.trickQueue=null;r.airYaw=0;
         if(r.gear.gants&&r.curTrick&&!r.pending&&r.curTrick.t>=r.curTrick.def.dur*.75){r.tricksDone.push(r.curTrick.def);r.curTrick=null;}
         if(!r.curTrick&&!r.pending)SK.GearEffects?.land(r);
         if (r.curTrick || r.pending) { const why = r.pending; r.pending = null; r.curTrick = null; r.tricksDone = []; this.fall(r, why === 'gel' ? 0 : 1.4, why === 'poele'); if (why === 'gel') this.freeze(r, 2); }
@@ -279,11 +341,12 @@
           let total = 0; r.tricksDone.forEach((t, i) => { total += t.coins * (1 + 0.5 * i); });
           total = Math.max(1, Math.round(total * r.trickPay));
           const awarded=SK.collectGold?SK.collectGold(r,total):total;if(!SK.collectGold){r.coins+=total;r.coinsTotal+=total;} r.tricksCoins += total; r.tricksCount += r.tricksDone.length;
+          if(this.mission?.type==='tricks')r.missionTricks+=r.tricksDone.filter(t=>t===SK.TRICKS[this.mission.trickId]).length;
           if(r.trickRampJump){
             r.boostCombo = Math.min(5, r.tricksDone.length);
             r.fx.comboBoost = 2;
           }
-          this.emit({ type: 'trick', r, combo: r.tricksDone.length, coins: awarded, names: r.tricksDone.map(t => t.name) });
+          this.emit({ type: 'trick', r, combo: r.tricksDone.length, points: total, coins: awarded, names: r.tricksDone.map(t => t.name) });
           r.tricksDone = [];
         } else this.emit({ type: 'land', r });
         r.trickRampJump=false;
@@ -297,14 +360,22 @@
         r.fx.fan=Math.max(r.fx.fan||0,1.5);r.speed=Math.max(r.speed,SK.raceTopSpeed(r)*1.15);this.emit({type:'groundboost',r});
       }
       for (const p of sg.props) {
-        if (p.decor) continue;
+        if (p.decor || p.destroyed) continue;
         const pz = sg.z + (p.dz == null ? SEG / 2 : p.dz);
+        if(p.type==='balloon'){
+          const size=p.size||1,center=(3.2+(p.v||0))*size,scale=SK.characterScale(r.def.id);
+          const dx=Math.max(0,Math.abs(r.x-p.x)-.32*scale),dy=Math.max(r.h-center,center-(r.h+1.9*scale),0);
+          if(pz>=zPrev&&pz<r.z&&(dx/(.6*size))**2+(dy/(.75*size))**2<1){p.destroyed=true;r.balloonPopAt=this.time;this.emit({type:'coin',r});}
+          continue;
+        }
         if (pz >= zPrev && pz < r.z && Math.abs(r.x - p.x) < p.r + 0.7 && (p.type==='lowarch'||r.h < (p.clearance ?? 1.1)) && r.state !== 'fall') { // Les deux commandes plient les genoux : accélérer ou préparer le saut.
           if(p.type==='lowarch'&&r.h>=(p.height??SK.HURDLE_HEIGHT)+.12)continue;
           if(p.type==='lowarch'&&r.state==='ride'&&(r.def.lowPassagePassive||inp.up||inp.jump))continue;
+          if(p.type==='banana'&&this.avoidBanana(r))continue;
           if(!p.trainingBarrier&&!p.mandatory&&SK.GearEffects?.protect(r,p))continue;
           if(p.type==='lowarch'){this.daze(r,1.8);continue;}
           if(p.type==='snowman'){r.speed*=.55;r.fx.slow=Math.max(r.fx.slow,1.4);SK.LensSnow.splash(r,24,true);this.emit({type:'snowimpact',r});continue;}
+          if(p.type==='snowbank'){if(!this.fall(r,2.2,false))continue;r.fx.snowBuried=2.2;r.h=0;r.yAbs=T.groundY(r.z);r.vy=0;r.speed=0;this.emit({type:'obstacle',r,kind:p.type});continue;}
           if(p.type==='banana'){r.fx.slip=1.4;r.pushVelocity=(r.input.steer<0?-1:1)*6;}
           this.fall(r, 1.3, false); this.emit({ type: 'obstacle', r, kind: p.type }); }
       }
@@ -315,13 +386,14 @@
       }
       if(sg.puzzle&&!sg.puzzle.taken&&r.ctrl==='human'&&sg.z+SEG/2>=zPrev&&sg.z+SEG/2<r.z&&Math.abs(r.x-sg.puzzle.x)<1.8&&r.h<2.5){sg.puzzle.taken=true;this.emit({type:'puzzle',r,id:sg.puzzle.id});}
       for (const c of sg.coins) {
-        const cz = sg.z + SEG / 2;
+        const cz = sg.z + (c.dz??SEG / 2);
         if (c.taken <= this.time && cz >= zPrev && cz < r.z && Math.abs(r.x - (SK.CoinWildlife?.pose(c,this.time).x??c.x)) < (r.gear.aimant ? 2.8 : 1.5) && Math.abs(r.h+.5-(SK.CoinWildlife?.pose(c,this.time).h??.5)) < 1.4) { c.taken = this.time + SK.BOX_RESPAWN * 3; r.trackCoins++; if(SK.collectGold)SK.collectGold(r,SK.COIN_VALUE);else{r.coins+=SK.COIN_VALUE;r.coinsTotal+=SK.COIN_VALUE;} r.coinBurst=this.time;this.emit({ type: 'coin', r }); }
       }
     }
     for (const k of this.rocks) {
       if (k.until>this.time && k.lap===r.lap && !r.immune() && this.time >= (k.landed || 0) && k.z >= zPrev && k.z < r.z && Math.abs(r.x - k.x) < 1.7 && r.h < 1.2 && !(k.owner === r && this.time - k.t0 < 1.5) && r.state !== 'fall') {
-        k.until = 0; if(k.type==='oil'){r.speed*=.45;r.fx.slow=2;r.fx.oilSpin=1.5;r.pushVelocity=(this.rng()<.5?-1:1)*4;if(this.rng()<.5)this.fall(r,1.4,false);}else this.fall(r, 1.4, false); if(k.type==='banana'){r.fx.slip=1.4;r.pushVelocity=(r.input.steer<0?-1:1)*6;} this.emit({ type: 'rockhit', r, by: k.owner, trapType:k.type||'rock' }); if (k.owner && k.owner !== r) k.owner.stats.hits++;
+        if(k.type==='banana'&&this.avoidBanana(r)){k.until=0;continue;}
+        const speedBeforeTrap=r.speed,helmetBeforeTrap=r.helmetLost;k.until = 0; if(k.type==='oil'){r.speed*=.45;r.fx.slow=2;r.fx.oilSpin=1.5;r.pushVelocity=(this.rng()<.5?-1:1)*4;if(this.rng()<.5)this.fall(r,1.4,false);}else this.fall(r, 1.4, false); if(!helmetBeforeTrap&&r.helmetLost){r.speed=speedBeforeTrap*.85;r.fx.slow=0;}SK.CoinWildlife?.laugh(this,k.sourceEnemy,r);if(k.type==='banana'&&r.state==='fall'){r.fx.slip=1.4;r.pushVelocity=(r.input.steer<0?-1:1)*6;} this.emit({ type: 'rockhit', r, by: k.owner, trapType:k.type||'rock' }); if (k.owner && k.owner !== r) k.owner.stats.hits++;
       }
     }
     // ---- tirs et objets
@@ -362,6 +434,12 @@
   };
 
   // ------------------------------------------------------------------ effets
+  P.liftBoost=function(r){
+    r.liftLandingAt=null;r.liftPressAt=null;
+    r.fx.fan=Math.max(r.fx.fan||0,2);r.startTurboAt=this.time;
+    r.speed=Math.max(r.speed,SK.raceTopSpeed(r)*.5);
+    this.emit({type:'liftboost',r});
+  };
   P.pushRacer = function(r){
     if(r.state!=='ride'||r.pushCooldown>0)return false;
     r.pushCooldown=.55;r.fx.pushPose=.55;
@@ -374,21 +452,35 @@
     // Déplacement net même contre un personnage plus fort, puis retour au contrôle.
     o.pushVelocity=dir*(13+9*Math.tanh(difference/12));o.fx.wobble=1.1;
     o.fx.pushHit=.65;o.pushHitDirection=dir;
-    r.speed*=.92;o.speed*=.90;r.pushCooldown=3-1.2*Math.max(0,r.strength-10)/40;
+    r.speed*=.92;o.speed*=.90; // Ready again as soon as the .55 s arm animation finishes.
     o.pushImpactUntil=difference>=2?this.time+1.2:0;r.pushDirection=dir;
     r.stats.pushes++;this.emit({type:'push',r,target:o});return true;
   };
+  P.avoidBanana=function(r){return !!(r.board.bananaImmune||(r.gear.aerosolBanane&&this.rng()<.33));};
+  P.absorbHelmet=function(r){
+    const selected=r.look&&Object.prototype.hasOwnProperty.call(r.look,'helmet')?r.look.helmet:Object.keys(r.gear).find(id=>r.gear[id]&&SK.isHelmet(id));
+    const id=selected===true?'casque':selected;
+    if(r.helmetLost||!SK.isHelmet(id)||!['ride','air'].includes(r.state))return false;
+    r.helmetLost=true;r.helmetFlight={id,at:this.time,side:r.idx%2?-1:1};
+    if(Object.keys(r.gear).some(k=>r.gear[k]&&SK.isHelmet(k)))r.stunFactor/=.8;
+    r.speed*=.85;r.fx.wobble=.3;r.fx.slip=0;r.fx.oilSpin=0;r.fx.frontTumble=0;r.pushVelocity=0;
+    r.curTrick=null;r.trickQueue=null;r.tricksDone=[];r.pending=null;r.advancedCombo=null;r.jumpCharge=0;
+    this.emit({type:'helmetsave',r});return true;
+  };
   P.daze=function(r,duration){
+    if(this.absorbHelmet(r))return false;
     r.state='stunned';r.stun=Math.max(r.stun,duration*r.stunFactor);r.speed*=.3;
-    r.curTrick=null;r.pending=null;r.tricksDone=[];r.jumpCharge=0;
+    r.curTrick=null;r.trickQueue=null;r.pending=null;r.tricksDone=[];r.jumpCharge=0;
     this.emit({type:'dazed',r});
   };
 
   P.fall = function (r, dur, flat) {
-    if (r.state === 'air') { r.pending = flat ? 'poele' : 'bombe'; return; }
+    if(this.absorbHelmet(r))return false;
+    if (r.state === 'air') r.vy=Math.min(r.vy,0);
+    r.pending=null;r.jumpCharge=0;r.advancedCombo=null;
     r.recovering=true;
-    r.state = 'fall'; r.stun = Math.max(r.stun, dur * r.stunFactor); r.speed *= 0.25; r.curTrick = null; r.tricksDone = []; if (flat) r.flat = dur;
-    r.stats.falls++; this.emit({ type: 'fall', r });
+    r.state = 'fall'; r.airYaw=0; r.stun = Math.max(r.stun, dur * r.stunFactor); r.speed *= 0.25; r.curTrick = null; r.trickQueue=null; r.tricksDone = []; if (flat) r.flat = dur;
+    r.stats.falls++; this.emit({ type: 'fall', r });return true;
   };
   P.freeze = function (r, dur) {
     if (r.state === 'air') { r.pending = 'gel'; return; }
@@ -420,7 +512,7 @@
     if(SK.CoinWildlife?.shoot(this,r,kind))return;
     if(kind==='rocher'){this.dropTrap(r);return;}
     if (kind === 'poele') {
-      for (const o of this.racers) if (o !== r && o.progress()>r.progress() && !o.immune()) this.shots.push({ kind, from: r, target: o, drop: 1.5, h: 12 });
+      for (const o of this.racers) if (o !== r && o.progress()>r.progress() && !o.immune()) this.shots.push({ kind, from: r, target: o, drop: 3, h: 12 });
       return;
     }
     const target = this.racerAhead(r);
@@ -428,7 +520,7 @@
       if (kind === 'bombe') this.shots.push({ kind, from: r, target: null, prog: r.progress(), x: r.x, lap: r.lap, life: 2.5, h: 1 });
       return;
     }
-    this.shots.push({ kind, from: r, target, prog: r.progress(), x: r.x, lap: r.lap, life: 8, h: 1.2, armedAt:this.time+1.5 });
+    this.shots.push({ kind, from: r, target, prog: r.progress(), x: r.x, lap: r.lap, life: 8, h: 1.2, armedAt:this.time+3 });
   };
   P.useItem = function (r) {
     const kind = r.item; r.item = null; r.stats.items++;
@@ -477,12 +569,12 @@
       g.cooldown=Math.max(0,g.cooldown-dt);
       if(g.windup>0){g.windup=Math.max(0,g.windup-dt);if(g.windup===0){
         const dx=g.aimX-g.x,dz=g.aimZ-g.z,length=Math.hypot(dx,dz)||1;
-        this.shots.push({kind:'wildsnow',x:g.x,z:g.z,vx:dx/length*40,vz:dz/length*40,h:1,lap:g.lap,life:4});g.cooldown=3.5;
+        this.shots.push({kind:g.projectile||'wildsnow',x:g.x,z:g.z,vx:dx/length*40,vz:dz/length*40,h:1,lap:g.lap,life:4});g.cooldown=3.5;
       }continue;}
       if(g.cooldown>0)continue;
       const r=this.racers.filter(r=>r.state==='ride'&&!r.immune()&&g.z-r.z>15&&g.z-r.z<85).sort((a,b)=>b.z-a.z)[0];
       if(r){
-        g.windup=1;g.aimX=r.x*.9;g.lap=r.lap;
+        g.projectile=this.rng()>.78?'wildrock':'wildsnow';g.windup=2;g.aimX=r.x*.9;g.lap=r.lap;
         // Viser la position future après la préparation ET le trajet de la boule.
         const speed=Math.max(0,r.speed),dz=r.z+speed*g.windup-g.z,dx=g.aimX-g.x;
         const a=speed*speed-40*40,b=2*dz*speed,cc=dx*dx+dz*dz;
@@ -502,24 +594,24 @@
         for(const r of this.racers){if(r.lap!==s.lap||r.immune()||!['ride','air'].includes(r.state)||r.h>1.8)continue;
           const prev=r.snowPrevious||r,ax=ox-prev.x,az=oz-prev.z,dx=(s.x-r.x)-ax,dz=(s.z-r.z)-az;
           const q=SK.clamp(-(ax*dx+az*dz)/(dx*dx+dz*dz||1),0,1);
-          if(Math.hypot(ax+q*dx,az+q*dz)<1.25){if(s.kind==='wildrock'){this.fall(r,1,false);this.emit({type:'rockhit',r});}else{r.speed*=.72;r.fx.wobble=.8;this.emit({type:'snowimpact',r});}hit=true;break;}
+          if(Math.hypot(ax+q*dx,az+q*dz)<1.25){if(s.kind==='wildrock'){if(this.fall(r,1.25,false))r.fx.frontTumble=.85;this.emit({type:'rockhit',r});}else{r.speed*=.72;r.fx.wobble=.8;this.emit({type:'snowimpact',r});}SK.CoinWildlife?.laugh(this,s.sourceEnemy,r);hit=true;break;}
         }
         if(!hit&&s.life>0&&s.z>0&&s.z<this.L&&Math.abs(s.x)<this.track.widthAt(s.z)+5)keep.push(s);
         continue;
       }
       if(s.wildTarget){const a=s.wildTarget;s.life-=dt;if(a.down||a.mode==='gone'||s.life<=0)continue;s.prog+=95*dt;s.z=s.prog-s.lap*this.L;s.x+=(a.x-s.x)*Math.min(1,dt*9);if(s.z>=a.z-1){SK.CoinWildlife.hit(this,a,s.from);continue;}keep.push(s);continue;}
-      if (s.drop != null) { s.drop -= dt; s.h = Math.max(0, s.drop * 14); if (s.drop <= 0) { if(s.target.progress()>s.from.progress())this.applyHit(s.target, s.kind, s.from); continue; } keep.push(s); continue; }
+      if (s.drop != null) { s.drop -= dt; s.h = Math.max(0, s.drop * 4); if (s.drop <= 0) { if(s.target.progress()>s.from.progress())this.applyHit(s.target, s.kind, s.from); continue; } keep.push(s); continue; }
       s.life -= dt; if (s.life <= 0) { this.emit({ type: 'fizzle', s }); continue; }
       const spd = 95 + (s.target ? s.target.speed : 0);
       const previous=s.prog;s.prog += spd * dt;
-      const rock=this.rocks.find(k=>k.until>this.time&&k.owner!==s.from&&k.lap===Math.floor(previous/this.L)&&Math.abs(k.x-s.x)<2.5&&k.lap*this.L+k.z>=previous-1&&k.lap*this.L+k.z<=s.prog+1);
+      const rock=this.rocks.find(k=>k.until>this.time&&k.owner!==s.from&&k.lap===Math.floor(previous/this.L)&&Math.abs(k.x-s.x)<(k.type==='banana'?.45:.8)+.2&&k.lap*this.L+k.z>=previous-1&&k.lap*this.L+k.z<=s.prog+1);
       if(rock){rock.until=0;this.explosions.push({z:rock.z,x:rock.x,lap:rock.lap,at:this.time});this.emit({type:'explode',s});continue;}
 
       if (s.target) {
         if (s.target.state === 'lift' || s.target.state === 'done') { this.emit({ type: 'fizzle', s }); continue; }
         s.x += (s.target.x - s.x) * Math.min(1, 6 * dt);
         if(this.time<(s.armedAt||0))s.prog=Math.min(s.prog,s.target.progress()-3);
-        if (s.prog >= s.target.progress() - 0.5) { this.applyHit(s.target, s.kind, s.from); this.emit({ type: 'explode', s }); continue; }
+        if (previous<=s.target.progress()+1 && s.prog >= s.target.progress() - 0.5 && Math.abs(s.x-s.target.x)<1) { this.applyHit(s.target, s.kind, s.from); this.emit({ type: 'explode', s }); continue; }
       }
       s.lap = Math.floor(s.prog / this.L); s.z = s.prog - s.lap * this.L;
       if (s.z > this.L - 1) { this.emit({ type: 'fizzle', s }); continue; }

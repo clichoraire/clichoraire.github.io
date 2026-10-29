@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Bomberkid</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <section id="screen-menu" class="screen active">
+    <div class="title-bg" aria-hidden="true"></div>
+    <div id="home-kids" aria-label="Les jeunes héros"></div>
+    <div class="menu-sparkles" aria-hidden="true"><i>✦</i><i>✧</i><i>✦</i><i>✧</i><i>✦</i><i>✧</i></div>
+    <h1 class="title-heading"><button id="btn-title" aria-label="Bomberkid — faire rebondir le titre" type="button"><img src="assets/title-logo.png" alt="Bomberkid" fetchpriority="high" draggable="false"></button></h1>
+    <button id="btn-start-music" type="button" hidden>🎵 Lance la musique !</button>
+    <div class="menu-dock">
+      <div class="buttons">
+        <button id="btn-adventure" class="primary">🗺️ Aventure<small>Tableaux, énigmes et boss</small></button>
+        <button id="btn-challenges">🏅 Défis<small>Gagne de l’or pour toute la famille</small></button>
+        <button id="btn-editor">🧱 Éditeur<small>Crée ton propre tableau</small></button>
+        <button id="btn-options" class="ghost">⚙️ Options<small>Réglages de l’aventure</small></button>
+        <button id="btn-debug" class="ghost">🛠️ Debug<small>Personnages et animations</small></button>
+      </div>
+      <div id="menu-gold" class="gold-badge"><i class="goldcoin"></i> <span>0</span>&nbsp;pièces d’or de la famille</div>
+      <p class="menu-foot"><a href="../">← Les jeux</a> · <span id="version"></span> · Flèches + Espace · Shift ramasse et lance · <button id="btn-music" class="link" type="button">🎵 Musique : on</button> (M)</p>
+      <p class="menu-foot credits">Musique : Kevin MacLeod (incompetech.com), Creative Commons BY 4.0 — Pixelland, Bit Quest, 8bit Dungeon Boss, Fluffing a Duck</p>
+    </div>
+    <div id="loading">Chargement des portraits…</div>
+  </section>
+
+  <section id="screen-chars" class="screen panel-screen">
+    <div class="panel">
+      <h1 id="chars-title">Aventure</h1><p id="chars-sub" class="sub"></p>
+      <div id="char-grid"></div>
+      <button id="chars-family" class="family-toggle" type="button" aria-expanded="false">Toute la famille ↓</button>
+      <div id="mode-options"></div>
+      <div class="buttons row"><button id="chars-back">Retour</button><button id="chars-play" class="primary">Jouer !</button></div>
+    </div>
+  </section>
+
+  <section id="screen-adventure" class="screen panel-screen">
+    <div class="panel">
+      <h1 id="adventure-title">Aventure</h1><p id="adventure-sub" class="sub"></p>
+      <div id="stage-list"></div>
+      <div class="buttons row"><button id="adventure-back">Retour</button><button id="adventure-reset" class="ghost">Effacer la progression</button></div>
+    </div>
+  </section>
+
+  <section id="screen-challenges" class="screen panel-screen">
+    <div class="panel">
+      <h1 id="challenges-title">Les îles des défis</h1><p id="challenge-sub" class="sub"></p>
+      <div id="challenge-list"></div>
+      <div class="buttons row"><button id="challenge-back">Retour</button></div>
+    </div>
+  </section>
+
+  <section id="screen-game" class="screen">
+    <canvas id="game" class="stage" width="1280" height="720"></canvas>
+    <button id="btn-stop-test" hidden onclick="BK.stopTest()">■ Arrêter le test</button>
+    <button id="btn-pause" type="button" aria-label="Ouvrir le menu Pause" hidden>⏸ Pause</button>
+    <div id="touch"><div class="stick"><div class="knob"></div></div><div class="btns"><button class="btn-action">✋</button><button class="btn-bomb">💣</button></div></div>
+  </section>
+
+  <section id="screen-editor" class="screen">
+    <div id="editor-panel"></div>
+    <canvas id="editor-canvas" class="stage" width="1280" height="720"></canvas>
+  </section>
+
+  <section id="screen-debug" class="screen">
+    <canvas id="debug-canvas" class="stage" width="1280" height="720"></canvas>
+    <div id="debug-panel"></div>
+  </section>
+
+  <div id="overlay"><div class="box"><h2></h2><div class="body"></div><div class="buttons"></div></div></div>
+</div>
+<script src="js/config.js?castle=12"></script>
+<script src="js/decor-biomes.js"></script>
+<script src="js/wildlife.js"></script>
+<script src="js/bestiary.js"></script>
+<script src="js/family-head-sources.js"></script>
+<script src="js/family-heads.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/sprites.js?castle=14"></script>
+<script src="js/sprites-biomes.js"></script>
+<script src="js/sprites-wildlife.js"></script>
+<script src="js/world.js?castle=19"></script>
+<script src="js/inventory.js"></script>
+<script src="js/input.js"></script>
+<script src="js/audio.js?ally=1"></script>
+<script src="js/ai.js?castle=19"></script>
+<script src="js/stage-1-1.js"></script>
+<script src="js/stage-1-2.js"></script>
+<script src="js/stage-1-3.js"></script>
+<script src="js/stage-1-4.js"></script>
+<script src="js/stage-1-5.js"></script>
+<script src="js/stage-world-2.js?castle=12"></script>
+<script src="js/encounter.js"></script>
+<script src="js/traps.js"></script>
+<script src="js/bestiary-world.js"></script>
+<script src="js/castle-encounter.js?v=4"></script>
+<script src="js/sprites-bestiary.js"></script>
+<script src="js/castle-towers.js?castle=12"></script>
+<script src="js/castle-finish.js?castle=12"></script>
+<script src="js/castle-pipes.js"></script>
+<script src="js/castle-mechanisms.js?castle=12"></script>
+<script src="js/bomb-dome.js?castle=13"></script>
+<script src="js/adventure.js?castle=19"></script>
+<script src="js/worldselect.js"></script>
+<script src="js/hub.js"></script>
+<script src="js/editor.js?castle=12"></script>
+<script src="js/match.js"></script>
+<script src="js/duels.js?castle=12"></script>
+<script src="js/fantasy-enemies.js?v=2"></script>
+<script src="js/challenges.js"></script>
+<script src="js/music.js"></script>
+<script src="js/debug.js"></script>
+<script src="js/home-kids.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

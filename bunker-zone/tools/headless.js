@@ -6,7 +6,7 @@
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const root = path.join(__dirname, '..');
 globalThis.window = globalThis;
-for (const f of ['config', 'utils', 'items', 'map', 'units', 'ai', 'game']) {
+for (const f of ['config', 'utils', 'hero-progression', 'map', 'units', 'ai', 'game']) {
   vm.runInThisContext(fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8'), { filename: f + '.js' });
 }
 const ZC = globalThis.ZC;

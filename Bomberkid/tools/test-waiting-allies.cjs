@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),BK=require('./headless');
+let menu;BK.overlay.show=o=>menu=o;
+const a=new BK.Adventure('mickael',4);a.save.gold=1000;a.enterHouse(a.world.doors.find(d=>d.c===6));a.state='play';a.world.frozen=false;
+const offers=[...a.world.displays];a.recruit(offers[0]);a.recruit(offers[1]);const old=a.activeAllies()[0];Object.assign(old,{hp:11,lives:2,fire:4,kick:true,poison:4});
+a.recruit(offers[2],old);let waiting=a.world.displays.find(d=>d.waiting);assert(waiting&&waiting.npc.npc&&!waiting.npc.ally);assert.equal(waiting.price,0);assert.equal(waiting.npc.hp,11);assert.equal(waiting.npc.lives,2);assert(waiting.npc.seat,'takes the freed chair');
+for(let i=0;i<180;i++)a.world.update(1/60);assert.equal(waiting.npc.hp,11,'health unchanged while waiting');
+a.leaveHouse();assert.equal(a.activeAllies().length,2);a.enterHouse(a.world.doors.find(d=>d.c===6));waiting=a.world.displays.find(d=>d.waiting);assert.equal(waiting.npc.hp,11);assert.equal(waiting.npc.lives,2);assert.equal(a.world.players.filter(p=>p.recruit).length,1);
+const gold=a.save.gold;assert(!a.buy(waiting));assert(menu.text.includes('gratuitement'));menu.buttons[2].onClick();assert.equal(a.save.gold,gold);assert(a.save.waitingAllies[waiting.key]);
+const outgoing=a.activeAllies()[0];outgoing.hp=17;outgoing.lives=1;a.buy(waiting);menu.buttons[0].onClick();assert.equal(a.save.gold,gold);const returning=a.activeAllies().find(p=>p.id===old.id);assert(returning&&returning.hp===11&&returning.lives===2&&returning.fire===4&&returning.kick&&returning.poison===4);assert(!a.save.waitingAllies[waiting.key]);
+waiting=a.world.displays.find(d=>d.waiting);assert.equal(waiting.npc.hp,17);assert.equal(waiting.npc.lives,1);assert.equal(a.activeAllies().length,2);
+// Changing the team repeatedly never replenishes health or lives and never charges again.
+for(let i=0;i<4;i++){const d=a.world.displays.find(d=>d.waiting),hp=d.npc.hp,lives=d.npc.lives;assert(a.recruit(d,a.activeAllies()[0]));assert.equal(d.npc.hp,hp);assert.equal(d.npc.lives,lives);assert.equal(a.save.gold,gold);assert.equal(a.activeAllies().length,2);assert.equal(a.world.displays.filter(d=>d.waiting).length,1);}
+const saved=BK.loadAdventure('mickael').waitingAllies,record=Object.values(saved)[0];assert(record&&record.member.hp>0);
+const fresh=new BK.Adventure('mickael',4);fresh.enterHouse(fresh.world.doors.find(d=>d.c===6));const d=fresh.world.displays.find(d=>d.waiting);assert(d&&d.npc.hp===record.member.hp&&d.npc.lives===record.member.lives,'waiting state survives reload');assert.equal(fresh.world.players.filter(p=>p.id===d.id).length,1,'no original recruit duplicated');const money=fresh.save.gold;assert(fresh.recruit(d));assert.equal(fresh.save.gold,money,'free return with empty team');
+fresh.leaveHouse();fresh.enterHouse(fresh.world.doors.find(d=>d.c===6));assert.equal(fresh.world.players.filter(p=>p.id===d.id).length,1,'free return cannot respawn original offer');
+// A companion awaiting revival keeps the remaining lives, and uses normal revival on return.
+const q=fresh.activeAllies()[0];q.alive=false;q.hp=0;q.lives=2;const next=fresh.world.displays.find(d=>!d.waiting);assert(next);fresh.save.gold=1000;assert(fresh.recruit(next,q));const dead=fresh.world.displays.find(d=>d.waiting);assert.equal(dead.npc.hp,0);assert(fresh.recruit(dead));assert.equal(dead.npc.alive,false);assert.equal(dead.npc.lives,2);for(let i=0;i<180;i++)fresh.world.update(1/60);assert(dead.npc.alive);assert.equal(dead.npc.lives,2);
+console.log('Waiting allies: free switches, seats, unchanged health/lives/powers, cancel, house return, reload, duplicates and revival passed.');

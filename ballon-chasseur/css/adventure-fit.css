@@ -1,0 +1,77 @@
+/* Écrans partagés de l'aventure : tout tient dans la fenêtre, sans défilement de page. */
+#screen-arcade.shared-adventure,#screen-practice.shared-adventure{padding:10px 3vw 12px;gap:8px}
+.shared-adventure>.arcade-heading{padding:2px 0}.shared-adventure>.arcade-heading p{font-size:10px;margin-bottom:2px}.shared-adventure>.arcade-heading h1{font-size:clamp(24px,3vw,46px);margin:4px 0}
+.shared-adventure>.arcade-content.shared-layout,.shared-adventure>main.shared-layout{padding:2px 4px 4px;gap:28px;align-items:stretch}
+.shared-adventure>.arcade-footer{padding-top:8px;gap:10px}.shared-adventure>.arcade-footer .arcade-button{font-size:clamp(12px,1.25vw,19px);padding:10px 15px}
+
+/* Colonne du héros : portrait, barres et améliorations resserrés. */
+.shared-sidebar{display:flex;flex-direction:column;overflow:hidden;padding:4px 6px 6px}
+.shared-sidebar .shared-hero{flex:1;min-height:0;grid-template-columns:minmax(100px,.72fr) minmax(0,1.28fr);gap:10px}
+.shared-sidebar .arcade-hero-art{height:clamp(150px,30vh,290px)}.shared-sidebar .arcade-hero-art canvas{max-height:100%}
+.shared-sidebar .arcade-profile h2{font-size:clamp(20px,2vw,30px)}
+.shared-sidebar .campaign-profile-top{gap:6px}
+.shared-sidebar .health-badge{padding:3px 6px}.shared-sidebar .health-badge b{font-size:20px}.shared-sidebar .health-badge i{font-size:22px}
+.shared-sidebar .campaign-xp{margin:6px 0!important;gap:4px}.shared-sidebar .campaign-xp progress{height:11px}.shared-sidebar .hero-level{font-size:11px;padding:4px 6px}
+.shared-sidebar .arcade-stat{grid-template-rows:13px 22px;margin-bottom:3px}.shared-sidebar .arcade-stat>span{font-size:11px}.shared-sidebar .arcade-stat>div{height:12px}.shared-sidebar .arcade-stat>b{font-size:15px}.shared-sidebar .arcade-stat b small{font-size:9px}
+.shared-sidebar .stat-plus{width:26px;height:22px;font-size:18px;line-height:18px}.shared-sidebar .arcade-stat>.upgrade-cost{font-size:9px}.shared-sidebar .health-upgradable .stat-plus{width:26px;height:26px;font-size:20px}
+.shared-sidebar .campaign-points-total{font-size:14px;margin:6px 0 0}
+
+/* Mon équipe : un encadré à part, avec le bouton Gérer et les six cartes. */
+.shared-team{flex:none;margin-top:10px;padding:8px 10px 10px;border:2px solid #a9d8ff;border-radius:14px;background:linear-gradient(165deg,#1d3a66f2,#101f3df2);box-shadow:0 5px 0 #081127,0 0 0 1px #0b1a33,inset 0 1px 0 #ffffff33}
+.shared-team-heading{margin-bottom:8px}.shared-team-heading h3{font-size:17px;color:#fff}.shared-team-heading .shared-manage{font-size:12px;padding:6px 14px}
+.shared-team-cards{gap:6px;padding:2px}.shared-team-cards .arcade-tile canvas{height:clamp(44px,7vh,66px)}.shared-team-cards .arcade-tile strong{font-size:9px;padding:3px 1px}.shared-team-cards .tile-level{font-size:8px;bottom:20px;padding:1px 3px}.shared-team-cards .tile-badge{font-size:7px;padding:1px}
+
+/* Tableau d'aventure : les cartes occupent la colonne de droite. */
+.shared-right .campaign-next{display:flex;flex-direction:column;height:100%;min-height:0}
+.shared-right .campaign-summary{margin:0 0 6px;justify-content:flex-end}
+.shared-right .campaign-route{margin-top:4px}
+.campaign-selection{margin:10px 0 0;padding:9px 14px;background:#101d38d9;border-left:3px solid #ffe36b;font-size:13px;color:#dfeeff}.campaign-selection b{color:#ffe36b}
+
+/* Affrontement : adversaires compacts, puis les écussons de difficulté. */
+.shared-right .versus-side.enemy{display:flex;flex-direction:column;gap:4px}
+.shared-right .versus-hero{grid-template-columns:.75fr 1.25fr;gap:12px;flex:none}.shared-right .versus-hero .arcade-hero-art{height:clamp(150px,24vh,230px)}.shared-right .versus-hero .arcade-hero-art canvas{height:100%;max-height:100%}
+.shared-right .versus-hero .mystery-monster{height:clamp(140px,22vh,210px);width:150px;margin:0 auto}.shared-right .versus-hero .mystery-boss{height:clamp(170px,26vh,250px);width:200px}
+.shared-right .versus-hero .arcade-profile h2{font-size:24px;margin-bottom:10px}.shared-right .versus-hero .arcade-power{min-height:0;font-size:11px;padding:7px}.shared-right .versus-hero .arcade-stat{margin-bottom:4px}.shared-right .versus-hero .arcade-stat>div{height:12px}.shared-right .versus-hero .arcade-stat>span{font-size:11px}.shared-right .versus-hero .arcade-stat>b{font-size:15px}
+.shared-right .versus-side>.versus-roster{margin-top:4px;padding-top:6px;gap:6px}.shared-right .versus-roster .arcade-tile{width:58px}
+.versus-difficulty{margin-top:8px;padding:8px 12px 12px;background:#0f1d38cc;border:1px solid #6d93c4;border-left:4px solid #ffe36b;border-radius:8px}
+.versus-difficulty>.arcade-kicker{margin:0 0 8px;color:#ffd647}
+.versus-difficulty .difficulty-badges{max-width:560px;margin:0 auto}
+.versus-reward{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:12px;font-size:12px;color:#d6e9ff}.reward-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;background:#1b2f55;border:1px solid #7fb2e6;font-weight:900;color:#fff}.reward-pill i{font-style:normal}.versus-reward small{width:100%;color:#a5edff;font-weight:700}
+@media(max-width:650px){.shared-sidebar{overflow:visible}.shared-sidebar .shared-hero{flex:none}.shared-right .versus-hero{grid-template-columns:1fr}}
+
+/* Adversaire dévoilé (revanche) : fiche resserrée pour laisser la place aux écussons. */
+.shared-right .versus-hero .arcade-kicker{display:none}.shared-right .versus-hero .arcade-profile h2{font-size:22px;margin:0 0 6px}
+.shared-right .versus-hero .arcade-stat{margin-bottom:2px}.shared-right .versus-hero .arcade-stat>span{font-size:10px}.shared-right .versus-hero .arcade-stat>div{height:10px}.shared-right .versus-hero .arcade-stat>b{font-size:13px}.shared-right .versus-hero .arcade-stat small{font-size:9px}
+.shared-right .versus-hero .arcade-power{margin:4px 0 0;padding:5px 8px;font-size:10px;line-height:1.3}.shared-right .versus-hero .arcade-power strong{font-size:12px}.shared-right .versus-hero .arcade-power span{margin-top:2px}
+.shared-right .versus-hero .arcade-health{margin:6px 0 0}.shared-right .versus-hero .health-badge{padding:2px 8px;gap:6px}.shared-right .versus-hero .health-badge b{font-size:22px}.shared-right .versus-hero .health-badge i{font-size:24px}
+.shared-right .versus-roster .tile-level{font-size:8px;bottom:22px}
+
+/* Magasin : étagères et cases plus basses, pour deux rangées d'objets sans défilement. */
+.shared-right .shop-hero-name{font-size:20px}.shared-right .shop-heroes{margin:4px 0}.shared-right .shop-heroes .arcade-tile canvas{height:44px}.shared-right .shop-heroes .arcade-tile strong{font-size:9px;padding:3px 1px}.shared-right .shop-hero-panel>.shop-pagination{margin:0}.shared-right .shop-pagination .arcade-button{padding:3px 12px;font-size:13px}.shared-right .shop-pagination{gap:10px;font-size:13px}
+.shared-right .shop-inventory-heading{font-size:18px;margin:4px 0}.shared-right .shop-equipped{height:78px}.shared-right .shop-equipped svg{height:38px}.shared-right .shop-equipped b{font-size:11px}.shared-right .shop-equipped small{font-size:9px}.shop-screen .shared-right .shop-slots{padding:8px;gap:8px}
+.shared-right .shop-tools{margin:6px 0}.shared-right .shop-tools button{font-size:11px;padding:7px 9px}.shared-right .shop-tools .shop-life{padding:5px}.shared-right .shop-life small{font-size:9px}.shared-right .shop-message{margin:0;font-size:11px;min-height:14px}
+.shared-right .shop-shelves{background:repeating-linear-gradient(to bottom,transparent 0 86px,#bd9b68 86px 92px,#5a392e 92px 99px,transparent 99px 108px)}.shared-right .shop-shelves .shelf-object{height:108px;padding:2px 6px 12px}.shared-right .shop-shelves .shelf-object svg{height:68px}.shared-right .shop-shelves .shelf-price{font-size:11px;padding:2px 7px}
+
+/* Affrontement hors aventure : les six portraits restent visibles sous les deux héros. */
+#screen-arcade>.arcade-versus{padding:8px 0}#screen-arcade>.arcade-versus .versus-hero .arcade-hero-art canvas{max-height:min(380px,40vh)}#screen-arcade>.arcade-versus .arcade-power{min-height:0}#screen-arcade>.arcade-versus .arcade-stat{margin-bottom:5px}#screen-arcade>.arcade-versus .versus-hero .arcade-profile h2{margin-bottom:6px}
+
+/* Adversaire dévoilé : nom et barres à gauche, pouvoir et vies à droite, sur une seule hauteur de portrait. */
+.shared-right .versus-hero .arcade-profile{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);grid-template-rows:auto 1fr;gap:6px 12px;align-items:start}
+.shared-right .versus-hero .arcade-profile h2{grid-column:1;grid-row:1;margin:0;align-self:center}.shared-right .versus-hero .arcade-profile .hero-level{grid-column:2;grid-row:1;justify-self:start;align-self:center;margin:0}
+.shared-right .versus-hero .arcade-profile .arcade-health{grid-column:2;grid-row:1;justify-self:end;align-self:center;margin:0}
+.shared-right .versus-hero .arcade-profile .arcade-bars{grid-column:1;grid-row:2;align-self:start}
+.shared-right .versus-hero .arcade-profile .arcade-power{grid-column:2;grid-row:2;margin:0;align-self:start;padding:5px 8px;font-size:10px;line-height:1.3}
+.shared-right .versus-hero .arcade-profile .hero-equipment{grid-column:1/-1}
+.shared-right .versus-hero .arcade-stat{grid-template-rows:12px 16px;gap:0 8px;margin-bottom:3px}.shared-right .versus-hero .arcade-stat>span{line-height:12px;align-self:start}.shared-right .versus-hero .arcade-stat>b{line-height:16px}
+.shared-right .versus-hero .arcade-health{font-size:0;line-height:1}.shared-right .versus-hero .arcade-health .health-badge{margin:0}
+
+/* Magasin : pagination des héros sur la même ligne que le nom. */
+.shared-right .shop-layout{gap:4px}.shared-right .shop-hero-panel{grid-template-columns:minmax(0,1fr) auto auto;gap:2px 14px;align-items:center}.shared-right .shop-subtitle{display:none!important}.shared-right .shop-hero-name{grid-row:1}.shared-right .shop-hero-panel>.shop-pagination{grid-column:2;grid-row:1}.shared-right .shop-recipient-wallet{grid-column:3;grid-row:1;font-size:20px}.shared-right .shop-heroes{grid-row:2}.shared-right .shop-merchandise>.shop-pagination{margin:4px 0 0}
+
+/* Affrontement hors aventure : barres et pouvoir plus compacts. */
+#screen-arcade>.arcade-versus{padding:4px 0}#screen-arcade>.arcade-versus .arcade-stat{gap:2px 10px;margin-bottom:4px}#screen-arcade>.arcade-versus .arcade-stat>span{font-size:12px;line-height:1.1}#screen-arcade>.arcade-versus .arcade-stat>div{height:14px}#screen-arcade>.arcade-versus .arcade-stat b{font-size:17px}#screen-arcade>.arcade-versus .arcade-stat small{font-size:12px}
+#screen-arcade>.arcade-versus .arcade-power{padding:6px 10px;font-size:11px}#screen-arcade>.arcade-versus .arcade-power strong{font-size:13px}#screen-arcade>.arcade-versus .arcade-health{margin:6px 0 0}#screen-arcade>.arcade-versus .health-badge{padding:3px 10px}#screen-arcade>.arcade-versus .health-badge b{font-size:26px}#screen-arcade>.arcade-versus .health-badge i{font-size:28px}
+#screen-arcade>.arcade-versus .versus-side>.versus-roster{padding-top:4px;margin-top:4px}#screen-arcade>.arcade-versus .versus-hero .arcade-hero-art canvas{max-height:min(380px,36vh)}
+
+/* Portables moins hauts : écussons et portraits un cran plus petits. */
+@media(max-height:800px){.versus-difficulty{padding:6px 10px 8px}.versus-difficulty .difficulty-badges{max-width:470px}.versus-reward{margin-top:6px;font-size:11px}.reward-pill{padding:3px 8px}.shared-right .versus-hero .mystery-boss{height:clamp(150px,24vh,220px);width:170px}.shared-right .versus-hero .mystery-monster:not(.mystery-boss){height:clamp(120px,20vh,180px)}.shared-right .versus-roster .arcade-tile{width:52px}.shared-right .versus-side>.versus-roster{padding-top:2px;margin-top:0}.shared-right .versus-side.enemy{gap:2px}.versus-difficulty>.arcade-kicker{margin:0 0 4px}.versus-difficulty .difficulty-badges{max-width:450px}.shared-right .shop-layout{gap:3px}.shared-right .shop-heroes .arcade-tile canvas{height:40px}.shared-right .shop-inventory-heading{margin:2px 0}.shared-right .shop-equipped{height:70px}.shared-right .shop-equipped svg{height:32px}.shared-right .shop-life small{display:none}.shared-right .shop-tools{margin:4px 0}.shared-right .shop-shelves{background:repeating-linear-gradient(to bottom,transparent 0 76px,#bd9b68 76px 82px,#5a392e 82px 88px,transparent 88px 96px)}.shared-right .shop-shelves .shelf-object{height:96px;padding:2px 6px 10px}.shared-right .shop-shelves .shelf-object svg{height:58px}}

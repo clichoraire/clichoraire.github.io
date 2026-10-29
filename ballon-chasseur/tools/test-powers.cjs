@@ -136,7 +136,7 @@ for (const team of [0, 1]) {
 // --- pouvoirs instantanés ---
 {
   const g = game(); const p = g.inner(0)[0]; setPower(p, 'laser'); g.usePower(p);
-  ok(g.inner(1).every(q => q.state === 'stun'), 'laser : tous figés'); step(g, N, 170); ok(g.inner(1).every(q => q.state === 'idle'), 'laser : libérés après 2,5 s');
+  ok(g.laserSweeps.length===1,'laser : balayage lancé');const hp=totalHp(g,1);for(let i=0;i<180;i++)g.updateProjectiles(1/60);ok(totalHp(g,1)<hp,'laser : dégâts pendant le balayage');
 }
 {
   const g = game(); const p = g.inner(0)[0]; setPower(p, 'pikachu'); const before = totalHp(g, 1); g.usePower(p);
@@ -238,11 +238,18 @@ function throwPower(id, prep) {
   ok(g.stats[1].catches === 0 && foe.hp < hp0 - 10, 'fusée : explose dans les mains (' + (hp0 - foe.hp) + ' dégâts)');
 }
 {
-  const { g, p } = throwPower('licorne', (g, p) => { g.inner(1)[1].y = p.y + 40; });
-  ok(g.ball.vy === 0 && p.fx.horseT > 1, 'licorne : tout droit, à cheval'); const foe = g.inner(1)[1]; foe.y = p.y;
-  g.ai.update = () => { for (const r of g.players) { r.ai.move = N; r.ai.act = null; } };
-  for (let i = 0; i < 400 && g.ball.state === 'live'; i++) { if (foe.state === 'idle') g.setState(foe, 'catch'); step(g); }
-  ok(g.stats[1].catches === 0 && g.stats[0].hits === 1, 'licorne : impossible à attraper');
+  const g=game(),p=holder(g);setPower(p,'licorne');
+  ok(g.usePower(p),'licorne : activation immédiate');
+  ok(p.fx.horseT===20&&g.rainbow[1]===20&&!p.power.armed,'galop et arc-en-ciel 20 secondes');
+  ok(g.speedMul(p)===1.35,'galop plus rapide');
+  const foe=g.inner(1)[1];g.give(foe);g.throwBall(foe,{charge:0,move:N});
+  Object.assign(g.ball,{x:950,y:450,z:30,vx:-840,vy:0,speed:600,power:null,airShot:true,launchZ:30,impactZ:30});
+  const x=g.ball.x;g.updateBall(.1);ok(Math.abs(g.ball.x-(x-50.4))<1e-8,'ballon ennemi ralenti de 40 %');
+  g.ball.team=0;g.ball.vx=840;const x2=g.ball.x;g.updateBall(.1);ok(Math.abs(g.ball.x-(x2+84))<1e-8,'ballon allié inchangé');
+  g.paused=true;g.update(1,[N,N]);ok(g.rainbow[1]===20,'pause conserve le temps du pouvoir');g.paused=false;
+  g.ball.state='dead';for(let i=0;i<1201;i++)g.update(1/60,[N,N]);
+  ok(g.rainbow[1]===0&&p.fx.horseT===0&&g.rainbowBallRate(1)===1,'expiration du galop et ralentissement');
+
 }
 // --- fantôme (passif) ---
 {

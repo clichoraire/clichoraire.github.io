@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),BK=require('./headless');
+const W=new BK.World({map:['.........','.."......','.........','......"..','.........'],props:{'2,1':{deco:'greenpipe',pipeLink:'B'},'6,3':{deco:'greenpipe',pipeLink:'B'}},theme:'castle',mode:'adventure',hearts:true,explore:true});
+const p=W.addPlayer(BK.charById('adam'),2,2,{}),ally=W.addPlayer(BK.charById('richard'),1,2,{hp:25,lives:3});Object.assign(ally,{ally:true,leader:p,human:false});
+assert.equal(W.pipeTrip(p).team.length,2);assert(W.usePipe(p));assert(p.x>5&&ally.x>4);assert.equal(ally.hp,25);assert.equal(ally.lives,3);assert(!W.usePipe(p));
+p.x=2.5;p.y=2.5;W.time=2;W.props['6,3'].pipeLink='A';assert(W.pipeTrip(p).error);assert(!W.usePipe(p));W.props['6,3'].pipeLink='B';p.carrying={};assert(W.pipeTrip(p).error);p.carrying=null;
+for(const d of BK.DIRS)W.cells[W.idx(6+d.dx,3+d.dy)]=1;assert(W.pipeTrip(p).error);
+const E=new BK.Editor({name:'Pipes',theme:'castle',cols:9,rows:5,grid:['.........','.."......','.........','......"..','.........'],props:W.props});assert.equal(JSON.parse(E.code()).props['2,1'].pipeLink,'B');
+const a=new BK.Adventure('adam',9),world=a.world,hero=a.player;world.hurtEnemy(world.enemies.find(e=>e.castleBoss),hero,99,'bomb');world.updateArenaEffects(4.1);const boss=world.enemies.find(e=>e.castleFinal);
+boss.x=5.5;boss.y=10.5;hero.x=3.5;hero.y=10.5;hero.invuln=999;world.performBestiaryAttack(boss,{kind:'royalPush',x:hero.x,y:hero.y});assert(hero.royalPush);for(let i=0;i<30;i++)world.updatePlayer(hero,1/60);assert(hero.falling,'pushed over unguarded arena edge');
+boss.x=14.5;boss.y=10.5;hero.x=14.5;hero.y=15.5;world.performBestiaryAttack(boss,{kind:'royalCheat',x:hero.x,y:hero.y});assert(boss.y>10.5&&boss.y<=13);assert(boss.z>0);world.updateBestiary(boss,2);assert.equal(boss.z,0);assert(world.walkableTerrain(Math.floor(boss.x),Math.floor(boss.y)));
+console.log('Pipes: pairing, allies, cooldown, missing endpoint, blocked exit, carried bomb and editor persistence passed. Matthieu: push off edge, forward teleport and landing passed.');

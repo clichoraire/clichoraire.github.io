@@ -18,7 +18,7 @@
     <div class="touch-actions">
       <button data-action="jump" class="touch-jump">↟<small>Sauter</small></button>
       <button data-action="trick">★<small>Figure</small></button>
-      <button data-action="shoot">◎<small>Tirer</small></button>
+      <button data-action="shoot" aria-label="Maintenir pour viser, relâcher pour tirer">◎<small>Viser / tirer</small></button>
       <button data-action="item">🎁<small>Objet</small></button>
       <button data-action="push">»<small>Pousser</small></button>
     </div>
@@ -28,17 +28,19 @@
   function refreshHeld() {
     T.held = {};
     for (const action of pointers.values()) T.held[action] = true;
+    const hint=panel.querySelector('.touch-hint');if(hint)hint.textContent=T.held.shoot?'Tourne avec les flèches, relâche pour tirer !':'Maintiens Sauter, puis relâche !';
     for (const button of buttons) {
       const held = !!T.held[button.dataset.action];
       button.classList.toggle('is-held', held);
       button.setAttribute('aria-pressed', String(held));
     }
   }
-  T.clear = function () { pointers.clear(); refreshHeld(); };
+  T.clear = function () { if(T.held.shoot)T.cancelShoot=true;pointers.clear(); refreshHeld(); };
   function sync() {
     T.clear();
     const visible = compact.matches && ['race', 'town', 'museum'].includes(T.screen) && !T.paused;
     panel.hidden = !visible;
+    T.visible=visible;
     panel.dataset.mode = T.screen;
     document.body.classList.toggle('touch-playing', visible);
   }
@@ -59,8 +61,9 @@
     });
     const release = e => { pointers.delete(e.pointerId); refreshHeld(); };
     button.addEventListener('pointerup', release);
-    button.addEventListener('pointercancel', release);
-    button.addEventListener('lostpointercapture', release);
+    const cancel=e=>{if(pointers.get(e.pointerId)==='shoot')T.cancelShoot=true;release(e);};
+    button.addEventListener('pointercancel', cancel);
+    button.addEventListener('lostpointercapture', cancel);
   }
   panel.querySelector('.touch-pause').onclick = () => { SK.Input.pressed.Escape = true; T.clear(); };
 })(window.SK);

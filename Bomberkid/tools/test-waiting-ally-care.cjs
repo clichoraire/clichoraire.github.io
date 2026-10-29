@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict'),BK=require('./headless');let menu;BK.overlay.show=o=>menu=o;
+const a=new BK.Adventure('mickael',4);delete a.save.waitingAllies;a.save.gold=1000;a.enterHouse(a.world.doors.find(d=>d.c===6));a.state='play';a.world.frozen=false;
+const offers=[...a.world.displays];a.recruit(offers[0]);a.recruit(offers[1]);const old=a.activeAllies()[0];Object.assign(old,{hp:11,lives:2,poison:5,poisonTick:.5,diarrheaT:8,shortfuseT:9});a.recruit(offers[2],old);
+let d=a.world.displays.find(d=>d.waiting),q=d.npc;const team=a.activeAllies(),gold=a.save.gold,p=a.player;p.inv=[{type:'meatcooked',n:2,perm:2},{type:'antidote',n:1,perm:1},{type:'antipoison',n:1,perm:1},{type:'meatraw',n:2,perm:2}];p.nearDisplay=d;
+a.pressEnter();assert(a.world.frozen&&a.state==='pause');assert(menu.title.includes(q.name));assert(menu.buttons.some(b=>b.label.includes('gratuitement')));assert(!menu.buttons.some(b=>b.label.includes('crue')));
+menu.buttons.find(b=>b.label.includes('Viande')).onClick();assert.equal(q.hp,21);assert.equal(p.inv.find(s=>s.type==='meatcooked').n,1);assert.equal(a.save.waitingAllies[d.key].member.hp,21);assert.equal(q.lives,2);
+menu.buttons.find(b=>b.label.includes('Guérir le poison')).onClick();assert.equal(q.poison,0);assert.equal(a.save.waitingAllies[d.key].member.poison,0);assert(!p.inv.some(s=>s.type==='antipoison'));
+assert.equal(q.diarrheaT,0);assert.equal(q.shortfuseT,0);assert.equal(p.inv.find(s=>s.type==='antidote').n,1);
+menu.buttons.find(b=>b.label.includes('Viande')).onClick();assert.equal(q.hp,30);assert(!p.inv.some(s=>s.type==='meatcooked'));assert(!a.world.feedAlly(p,q,'meatraw'));assert(!a.world.cureAlly(p,q,'antipoison'));assert.equal(a.save.gold,gold);assert.deepEqual(a.activeAllies(),team);
+menu.buttons.find(b=>b.label.includes('reposer')).onClick();assert(!a.world.frozen);assert(q.npc&&!q.ally&&q.seat);
+a.leaveHouse();a.enterHouse(a.world.doors.find(d=>d.c===6));d=a.world.displays.find(d=>d.waiting);q=d.npc;assert.equal(q.hp,30);assert.equal(q.poison,0);assert.equal(q.shortfuseT,0);assert.equal(q.lives,2);
+const saved=BK.loadAdventure('mickael');assert.equal(saved.waitingAllies[d.key].member.hp,30);assert.equal(saved.waitingAllies[d.key].member.diarrheaT,0);assert(!saved.inv.some(s=>['meatcooked','antipoison'].includes(s.type)),'consumed inventory saved');
+a.showAllyFood(q);menu.buttons.find(b=>b.label.includes('gratuitement')).onClick();assert(menu.title.includes('complète'));menu.buttons[0].onClick();assert(a.activeAllies().includes(q));assert.equal(q.hp,30);assert.equal(q.lives,2);assert.equal(q.poison,0);assert(!q.waitingMember);assert.equal(a.save.gold,gold);
+const npc=a.world.addNpc(BK.charById('adam'),2,2);npc.hp=1;a.player.inv=[{type:'meatcooked',n:1}];assert(!a.world.feedAlly(a.player,npc,'meatcooked'),'ordinary merchants cannot receive ally food');
+const waiting=a.world.displays.find(d=>d.waiting).npc;waiting.hp=20;waiting.waitingMember.alive=false;assert(!a.world.feedAlly(a.player,waiting,'meatcooked'),'food does not revive a dead reserve companion');assert.equal(a.player.inv[0].n,1);
+console.log('Waiting ally care: interaction, portions, health cap, remedies, persistence, free return, ownership and invalid uses passed.');

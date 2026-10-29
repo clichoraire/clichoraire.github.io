@@ -89,7 +89,7 @@
     const id=r.def.id+key+JSON.stringify(colors)+(L.helmet||'')+(L.goggles||'')+Boolean(L.rocketPack)+Boolean(L.gripBoots)+Boolean(L.springBoots)+(L.hat||'none')+Boolean(L.paddedVest)+Boolean(L.whistle)+(L.gloves||'');if(cache.has(id))return cache.get(id);
     const c=canvas(source.width,source.height),ctx=c.getContext('2d');ctx.drawImage(source,0,0);const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;
     const coat=custom.jacket?SK.jacketPalette(L.jacket):null;
-    const coatData=coat?fittedCoat(source,L.jacket,key):null;
+    const pantsData=fittedPants(source,L.pants,key);
     for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const a=d[i],b=d[i+1],v=d[i+2],y=Math.floor(i/4/c.width)/c.height;let slot=null,light=1;
       if(y>.58&&a>150&&b>90&&b<a*.88&&v<90){slot='board';light=b/173;}
       else if(y>.26&&a>b*1.45&&a>v*1.5&&a>145){slot='jacket';light=a/205;}
@@ -103,7 +103,7 @@
         if(slot==='pants'&&SK.DENIM_COLORS.includes(color)){light*=((Math.floor(i/4/c.width)+(i/4)%c.width)%5===0)?.83:1.04;}
         const col=rgb(color);for(let k=0;k<3;k++)d[i+k]=Math.min(255,col[k]*light);}
     }
-    if(coatData){for(let j=0;j<d.length;j+=4){if(!coatData[j+3])continue;d[j]=coatData[j];d[j+1]=coatData[j+1];d[j+2]=coatData[j+2];}}
+    if(pantsData){for(let j=0;j<d.length;j+=4){if(!pantsData[j+3])continue;d[j]=pantsData[j];d[j+1]=pantsData[j+1];d[j+2]=pantsData[j+2];}}
     const frontCoat=coat&&(key==='girlFront0'||key==='boyWalk0');
     let garment=null;
     if(frontCoat){
@@ -118,6 +118,18 @@
       for(let y=Math.floor(c.height*.60);y<c.height*.75;y++)for(let x=0;x<c.width;x++)if(x<c.width*.30||x>c.width*.70)d[(y*c.width+x)*4+3]=0;
       garment=()=>{const gx=c.width*.50,gy=c.height*.465,gw=c.width*.83,gh=c.height*.335;
         ctx.save();ctx.translate(gx,gy);ctx.scale(gw/2,gh/2.29);SK.drawJacket(ctx,L.jacket,0,0,1);for(const sign of [-1,1]){ctx.save();ctx.scale(sign,1);ctx.fillStyle=SK.gearById(L.gloves)?.tint||coat.trim;ctx.beginPath();ctx.moveTo(.73,.88);ctx.lineTo(.96,.86);ctx.quadraticCurveTo(1.04,1.18,.91,1.21);ctx.quadraticCurveTo(.76,1.24,.74,1.07);ctx.quadraticCurveTo(.65,1.12,.67,1.01);ctx.closePath();ctx.fill();ctx.restore();}ctx.restore();};
+    }
+    if(coat&&!frontCoat){
+      // Remove only original cloth and its white number; retain skin, boots and trousers.
+      const original=source.getContext('2d').getImageData(0,0,c.width,c.height).data;
+      for(let y=Math.floor(c.height*.27);y<c.height*.74;y++)for(let x=0;x<c.width;x++){
+        const j=(y*c.width+x)*4,a=original[j],b=original[j+1],v=original[j+2];
+        const cloth=a>145&&a>b*1.45&&a>v*1.5;
+        const number=x>c.width*.28&&x<c.width*.72&&y>c.height*.35&&y<c.height*.58&&b>115&&v>105&&Math.abs(a-b)<90;
+        const hand=y>c.height*.50&&a>160&&b>110&&v>70&&a>v*1.15&&b>v*1.07;
+        if(cloth||number||hand||(y>c.height*.33&&y<c.height*(key.includes('Board')?.56:.61))||(y>c.height*.60&&y<c.height*.74&&(x<c.width*.30||x>c.width*.70)))d[j+3]=0;
+      }
+      garment=()=>drawPoseCoat(ctx,L,key,c.width,c.height);
     }
     ctx.putImageData(im,0,0);
     if(window.FamilyHeads?.has(r.def.id)) personalize(c,source,r,key,garment);
@@ -141,32 +153,102 @@
     if(L.goggles) goggles(c,r,key,L.goggles);
     if(cache.size>180)cache.clear();cache.set(id,c);return c;
   }
-  // Une seule illustration de vêtement, projetée sur le masque de chaque pose.
-  // Le masque conserve les mains, l'inclinaison et la perspective du sprite original.
-  function fittedCoat(source,color,key){
+  // Native diagonal/back poses retain their silhouette and original shading.
+  // Project the shop fabric only onto the original blue trouser pixels.
+  function fittedPants(source,color,key){
     const w=source.width,h=source.height,src=source.getContext('2d').getImageData(0,0,w,h).data;
-    const result=new Uint8ClampedArray(src.length),rows=[];let top=h,bottom=0;
-    const red=j=>src[j+3]>8&&src[j]>145&&src[j]>src[j+1]*1.45&&src[j]>src[j+2]*1.5;
-    for(let y=Math.floor(h*.26);y<h*.73;y++){let l=w,r=-1;for(let x=0;x<w;x++){const j=(y*w+x)*4;if(red(j)){l=Math.min(l,x);r=Math.max(r,x);}}rows[y]={l,r};
-      // Le tronc, plutôt que les mains, fixe la hauteur du manteau.
-      if(r-l>w*.25&&l<w*.65&&r>w*.35){top=Math.min(top,y);bottom=y;}}
-    if(bottom<=top)return result;
-    const index=Number(key.match(/(\d+)$/)?.[1]||0),girl=key.startsWith('girl'),board=key.includes('Board');
-    const view=key.includes('Front')?'front':board?(index>=2?'back':index===0?'side':'front'):girl?(index===0||index>=5?'back':index===1||index===2?'side':'front'):(index===1||index>=6?'back':index===2||index===3?'side':'front');
-    const texture=canvas(256,256),tc=texture.getContext('2d');SK.drawJacket(tc,color,128,128,100,view);
-    const pixels=tc.getImageData(0,0,256,256).data,palette=SK.jacketPalette(color);
-    for(let y=top;y<=bottom;y++){const row=rows[y];if(!row||row.r<row.l)continue;const v=(y-top)/(bottom-top),span=Math.max(1,row.r-row.l);
-      for(let x=row.l;x<=row.r;x++){const j=(y*w+x)*4;if(!src[j+3])continue;const u=(x-row.l)/span;
-        // Conserver peau et gants; effacer seulement l'ancien numéro sur le torse.
-        const number=u>.32&&u<.68&&v>.18&&v<.8&&src[j+1]>115&&src[j+2]>105&&Math.abs(src[j]-src[j+1])<90;
-        if(!red(j)&&!number)continue;
-        if(key==='girlFront0'&&y/h>.61&&(x/w<.30||x/w>.70))continue;
-        const tx=Math.max(0,Math.min(255,Math.round(128+(u-.5)*(view==='side'?140:200)))),ty=Math.round(45+v*188),k=(ty*256+tx)*4;
-        const fallback=rgb(color==='#fb8c00'&&(u<.25||u>.75)?palette.panel:palette.main),shade=number?1:Math.max(.88,Math.min(1.06,src[j]/215));
-        for(let ch=0;ch<3;ch++)result[j+ch]=(pixels[k+3]>100?pixels[k+ch]:fallback[ch])*shade;result[j+3]=src[j+3];
-      }}return result;
+    const mask=[];let left=w,right=0,top=h,bottom=0;
+    for(let y=Math.floor(h*.45);y<h;y++)for(let x=0;x<w;x++){
+      const j=(y*w+x)*4,a=src[j],b=src[j+1],v=src[j+2];
+      if(src[j+3]>8&&v>a*1.3&&v>b*1.05&&!(key==='girlFront0'&&y>h*.84)){
+        mask.push(j);left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+      }
+    }
+    if(right<=left||bottom<=top)return null;
+    const tile=canvas(160,200),tc=tile.getContext('2d');SK.drawPants(tc,color,80,100,95);
+    const texture=tc.getImageData(0,0,160,200).data,out=new Uint8ClampedArray(src.length),base=rgb(color);
+    for(const j of mask){const x=j/4%w,y=Math.floor(j/4/w),u=(x-left)/(right-left),v=(y-top)/(bottom-top);
+      const tx=Math.round(20+u*120),ty=Math.round(10+v*178),k=(ty*160+tx)*4;
+      const shade=Math.max(.72,Math.min(1.08,src[j+2]/(key==='girlFront0'?174:116)));
+      for(let ch=0;ch<3;ch++)out[j+ch]=(texture[k+3]>100?texture[k+ch]:base[ch])*shade;
+      out[j+3]=src[j+3];
+    }
+    return out;
+  }
+  // Anatomical anchors, independent of each scanline's arm/torso width.
+  function drawPoseCoat(c,L,key,w,h){
+    const board=key.includes('Board'),girl=key.startsWith('girl'),i=Number(key.match(/(\d+)$/)?.[1]||0);
+    const side=!board&&(girl?(i===1||i===2):(i===2||i===3));
+    const back=board?i>=2||(girl&&i===1):girl?(i===0||i>=5):(i===1||i>=6);
+    const view=side?'side':back?'back':'front';
+    const cx=w*(board?.52:.50),cy=h*(board?.435:.465),height=h*(board?.27:.29),width=w*(side?.28:board?.37:.46);
+    const unit=height/2.1;
+    const arm=(sign)=>{
+      let sx=cx+sign*width*.43,sy=cy-height*.32,ex=sx+sign*w*.065,ey=cy+height*.16,hx=sx+sign*w*.15,hy=cy+height*.52;
+      if(board){hx=w*(sign<0?.16:.81);hy=h*(sign<0?.51:.54);ex=(sx+hx)*.5;ey=(sy+hy)*.5;}
+      if(side){sx=cx;ex=cx+w*.035;hx=cx+w*.05;}
+      sleeve(c,L,sx,sy,ex,ey,hx,hy,unit*2.6);
+      c.fillStyle=SK.gearById(L.gloves)?.tint||SK.jacketPalette(L.jacket).trim;
+      c.beginPath();c.ellipse(hx,hy+unit*.09,unit*.19,unit*.23,0,0,Math.PI*2);c.fill();
+    };
+    if(!side)arm(-1);
+    c.save();c.translate(cx,cy);c.scale(width/(side?.95:1.14),height/2.1);
+    SK.drawJacket(c,L.jacket,0,0,1,view,true);c.restore();
+    if(!side)arm(1);
+  }
+  // A continuous fabric silhouette follows the hip, knee and ankle.
+  // Coordinates are in pixels; seams and pockets rotate with each limb.
+  function pantLeg(c,color,hip,knee,ankle,s,{width=.27,far=false,back=false}={}){
+    const denim=SK.DENIM_COLORS.includes(color),style=SK.PANT_STYLES?.[color],w=width*s*(style?.type==='snow'?1.12:1),ankleWidth=style?.type==='jogger'?.29:style?.type==='snow'?.46:.40;
+    const normal=(a,b)=>{const d=Math.max(.001,Math.hypot(b[0]-a[0],b[1]-a[1]));return [(b[1]-a[1])/d,-(b[0]-a[0])/d];};
+    const n0=normal(hip,knee),n1=normal(knee,ankle),sum=[n0[0]+n1[0],n0[1]+n1[1]],len=Math.hypot(...sum)||1,nm=sum.map(v=>v/len);
+    const offset=(a,n,r)=>[a[0]+n[0]*r,a[1]+n[1]*r];
+    const a=offset(hip,n0,w*.49),b=offset(knee,nm,w*.55),d=offset(ankle,n1,w*ankleWidth);
+    const e=offset(ankle,n1,-w*ankleWidth),f=offset(knee,nm,-w*.48),g=offset(hip,n0,-w*.49);
+    c.save();c.lineJoin='round';c.lineCap='round';
+    const shape=()=>{c.beginPath();c.moveTo(...a);c.quadraticCurveTo(a[0]+(b[0]-a[0])*.25,a[1]+(b[1]-a[1])*.55,...b);c.quadraticCurveTo(b[0]+(d[0]-b[0])*.80,b[1]+(d[1]-b[1])*.35,...d);c.lineTo(...e);c.quadraticCurveTo(e[0]+(f[0]-e[0])*.28,e[1]+(f[1]-e[1])*.65,...f);c.quadraticCurveTo(f[0]+(g[0]-f[0])*.8,f[1]+(g[1]-f[1])*.40,...g);c.closePath();};
+    shape();c.fillStyle=color;c.fill();c.save();c.clip();
+    const light=c.createLinearGradient(hip[0]-w*.6,hip[1],hip[0]+w*.6,hip[1]);
+    light.addColorStop(0,'#102b4145');light.addColorStop(.35,'#ffffff26');light.addColorStop(.65,'#ffffff08');light.addColorStop(1,'#102b4138');c.fillStyle=light;c.fill();
+    // Detail coordinates follow the upper/lower leg, so a pocket never floats beside a knee.
+    const segment=(from,to,draw)=>{c.save();c.translate(...from);c.rotate(Math.atan2(to[1]-from[1],to[0]-from[0])-Math.PI/2);draw(Math.hypot(to[0]-from[0],to[1]-from[1]));c.restore();};
+    const seam=denim?'#d8bd8dcc':'#e3f0ed80';
+    segment(hip,knee,h=>{if(SK.drawCollectionPantDetail?.(c,color,w,h,s,true))return;c.strokeStyle=seam;c.lineWidth=s*.012;c.beginPath();c.moveTo(w*.31,0);c.lineTo(w*.36,h);c.stroke();
+      c.fillStyle='#142b3d24';c.strokeStyle=seam;c.lineWidth=s*.009;
+      c.beginPath();c.roundRect(-w*.28,h*.25,w*.53,h*.43,w*.07);c.fill();c.stroke();
+      c.beginPath();c.moveTo(-w*.26,h*.33);c.lineTo(w*.24,h*.33);c.stroke();
+      if(back&&denim){c.beginPath();c.moveTo(-w*.22,h*.46);c.lineTo(0,h*.57);c.lineTo(w*.20,h*.46);c.stroke();}
+    });
+    segment(knee,ankle,h=>{if(SK.drawCollectionPantDetail?.(c,color,w,h,s,false))return;c.strokeStyle=seam;c.lineWidth=s*.011;c.beginPath();c.moveTo(w*.36,0);c.lineTo(w*.27,h);c.stroke();
+      c.fillStyle='#172c4845';c.fillRect(-w*.6,Math.max(0,h-s*.10),w*1.2,s*.12);
+      c.strokeStyle=seam;c.beginPath();c.moveTo(-w*.38,h-s*.08);c.lineTo(w*.38,h-s*.08);c.stroke();
+      c.strokeStyle='#132d4244';c.lineWidth=s*.014;c.beginPath();c.moveTo(-w*.32,h*.12);c.quadraticCurveTo(0,h*.21,w*.29,h*.12);c.stroke();
+      c.strokeStyle='#ffffff45';c.lineWidth=s*.01;c.beginPath();c.moveTo(-w*.24,h*.18);c.lineTo(w*.13,h*.23);c.stroke();
+    });
+    if(far){c.fillStyle='#10223830';shape();c.fill();}
+    c.restore();shape();c.strokeStyle='#19334780';c.lineWidth=s*.012;c.stroke();c.restore();
+  }
+  // Fixed upper-arm and forearm lengths, shared by riding and every aerial pose.
+  function armJoint(from,to,length,bend){
+    const a=SK.ArmRig.solve(from,to,length,length*.94,bend);
+    return {end:a.wrist,middle:a.elbow};
+  }
+  function drawHand(c,L,elbow,wrist,s,side=1){
+    c.save();c.translate(wrist[0]*s,wrist[1]*s);
+    c.rotate(Math.atan2(wrist[1]-elbow[1],wrist[0]-elbow[0])-Math.PI/2);
+    c.fillStyle=SK.gearById(L.gloves)?.tint||L.skin;
+    c.beginPath();c.roundRect(-s*.065,-s*.025,s*.13,s*.16,s*.05);c.fill();
+    c.beginPath();c.ellipse(-side*s*.06,s*.035,s*.035,s*.05,-side*.25,0,Math.PI*2);c.fill();
+    c.restore();
+  }
+  function rigArm(c,L,shoulder,target,s,{side=1,bend=-side,scale=1,far=false,hand=true}={}){
+    const a=SK.ArmRig.solve(shoulder,target,.33*scale,.31*scale,bend);
+    c.save();if(far)c.globalAlpha*=.82;
+    sleeve(c,L,...a.shoulder.map(v=>v*s),...a.elbow.map(v=>v*s),...a.wrist.map(v=>v*s),s*.92);
+    if(hand)drawHand(c,L,a.elbow,a.wrist,s,side);c.restore();return a;
   }
   function sleeve(ctx,L,sx,sy,ex,ey,hx,hy,s){
+    if(SK.drawCollectionSleeve?.(ctx,L,sx,sy,ex,ey,hx,hy,s))return;
     const p=SK.jacketPalette(L.jacket);ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=s*.19;
     ctx.strokeStyle=L.jacket==='#fb8c00'?p.panel:p.main;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.lineTo(hx,hy);ctx.stroke();
     ctx.strokeStyle=p.panel;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+(ex-sx)*.4,sy+(ey-sy)*.4);ctx.stroke();
@@ -228,7 +310,7 @@
     const actualH=frame?Math.min(hh,hh*1.18*frame.height/frame.width):hh,top=hh-actualH+headInset(c,r,key);
     ctx.save();ctx.translate(c.width/2,top);if(board&&i===0||!board&&!girl&&i===3)ctx.scale(-1,1);
     const knit=L.hat?.startsWith('beanie');
-    SK.drawHeadwear(ctx,L.hat,L.hatColor,0,actualH*(L.hat==='crown'?.04:-.02),hw*(knit?1.02:.88),actualH*(L.hat==='crown'?.40:knit?.62:.56),view,true);ctx.restore();
+    SK.drawHeadwear(ctx,L.hat,L.hatColor,0,actualH*(L.hat==='crown'?.04:-.02),hw*(knit?.90:.88),actualH*(L.hat==='crown'?.40:knit?.62:.56),view,true);ctx.restore();
   }
   function helmet(c,r,key,id) {
     const ctx=c.getContext('2d'),girl=r.def.gender==='girl',board=key.includes('Board');
@@ -258,47 +340,67 @@
     SK.drawSnowHelmet(ctx,id===true?'casque':id,0,shellTop,shellW,shellH,view,true,{chinY:actualH*.97-shellTop});
     ctx.restore();
   }
+  // Build the whole upper body from one rig. Never crop sleeves out of a
+  // dressed sprite: those crops retained old shoulders under the new arms.
+  const riderHeads=new WeakMap();
+  function riderHead(img,r,L,key,view='back'){
+    const cached=riderHeads.get(img);if(cached?.[view])return cached[view];
+    const out=canvas(img.width,img.height),c=out.getContext('2d');
+    if(window.FamilyHeads?.has(r.def.id)){
+      const hh=out.height*.34,hw=hh*1.18;
+      window.FamilyHeads.draw(c,r.def.id,view,out.width*.5-hw/2,headInset(out,r,key),hw,hh);
+      if(L.helmet==='couronne')headwear(out,r,key,{hat:'crown',hatColor:'#e6b33f'});
+      else if(L.helmet)helmet(out,r,key,L.helmet);
+      else if(!['shinobin','santa','robot'].includes(r.def.id)&&L.hat&&L.hat!=='none')headwear(out,r,key,L);
+      if(L.goggles)goggles(out,r,key,L.goggles);
+    }else c.drawImage(img,0,0,img.width,img.height*.33,0,0,img.width,img.height*.33);
+    riderHeads.set(img,{...cached,[view]:out});return out;
+  }
+  function riderUpper(c,r,L,img,key,s,hip,targets,{view='back',torso=r.def.id==='milo'?.9:1}={}){
+    const profile=view==='side',width=profile?.38:.59;
+    const hands=[];
+    const draw=target=>{
+      const side=target.side,shoulder=[hip[0]+(profile?side*.055:side*.26),hip[1]-.67*torso];
+      const arm=rigArm(c,L,shoulder,target.hand,s,{side,bend:target.bend??-side,scale:torso,far:profile&&side<0,hand:profile&&side<0});
+      if(!profile||side>0)hands.push({arm,side});return arm;
+    };
+    // Rear arm, torso, near arm, then hair: the shoulder joint stays inside the coat.
+    for(const target of targets)if(!profile||target.side<0)draw(target);
+    c.save();c.translate(hip[0]*s,(hip[1]-.39*torso)*s);c.scale(width*s,.38*torso*s);
+    SK.drawJacket(c,L.jacket,0,0,1,view,true);c.restore();
+    if(!r.look?.jacket&&!profile){c.fillStyle='#fff3e1';c.font='bold '+s*.24+'px Arial';c.textAlign='center';c.fillText('1',hip[0]*s,(hip[1]-.30*torso)*s);}
+    if(L.paddedVest||L.whistle)SK.drawWornTorso(c,L,hip[0]*s,(hip[1]-.39*torso)*s,.38*s,view);
+    if(L.rocketPack)SK.drawRocketPack(c,(hip[0]-(profile?.24:0))*s,(hip[1]-.39*torso)*s,.36*s,view);
+    if(profile)for(const target of targets)if(target.side>0)draw(target);
+    for(const {arm,side} of hands)drawHand(c,L,arm.elbow,arm.wrist,s,side);
+    const h=2.5*s,w=h*img.width/img.height,head=riderHead(img,r,L,key,view);
+    c.drawImage(head,hip[0]*s-w/2,(hip[1]-.67*torso-.855)*s,w,h);
+  }
   // Descente en ligne droite : planche dans l'axe et jambes articulées.
   // Les sprites diagonaux restent réservés aux virages et aux figures.
-  function straightRider(ctx,r,L,s) {
+  function straightRider(ctx,r,L,s,steer=0) {
     const girl=r.def.gender==='girl',key=girl?'girlWalk':'boyWalk',index=girl?0:1;
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index);
     const tuck=Math.max(0,Math.min(1,Math.max(r.crouch||0,r.jumpCharge||0,r.pumpPose||0))),h=2.5*s,w=h*img.width/img.height;
     const pump=Math.min(1,Math.max(r.pumpPose||0,r.jumpCharge||0));
-    const hipY=-s*.96+tuck*s*.18+pump*s*.13,hipX=-tuck*s*.07-pump*s*.03;
+    const hipY=-s*(r.def.id==='milo'?.77:.96)+tuck*s*.18+pump*s*.13,hipX=-tuck*s*.07-pump*s*.03+steer*s*.12;
     ctx.save();
     const leg=(back)=>{
-      const footY=(back?-.55:-.06)*s,footX=(back?.025:-.025)*s;
+      const angle=steer*1.04,fx=(back?.025:-.025)*s,fy=(back?-.55:-.06)*s+s*.25;
+      const footX=fx*Math.cos(angle)-fy*Math.sin(angle),footY=fx*Math.sin(angle)+fy*Math.cos(angle)-s*.25;
       const kneeX=(back?.045:.075)*s+tuck*s*.075+pump*s*.035,kneeY=(hipY+footY)*.5-tuck*s*.06;
-      ctx.strokeStyle=L.pants;ctx.lineWidth=s*(back?.24:.28);ctx.lineCap='round';ctx.lineJoin='round';
-      ctx.beginPath();ctx.moveTo(hipX,hipY);ctx.lineTo(kneeX,kneeY);ctx.lineTo(footX,footY-s*.10);ctx.stroke();
-      if(back){ctx.strokeStyle='#14203d35';ctx.stroke();}
-      ctx.fillStyle=back?'#20313a':'#2b414a';
-      ctx.beginPath();ctx.moveTo(footX-s*.13,footY-s*.23);ctx.lineTo(footX+s*.10,footY-s*.23);
-      ctx.lineTo(footX+s*.13,footY-s*.07);ctx.quadraticCurveTo(footX+s*.24,footY-s*.04,footX+s*.22,footY+s*.05);
-      ctx.quadraticCurveTo(footX,footY+s*.12,footX-s*.16,footY+s*.04);ctx.closePath();ctx.fill();
-      if(L.gripBoots||L.springBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(ctx,footX-s*.16,footY-s*.25,s*.39,s*.34,1);
+      pantLeg(ctx,L.pants,[hipX,hipY],[kneeX,kneeY],[footX,footY-s*.10],s,{width:back?.29:.33,far:back,back:true});
+      SK.drawCharacterBoot(ctx,L,footX-s*.16,footY-s*.25,s*.39,s*.34,'side');
     };
     leg(true);leg(false);
-    ctx.save();ctx.translate(hipX,hipY);ctx.rotate(tuck*.22);
-    // Tête, casque et manteau gardent leurs proportions pendant la flexion.
-    if(r.fx?.pushPose>0){
-      // Conserver la tête et le torse, remplacer les deux manches par des bras articulés.
-      ctx.drawImage(img,0,0,img.width,img.height*.34,-w/2,-h*.61,w,h*.34);
-      ctx.drawImage(img,img.width*.22,img.height*.34,img.width*.56,img.height*.27,-w*.28,-h*.27,w*.56,h*.27);
-      const extension=Math.sin(Math.PI*SK.clamp(1-r.fx.pushPose/.55,0,1));
-      for(const side of [-1,1]){
-        const reach=side===(r.pushDirection||1)?extension:0;
-        const sx=side*w*.22,sy=-h*.24,ex=sx+side*s*(.12+.24*reach),ey=sy+s*(.27-.22*reach);
-        const hx=sx+side*s*(.16+.62*reach),hy=sy+s*(.55-.55*reach);
-        sleeve(ctx,L,sx,sy,ex,ey,hx,hy,s);
-        ctx.fillStyle=SK.gearById(L.gloves)?.tint||L.skin;ctx.beginPath();ctx.arc(hx,hy,s*.10,0,Math.PI*2);ctx.fill();
-      }
-    }else{
-      ctx.drawImage(img,0,0,img.width,img.height*.61,-w/2,-h*.61,w,h*.61);
-      for(const edge of [0,.78])ctx.drawImage(img,img.width*edge,img.height*.61,img.width*.22,img.height*.12,-w/2+w*edge,0,w*.22,h*.12);
-    }
+    SK.drawFancySkirt?.(ctx,L,hipX,hipY,s,'back',undefined,Math.min(1,(-hipY/s-.12)/.82));
+    ctx.save();ctx.translate(hipX,hipY);ctx.rotate(tuck*.22+steer*.10);
+    const extension=r.fx?.pushPose>0?Math.sin(Math.PI*SK.clamp(1-r.fx.pushPose/.55,0,1)):0;
+    riderUpper(ctx,r,L,img,key+index,s,[0,0],[-1,1].map(side=>{
+      const reach=side===(r.pushDirection||1)?extension:0;
+      return {side,bend:reach>0?side:-side,hand:[side*(.38+.46*reach),-.065-.53*reach]};
+    }));
     ctx.restore();ctx.restore();return true;
   }
   function turningBoard(ctx,r,L,s,steer) {
@@ -316,64 +418,52 @@
     }
     ctx.putImageData(im,0,0);bareBodies.set(img,c);return c;
   }
-  // Surface réutilisée pour fondre les poses sans doubler leur opacité.
-  const turnBlend=canvas(512,512);
   // Même caméra de dos qu'au sol. La planche vient à la main, jamais l'inverse.
   function aerialRider(c,r,L,s){
-    const trick=r.curTrick,pose=trick?.def.pose||'indy';
+    const trick=r.curTrick,phase=trick?SK.clamp(trick.t/trick.def.dur,0,.999):0,pose=trick?.def.poses?trick.def.poses[Math.floor(phase*trick.def.poses.length)]:trick?.def.pose||'indy';
     const ease=x=>{x=SK.clamp(x,0,1);return x*x*(3-2*x);};
     const p=trick?SK.clamp(trick.t/trick.def.dur,0,1):0;
     const g=trick?ease(p/.3)*ease((1-p)/.3):0;
     // Un saut simple conserve les manches et les mains de la pose de glisse.
-    if(g<=.001){turningBoard(c,r,L,s,0);return straightRider(c,r,L,s);}
     const key=r.def.gender==='girl'?'girlWalk':'boyWalk',index=r.def.gender==='girl'?0:1;
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index),h=2.5*s,w=h*img.width/img.height;
-    const angles={indy:.42,nose:-.65,tail:.95,melon:-.45,method:-.9,double:.3};
+    const yaw=(r.airYaw||0)+(trick?.def.anim==='spin'?p*Math.PI*2*(trick.def.turns||1)*(trick.def.sign||1):0),cos=Math.cos(yaw);
+    const view=Math.abs(cos)<.42?'side':cos<0?'front':'back';
+    const free=['spread','tuck','cross','superman','star'].includes(pose);
+    const angles={indy:.55,nose:-1.1,tail:1.2,melon:-.6,method:-1.4,double:.3,spread:0,tuck:.25,cross:0,star:1.4,superman:0};
     const grabSide=['nose','melon','method'].includes(pose)?-1:1;
-    const angle=(angles[pose]||0)*g,by=-.32-(pose==='tail'?.86:.65)*g;
-    const bx=(pose==='double'?0:grabSide*.60)*g;
-    const boardPoint=(across,along)=>[bx+across*Math.cos(angle)-along*Math.sin(angle),by+across*Math.sin(angle)+along*Math.cos(angle)];
-    const hip=[(pose==='double'?0:grabSide*.10)*g,-.96+.10*g];
+    const angle=(angles[pose]||0)*g+yaw,by=-.32-(pose==='superman'||pose==='star'||pose==='spread'?.05:pose==='tail'?.86:.78)*g;
+    const bx=(free||pose==='double'?0:grabSide*.45)*g;
+    const depth=.65+.35*Math.abs(cos);
+    const boardPoint=(across,along)=>[bx+across*Math.cos(angle)-along*depth*Math.sin(angle),by+across*Math.sin(angle)+along*depth*Math.cos(angle)];
+    const hip=[(pose==='double'?0:grabSide*.10)*g,-(r.def.id==='milo'?.77:.96)+.10*g];
     const line=(pts,color,width)=>{c.strokeStyle=color;c.lineWidth=width*s;c.lineCap='round';c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x*s,y*s):c.moveTo(x*s,y*s));c.stroke();};
     // Deux segments fixes : les mains ne peuvent pas dépasser la portée du bras.
-    const joint=(from,to,length,bend)=>{
-      let dx=to[0]-from[0],dy=to[1]-from[1],d=Math.max(.001,Math.hypot(dx,dy));
-      const reach=Math.min(d,length*1.98),end=[from[0]+dx/d*reach,from[1]+dy/d*reach];
-      const offset=Math.sqrt(Math.max(0,length*length-reach*reach/4));
-      return {end,middle:[(from[0]+end[0])/2-dy/d*offset*bend,(from[1]+end[1])/2+dx/d*offset*bend]};
-    };
-    SK.drawBoard(c,r.board,bx*s,by*s,.65*s,1.48*s,angle,r.input?.steer||0);
+
+    SK.drawBoard(c,r.board,bx*s,by*s,.65*s,1.48*s*depth,angle,r.input?.steer||0);
     for(const along of [-.25,.25]){
       const foot=boardPoint(0,along),ankle=[foot[0],foot[1]-.10];
       // Genoux rapprochés, fléchis dans le sens de la glisse.
       const knee=[hip[0]+.08+(foot[0]-hip[0])*.55*g,(hip[1]+ankle[1])/2-.13*g];
-      line([hip,knee,ankle],L.pants,along<0?.24:.28);
-      if(along<0)line([hip,knee,ankle],'#14203d25',.24);
+      pantLeg(c,L.pants,hip.map(v=>v*s),knee.map(v=>v*s),ankle.map(v=>v*s),s,{width:along<0?.29:.33,far:along<0,back:view==='back'});
       c.save();c.translate(foot[0]*s,foot[1]*s);c.rotate(angle);
-      if(L.springBoots||L.gripBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(c,-.16*s,-.25*s,.39*s,.34*s,1);
-      else{c.fillStyle='#263b4d';c.beginPath();c.roundRect(-.16*s,-.23*s,.38*s,.29*s,.06*s);c.fill();}
+      SK.drawCharacterBoot(c,L,-.16*s,-.25*s,.39*s,.34*s,'side');
       c.restore();
     }
-    // Découpe native de dos : ni tête de face, ni corps aplati ou étiré.
-    c.drawImage(img,0,0,img.width,img.height*.34,hip[0]*s-w/2,hip[1]*s-h*.61,w,h*.34);
-    c.drawImage(img,img.width*.22,img.height*.34,img.width*.56,img.height*.27,hip[0]*s-w*.28,hip[1]*s-h*.27,w*.56,h*.27);
-    for(const side of [-1,1]){
-      const shoulder=[hip[0]+side*w/s*.22,hip[1]-.6];
-      const rest=[shoulder[0]+side*.32,hip[1]+.08];
+    SK.drawFancySkirt?.(c,L,hip[0]*s,hip[1]*s,s,view,undefined,Math.min(1,(-hip[1]-.12-.35*g)/.82));
+    c.save();if(view==='side'&&Math.sin(yaw)>0)c.scale(-1,1);
+    riderUpper(c,r,L,img,key+index,s,hip,[-1,1].map(side=>{
+      const rest=[hip[0]+side*.38,hip[1]-.065];
       const holds=pose==='double'||side===(['nose','melon','method'].includes(pose)?-1:1);
-      const gripPoint=boardPoint(side*.30,pose==='nose'?-.52:pose==='tail'?.50:0);
-      const target=holds?gripPoint:[shoulder[0]+side*.46,hip[1]-.05];
-      const hand=[rest[0]+(target[0]-rest[0])*g,rest[1]+(target[1]-rest[1])*g];
-      const arm=joint(shoulder,hand,.43,side);
-      sleeve(c,L,shoulder[0]*s,shoulder[1]*s,arm.middle[0]*s,arm.middle[1]*s,arm.end[0]*s,arm.end[1]*s,s);
-      c.fillStyle='#263b4d';c.beginPath();c.arc(arm.end[0]*s,arm.end[1]*s,.10*s,0,Math.PI*2);c.fill();
-      if(holds&&g>.8){
-        // Pouce refermé sur la carre, lisible même à l'échelle de la course.
-        c.strokeStyle='#152936';c.lineWidth=.045*s;c.beginPath();
-        c.arc(arm.end[0]*s,arm.end[1]*s,.075*s,-.4,2.1);c.stroke();
-      }
-    }
+      const gripPoint=boardPoint(side*.25,pose==='nose'?-.48:pose==='tail'?.46:0);
+      let target=holds?gripPoint:[hip[0]+side*.48,hip[1]-.18];
+      if(pose==='spread'||pose==='star')target=[hip[0]+side*.86,hip[1]-.62+(pose==='star'?side*.25:0)];
+      if(pose==='tuck')target=[hip[0]+side*.15,hip[1]-.32];
+      if(pose==='cross')target=[hip[0]-side*.16,hip[1]-.62];
+      if(pose==='superman')target=[hip[0]+side*.25,hip[1]-1.24];
+      return {side,hand:[rest[0]+(target[0]-rest[0])*g,rest[1]+(target[1]-rest[1])*g]};
+    }),{view});c.restore();
     return true;
   }
   S.draw=function(ctx,r,L,s,front,steer) {
@@ -381,27 +471,10 @@
     if(r.state==='air')return aerialRider(ctx,r,L,s);
     const key=r.def.gender==='girl'?'girlBoard':'boyBoard';if(!frames[key])return false;
     if(r.state==='ride'&&!front&&!r.curTrick){
-      const amount=r.fx?.pushPose>0||r.pumpPose>0||r.jumpCharge>0?0:Math.min(1,Math.max(Math.abs(steer),r.brake||0));
-      const blend=amount*amount*(3-2*amount),c=turnBlend.getContext('2d');
-      const unit=120,anchorX=256,anchorY=420;
-      c.clearRect(0,0,512,512);c.save();c.translate(anchorX,anchorY);
-      c.globalAlpha=1-blend;straightRider(c,r,L,unit);
-      if(blend>0){
-        c.globalCompositeOperation='lighter';c.globalAlpha=blend;
-        // Même hauteur tête-planche et même ancrage que la pose droite.
-        const img=bodyWithoutBoard(colored(frames[key][0],r,L,key+'0'),frames[key][0]);
-        const height=(2.87-.23*Math.min(1,Math.max(r.crouch||0,r.jumpCharge||0,r.pumpPose||0)))*unit,width=height*img.width/img.height;
-        c.save();if(steer>0)c.scale(-1,1);
-        c.drawImage(img,-width/2,-height+.37*unit,width,height);c.restore();
-      }
-      c.restore();turningBoard(ctx,r,L,s,steer);ctx.drawImage(turnBlend,-anchorX*s/unit,-anchorY*s/unit,512*s/unit,512*s/unit);return true;
+      turningBoard(ctx,r,L,s,steer);
+      straightRider(ctx,r,L,s,steer);return true;
     }
-    let index=front?1:2,mirror=false;
-    if(Math.abs(steer)>.35){index=0;mirror=steer>0;}
-    if(front&&key==='girlBoard')index=0;
-    const img=bodyWithoutBoard(colored(frames[key][index],r,L,key+index),frames[key][index]),height=2.87*s,width=height*img.width/img.height;
-    SK.drawBoard(ctx,r.board,0,s*.12,s*.48,s*2.05,mirror?-.85:.85,r.input?.steer||0);
-    ctx.save();if(mirror)ctx.scale(-1,1);ctx.drawImage(img,-width/2,-height+.37*s,width,height);ctx.restore();return true;
+    S.shopPose(ctx,r,L,s,performance.now()/1000);return true;
   };
   // Preview pose: fixed feet on the board, gentle balance through elbows and knees.
   S.shopPose=function(c,r,L,s,t){
@@ -412,27 +485,22 @@
     SK.drawBoard(c,r.board,0,0,s*.42,s*2.5,Math.PI/2,0);
     c.lineCap='round';c.lineJoin='round';
     for(const side of [-1,1]){
-      c.strokeStyle=L.pants;c.lineWidth=s*.24;c.beginPath();c.moveTo(side*s*.18,hip);c.lineTo(side*s*.34,-s*.39);c.lineTo(side*s*.37,-s*.12);c.stroke();
-      c.fillStyle='#263e48';c.beginPath();c.roundRect(side*s*.37-s*.14,-s*.23,s*.31,s*.25,s*.06);c.fill();
-      if(L.springBoots||L.gripBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(c,side*s*.37-s*.16,-s*.27,s*.34,s*.30,side);
+      pantLeg(c,L.pants,[side*s*.18,hip],[side*s*.34,-s*.39],[side*s*.37,-s*.12],s,{width:.29});
+      SK.drawCharacterBoot(c,L,side*s*.37-s*.16,-s*.27,s*.34,s*.30,'front',side);
     }
-    // Keep the original head and central jacket at their native proportions.
-    c.drawImage(img,0,0,img.width,img.height*.34,-w/2,hip-h*.61,w,h*.34);
-    c.drawImage(img,img.width*.22,img.height*.34,img.width*.56,img.height*.27,-w*.28,hip-h*.27,w*.56,h*.27);
-    for(const side of [-1,1]){
-      const sy=hip-h*.23,sx=side*w*.22,ey=sy+s*.23,hx=side*s*.80,hy=sy-s*.04+Math.sin(t*1.7+side)*s*.05;
-      sleeve(c,L,sx,sy,side*s*.60,ey,hx,hy,s);
-      c.fillStyle=SK.gearById(L.gloves)?.tint||'#263e48';c.beginPath();c.arc(hx,hy,s*.10,0,Math.PI*2);c.fill();
-    }
+    SK.drawFancySkirt?.(c,L,0,hip,s,'front',undefined,Math.min(1,(-hip/s-.12)/.82));
+    riderUpper(c,r,L,img,key+'0',s,[0,hip/s],[-1,1].map(side=>({side,hand:[side*.46,hip/s-.12+Math.sin(t*1.7+side)*.025]})),{view:'front'});
+
   };
   S.seated=function(ctx,r,L,s){
     const girl=r.def.gender==='girl',key=girl?'girlFront':'boyWalk',img=colored(frames[key][0],r,L,key+'0');
     const h=2.5*s,w=h*img.width/img.height;
-    ctx.drawImage(img,0,0,img.width,img.height*.61,-w/2,-h*.61,w,h*.61);
     ctx.strokeStyle=L.pants;ctx.lineWidth=s*.25;ctx.lineCap='round';ctx.lineJoin='round';
-    for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*s*.16,-s*.06);ctx.lineTo(side*s*.28,s*.18);ctx.lineTo(side*s*.29,s*.65);ctx.stroke();
-      ctx.fillStyle='#263e48';ctx.fillRect(side*s*.29-s*.13,s*.54,s*.29,s*.22);}
+    for(const side of [-1,1]){pantLeg(ctx,L.pants,[side*s*.16,-s*.06],[side*s*.28,s*.18],[side*s*.29,s*.65],s,{width:.29});
+      SK.drawCharacterBoot(ctx,L,side*s*.29-s*.15,s*.49,s*.32,s*.29,'front',side);}
     SK.drawBoard(ctx,r.board,0,s*.85,s*.4,s*2.05,Math.PI/2+.07,r.input?.steer||0);
+    SK.drawFancySkirt?.(ctx,L,0,0,s,'front',undefined,.5);
+    riderUpper(ctx,r,L,img,key+'0',s,[0,0],[-1,1].map(side=>({side,hand:[side*.30,-.10]})),{view:'front'});
   };
   S.face=function(ctx,r,L,x,y,rad) {
     if(r.def.hidden&&!window.FamilyHeads?.has(r.def.id))return false;
@@ -440,92 +508,38 @@
     if(!frames[key])return false;
     const img=colored(frames[key][index],r,L,key+index);
     ctx.save();ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.clip();ctx.fillStyle='#dceffa';ctx.fillRect(x-rad,y-rad,rad*2,rad*2);
-    ctx.drawImage(img,img.width*.12,0,img.width*.76,img.height*.34,x-rad,y-rad*1.16,rad*2,rad*2);ctx.restore();return true;
+    if(!window.FamilyHeads?.draw(ctx,r.def.id,'front',x-rad*.84,y-rad*.84,rad*1.68,rad*1.68))ctx.drawImage(img,img.width*.12,0,img.width*.76,img.height*.39,x-rad*.84,y-rad*.84,rad*1.68,rad*1.68);ctx.restore();return true;
   };
   S.walk=function(ctx,r,L,x,y,s,t,direction,moving) {
-    const girl=r.def.gender==='girl',side=moving&&(direction==='left'||direction==='right');
-    const key=girl&&!moving?'girlFront':girl?'girlWalk':'boyWalk';if(!frames[key])return;
-    const mapping=girl?{up:0,right:1,left:1,down:3,downRight:3,downLeft:4,upRight:5,upLeft:6}:{up:1,right:2,left:2,down:0,downRight:4,downLeft:5,upRight:6,upLeft:7};
-    const index=girl&&!moving?0:(mapping[direction]??mapping.down);
-    const img=colored(frames[key][index],r,L,key+index),height=2.5*s,width=height*img.width/img.height;
-    ctx.save();ctx.translate(x,y);
-    // La même pose vers la droite est retournée entièrement : tête, bras et jambes.
-    if(direction==='left'&&moving)ctx.scale(-1,1);
-    const frontLegs=!side&&direction==='down';
-    if(frontLegs){
-      for(const sign of [-1,1]){
-        ctx.save();ctx.scale(sign,1);ctx.translate(-s*.025,0);ctx.fillStyle=L.pants;
-        ctx.beginPath();ctx.moveTo(s*.055,-s*1.08);ctx.lineTo(s*.24,-s*1.08);ctx.lineTo(s*.245,-s*.22);ctx.lineTo(s*.065,-s*.22);ctx.closePath();ctx.fill();
-        if(SK.DENIM_COLORS.includes(L.pants)){ctx.strokeStyle='#d1b78b';ctx.lineWidth=s*.012;ctx.beginPath();ctx.moveTo(s*.09,-s*1.03);ctx.lineTo(s*.09,-s*.28);ctx.stroke();}
-        ctx.fillStyle= r.def.gender==='girl'?'#27334f':'#243648';
-        ctx.beginPath();ctx.moveTo(s*.065,-s*.29);ctx.lineTo(s*.26,-s*.29);ctx.lineTo(s*.27,-s*.11);
-        ctx.quadraticCurveTo(s*.35,-s*.07,s*.34,-s*.015);ctx.quadraticCurveTo(s*.22,s*.02,s*.055,-s*.015);ctx.closePath();ctx.fill();
-        if(L.gripBoots||L.springBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(ctx,s*.04,-s*.32,s*.31,s*.34);
-        ctx.restore();
-      }
-      ctx.save();ctx.beginPath();ctx.rect(-width,-height-20,width*2,height+40);ctx.rect(-s*.48,-s*.94,s*.96,s*1.5);ctx.clip('evenodd');
+    const side=['left','right'].includes(direction),back=direction.startsWith('up');
+    const view=side?'side':back?'back':'front',girl=r.def.gender==='girl';
+    const key=girl?'girlWalk':'boyWalk',index=side?(girl?1:2):back?(girl?0:1):(girl?3:0);
+    if(!frames[key])return;
+    const img=colored(frames[key][index],r,L,key+index);
+    const p=proportions[r.def.id]||{torso:1,legs:1};
+    const hip=-.20-.75*p.legs,torso=p.torso,phase=t*Math.PI*3.6;
+    const bob=moving?-Math.abs(Math.sin(phase))*.018:0;
+    ctx.save();ctx.translate(x,y);if(direction==='left'||direction.endsWith('Left'))ctx.scale(-1,1);
+    const steps=[];
+    for(const sign of [-1,1]){
+      const a=phase+(sign<0?Math.PI:0),swing=moving?Math.sin(a):0;
+      const footX=side?swing*.22:sign*.15+swing*.025;
+      const lift=moving?Math.max(0,Math.cos(a))*.07:0;
+      const hx=side?0:sign*.13,hy=hip+bob,ax=footX,ay=-.18-lift;
+      const knee=[hx+(ax-hx)*.5+(side?.06:0),(hy+ay)*.5-.025*Math.abs(swing)];
+      pantLeg(ctx,L.pants,[hx*s,hy*s],knee.map(v=>v*s),[ax*s,ay*s],s,{width:.25,far:side&&sign<0,back});
+      SK.drawCharacterBoot(ctx,L,(ax-.13)*s,(ay-.12)*s,(side?.37:.28)*s,.31*s,view,side?1:sign);
+      steps.push({side:sign,swing});
     }
-    if(side){
-      const phase=t*Math.PI*3.6,hipY=-height*.39,bob=-Math.abs(Math.sin(phase))*s*.035;
-      // Appui : le pied recule régulièrement au sol. Retour : il se lève et
-      // revient devant; le genou est calculé avec deux segments de longueur fixe.
-      const stepPose=offset=>{
-        const cycle=((phase+offset)/(Math.PI*2))%1;
-        const u=cycle<.5?cycle*2:(cycle-.5)*2;
-        const forward=cycle<.5?1-2*u:-Math.cos(u*Math.PI);
-        return {x:forward*s*.23,lift:cycle<.5?0:Math.sin(u*Math.PI)*s*.07};
-      };
-      const leg=(offset,far)=>{
-        const foot=stepPose(offset),hx=-s*.045,hy=hipY+bob;
-        const ax=foot.x,ay=-s*.18-foot.lift;
-        const dx=ax-hx,dy=ay-hy,d=Math.hypot(dx,dy),length=s*.415;
-        const bend=Math.sqrt(Math.max(0,length*length-d*d/4));
-        const kx=(hx+ax)/2+dy/d*bend,ky=(hy+ay)/2-dx/d*bend;
-        ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=L.pants;ctx.lineWidth=s*.17;
-        ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(kx,ky);ctx.lineTo(ax,ay);ctx.stroke();
-        if(SK.DENIM_COLORS.includes(L.pants)){ctx.strokeStyle='#b9ac89';ctx.lineWidth=s*.012;ctx.stroke();}
-        if(far){ctx.lineWidth=s*.17;ctx.strokeStyle='rgba(10,22,50,.18)';ctx.stroke();}
-        // Botte plate, ancrée sous la cheville (plus de gros ronds aux pieds).
-        ctx.translate(ax,ay);ctx.fillStyle=far?'#20333b':'#2b414a';
-        ctx.beginPath();ctx.moveTo(-s*.09,-s*.09);ctx.lineTo(s*.075,-s*.09);
-        ctx.lineTo(s*.095,s*.06);ctx.quadraticCurveTo(s*.25,s*.06,s*.25,s*.145);
-        ctx.quadraticCurveTo(s*.25,s*.18,s*.20,s*.18);ctx.lineTo(-s*.10,s*.18);
-        ctx.quadraticCurveTo(-s*.13,s*.17,-s*.11,s*.10);ctx.closePath();ctx.fill();if(L.gripBoots||L.springBoots)(L.springBoots?SK.drawSpringBoot:SK.drawGripBoot)(ctx,-s*.12,-s*.13,s*.38,s*.33);ctx.restore();
-      };
-      leg(Math.PI,true);leg(0,false);
-      const shoulderY=-height*.59+bob;
-      const arm=(offset,far)=>{
-        // Le bras avance quand la jambe du même côté recule.
-        const swing=-stepPose(offset).x/(s*.23),sx=-s*.025,handX=swing*s*.35;
-        const handY=shoulderY+s*.53-Math.abs(swing)*s*.06;
-        ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=s*.19;ctx.strokeStyle=L.jacket;
-        sleeve(ctx,L,sx,shoulderY,sx+handX*.45,shoulderY+s*.29,handX,handY,s);
-        if(far){ctx.strokeStyle='rgba(15,25,45,.18)';ctx.stroke();}
-        ctx.fillStyle=SK.gearById(L.gloves)?.tint||SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.arc(handX,handY+s*.015,s*.080,0,Math.PI*2);ctx.fill();ctx.restore();
-      };
-      if(L.rocketPack)SK.drawRocketPack(ctx,-s*.29,-height*.51+bob,s*.30);
-      arm(Math.PI,true);
-      // Isoler tête et torse pour remplacer les bras figés de la référence.
-      ctx.save();ctx.beginPath();
-      ctx.rect(-width/2,-height+bob,width,height*.38);
-      ctx.rect(-width*.205,-height*.62+bob,width*.43,height*.245);ctx.clip();
-      ctx.drawImage(img,-width/2,-height+bob,width,height);ctx.restore();
-      arm(0,false);
-    }else if(r.wave){
-      // Enlever le bras immobile avant de dessiner le salut, sans toucher au visage.
-
-      const sx=width*.15,sy=-height*.59,ex=sx+s*.28,ey=sy-s*.18,angle=Math.sin(t*5)*.28;
-      const hx=ex+Math.sin(angle)*s*.38,hy=ey-Math.cos(angle)*s*.43;
-      sleeve(ctx,L,sx,sy,ex,ey,hx,hy,s);
-      ctx.fillStyle=SK.gearById(L.gloves)?.tint||SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.ellipse(hx,hy-s*.015,s*.08,s*.10,angle,0,Math.PI*2);ctx.fill();
-      // Le torse recouvre la naissance du bras : épaule derrière le manteau.
-      ctx.save();ctx.beginPath();ctx.rect(-width/2,-height,width,height);ctx.rect(width*.22,-height*.63,width*.28,height*.40);ctx.clip('evenodd');ctx.drawImage(img,-width/2,-height,width,height);ctx.restore();
-    }else ctx.drawImage(img,-width/2,-height,width,height);
-    if(frontLegs){
-      ctx.restore();
-      // Les mitaines passent devant le masque qui remplace les jambes.
-      for(const sign of [-1,1]){if(r.wave&&sign===1)continue;ctx.save();ctx.translate(sign*width*.35,-height*.37);ctx.scale(sign,1);ctx.fillStyle=SK.gearById(L.gloves)?.tint||SK.jacketPalette(L.jacket).trim;ctx.beginPath();ctx.moveTo(-s*.075,-s*.09);ctx.lineTo(s*.075,-s*.09);ctx.bezierCurveTo(s*.12,s*.01,s*.11,s*.14,s*.025,s*.15);ctx.bezierCurveTo(-s*.05,s*.17,-s*.09,s*.11,-s*.085,s*.04);ctx.quadraticCurveTo(-s*.15,s*.06,-s*.12,-s*.015);ctx.closePath();ctx.fill();ctx.restore();}
-    }
+    SK.drawFancySkirt?.(ctx,L,0,(hip+bob)*s,s,view,undefined,Math.min(1,(-hip-bob-.12)/.82));
+    const digAngle=-.25+Math.sin((r.digProgress||0)*Math.PI*6)*.55;
+    const targets=steps.map(({side:sign,swing})=>{
+      if(r.digProgress>0){const grip=sign<0?.48:.18;return {side:sign,hand:[.14+Math.sin(digAngle)*grip,hip+bob+.03-Math.cos(digAngle)*grip]};}
+      if(r.wave&&sign>0)return {side:sign,bend:1,hand:[.62,hip+bob-.98*torso+Math.sin(t*8)*.035]};
+      return {side:sign,bend:side?1:-sign,hand:[side?-swing*.23:sign*(.37+Math.abs(swing)*.025),hip+bob-(.065+Math.abs(swing)*.07)*torso]};
+    });
+    riderUpper(ctx,r,L,img,key+index,s,[0,hip+bob],targets,{view,torso});
+    if(r.digProgress>0)SK.drawShovel(ctx,.14*s,(hip+bob+.03)*s,s,digAngle);
     ctx.restore();
   };
   // Milo : corps et jambes plus courts, sans écraser son visage ni son casque.
@@ -564,31 +578,15 @@
         const bend=Math.sqrt(Math.max(0,.395*.395-d*d/4));
         kx=(hx+ax)/2+dy/d*bend;ky=(hy+ay)/2-dx/d*bend;
       }
-      limb([[hx,hy],[kx,ky],[ax,ay]],L.pants||r.def.colors.pants,.19);
-      if(side&&!near)limb([[hx,hy],[kx,ky],[ax,ay]],'rgba(10,22,40,.18)',.19);
-      c.save();c.translate(ax,ay);c.fillStyle=side&&!near?'#20323c':'#2b414b';
-      // Upright cuff, rounded toe and flat sole instead of a horizontal capsule.
-      c.beginPath();c.moveTo(-.095,-.09);c.lineTo(.085,-.09);
-      if(side){
-        c.lineTo(.10,.065);c.quadraticCurveTo(.235,.07,.24,.135);
-        c.quadraticCurveTo(.245,.18,.20,.18);c.lineTo(-.105,.18);
-      }else{
-        c.lineTo(.115,.10);c.quadraticCurveTo(.135,.18,.08,.18);
-        c.lineTo(-.08,.18);c.quadraticCurveTo(-.135,.18,-.115,.10);
-      }
-      c.lineTo(-.095,-.09);c.closePath();c.fill();
-      c.strokeStyle='#192e38';c.lineWidth=.025;c.beginPath();
-      c.moveTo(-.095,.165);c.lineTo(side?.21:.095,.165);c.stroke();
-      c.restore();
+      pantLeg(c,L.pants||r.def.colors.pants,[hx,hy],[kx,ky],[ax,ay],1,{width:.25,far:side&&!near});
+      SK.drawCharacterBoot(c,L,ax-.13,ay-.12,side?.37:.28,.31,side?'side':'front',side?1:sign);
     };
     leg(false);leg(true);
-    const arm=(near)=>{const sign=near?1:-1,ax=side?(near?.08:-.08):sign*.245,sy=-1.56-bob;
-      const swing=side?-step(near?0:Math.PI).x:0;
-      const waving=r.wave&&near;
-      const elbow=[ax+(waving?.28:side?swing:sign*.09),sy+(waving?-.18:.34)];
-      const hand=[ax+(waving?.32+Math.sin(t*9)*.07:side?swing*1.4:sign*.14),sy+(waving?-.61:.65)];
-      sleeve(c,L,ax,sy,elbow[0],elbow[1],hand[0],hand[1],1);
-      limb([hand,[hand[0],hand[1]+.045]],r.def.colors.skin,.18);
+    const arm=(near)=>{
+      const sign=near?1:-1,shoulder=[side?(near?.06:-.06):sign*.23,-1.56-bob];
+      const swing=side?-step(near?0:Math.PI).x:0,waving=r.wave&&near;
+      const hand=waving?[.58,-1.91-bob+Math.sin(t*8)*.035]:[side?swing:sign*.36,-.94-bob-Math.abs(swing)*.12];
+      rigArm(c,L,shoulder,hand,1,{side:sign,bend:waving||side?1:-sign,far:side&&!near});
     };
     arm(false);if(r.wave)arm(true);
     // Only the torso belongs here: both sleeves are already drawn as moving arms.
@@ -601,21 +599,8 @@
   }
   S.walk=function(ctx,r,L,x,y,s,t,direction,moving){
     if(r.def.adult)return adultWalker(ctx,r,L,x,y,s,t,direction,moving);
-    const p=proportions[r.def.id];if(!p)return fullWalk(ctx,r,L,x,y,s,t,direction,moving);
-    const c=toddlerCanvas.getContext('2d'),u=120,ax=256,ay=400;
-    c.clearRect(0,0,512,512);fullWalk(c,r,L,ax,ay,u,t,direction,moving);
-    const neck=ay-1.65*u,hip=ay-.95*u,ankle=ay-.20*u;
-    const newHip=ankle-(ankle-hip)*p.legs,newNeck=newHip-(hip-neck)*p.torso,k=s/u;
-    ctx.save();ctx.translate(x,y);
-    ctx.drawImage(toddlerCanvas,0,0,512,neck,-ax*k,(newNeck-neck-ay)*k,512*k,neck*k);
-    ctx.drawImage(toddlerCanvas,0,neck,512,hip-neck,-ax*k,(newNeck-ay)*k,512*k,(newHip-newNeck)*k);
-    ctx.drawImage(toddlerCanvas,0,hip,512,ankle-hip,-ax*k,(newHip-ay)*k,512*k,(ankle-newHip)*k);
-    ctx.drawImage(toddlerCanvas,0,ankle,512,512-ankle,-ax*k,(ankle-ay)*k,512*k,(512-ankle)*k);
-    ctx.restore();
+    return fullWalk(ctx,r,L,x,y,s,t,direction,moving);
   };
-  S.draw=function(ctx,r,L,s,front,steer){
-    if(r.def.id!=='milo')return fullDraw(ctx,r,L,s,front,steer);
-    toddler(ctx,s,.37,(c,u)=>fullDraw(c,r,L,u,front,steer),r.def.id==='edison'?.88:.8);return true;
-  };
+  S.draw=function(ctx,r,L,s,front,steer){return fullDraw(ctx,r,L,s,front,steer);};
   S.seated=function(ctx,r,L,s){return fullSeat(ctx,r,L,r.def.id==='milo'?s*.72:s);};
 })(window.SK);

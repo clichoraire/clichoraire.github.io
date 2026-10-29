@@ -15,7 +15,7 @@ for(let i=0;i<12;i++){
   const g=new BC.Game({...m,ctrl:['cpu','cpu'],intro:false,mode:'adventure'});
   assert.deepEqual(g.players.filter(p=>p.team===0).map(p=>p.id),family);
   for(const p of g.players.filter(p=>p.team===1)){assert.ok(p.def.monster);assert.ok(!A.allIds().includes(p.id));assert.ok(!ids.has(p.id));ids.add(p.id);}
-  for(let t=0;t<300&&g.phase!=='end';t+=BC.STEP)g.update(BC.STEP);
+  for(let t=0;t<600&&g.phase!=='end';t+=BC.STEP)g.update(BC.STEP);
   assert.equal(g.phase,'end','match terminé : '+team.name);
   assert.ok(g.players.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.hp)));
 }

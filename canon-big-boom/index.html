@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Canon Big Boom</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-title" class="screen">
+    <canvas id="title-anim" width="960" height="640" aria-hidden="true"></canvas>
+    <div class="title-box">
+      <p class="eyebrow">LES FAMILLES · BRIGADE ANTI-BÉBITTES</p>
+      <h1 class="logo"><span class="t1">CANON</span><span class="t2">BIG BOOM</span></h1>
+      <p class="tagline">Ta famille. Ton canon. Et des bébittes volantes qui n'ont rien demandé.</p>
+      <div class="title-buttons">
+        <button id="btn-continue" class="lego primary hidden"></button>
+        <button id="btn-play" class="lego primary">▶ Jouer</button>
+        <button id="btn-help" class="lego">? Comment jouer</button>
+        <button id="btn-sound" class="lego small">🔊 Son</button>
+      </div>
+      <span id="version"></span>
+    </div>
+  </section>
+
+  <section id="screen-characters" class="screen hidden">
+    <div class="panel big">
+      <header class="panel-head">
+        <div class="tabs" id="family-tabs"></div>
+        <h2 class="panel-title">PERSONNAGES</h2>
+        <button class="back" data-back><b>B</b> RETOUR</button>
+      </header>
+      <div class="char-layout">
+        <div id="char-grid" class="char-grid" role="listbox" aria-label="Choisis ton personnage"></div>
+        <aside id="char-detail" class="char-detail"></aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-map" class="screen hidden">
+    <div class="map-frame">
+      <canvas id="map-canvas" width="960" height="640" aria-label="Carte du monde"></canvas>
+      <div class="hud-top">
+        <div class="badge" id="map-badge"></div>
+        <div class="world-nav"><button id="world-prev" class="world-arrow" aria-label="Monde précédent"><b>L</b> ◀</button><div class="world-title" id="world-title"></div><button id="world-next" class="world-arrow" aria-label="Monde suivant">▶ <b>R</b></button></div>
+        <div class="gold-pill" id="map-gold"></div>
+      </div>
+      <div class="map-bottom">
+        <div class="objective" id="map-objective"></div>
+        <div class="map-actions">
+          <button id="btn-level" class="lego primary pulse hidden">⭐ Évolution !</button>
+          <button class="lego" data-back><b class="btn-badge">B</b> Retour</button>
+          <button id="btn-shop" class="lego">🔧 Hangar</button>
+          <button id="btn-start" class="lego primary"><b class="btn-badge">A</b> Jouer</button>
+          <button id="btn-debug" class="lego small dev hidden" title="Lance ce tableau en mode debug (Matthieu seulement)">🐞 Debug</button>
+          <button id="btn-new-wave" class="lego small dev hidden" title="Crée un tableau vide à partir de zéro">🆕 Créer un tableau</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-shop" class="screen hidden">
+    <div class="panel big">
+      <header class="panel-head">
+        <div class="tabs" id="shop-tabs"></div>
+        <h2 class="panel-title">HANGAR</h2>
+        <div class="gold-pill" id="shop-gold"></div>
+        <button class="back" data-back><b>B</b> RETOUR</button>
+      </header>
+      <p class="shop-intro" id="shop-intro"></p>
+      <div id="shop-list" class="shop-list"></div>
+    </div>
+  </section>
+
+  <section id="screen-wave" class="screen hidden">
+    <div class="wave-frame">
+      <canvas id="wave-canvas" width="960" height="640" aria-label="Vise avec la souris ou le doigt"></canvas>
+      <div class="hud">
+        <div class="badge" id="wave-badge"></div>
+        <div class="gold-pill" id="wave-gold"></div>
+        <div class="objective-panel">
+          <div class="objective-tag"><span class="bang">!</span><span id="wave-tag">Vague 1</span></div>
+          <div class="objective-text" id="wave-text"></div>
+          <div class="objective-bar"><i id="wave-bar"></i></div>
+          <div class="objective-sub" id="wave-sub"></div>
+        </div>
+        <div class="right-hud">
+          <div class="combo" id="wave-combo">x0</div>
+          <div class="hp-meter" title="Points de vie"><i id="wave-hp"></i></div>
+          <div class="hp-text" id="wave-hp-text"></div>
+        </div>
+        <div class="timer" id="wave-timer"></div>
+        <div class="cards-owned" id="wave-cards"></div>
+        <div class="tutorial hidden" id="wave-tutorial"><div class="tut-head">TUTORIEL <span>?</span></div><div class="tut-body" id="wave-tutorial-text"></div></div>
+        <button id="btn-fire" class="fire-btn" aria-label="Tirer">💥</button>
+        <button id="btn-pause" class="pause-btn" aria-label="Pause">❚❚</button>
+        <div class="rotate-hint">📱 Tourne ton appareil pour voir plus grand !</div>
+      </div>
+      <div id="overlay-pause" class="overlay hidden">
+        <div class="pause-box">
+          <div class="pause-kicker">Pause</div>
+          <div class="pause-ring"><div class="pause-logo"><span class="t1">CANON</span><span class="t2">BIG BOOM</span></div><div class="pause-world" id="pause-world"></div><div class="pause-pct" id="pause-pct"></div></div>
+          <div class="pause-stats" id="pause-stats"></div>
+          <div class="pause-buttons"><button id="btn-resume" class="lego primary">▶ Reprendre</button><button id="btn-restart" class="lego">↻ Recommencer</button><button id="btn-quit" class="lego">🗺 Carte</button></div>
+        </div>
+      </div>
+      <div id="overlay-cards" class="overlay hidden">
+        <div class="cards-box">
+          <div class="cards-kicker">ENNEMI SPÉCIAL ABATTU !</div>
+          <h2>Choisis une carte</h2>
+          <p>Son pouvoir dure jusqu’à la fin de ce tableau.</p>
+          <div class="cards" id="card-list"></div>
+        </div>
+      </div>
+      <div id="overlay-result" class="overlay hidden"><div class="result-panel" id="result-panel"></div></div>
+      <aside id="debug-panel" class="debug-panel hidden" aria-label="Debug"></aside>
+    </div>
+  </section>
+
+  <dialog id="levelup" class="lego-dialog levelup" aria-labelledby="level-title">
+    <div class="kicker">NIVEAU SUPÉRIEUR !</div>
+    <h2 id="level-title">CHOISIS TON ÉVOLUTION</h2>
+    <p id="level-intro" class="level-intro"></p>
+    <div id="talent-list" class="talent-grid"></div>
+  </dialog>
+
+  <dialog id="help" class="lego-dialog" aria-labelledby="help-title">
+    <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
+    <h2 id="help-title">COMMENT JOUER</h2>
+    <div class="help-grid">
+      <div><b>🎯 Viser et tirer</b><p>Souris ou doigt : vise et clique pour tirer un boulet. Clavier : flèches + Espace. Manette : stick + ZR / A. Au début, un clic = un tir : achète le <b>tir automatique</b> au hangar pour tirer en continu.</p></div>
+      <div><b>🗺 La carte</b><p>Chaque monde a cinq tableaux : abats des ennemis, survis au chrono, et termine par le boss. Trois étoiles si ton canon est encore en pleine forme.</p></div>
+      <div><b>🪙 L’or</b><p>Un ennemi = une pièce au premier monde, et de plus en plus ensuite. Les combos (ennemis abattus à la suite) multiplient le butin.</p></div>
+      <div><b>🔧 Le hangar</b><p>Améliore la cadence, la portée, les dégâts, les points de vie… Achète de nouveaux canons, de nouveaux boulets et des effets spéciaux.</p></div>
+      <div><b>★ Les ennemis spéciaux</b><p>Une chauve-souris rouge, un fantôme vert… Abats-les pour choisir une carte : un pouvoir gardé seulement pour ce tableau.</p></div>
+      <div><b>⭐ Les niveaux</b><p>À chaque niveau gagné, c’est toi qui choisis ton évolution : vie, dégâts, cadence, portée, critique ou butin.</p></div>
+      <div><b>👥 L’équipe</b><p>Au hangar, recrute un coéquipier : un autre membre de la famille tire tout seul à tes côtés, avec des boulets deux fois moins forts.</p></div>
+      <div><b>💥 Détruit ?</b><p>Tu gardes l’or et l’expérience gagnés. Retourne au hangar, deviens plus fort, et recommence !</p></div>
+    </div>
+  </dialog>
+</div>
+<script src="js/config.js"></script>
+<script src="js/family-head-sources.js"></script>
+<script src="js/family-heads.js"></script>
+<script src="js/save.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/map.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/custom-waves.js"></script>
+<script src="js/debug.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -22,6 +22,9 @@ js/powers.js               les quinze pouvoirs (bouton V), projectiles (bulles, 
 js/ai.js                   intelligence des joueurs non contrôlés (porteur, défenseurs, extérieurs, pouvoirs)
 js/render.js               quatre décors, joueurs triés par profondeur, effets des pouvoirs, HUD (points de vie, pouvoirs), accueil, galerie
 js/adventure.js            mode Aventure : sauvegarde, chef, équipe, expérience, points de stat, écrans
+js/arcade-ui.js            écrans arcade partagés : sélection, tableau d'aventure (cartes), affrontement (difficulté), magasin
+js/difficulty-badges.js    les cinq écussons de difficulté (SVG) affichés sur l'écran d'affrontement
+css/adventure-fit.css      écrans d'aventure sans défilement : barre latérale compacte, encadré Mon équipe, affrontement
 js/audio.js                sons synthétisés (WebAudio)
 js/input.js                clavier et manette
 js/main.js                 menus, sélection, boucle du match, résultats, coupe, galerie de la famille
@@ -98,7 +101,7 @@ La campagne suit douze rencontres : Goblins, Lézards-hommes, Sorcières, Squele
 Harpies, Hommes-bêtes, Slimes venimeux, Spectres des ombres, Trolls des cavernes, Gnolls et Mandragores hurlantes.
 Chaque espèce possède six joueurs, une silhouette et un terrain dédiés (`js/monsters.js`, `js/monster-sprites.js`).
 Les portraits illustrés transparents sont dans `assets/monsters/portraits-v2.png` ; leur copie embarquée permet le jeu hors ligne. `js/monster-heads.js` définit les cadrages, et `js/monster-sprites.js` anime les corps détaillés. Le prompt et la provenance sont dans `assets/monsters/README.md`.
-La difficulté se choisit avant chaque match, parmi cinq niveaux, avec des récompenses XP croissantes.
+La difficulté se choisit sur l'écran d'affrontement (« Voir l'affrontement »), parmi cinq écussons, avec des récompenses XP croissantes ; le tableau d'aventure ne montre que les quatre cartes et l'équipe.
 Les rencontres déjà gagnées peuvent être rejouées sans avancer la campagne. Une défaite permet de retenter la même rencontre.
 Les malédictions ralentissent, le venin inflige des dégâts, les cris étourdissent ; les trolls régénèrent 3 PV toutes
 les quatre secondes. La fragmentation des slimes est une animation de réaction aux coups, sans ajouter de joueurs.

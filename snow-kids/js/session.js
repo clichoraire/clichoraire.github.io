@@ -3,6 +3,7 @@
  'use strict';
  const S=SK.Session={paused:false};
  S.format=seconds=>{const minutes=Math.floor(Math.max(0,Number(seconds)||0)/60);return Math.floor(minutes/60)+' h '+String(minutes%60).padStart(2,'0')+' min';};
+ S.formatCompact=seconds=>{const minutes=Math.floor(Math.max(0,Number(seconds)||0)/60);return Math.floor(minutes/60)+'h'+String(minutes%60).padStart(2,'0');};
  S.createTimer=(now=0)=>({last:now,activity:now,tick(now,enabled){const seconds=enabled?Math.max(0,Math.min(now,this.activity+120000)-this.last)/1000:0;this.last=now;return {seconds,idle:enabled&&now-this.activity>=120000};},touch(now){this.activity=now;}});
  S.init=opts=>{
   const timer=S.timer=S.createTimer(performance.now());let lastStore=performance.now(),wasRacePaused=false;
@@ -19,7 +20,7 @@
    if(!document.hidden&&!S.paused&&(Object.values(SK.Input.keys).some(Boolean)||Object.values(SK.Touch.held).some(Boolean)||pad))timer.touch(now);
    const result=timer.tick(now,!S.paused&&!opts.isPaused()&&!document.hidden&&SK.Touch.screen!=='menu');
    const save=opts.getSave();if(result.seconds)save.playSeconds=(Number(save.playSeconds)||0)+result.seconds;
-   document.querySelectorAll('[data-play-time]').forEach(el=>{const profile=SK.Profiles.peek(save,el.dataset.playTime);el.textContent='⏱ Temps de jeu : '+S.format(profile.playSeconds);});
+   document.querySelectorAll('[data-play-time]').forEach(el=>{const profile=SK.Profiles.peek(save,el.dataset.playTime);const label='Temps de jeu : '+S.format(profile.playSeconds);el.textContent=el.dataset.timeFormat==='compact'?S.formatCompact(profile.playSeconds):'⏱ '+label;el.title=label;el.setAttribute('aria-label',label);});
    if(result.idle)pause();
    if(now-lastStore>15000){lastStore=now;opts.store();}
   };

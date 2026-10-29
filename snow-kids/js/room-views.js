@@ -40,7 +40,7 @@
  document.querySelector('#screen-shop>.canvas-wrap')?.remove();
  const school=document.createElement('div');school.append(document.getElementById('school-scene'),document.getElementById('missions'));
  mount('school',school,1440/900,['.school-header','#school-gold','#school-more','#btn-school-back']);
- mount('gym',document.querySelector('.gym-room'),1280/720,['#gym-gold','#gym-back','#gym-talk','#gym-training'],true);
+ mount('gym',document.querySelector('.gym-room'),1280/720,['#gym-gold','#gym-back','#gym-training'],true);
  const throne=document.createElement('div');throne.append(document.getElementById('throne-canvas'));mount('throne',throne,1280/720,['#throne-speech','.throne-actions','.throne-test'],true);
  mount('wardrobe',document.querySelector('.closet-panel'),1100/800,['#wardrobe-back','#wardrobe-title','.closet-sub']);
 })(window.SK);

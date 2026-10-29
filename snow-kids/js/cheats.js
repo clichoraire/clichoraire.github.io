@@ -20,7 +20,21 @@
     {code:'PLANCHES64',label:'Recevoir toutes les planches',apply:s=>{s.boards=SK.BOARDS.map(x=>x.id);}}
   ];
   const normalize=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  C.apply=function(text,save){const entry=codes.find(x=>normalize(x.code)===normalize(text));if(!entry)return null;entry.apply(save);return entry.label;};
+  const statCodes={SPEED:'speed',VITESSE:'speed',TURN:'corner',CORNER:'corner',VIRAGE:'corner',ACCEL:'acceleration',ACCELERATION:'acceleration',JUMP:'jump',SAUT:'jump',FORCE:'strength',STRENGTH:'strength',ALL:'all',TOUT:'all'};
+  const statLabels={speed:'Vitesse',corner:'Virage',acceleration:'Accélération',jump:'Saut',strength:'Force'};
+  const statHelp=[['SPEED5','Vitesse +5'],['TURN5','Virage +5'],['ACCEL5','Accélération +5'],['JUMP5','Saut +5'],['FORCE5','Force +5'],['ALL5','Toutes les stats +5']];
+  C.apply=function(text,save){
+    const match=String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().match(/^([A-Z]+)\s*(\d{1,3})$/);
+    if(match&&statCodes[match[1]]){
+      const amount=Number(match[2]);if(amount<1||amount>50)return null;
+      const stat=statCodes[match[1]],keys=stat==='all'?Object.keys(statLabels):[stat],levels=SK.trainingLevels(save),values=SK.Gym.stats(save),messages=[];
+      for(const key of keys){const added=Math.min(amount,SK.STAT_MAX-values[key]);
+        if(key==='strength')save.strengthLevel=(save.strengthLevel||0)+added;else levels[key]=(levels[key]||0)+added;
+        messages.push(statLabels[key]+(added?' +'+added:' au maximum')+' ('+(values[key]+added)+'/50)');
+      }
+      return messages.join(' · ');
+    }
+    const entry=codes.find(x=>normalize(x.code)===normalize(text));if(!entry)return null;entry.apply(save);return entry.label;};
   C.sequence=function(){let count=0,last=null;return {reset(){count=0;last=null;},press(now){if(last===null||now-last>=4000)count=0;last=now;if(++count===7){this.reset();return true;}return false;}};};
   const sequence=C.sequence();C.reset=()=>sequence.reset();
   C.init=function(opts){
@@ -34,7 +48,7 @@
       SK.Audio.init();SK.Audio.sfx('emergency');
       emergency.animate([{transform:'translateY(0)'},{transform:'translateY(5px)',offset:.25},{transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
       if(sequence.press(performance.now())){
-        title.textContent='Les secrets du chalet';body.innerHTML='<p>Dans le village, appuie sur Entrée et écris un code dans le chat.</p><dl>'+codes.map(x=>'<dt>'+x.code+'</dt><dd>'+x.label+'</dd>').join('')+'<p>Les vêtements et les planches se choisissent ensuite dans la boutique.</p>';
+        title.textContent='Les secrets du chalet';body.innerHTML='<p>Dans le village, appuie sur Entrée et écris un code dans le chat.</p><dl>'+statHelp.map(([code,label])=>'<dt>'+code+'</dt><dd>'+label+'</dd>').join('')+'<p>Remplace 5 par un nombre de 1 à 50. Pour le personnage actuel, sans dépenser de points. Maximum : 50 par statistique.</p>'+codes.map(x=>'<dt>'+x.code+'</dt><dd>'+x.label+'</dd>').join('')+'<p>Les vêtements et les planches se choisissent ensuite dans la boutique.</p>';
         SK.Audio.sfx('unlock');dialog.showModal();
       }
     };

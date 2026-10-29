@@ -47,3 +47,14 @@ for(const [value,cost] of Object.entries(prices)){
 }
 c.stats.power=18;c.earned=0;A.save(s);assert.equal(A.load('matthieu').chars.matthieu.stats.power,18);
 assert.equal(A.spend(s,'matthieu','unknown'),false);
+
+// La vie se développe sans plafond, indépendamment de l’Endurance.
+c.stats.hp=18;c.stats.lifeBonus=250;c.points=26;
+const beforeLife=BC.phys(BC.PLAYERS.matthieu,c.stats).maxHp;
+assert.equal(A.upgradeCost(c,'life'),26);
+assert.equal(A.spend(s,'matthieu','life'),true);
+assert.equal(c.stats.hp,18);assert.equal(c.stats.lifeBonus,251);assert.equal(c.points,0);
+assert.equal(BC.phys(BC.PLAYERS.matthieu,c.stats).maxHp,beforeLife+1);
+assert.equal(A.load('matthieu').chars.matthieu.stats.lifeBonus,251);
+assert.equal(A.spend(s,'matthieu','life'),false);
+assert.equal(A.spend(s,'matthieu','hp'),false);

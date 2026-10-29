@@ -5,7 +5,7 @@
   const cup=(id,name,group,tracks,laps)=>({id,name,group,tracks,laps});
   SK.CUPS=[
     cup('flocons','Premiers flocons','beginner',['rookie','snowman','sunset'],2),
-    cup('sapins','La forêt des sapins','beginner',['rookie','snowman','rookie'],2),
+    cup('sapins','La forêt des sapins','beginner',['snowman','rookie','rookie'],2),
     cup('boules','Bataille de boules de neige','beginner',['snowman','rookie','sunset'],2),
     cup('couchant','Les couleurs du couchant','beginner',['sunset','grass','rookie'],2),
     cup('glissades','Grandes glissades','beginner',['grass','snowman','sunset'],3),
@@ -22,7 +22,7 @@
   ];
   const ROUTES=[
     ['Première glisse','Les premiers obstacles','La grande tempête'],
-    ['À l’orée du bois','La forêt profonde','Les sentiers des sapins'],
+    ['La forêt profonde','Les sentiers des sapins','Le bois sauvage'],
     ['Les guetteurs de neige','La traversée des ours','L’embuscade polaire'],
     ['Le canyon orange','Les prés du soir','Le dernier rayon'],
     ['La prairie bondissante','Les branches givrées','Le slalom des rochers'],
@@ -40,11 +40,13 @@
   SK.cupCourse=(cup,stage)=>{
     const order=SK.CUPS.indexOf(cup),level=order+(stage/(cup.tracks.length));
     const c=JSON.parse(JSON.stringify(SK.courseById(cup.tracks[stage])));
-    Object.assign(c,{puzzleId:cup.id+':course:'+stage,recordId:'cup:'+cup.id+':'+stage+':laps:'+cup.laps,name:ROUTES[order][stage],difficulty:level});
+    Object.assign(c,{cupIndex:order,puzzleId:cup.id+':course:'+stage,recordId:'cup:'+cup.id+':'+stage+':laps:'+cup.laps,name:ROUTES[order][stage],difficulty:level});
     if(order<3){c.theme='rookie';c.surface='snow';c.sections=c.sections.filter(s=>s.t!=='x');}
-    c.forest=cup.id==='sapins';c.forestLevel=c.forest?stage+1:0;
-    c.snowGuards=c.forest||cup.id==='boules';c.guardCount=c.forest?8:0;c.guardSpacing=cup.id==='boules'?38:0;c.polarBears=cup.id==='boules';
+    c.forest=cup.id==='sapins';c.forestLevel=c.forest?stage+2:0;
+    c.snowGuards=c.forest||cup.id==='boules'||(cup.id==='flocons'&&stage>=1);c.guardCount=c.forest?8:cup.id==='flocons'&&stage>=1?(stage===1?6:10):0;c.guardSpacing=cup.id==='boules'?38:0;c.polarBears=cup.id==='boules';
     c.blizzard=cup.id==='flocons'&&stage===2;c.stormFromCountdown=c.blizzard;
+    if(cup.id==='flocons'&&stage===2){c.deepSnowbanks=true;c.extraRocks=true;c.gustDuration=7.6;c.cloudOpacity=.64;}
+    if(cup.id==='flocons')c.snowfallIntensity=[.35,1.15,2.4][stage];
     // Difficulté croissante : virages, largeur, puis enchaînements saut/flexion.
     c.sections=c.sections.map((s,i)=>({...s,...(s.w?{w:Math.max(6.5,s.w*(1-.012*level)-(stage*.25))}:{}),...(s.c?{c:s.c*(1+.018*level)*(stage%2?-1:1)}:{})}));
     c.challenges={spacing:Math.round(100-level*3.1),warning:Math.round(23-level*.65),first:order===0&&stage===0?95:55,stage,style:['highway'].includes(c.theme)?'metal':c.theme==='ninja'?'bamboo':'wood'};
@@ -65,5 +67,12 @@
     if(!run.finished)return {won:false,firstWin:false};
     save.cups=save.cups||{};const rows=SK.cupStandings(run),me=rows.find(r=>r.human),won=!!rows[0]?.human,old=save.cups[run.id]||{},firstWin=won&&!old.won;
     save.cups[run.id]={bestRank:Math.min(old.won?1:old.bestRank||Infinity,me?rows.indexOf(me)+1:Infinity),won:won||!!old.won,bestPoints:Math.max(old.bestPoints||0,me?.points||0),bestTime:me&&!me.estimated?Math.min(old.bestTime||Infinity,me.time):old.bestTime||null};return {won,firstWin};
+  };
+  SK.drawCupIdentity=function(cv,cup){
+    const c=cv.getContext('2d'),w=cv.width,h=cv.height,R=SK.Render;c.save();
+    if(cup.id==='flocons'){for(let i=0;i<22;i++){const x=(i*83+17)%w,y=(i*47+9)%(h*.8),r=2+i%3;c.strokeStyle='#fff';c.lineWidth=1.4;c.beginPath();for(let a=0;a<3;a++){const q=a*Math.PI/3;c.moveTo(x-Math.cos(q)*r,y-Math.sin(q)*r);c.lineTo(x+Math.cos(q)*r,y+Math.sin(q)*r);}c.stroke();}}
+    if(cup.id==='sapins'){for(let row=0;row<6;row++)for(const side of [-1,1])for(let k=0;k<3;k++){const y=h*.56+row*h*.075,s=3+row*1.15,x=w*.5+side*(20+row*14+k*(13+row*5));R.drawProp(c,'fir',x,y,s,.75,0,{});}}
+    if(cup.id==='boules'){for(let row=0;row<3;row++)for(let k=0;k<4;k++){const x=w*.12+k*w*.25+(row%2?-10:8),y=h*.56+row*h*.16,s=11+row*4,n=row*4+k;R.drawProp(c,'snowguard',x,y,s,.5,0,{x:k<2?-1:1,windup:1});c.strokeStyle=['#df6577','#5598ce','#8155ad','#42a78b'][n%4];c.lineWidth=s*.18;c.beginPath();c.moveTo(x-s*.48,y-s*2.3);c.lineTo(x+s*.48,y-s*2.3);c.lineTo(x+s*.38,y-s*1.55);c.stroke();if(n%3===1){c.fillStyle='#eeaa4c';c.beginPath();c.arc(x,y-s*3.8,s*.18,0,Math.PI*2);c.fill();}const dir=k<2?1:-1;for(let j=0;j<3;j++){c.fillStyle='#fff';c.strokeStyle='#8fb8d1';c.lineWidth=1;c.beginPath();c.arc(x+dir*(s*1.8+j*9),y-s*2.8-j*4,2+j%2,0,Math.PI*2);c.fill();c.stroke();}}}
+    c.restore();
   };
 })(window.SK);

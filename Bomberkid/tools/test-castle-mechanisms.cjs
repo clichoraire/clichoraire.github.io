@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),BK=require('./headless');
+function world(map,props={}){return new BK.World({map,props,theme:'castle',mode:'adventure',hearts:true,explore:true,itemChance:0});}
+const W=world(['#######','#.....#','#.....#','###"###','#..1..#','#######'],{'3,3':{deco:'crackedstone',secretGroup:'A',secretWidth:5,secretDepth:2,secretDirection:2}}),p=W.addPlayer(BK.charById('adam'),3,4,{bombs:2,fire:2});
+assert(W.hiddenSecretAt(3,2));assert(W.blocked(3,2,p));const enemy=W.addEnemy('alt_wizzrobe',2,2),before={x:enemy.x,y:enemy.y};W.updateEnemy(enemy,5);assert.equal(enemy.x,before.x);assert.equal(enemy.y,before.y);
+W.placeBomb(p);W.explodeBomb(W.bombs[0]);assert.equal(W.cell(3,3),0);assert(!W.hiddenSecretAt(3,2));assert(!W.blocked(3,2,p));assert.equal(W.events.filter(e=>e.type==='secretFound').length,1);assert(W.particles.filter(q=>q.heavy).length>=30);W.destroyBlock(3,3,p);assert.equal(W.events.filter(e=>e.type==='secretFound').length,1);
+W.editorPreview=true;assert(!W.hiddenSecretAt(3,2));
+const E=new BK.Editor({name:'Mécanismes',theme:'castle',cols:12,rows:8,grid:Array(8).fill('.'.repeat(12)),props:{}});
+E.item={tool:'raiseHalf'};E.paint(2,2,true);assert.equal(E.props['2,2'].lv,.5);E.item={ch:'{',opts:'autoLift'};E.liftHeight=1.5;E.paint(2,2,true);assert(E.world.elevAt(2,2).auto);assert(Math.abs(E.world.elevAt(2,2).top-1.2)<1e-5);
+E.item={ch:'(',opts:'movingPlatform'};E.platformLength=4;E.platformAxis='vertical';E.platformLevel=.5;E.paint(6,2,true);assert.equal(E.world.movers[0].cells.length,4);assert.equal(E.world.movers[0].top,.3);assert.equal(E.world.movers[0].cells.at(-1).r,5);const code=JSON.parse(E.code());assert(code.props['2,2'].autoLift);assert(code.props['6,2'].platformPit);assert.equal(code.props['6,2'].platformLevel,.5);
+const a=new BK.Adventure('adam',7),V=a.world,h=a.player;V.enemies=[];V.frozen=false;h.invuln=999;h.x=17.5;h.y=16.5;h.safe={x:h.x,y:h.y,dir:2};
+const ally=V.addPlayer(BK.charById('richard'),17,16,{hp:25,lives:3});Object.assign(ally,{ally:true,human:false,leader:h,invuln:999});
+const tick=()=>V.update(1/60);const wait=fn=>{for(let i=0;i<1800;i++){if(fn())return;tick();}throw Error('transport timeout');};
+function walk(x,y){for(let i=0;i<500;i++){const dx=x-h.x,dy=y-h.y;if(Math.hypot(dx,dy)<.07){h.input.dx=h.input.dy=0;return;}h.input.dx=Math.abs(dx)>.07?Math.sign(dx):0;h.input.dy=h.input.dx?0:Math.sign(dy);tick();assert(!h.falling,'route must stay on floor: '+h.x+','+h.y);}throw Error('walk blocked '+x+','+y+' from '+h.x+','+h.y);}
+const lift=V.elevAt(17,15);wait(()=>lift.state==='rest');walk(17.5,15.5);wait(()=>lift.state==='wait');walk(17.5,14.5);
+const horizontal=V.movers.find(m=>m.cells[0].r===14);wait(()=>horizontal.pos===0&&horizontal.wait>1);walk(horizontal.x,horizontal.y);h.input.dx=h.input.dy=0;const x=h.x;wait(()=>horizontal.pos===horizontal.cells.length-1&&horizontal.wait>1);assert(h.x>x+3,'platform carries player');assert(Math.hypot(ally.x-h.x,ally.y-h.y)<1,'ally rides with hero');walk(23.5,14.5);walk(23.5,12.5);walk(23.5,10.5);assert.equal(V.groundZ(h.x,h.y),0,'descends to lower landing');
+const vertical=V.movers.find(m=>m.cells[0].c===23);wait(()=>vertical.pos===vertical.cells.length-1&&vertical.wait>1);walk(23.5,9.5);h.input.dx=h.input.dy=0;wait(()=>vertical.pos===0&&vertical.wait>1);walk(23.5,6.5);const lift2=V.elevAt(23,5);wait(()=>lift2.state==='rest');walk(23.5,5.5);wait(()=>lift2.state==='wait');walk(22.5,5.5);walk(17.5,5.5);walk(17.5,3.5);assert(Math.abs(V.groundZ(h.x,h.y)-1.2)<1e-5);
+for(let i=0;i<90;i++)tick();assert(Math.hypot(ally.x-h.x,ally.y-h.y)<2,'ally follows through the complete route');
+// Missing platform means a fall, with the previous landing as the recovery point.
+h.x=20.5;h.y=14.5;h.safe={x:17.5,y:14.5,dir:0};horizontal.pos=0;horizontal.x=18.5;horizontal.wait=2;V.applyMovers();V.updatePlayer(h,.01);assert(h.falling);assert.equal(h.safe.x,17.5);
+console.log('Castle mechanisms: hidden room, dormant enemy, one-bomb reveal, fragments, single jingle, half floors, editor settings/serialization, full timed route (two lifts + two moving platforms + descent), void fall and safe return passed.');

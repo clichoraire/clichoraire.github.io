@@ -337,10 +337,7 @@
       ctx.save();
       ctx.translate(u.rx, u.ry + bob);
       ctx.rotate(u.rf);
-      const gear = u.def.hero && u.build.gear, hasGear = gear && Object.keys(gear).length > 0;
-      if (hasGear && gear.cape) { ctx.save(); ctx.rotate(-u.rf); ZC.drawGear(ctx, u, 'cape', t); ctx.restore(); }
       ZC.drawUnitSprite(ctx, u.type, g.players[u.owner].hex, u.anim, u.moving, u.attackAnim > 0 ? u.attackAnim / 0.15 : 0, t + u.id * 0.37, u.up, u.rf, undefined, g.players[u.owner].race);
-      if (hasGear) { ctx.save(); ctx.rotate(-u.rf); for (const slot of ['boots', 'armor', 'gloves', 'helmet', 'weapon']) if (gear[slot]) ZC.drawGear(ctx, u, slot, t); ctx.restore(); }
       if (u.building) { ctx.globalAlpha = 0.55; ctx.fillStyle = 'rgba(255,220,80,0.25)'; ctx.beginPath(); ctx.arc(0, 0, u.radius + 4, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
       if (u.def.worker) {
         if (u.carry > 0) { // cristal transporté
@@ -854,72 +851,6 @@
       return { x: (mx - this.miniOx) / this.miniScale, y: (my - this.miniOy) / this.miniScale };
     }
   }
-  // Équipement du héros dessiné par-dessus (ou derrière, pour la cape) son sprite, dans le repère du sprite debout.
-  // Couleur = rareté de l'objet (gris, bleu, violet, orange), nuancée par la teinte de la base ; les objets légendaires scintillent.
-  ZC.drawGear = function (ctx, u, slot, t) {
-    const spec = ZC.spriteSpec(u.type); if (!spec) return;
-    const it = u.build.gear[slot]; if (!it) return;
-    const h = spec.h, feet = spec.feet, top = feet - h;
-    const col = ZC.itemColor(it), R = ZC.RARITIES[it.rarity];
-    const glow = it.rarity === 'legendary' ? 0.6 + 0.4 * Math.sin(t * 6 + u.id) : it.rarity === 'epic' ? 0.5 : 0.3;
-    const hueCol = 'hsl(' + it.hue + ',55%,45%)';
-    const dir = ((Math.round(u.rf / (Math.PI / 4)) % 8) + 8) % 8, sx = dir >= 3 && dir <= 5 ? -1 : 1; // orientation du sprite (miroir vers l'ouest)
-    ctx.save();
-    ctx.lineWidth = 1;
-    switch (slot) {
-      case 'cape': { // drapé derrière le dos qui ondule avec la marche
-        const wave = Math.sin(t * (u.moving ? 9 : 3) + u.id) * (u.moving ? 4 : 1.5);
-        const y0 = top + h * 0.3, y1 = feet - 2;
-        ctx.fillStyle = hueCol; ctx.strokeStyle = col;
-        ctx.beginPath(); ctx.moveTo(-h * 0.2, y0); ctx.lineTo(h * 0.2, y0);
-        ctx.quadraticCurveTo(h * 0.28 - sx * wave * 0.5, (y0 + y1) / 2, h * 0.24 - sx * wave, y1);
-        ctx.lineTo(-h * 0.24 - sx * wave, y1);
-        ctx.quadraticCurveTo(-h * 0.28 - sx * wave * 0.5, (y0 + y1) / 2, -h * 0.2, y0); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = ZC.rgba(col, 0.35); ctx.fillRect(-h * 0.2, y0, h * 0.4, 2);
-        // Les sprites détourés ont des trous transparents dans l'armure :
-        // une doublure opaque empêche la cape de transparaître sur le torse.
-        ctx.fillStyle = '#202b28';
-        ctx.beginPath(); ctx.moveTo(-h*.16, y0); ctx.lineTo(h*.16, y0);
-        ctx.lineTo(h*.18, top+h*.56); ctx.lineTo(h*.12, top+h*.66);
-        ctx.lineTo(-h*.12, top+h*.66); ctx.lineTo(-h*.18, top+h*.56);
-        ctx.closePath(); ctx.fill();
-        break;
-      }
-      case 'helmet': { // crête / visière colorée sur le casque
-        const y = top + h * 0.1;
-        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, y + 3, h * 0.13, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
-        ctx.fillStyle = ZC.rgba(col, glow); ctx.fillRect(-h * 0.1, y + 4, h * 0.2, 1.5);
-        break;
-      }
-      case 'armor': { // plastron : plaque centrale et liseré
-        const y = top + h * 0.36;
-        ctx.strokeStyle = col; ctx.fillStyle = ZC.rgba(hueCol, 0.55);
-        ctx.beginPath(); ctx.moveTo(-h * 0.13, y); ctx.lineTo(h * 0.13, y); ctx.lineTo(h * 0.1, y + h * 0.2); ctx.lineTo(-h * 0.1, y + h * 0.2); ctx.closePath(); ctx.fill(); ctx.stroke();
-        break;
-      }
-      case 'gloves': { // deux gantelets
-        const y = top + h * 0.5;
-        ctx.fillStyle = col; ctx.strokeStyle = '#000';
-        for (const side of [-1, 1]) { ctx.beginPath(); ctx.rect(side * h * 0.24 - 2.5, y - 2.5 + (side === sx ? 3 : 0), 5, 5); ctx.fill(); ctx.stroke(); }
-        break;
-      }
-      case 'boots': { // deux bottes colorées aux pieds
-        ctx.fillStyle = col; ctx.strokeStyle = '#000';
-        for (const side of [-1, 1]) { ctx.beginPath(); ctx.rect(side * h * 0.11 - 3, feet - 5, 6, 4); ctx.fill(); ctx.stroke(); }
-        break;
-      }
-      case 'weapon': { // canon de l'arme : lueur colorée à la bouche, trait d'énergie le long du canon
-        const y = top + h * 0.5, x = sx * h * 0.42;
-        ctx.strokeStyle = ZC.rgba(col, 0.8); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - sx * h * 0.22, y); ctx.lineTo(x, y); ctx.stroke();
-        ctx.fillStyle = ZC.rgba(col, glow); ctx.beginPath(); ctx.arc(x, y, 2.2 + (u.attackAnim > 0 ? 1.5 : 0), 0, Math.PI * 2); ctx.fill();
-        break;
-      }
-    }
-    if (it.rarity === 'legendary' && Math.sin(t * 7 + u.id * 3 + ZC.SLOT_ORDER.indexOf(slot)) > 0.85) { // étincelle
-      ctx.fillStyle = '#fff6d0'; ctx.fillRect(sx * h * 0.2 - 1, top + h * 0.3 + ZC.SLOT_ORDER.indexOf(slot) * 4, 2, 2);
-    }
-    ctx.restore();
-  };
   ZC.Renderer = Renderer;
   ZC.TILESET_PALETTES = TILESETS;
   ZC.buildTerrain = buildTerrain;

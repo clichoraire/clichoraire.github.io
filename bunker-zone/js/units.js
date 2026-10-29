@@ -21,7 +21,7 @@
       this.hp = this.def.hp;
       this.shield = this.def.shield;
       this.heroLevel = 0; this.xp = 0;      // héros : niveau et expérience en cours de mission
-      this.build = ZC.DEFAULT_BUILD;        // héros : caractéristiques et équipement (items.js) ; valeurs neutres pour les autres unités
+      this.build = ZC.DEFAULT_BUILD;        // héros : caractéristiques (hero-progression.js) ; valeurs neutres pour les autres unités
       this.flux = 0; this.fluxMax = 0;      // héros : réserve d'énergie des pouvoirs
       this.facing = this.def.structure ? 0 : Math.random() * Math.PI * 2;
       this.prevFacing = this.facing;
@@ -79,7 +79,7 @@
     get damage() {
       if (this.def.dmg <= 0) return 0;
       const b = this.bonus, h = this.def.hero ? ZC.heroScale(this.heroLevel) : null, bd = this.def.hero ? this.build : null;
-      const base = Math.round(this.def.dmg * (h ? h.dmg : 1) * (bd ? bd.dmgMult : 1)) + (bd ? bd.dmgFlat : 0) + this.up.weapons + (b ? b.dmg : 0);
+      const base = Math.round(this.def.dmg * (h ? h.dmg : 1) * (bd ? bd.dmgMult : 1)) + this.up.weapons + (b ? b.dmg : 0);
       const m = (this.buff && this.buff.dmgMult ? this.buff.dmgMult : 1) * (this.debuff && this.debuff.dmgMult ? this.debuff.dmgMult : 1);
       return m === 1 ? base : Math.max(1, Math.round(base * m));
     }
@@ -88,7 +88,7 @@
       const b = this.bonus, h = this.def.hero ? ZC.heroScale(this.heroLevel) : null;
       return this.def.armor + this.up.armor + (b ? b.armor : 0) + (h ? h.armor + this.build.armor : 0) + (this.buff && this.buff.armor ? this.buff.armor : 0);
     }
-    get range() { return this.def.range + this.up.range * ZC.TILE * (this.def.range > 0 ? 1 : 0.5) + (this.buff && this.buff.rangeAdd ? this.buff.rangeAdd : 0) + (this.def.hero && this.def.range > 0 ? this.build.rangeAdd : 0); }
+    get range() { return this.def.range + this.up.range * ZC.TILE * (this.def.range > 0 ? 1 : 0.5) + (this.buff && this.buff.rangeAdd ? this.buff.rangeAdd : 0); }
 
     // Évolution : l'unité devient son niveau 2 en gardant sa proportion de vie
     transformTo(type) {
@@ -100,9 +100,9 @@
     }
     get speed() {
       if (this.buff && this.buff.immobile) return 0;
-      return this.def.speed * (this.stimT > 0 ? ZC.STIM.speedMult : 1) * (this.buff && this.buff.speedMult ? this.buff.speedMult : 1) * (this.debuff && this.debuff.speedMult ? this.debuff.speedMult : 1) * (this.def.hero ? this.build.speedMult : 1);
+      return this.def.speed * (this.stimT > 0 ? ZC.STIM.speedMult : 1) * (this.buff && this.buff.speedMult ? this.buff.speedMult : 1) * (this.debuff && this.debuff.speedMult ? this.debuff.speedMult : 1);
     }
-    get attackCooldown() { return this.def.cooldown * (this.stimT > 0 ? ZC.STIM.cooldownMult : 1) * (this.buff && this.buff.cdMult ? this.buff.cdMult : 1) * (this.debuff && this.debuff.cdMult ? this.debuff.cdMult : 1) * (this.def.hero ? this.build.cdMult : 1); }
+    get attackCooldown() { return this.def.cooldown * (this.stimT > 0 ? ZC.STIM.cooldownMult : 1) * (this.buff && this.buff.cdMult ? this.buff.cdMult : 1) * (this.debuff && this.debuff.cdMult ? this.debuff.cdMult : 1); }
 
     isIdle() {
       return (this.order.type === 'idle' || this.order.type === 'hold') && !this.target;
@@ -309,9 +309,8 @@
       if (this.debuff && (this.debuff.t -= dt) <= 0) this.debuff = null;
       if (this.gasT > 0) this.gasT -= dt;
       for (const k in this.cd) if (this.cd[k] > 0) this.cd[k] -= dt;
-      if (this.def.hero) { // flux et régénération de l'équipement
+      if (this.def.hero) { // régénération du flux
         if (this.flux < this.fluxMax) this.flux = Math.min(this.fluxMax, this.flux + this.build.fluxRegen * dt);
-        if (this.build.regen > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.build.regen * dt);
       }
       if (this.poison) {
         this.poison.t -= dt; this.hp -= this.poison.dps * dt; this.hitFlash = Math.max(this.hitFlash, 0.05);

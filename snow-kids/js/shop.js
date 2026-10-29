@@ -46,7 +46,7 @@
   // Articles d'un onglet, avec leur état (possédé, équipé, verrouillé) pour cette sauvegarde
   function items(tab, save) {
     if (tab === 'boards') return SK.BOARDS.map(b => { const eff = SK.effectiveBoard(b.id, save), owned = save.boards.includes(b.id), reason = owned ? null : SK.lockReason(b.unlock, save), lock = b.secret && reason ? 'À toi de découvrir son secret !' : reason; return { id: b.id, kind: 'board', secret: !!b.secret, name: b.secret && lock ? '???' : 'Planche ' + b.name, price: b.price, color: eff.color, pattern: eff.pattern, desc: b.secret && lock ? 'Une planche mystérieuse…' : b.desc + ` Vitesse ${mod(eff.speed)} · Virage ${mod(eff.corner)} · Accélération ${mod(eff.acceleration)} · Saut ${mod(eff.jump)}.`, owned, lock, action: lock ? 'locked' : !owned ? 'buy' : save.advBoard === b.id ? 'equipped' : 'equip' }; });
-    if (tab === 'linge') { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); return SK.WARDROBE.filter(w => w.cat === tab).map(w => { const owned = w.price === 0 || (save.wardrobe || []).includes(w.id), eq = look[w.slot] === w.value; return { id: w.id, kind: 'wardrobe', slot: w.slot, value: w.value, name: w.name, price: w.price, desc: w.desc, owned, lock: null, action: eq ? 'equipped' : owned ? 'equip' : 'buy' }; }); }
+    if (tab === 'linge') { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); return SK.WARDROBE.filter(w => w.cat === tab).map(w => { const owned = w.price === 0 || (save.wardrobe || []).includes(w.id), eq = SK.wardrobeEquipped(look,w); return { id: w.id, kind: 'wardrobe', slot: w.slot, value: w.value, name: w.name, price: w.price, desc: w.desc, owned, lock: null, action: eq ? 'equipped' : owned ? 'equip' : 'buy' }; }); }
     if (tab === 'up') { const b = SK.boardById(save.advBoard), u = SK.trainingLevels(save); return UP_DEFS.map(([k, lab, d]) => { const lvl = u[k] || 0, max = SK.capStat(((SK.charById(save.advChar||save.char)||SK.CHARACTERS[0])[k]||0)+(b[k]||0)+lvl+(SK.equippedGear(save).couronne?1:0)+(k==='corner'&&SK.equippedGear(save).bottes?1:0)+(k==='jump'&&SK.equippedGear(save).ressort?1:0)) >= SK.STAT_MAX, lock = max ? null : SK.lockReason(lvl >= 1 ? { wins: 3 } : null, save); return { id: 'up-' + k, kind: 'up', stat: k, boardId: b.id, name: lab + ' +1 · ' + (SK.charById(save.advChar||save.char)||SK.CHARACTERS[0]).name, price: max ? 0 : SK.upgradeCost(lvl), color: b.color, desc: d + ` Niveau actuel : ${lvl} / ${SK.UPGRADE_MAX}.`, owned: max, lock, action: lock ? 'locked' : max ? 'max' : 'buy', level: lvl }; }); }
     return SK.GEAR.filter(g => g.cat === tab && g.id !== 'lunettes').map(g => { const owned = save.gear.includes(g.id) || (g.id === 'masque' && save.shinobin), lock = owned ? null : SK.lockReason(g.unlock, save); return { id: g.id, kind: 'gear', name: g.name, price: g.price, desc: g.desc, owned, lock, action: lock ? 'locked' : owned ? (SK.isGoggles(g.id)||SK.isHelmet(g.id))?(SK.lookOf(SK.charById(save.advChar)||SK.CHARACTERS[0],save)[SK.isHelmet(g.id)?'helmet':'goggles']===g.id?'equipped':'equip'):'owned' : 'buy' }; });
   }
@@ -63,15 +63,15 @@
     }
     const next=calc(boardId,g2,up);for(const k of Object.keys(cur)){cur[k]=SK.capStat(cur[k]);next[k]=SK.capStat(next[k]);}return {ch,cur,next};
   }
-  function previewLook(save, it) { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); if (it && it.kind === 'wardrobe' && it.action !== 'equipped') look[it.slot] = it.value; if(it?.kind === 'gear' && SK.isHelmet(it.id)) look.helmet = it.id; if(it?.kind==='gear'&&it.id==='bottes')look.gripBoots=true; if(it?.kind==='gear'){const slot={couronne:'helmet',veste:'paddedVest',sifflet:'whistle',fusee:'rocketPack',gants:'gloves',gantsMauves:'gloves'}[it.id];if(slot)look[slot]=['gloves','helmet'].includes(slot)?it.id:true;} if(it?.kind==='gear'&&SK.isGoggles(it.id))look.goggles=it.id; return look; }
+  function previewLook(save, it) { const ch = SK.charById(save.advChar) || SK.CHARACTERS[0], look = SK.lookOf(ch, save); if(it?.kind==='wardrobe')Object.assign(look,SK.wardrobePatch(it,look)); if(it?.kind === 'gear' && SK.isHelmet(it.id)) look.helmet = it.id; if(it?.kind==='gear'&&it.id==='bottes')look.gripBoots=true; if(it?.kind==='gear'){const slot={couronne:'helmet',veste:'paddedVest',sifflet:'whistle',fusee:'rocketPack',gants:'gloves',gantsMauves:'gloves'}[it.id];if(slot)look[slot]=['gloves','helmet'].includes(slot)?it.id:true;} if(it?.kind==='gear'&&SK.isGoggles(it.id))look.goggles=it.id; return look; }
   function renderMe(E, save, it, tab) {
     const { ch, cur, next } = statsFor(save, it), board = SK.effectiveBoard(save.advBoard,save), look = previewLook(save, it);
-    const bar=(k,lab)=>{let seg='';for(let i=1;i<=50;i++){let cls=i<=next[k]?'on':'';if(i>cur[k]&&i<=next[k])cls+=' gain';if(i>next[k]&&i<=cur[k])cls+=' loss';seg+=`<i class="${cls}"></i>`;}const d=next[k]-cur[k];return `<div class="me-stat"><span class="me-stat-label"><i class="stat-icon stat-${k}"><svg viewBox="0 0 32 34">${STAT_ICONS[k]}</svg></i>${lab}</span><div class="segs stat-fifty">${seg}</div><em>${cur[k]}${d?' → '+next[k]:''} / 50</em></div>`;};
+    const bar=(k,lab)=>{const seg=SK.statTicks(next[k],cur[k]);const d=next[k]-cur[k];return `<div class="me-stat"><span class="me-stat-label"><i class="stat-icon stat-${k}"><svg viewBox="0 0 32 34">${STAT_ICONS[k]}</svg></i>${lab}</span><div class="segs stat-ten">${seg}</div><em>${cur[k]}${d?' → '+next[k]:''} / 50</em></div>`;};
     const owned = (save.gear || []).map(id => SK.gearById(id)).filter(Boolean);
     E.me.innerHTML = `<h4>Mon équipement</h4><div class="me-top"><div class="me-info"><b>${ch.name}</b><span class="me-board"><i style="background:${board.color}"></i>${board.name}</span><small>${owned.length ? owned.length + ' article' + (owned.length > 1 ? 's' : '') : 'Aucun article'}</small></div></div>
       <div class="me-stats">${bar('speed', 'Vitesse')}${bar('corner', 'Virage')}${bar('acceleration', 'Accélération')}${bar('jump', 'Saut')}${bar('strength','Force')}</div>
       <div class="me-gear">${owned.map(g => `<canvas width="48" height="48" data-id="${g.id}" title="${g.name}"></canvas>`).join('')}${it && it.kind === 'gear' && !it.owned ? `<canvas width="48" height="48" data-id="${it.id}" class="preview" title="${it.name} (aperçu)"></canvas>` : ''}</div>
-      <p class="me-hint">${it && (it.action === 'buy' || it.action === 'equip' || it.action === 'locked') ? 'En vert : ce que « ' + it.name + ' » te ferait gagner. Rouge : les points perdus.' : 'Choisis un article pour voir son effet sur tes barres. Maximum : 50 par statistique.'}</p>`;
+      <p class="me-hint">${it && (it.action === 'buy' || it.action === 'equip' || it.action === 'locked') ? 'Les coches entourées indiquent les changements. '+SK.STAT_LEGEND : SK.STAT_LEGEND}</p>`;
     E.me.querySelector('.me-stats').hidden=false;
     E.me.querySelector('.me-hint').textContent=it?.kind==='board'?'Aperçu des statistiques avec cette planche.':'Choisis une planche pour comparer ses statistiques, ou un accessoire pour l’essayer.';
     const cc = document.getElementById('shop-standing-kid');
@@ -111,7 +111,7 @@
       const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,duration=reduced?0:550;
       old.animate([{transform:'perspective(1000px) rotateY(0)',opacity:1},{transform:'perspective(1000px) translateX('+(-d*75)+'%) rotateY('+d*45+'deg)',opacity:0}],{duration,easing:'cubic-bezier(.4,0,.2,1)'});
       const animation=next.animate([{transform:'perspective(1000px) translateX('+(d*75)+'%) rotateY('+(-d*45)+'deg)',opacity:0},{transform:'perspective(1000px) rotateY(0)',opacity:1}],{duration,easing:'cubic-bezier(.4,0,.2,1)'});
-      document.getElementById('shop-explore-hint').textContent=(opts.tab==='linge'?['Le comptoir · pantalons et bonnets','Les accessoires','Les manteaux et cols roulés','La sortie']:['Le comptoir','L’atelier des planches','Les planches prestige','Les motifs de Jérémie'])[wall]+' · '+(wall+1)+' / 4 · ← → pour tourner';
+      document.getElementById('shop-explore-hint').textContent=(opts.tab==='linge'?['Le comptoir · pantalons et bonnets','Les accessoires','Les manteaux et cols roulés','Les bottes · couleurs et motifs']:['Le comptoir','L’atelier des planches','Les planches prestige','Les motifs de Jérémie'])[wall]+' · '+(wall+1)+' / 4 · ← → pour tourner';
       let finished=false;const complete=()=>{if(finished)return;finished=true;old.hidden=true;turning=false;};
       animation.finished.then(complete,complete);setTimeout(complete,duration+60);
       SK.Audio.sfx('click');
@@ -121,7 +121,7 @@
     card.onclose=()=>{SK.Input.keys={};renderMe(E,save,selected(),state.tab);};
     card.onkeydown=e=>{if(e.code==='Escape')card.close();e.stopPropagation();};card.onkeyup=e=>e.stopPropagation();
     let pointer=null,dragged=false,lastWheel=0;
-    const down=e=>{dragged=false;if(e.pointerType==='touch'&&!SK.RoomViews?.overflow('shop'))pointer=e.clientX;};
+    const down=e=>{dragged=false;pointer=null;if(e.target.closest('.motif-workshop'))return;if(e.pointerType==='touch'&&!SK.RoomViews?.overflow('shop'))pointer=e.clientX;};
     const up=e=>{if(pointer!==null&&e.clientX!=null&&Math.abs(e.clientX-pointer)>45){dragged=true;turn(e.clientX<pointer?1:-1);}pointer=null;};
     const wheel=e=>{if(e.target.closest('.motif-workshop')||SK.RoomViews?.overflow('shop'))return;e.preventDefault();if(performance.now()-lastWheel>650){lastWheel=performance.now();turn((e.deltaX||e.deltaY)>0?1:-1);}};
     aisle.addEventListener('pointerdown',down);window.addEventListener('pointerup',up);aisle.addEventListener('wheel',wheel,{passive:false});
@@ -139,7 +139,7 @@
       const ranked=[...gear.filter(e=>['lunettesNeige','lunettesForet'].includes(e.it.id)),...gear.filter(e=>SK.isHelmet(e.it.id)),...gear.filter(e=>!SK.isHelmet(e.it.id)&&!['lunettesNeige','lunettesForet'].includes(e.it.id)),...catalog('gadget'),...catalog('other')];
       const rankItems=rank=>ranked.filter(e=>SK.gearById(e.it.id).rank===rank);
       const walls=clothingShop
-        ? [clothes.filter(e=>e.it.slot!=='jacket').sort((a,b)=>({pants:0,hat:1,hatColor:2}[a.it.slot]-{pants:0,hat:1,hatColor:2}[b.it.slot])),gear,clothes.filter(e=>e.it.slot==='jacket'),[]]
+        ? [clothes.filter(e=>e.it.slot!=='jacket'&&e.it.slot!=='bootStyle').sort((a,b)=>({pants:0,bootStyle:1,hat:2,hatColor:3}[a.it.slot]-{pants:0,bootStyle:1,hat:2,hatColor:3}[b.it.slot])),gear,clothes.filter(e=>e.it.slot==='jacket'),clothes.filter(e=>e.it.slot==='bootStyle')]
         : [[...firstBoards,...affordable,...rankItems(1)],
            [...intermediate,...rankItems(2)],[...premium,...rankItems(3),...rankItems(4)],[]];
       walls.forEach((list,n)=>{
@@ -147,11 +147,11 @@
         const scene=document.createElement('canvas');scene.width=1280;scene.height=720;scene.className='wall-scene';section.appendChild(scene);paintWall(scene,n,clothingShop);addFamilyFrames(section,n,clothingShop,save,()=>{const amount=SK.PhotoGold.claim(save);if(!amount)return;opts.store();refresh();SK.Audio.sfx('buy');return amount;});
         let bi=0,oi=0;const boardCount=list.filter(x=>x.it.kind==='board').length,otherCount=list.length-boardCount;
         const stackSlots=new Map();
-        if(clothingShop&&n===2){const families=new Map();for(const entry of list){const it=entry.it;
-          const family=it.slot==='jacket'?(it.id.startsWith('turtleneck-')?'cols':/^jacket-\d+$/.test(it.id)?'classiques':'motifs'):it.slot==='pants'?(it.id.startsWith('jeans-')?'jeans':'neige'):it.slot==='hat'?(it.value.startsWith('beanie')?'tuques':'casquettes'):it.slot;
+        if(clothingShop&&(n===0||n===2)){const families=new Map();for(const entry of list){const it=entry.it;
+          const family=it.slot==='jacket'?(it.id.startsWith('turtleneck-')?'cols':/^jacket-\d+$/.test(it.id)?'classiques':'motifs'):it.slot==='pants'?(it.id.startsWith('jeans-')?'jeans':SK.PANT_STYLES?.[it.value]?.type==='jogger'?'joggings':(SK.PANT_STYLES?.[it.value]?.fancy||['santa','elf','ninja'].includes(SK.PANT_STYLES?.[it.value]?.type))?'costumes':'neige'):it.slot==='hat'?(it.value.startsWith('beanie')?'tuques':it.value.startsWith('costume-')?'costumes-tete':'casquettes'):it.slot;
           if(!families.has(family))families.set(family,[]);families.get(family).push(entry);
         }
-        let group=0;for(const [name,family] of families){const limit=name==='classiques'?10:name==='motifs'?6:name==='neige'?8:name==='hatColor'?7:5;for(let start=0;start<family.length;start+=limit){const batch=family.slice(start,start+limit);batch.forEach((e,index)=>stackSlots.set(e.it.id,{group,index,count:batch.length}));group++;}}}
+        let group=0;for(const [name,family] of families){const limit=name==='classiques'?10:name==='motifs'?6:name==='neige'?8:name==='hatColor'?7:name==='costumes'||name==='costumes-tete'?10:5;for(let start=0;start<family.length;start+=limit){const batch=family.slice(start,start+limit);batch.forEach((e,index)=>stackSlots.set(e.it.id,{group,index,count:batch.length}));group++;}}}
         list.forEach(({it,i,tab})=>{
           const button=document.createElement('button');button.className='shop-product'+(it.kind==='board'?' is-board':'');button.dataset.item=it.id;button.dataset.department=tab;button.classList.toggle('is-locked',!!it.lock);button.classList.toggle('is-secret',!!it.secret&&!!it.lock);
           let x,y,width,height;
@@ -160,26 +160,30 @@
             x=n===0?(first?28+bi*4.9:52+(bi-firstBoards.length)*4.9):29+bi*5.35;
             y=n===0?8:18;width=n===0?7:8;height=42;
             button.dataset.boardGroup=n===0?(first?'starter':'400-850'):n===1?'851-2000':'2000-plus';bi++;
+          }else if(clothingShop&&n===3&&it.slot==='bootStyle'){
+            x=28+(oi%5)*11;y=8+Math.floor(oi/5)*19;width=10;height=16;oi++;
           }else if(n===0&&!clothingShop){
             x=29+(oi%5)*11;y=65;width=10;height=25;oi++;
-          }else if(clothingShop&&n===2){const st=stackSlots.get(it.id);x=28+(st.group%3)*(n===0?19:23)+st.index*Math.min(2.6,13/Math.max(1,st.count-1));y=18+Math.floor(st.group/3)*24;width=10;height=23;oi++;}
+          }else if(clothingShop&&(n===0||n===2)){const st=stackSlots.get(it.id);x=28+(st.group%3)*(n===0?19:23)+st.index*Math.min(2.6,13/Math.max(1,st.count-1));y=(n===0?10:18)+Math.floor(st.group/3)*(n===0?20:24);width=10;height=n===0?18:23;oi++;}
           else {x=28+(oi%6)*10;y=81;width=10;height=17;oi++;}
-          const variation=[0,-3,2,-1,3,-2][i%6];if(it.kind!=='board'&&n!==2){y+=variation+(i%2?1:0);}
+          const variation=[0,-3,2,-1,3,-2][i%6];if(it.kind!=='board'&&it.slot!=='bootStyle'&&!stackSlots.has(it.id)&&n!==2){y+=variation+(i%2?1:0);}
           if(n===0&&it.id==='sac'){x=93;y=66;width=7;height=21;}
           button.style.cssText=`left:${x}%;top:${y}%;width:${width}%;height:${height}%`;
-          if(clothingShop&&n===2){const st=stackSlots.get(it.id);button.classList.add('stacked-clothing');button.classList.toggle('stack-front',st.index===st.count-1);button.dataset.stack=st.group;button.style.setProperty('--stack-order',st.index+1);}
+          if(clothingShop&&(n===0||n===2)){const st=stackSlots.get(it.id);button.classList.add('stacked-clothing');button.classList.toggle('stack-front',st.index===st.count-1);button.dataset.stack=st.group;button.style.setProperty('--stack-order',st.index+1);}
           button.setAttribute('aria-label',it.name+' — '+SK.fmtGold(it.price)+(it.lock?' — verrouillé':''));
           const image=document.createElement('canvas');image.width=it.kind==='board'?110:180;image.height=260;S.drawItem(image.getContext('2d'),it,image.width/2,125,it.kind==='board'?94:it.id==='aimant'?44:65,0,it.kind==='board');
           image.style.transform=SK.isGoggles(it.id)?'none':'rotate('+([ -5,3,-2,6,0,-4 ][i%6])+'deg)';
           const support=image.getContext('2d');
           if(it.kind==='wardrobe'&&it.slot==='jacket'){support.fillStyle='#564436';support.fillRect(87,38,6,12);support.fillStyle='#b4a492';support.beginPath();support.arc(90,36,5,0,TAU);support.fill();support.fillStyle='#e1d4bd';support.beginPath();support.arc(88,34,2,0,TAU);support.fill();}
+          if(it.kind==='wardrobe'&&it.slot==='pants'){support.strokeStyle='#b4a492';support.lineWidth=3;support.beginPath();support.arc(90,47,6,Math.PI,Math.PI*2);support.lineTo(90,61);support.moveTo(55,63);support.lineTo(125,63);support.stroke();support.fillStyle='#675449';for(const xx of [55,119])support.fillRect(xx,60,6,12);}
           if(it.id==='aimant'&&n!==0){support.fillStyle='#574538';support.fillRect(86,84,8,16);support.fillStyle='#d5c5aa';support.beginPath();support.arc(90,88,7,0,TAU);support.fill();support.fillStyle='#fff1d5';support.beginPath();support.arc(88,86,2,0,TAU);support.fill();}
           const boardPlacement=it.kind==='board'?[x*12.8+8,n===0?288:360,n===0?52:57]:null;
           const rankIndex=list.filter(e=>e.it.kind==='gear').findIndex(e=>e.it.id===it.id);
           const garmentIndex=list.findIndex(e=>e.it.id===it.id);
-          const garmentPlacement=clothingShop&&n===0?[365+(garmentIndex%9)*75,205+Math.floor(garmentIndex/9)*120,it.slot==='pants'?45:it.slot==='hatColor'?32:53]:null;
+          const garmentPlacement=clothingShop&&n===0&&!stackSlots.has(it.id)?[365+(garmentIndex%9)*75,205+Math.floor(garmentIndex/9)*120,it.slot==='pants'?45:it.slot==='hatColor'?32:53]:null;
           if(garmentPlacement)button.classList.add('wall-garment');
-          const counterPlacement=garmentPlacement||boardPlacement||(clothingShop&&n===1?[410+(oi-1)%5*110,310+Math.floor((oi-1)/5)*130,70]:null)||(!clothingShop&&it.kind==='gear'?[410+(rankIndex%6)*94,rankIndex<6?490:rankIndex<12?590:675,['portemonnaie','portefeuilleOr','portefeuilleRoyal','boussole'].includes(it.id)?36:it.id==='bottes'?48:58]:null);
+          const bootPlacement=clothingShop&&n===3&&it.slot==='bootStyle'?[380+((oi-1)%5)*140,173+Math.floor((oi-1)/5)*137,82]:null;
+          const counterPlacement=bootPlacement||garmentPlacement||boardPlacement||(clothingShop&&n===1?[410+(oi-1)%5*110,310+Math.floor((oi-1)/5)*130,70]:null)||(!clothingShop&&it.kind==='gear'?[410+(rankIndex%6)*94,rankIndex<6?490:rankIndex<12?590:675,['portemonnaie','portefeuilleOr','portefeuilleRoyal','boussole'].includes(it.id)?36:it.id==='bottes'?48:58]:null);
           if(counterPlacement||button.classList.contains('stacked-clothing')){
             // Recadrage alpha : le bas réel de l'objet repose sur le plateau propre à chaque objet.
             const pixels=support.getImageData(0,0,image.width,image.height).data;let l=image.width,t=image.height,r=0,b=0;
@@ -195,6 +199,7 @@
             button.style.top=(((counterPlacement?counterPlacement[1]:510)-displayHeight)/720*100)+'%';button.style.height=(displayHeight/720*100)+'%';
             }
           }
+          if(clothingShop&&['hat','hatColor'].includes(it.slot)){image.style.width='62%';image.style.height='62%';image.style.position='absolute';image.style.left='19%';image.style.bottom='12px';}
           const tag=document.createElement('span');tag.className='product-price';tag.innerHTML=it.secret?(it.lock?'🔒 '+it.name.replace('Planche ',''):it.owned?'✓ '+it.name.replace('Planche ',''):'🎁 '+it.name.replace('Planche ','')):(it.lock?'🔒 ':'<img src="'+SK.COIN_SVG+'" alt=""> ')+SK.fmtGold(it.price,!!it.lock);
           button.append(image,tag);
           if(it.owned){button.classList.add('product-owned');const badge=document.createElement('span');badge.className='owned-check';badge.textContent='✓';badge.setAttribute('aria-label','Déjà dans ton casier');button.append(badge);button.setAttribute('aria-label',button.getAttribute('aria-label')+' — déjà dans ton casier');}
@@ -204,11 +209,11 @@
           button.onpointerleave=button.onblur=()=>renderMe(E,save,selected(),state.tab);
           button.onclick=()=>{if(dragged){dragged=false;return;}if(turning)return;state.tab=tab;state.idx=i;focusItem=button;refresh();SK.Audio.sfx('click');if(!card.open)card.show();positionCard();};section.appendChild(button);
         });
-        if(clothingShop&&n===2){
+        if(clothingShop&&(n===0||n===2)){
           const groups=new Map();for(const entry of list){const st=stackSlots.get(entry.it.id);groups.set(st.group,entry.it);}
           for(const [group,it] of groups){const label=document.createElement('span');label.className='product-price stack-price';label.dataset.stackPrice=group;
             label.innerHTML='<img src="'+SK.COIN_SVG+'" alt=""> '+SK.fmtGold(it.price,false);
-            label.style.cssText=`left:${28+(group%3)*(n===0?19:23)+7}%;top:${18+Math.floor(group/3)*24+27}%;`;
+            label.style.cssText=`left:${28+(group%3)*(n===0?19:23)+7}%;top:${(n===0?10:18)+Math.floor(group/3)*(n===0?20:24)+(n===0?21:27)}%;`;
             section.appendChild(label);}
         }
         if(n===(clothingShop?3:2)){section.appendChild(emergency);}
@@ -250,7 +255,7 @@
       E.icon.style.filter=it.lock?'grayscale(1) brightness(.8)':'none';
       if (it.lock) { ic.fillStyle = 'rgba(20,24,42,0.55)'; ic.fillRect(0, 0, E.icon.width, E.icon.height); padlock(ic, E.icon.width / 2, E.icon.height / 2, E.icon.width * 0.2); }
     };
-    const wear = it => { save.look = save.look || {}; const l = (save.look[save.advChar] = save.look[save.advChar] || {}); l[it.slot] = it.value; };
+    const wear = it => { save.look = save.look || {}; const l = (save.look[save.advChar] = save.look[save.advChar] || {}); Object.assign(l,SK.wardrobePatch(it,SK.lookOf(SK.charById(save.advChar)||SK.CHARACTERS[0],save))); };
     const act = it => {
       if(it.action==='equipped'&&it.kind==='gear'&&(SK.isHelmet(it.id)||SK.isGoggles(it.id))){wear({slot:SK.isHelmet(it.id)?'helmet':'goggles',value:false});opts.store();SK.Audio.sfx('box');refresh();populate();renderMe(E,save,null,state.tab);return;}
       if (it.action === 'buy') {
@@ -279,7 +284,7 @@
     window.FamilyHeads?.ready.then(()=>{if(canvas===opts.canvas&&kid.isConnected)world.querySelectorAll('.wall-scene').forEach((scene,i)=>paintWall(scene,i,opts.tab==='linge'));});
     wall=0;
     [...world.children].forEach((section,i)=>{section.hidden=i!==wall;section.inert=i!==wall;});
-    document.getElementById('shop-explore-hint').textContent=(opts.tab==='linge'?['Le comptoir · pantalons et bonnets','Les accessoires','Les manteaux et cols roulés','La sortie']:['Le comptoir','L’atelier des planches','Les planches prestige','Les motifs de Jérémie'])[wall]+' · '+(wall+1)+' / 4 · ← → pour tourner';
+    document.getElementById('shop-explore-hint').textContent=(opts.tab==='linge'?['Le comptoir · pantalons et bonnets','Les accessoires','Les manteaux et cols roulés','Les bottes · couleurs et motifs']:['Le comptoir','L’atelier des planches','Les planches prestige','Les motifs de Jérémie'])[wall]+' · '+(wall+1)+' / 4 · ← → pour tourner';
   };
   function addFamilyFrames(section,n,clothes,save,reward){
     const jay='shop-photos/jay-cartoon.png',jo='shop-photos/jo-cartoon.png';
@@ -289,7 +294,7 @@
       [[clothes?jo:jay,60,195,210,120,-3,clothes?'Souper chez Jo':'Famille de Jay']],
       [[jo,370,190,260,190,-3,'Souper chez Jo'],[jay,690,135,210,157,4,'Famille de Jay'],['shop-photos/couple-cartoon.png',760,340,115,156,-5,'Mickaël et Marie']]
     ];
-    for(const [src,x,y,w,h,angle,label] of layouts[n]){
+    for(const [src,x,y,w,h,angle,label] of (clothes&&n===3?[[jo,55,195,210,150,-3,'Souper chez Jo']]:layouts[n])){
       const frame=document.createElement('button');frame.type='button';frame.className='shop-family-frame';frame.setAttribute('aria-label',label);
       frame.onclick=()=>{const amount=reward();if(amount)SK.PhotoGold.show(frame,amount);};
       frame.style.cssText=`left:${x/12.8}%;top:${y/7.2}%;width:${w/12.8}%;height:${h/7.2}%;transform:rotate(${angle}deg)`;
@@ -314,7 +319,7 @@
 
       }
 
-      if(clothingShop){for(const y of [205,325,445,565])shelf(350,y+5,675);}
+      if(clothingShop){for(const y of [222,366,510,654])shelf(350,y+5,675);}
       const workerId=clothingShop?'marie':'emily',worker=SK.fakeRacer(workerId,'freestyle','ride');worker.look=SK.lookOf(worker.def,{gear:[],look:{}});SK.Render.drawWalker(ctx,worker,1160,600,79,0,'down',false);ctx.fillStyle='#633c23';ctx.fillRect(1040,550,240,125);ctx.fillStyle='#a06a3b';ctx.fillRect(1025,540,255,18);for(let x=1055;x<1260;x+=65){ctx.strokeStyle='#392517';ctx.lineWidth=4;ctx.strokeRect(x,570,52,85);}
       ctx.fillStyle='#fff0c9';ctx.fillRect(1080,565,145,35);ctx.fillStyle='#513723';ctx.textAlign='center';ctx.font='bold 22px Trebuchet MS';ctx.fillText(clothingShop?'Marie':'Emily',1152,590);
     }else if(n===1){
@@ -328,7 +333,7 @@
 
     }
     else if(n===2){ /* Les clous suivent chaque vêtement. */ }
-    else{ /* Articles suspendus : pas de tablette sous les étiquettes. */ }
+    else if(clothingShop){for(const y of [173,310,447,584])shelf(350,y,700);}
     if(!clothingShop&&n!==3){shelf(390,490,680);shelf(390,590,680);}
     else if(n===1){for(const y of [310,440])shelf(390,y,595);}
     if(n===3){ctx.fillStyle='#342116';ctx.fillRect(1090,225,150,350);ctx.fillStyle='#704624';ctx.fillRect(1100,235,130,330);ctx.fillStyle='#8bc7df';ctx.fillRect(1118,255,94,120);ctx.fillStyle='#effaff';ctx.beginPath();ctx.moveTo(1118,365);ctx.lineTo(1155,300);ctx.lineTo(1212,365);ctx.fill();ctx.fillStyle='#403021';ctx.fillRect(1160,255,7,120);ctx.fillRect(1118,310,94,7);ctx.fillStyle='#e8b750';ctx.beginPath();ctx.arc(1210,430,7,0,TAU);ctx.fill();ctx.fillStyle='#eee5ca';ctx.fillRect(1110,185,110,30);ctx.fillStyle='#354539';ctx.font='bold 23px Arial';ctx.textAlign='center';ctx.fillText('SORTIE',1165,209);ctx.fillStyle='#49382d';ctx.fillRect(1065,580,195,40);}
@@ -498,6 +503,9 @@
       const frame=patternFrame(p.board.pattern,t);
       if(!canvas.isConnected){animatedPreviews.delete(canvas);continue;}
       if(p.frame===frame||!canvas.getClientRects().length)continue;
+      // Do not animate shelves outside a phone/tablet's scrolling catalog.
+      const bounds=canvas.getBoundingClientRect(),catalog=canvas.closest('.motif-catalog'),clip=catalog?.getBoundingClientRect();
+      if(bounds.bottom<0||bounds.top>innerHeight||bounds.right<0||bounds.left>innerWidth||clip&&(bounds.bottom<clip.top||bounds.top>clip.bottom))continue;
       p.frame=frame;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.save();c.translate(-p.offsetX,-p.offsetY);S.drawItem(c,p.board,p.x,p.y,p.size,frame/24,p.standing);c.restore();
       if(p.board.lock&&!p.standing){c.fillStyle='rgba(20,24,42,0.55)';c.fillRect(0,0,canvas.width,canvas.height);padlock(c,canvas.width/2,canvas.height/2,canvas.width*.2);}
     }
@@ -507,7 +515,10 @@
     const b=board||SK.BOARDS[0],key=b.color+':'+b.pattern,frame=animatedPattern(b.pattern)?patternFrame(b.pattern,performance.now()/1000):0;
     let entry=boardArt.get(key);if(!entry){const art=document.createElement('canvas');art.width=240;art.height=720;entry={art,frame:-1};boardArt.set(key,entry);}
     const gaze=b.pattern==='custom-snow-shark'?Math.round(Math.max(-1,Math.min(1,steer))*10)/10:0;
-    if(entry.frame!==frame||entry.gaze!==gaze){const ac=entry.art.getContext('2d');ac.clearRect(0,0,240,720);S.drawItem(ac,{...b,kind:'board',skinSteer:gaze},120,355,300,frame/24,true);entry.frame=frame;entry.gaze=gaze;}
+    if(entry.frame!==frame||entry.gaze!==gaze){const ac=entry.art.getContext('2d');ac.clearRect(0,0,240,720);S.drawItem(ac,{...b,kind:'board',skinSteer:gaze,noAura:true},120,355,300,frame/24,true);entry.frame=frame;entry.gaze=gaze;
+      entry.side??=document.createElement('canvas');entry.side.width=240;entry.side.height=720;const edge=entry.side.getContext('2d');edge.drawImage(entry.art,0,0);edge.globalCompositeOperation='source-in';const rim=edge.createLinearGradient(0,0,240,0);rim.addColorStop(0,'#7e9aa7');rim.addColorStop(.3,'#344652');rim.addColorStop(1,'#172733');edge.fillStyle=rim;edge.fillRect(0,0,240,720);edge.globalCompositeOperation='source-over';}
+    const thickness=Math.max(1,Math.min(w,h)*.075);
+    c.save();c.translate(x,y+thickness);c.rotate(angle);c.drawImage(entry.side,-w/2,-h/2,w,h);c.restore();
     c.save();c.translate(x,y);c.rotate(angle);c.drawImage(entry.art,-w/2,-h/2,w,h);c.restore();
   };
   S.drawItem = function (c, it, x, y, s, t, standing) {
@@ -516,6 +527,8 @@
     const tint = it.tint || SK.gearById(it.id)?.tint || '#1e88e5';
     const rr2 = (xx, yy, w, h, r) => { c.beginPath(); c.moveTo(xx + r, yy); c.arcTo(xx + w, yy, xx + w, yy + h, r); c.arcTo(xx + w, yy + h, xx, yy + h, r); c.arcTo(xx, yy + h, xx, yy, r); c.arcTo(xx, yy, xx + w, yy, r); c.closePath(); };
     switch (id) {
+      case 'aerosolBanane': {c.fillStyle='#0e6478';rr2(-s*.3,-s*.52,s*.6,s*1.12,s*.1);c.fill();c.fillStyle='#ffe469';rr2(-s*.25,-s*.25,s*.5,s*.64,s*.06);c.fill();c.fillStyle='#d7e9ed';c.fillRect(-s*.25,-s*.65,s*.5,s*.15);c.fillStyle='#253e52';c.fillRect(-s*.12,-s*.81,s*.24,s*.17);c.fillStyle='#8e6419';c.font='bold '+s*.23+'px sans-serif';c.textAlign='center';c.fillText('33%',0,s*.16);c.strokeStyle='#fff4b1';c.lineWidth=s*.07;c.beginPath();c.arc(0,-s*.1,s*.16,0,Math.PI);c.stroke();break;}
+      case 'pelle': SK.drawShovel(c,0,0,s,-.3);break;
       case 'board': {
         c.rotate(standing ? 0 : -0.6); const col = it.color || '#4caf50', bid = it.pattern || (SK.boardById(it.id) || {}).pattern || 'stripes';
         const outline=()=>{c.beginPath();c.moveTo(-s*.34,-s*.82);c.bezierCurveTo(-s*.34,-s*1.27,s*.34,-s*1.27,s*.34,-s*.82);c.bezierCurveTo(s*.25,-s*.3,s*.25,s*.3,s*.34,s*.82);c.bezierCurveTo(s*.34,s*1.27,-s*.34,s*1.27,-s*.34,s*.82);c.bezierCurveTo(-s*.25,s*.3,-s*.25,-s*.3,-s*.34,-s*.82);c.closePath();};
@@ -596,11 +609,11 @@
       case 'chrono': case 'montreEtoiles': case 'boussole': case 'ressort': case 'sifflet': case 'thermos': case 'sablier': case 'meteore': case 'couronne': {
         drawRankGear(c,it.id,s);break;
       }
-      case 'casqueAero': case 'casque': case 'casqueForet': case 'casqueCorail': case 'casqueNoir': { SK.drawSnowHelmet(c,it.id,0,-s*.8,s*1.9,s*1.12,'side');break; }
+      case 'casqueCone': case 'casqueRequin': case 'casqueDino': case 'casqueAero': case 'casque': case 'casqueForet': case 'casqueCorail': case 'casqueNoir': { SK.drawSnowHelmet(c,it.id,0,-s*.8,s*1.9,s*1.12,'side');break; }
       case 'gantsMauves': case 'gants': { c.fillStyle = tint; rr2(-s * 0.9, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); rr2(s * 0.1, -s * 0.5, s * 0.8, s * 1.3, s * 0.3); c.fill(); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(-s * 0.9, s * 0.5, s * 0.8, s * 0.3); c.fillRect(s * 0.1, s * 0.5, s * 0.8, s * 0.3); c.fillStyle = tint; rr2(-s * 1.1, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); rr2(s * 0.75, -s * 0.3, s * 0.35, s * 0.6, s * 0.15); c.fill(); c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = s * 0.06; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-s * 0.75 + k * s * 0.25, -s * 0.5); c.lineTo(-s * 0.75 + k * s * 0.25, s * 0.1); c.moveTo(s * 0.25 + k * s * 0.25, -s * 0.5); c.lineTo(s * 0.25 + k * s * 0.25, s * 0.1); c.stroke(); } break; }
       case 'boots-normal': {c.fillStyle='#263b4d';for(const side of [-1,1]){c.save();c.scale(side,1);c.beginPath();c.roundRect(s*.12,-s*.85,s*.58,s*1.25,s*.12);c.roundRect(s*.12,s*.24,s*.85,s*.35,s*.12);c.fill();c.restore();}break;}
       case 'bottes': { SK.drawGripBoot(c,-s*.95,-s*.85,s*.87,s*1.65,-1);SK.drawGripBoot(c,s*.08,-s*.85,s*.87,s*1.65,1);break; }
-      case 'lunettesForet': case 'lunettesTricolores': case 'lunettesNeige': case 'lunettesMiroir': case 'lunettes': SK.drawGoggles(c,it.id,0,0,s);break;
+      case 'lunettesCool': case 'lunettesForet': case 'lunettesTricolores': case 'lunettesNeige': case 'lunettesMiroir': case 'lunettes': SK.drawGoggles(c,it.id,0,0,s);break;
 
       case 'veste': {SK.drawWornTorso(c,{paddedVest:true},0,0,s*1.2);break;}
       case 'portefeuilleOr': case 'portefeuilleRoyal': case 'portemonnaie': {
@@ -626,10 +639,11 @@
       case 'vip': { c.rotate(-0.15); c.fillStyle = '#ffd54a'; rr2(-s * 1.2, -s * 0.75, s * 2.4, s * 1.5, s * 0.2); c.fill(); c.fillStyle = '#263238'; c.fillRect(-s * 1.2, -s * 0.45, s * 2.4, s * 0.3); c.fillStyle = '#b8720c'; c.font = '900 ' + s * 0.7 + 'px sans-serif'; c.textAlign = 'center'; c.fillText('VIP', 0, s * 0.5); break; }
       case 'teteNoel': case 'teteRobot': case 'masque': {if(window.FamilyHeads?.draw(c,{masque:'shinobin',teteNoel:'santa',teteRobot:'robot'}[it.id],'front',-s,-s,s*2,s*2))break;}
       case 'legacy-masque': { c.fillStyle = '#212121'; c.beginPath(); c.arc(0, 0, s, 0, TAU); c.fill(); c.fillStyle = '#f3c9a3'; rr2(-s * 0.75, -s * 0.3, s * 1.5, s * 0.45, s * 0.2); c.fill(); c.fillStyle = '#263238'; c.beginPath(); c.arc(-s * 0.3, -s * 0.08, s * 0.1, 0, TAU); c.arc(s * 0.3, -s * 0.08, s * 0.1, 0, TAU); c.fill(); c.fillStyle = '#d32f2f'; c.fillRect(-s, -s * 0.38, s * 2, s * 0.12); c.beginPath(); c.moveTo(s * 0.9, -s * 0.3); c.lineTo(s * 1.6, -s * 0.1); c.lineTo(s * 1.0, -s * 0.15); c.fill(); break; }
-      case 'jacket': SK.drawJacket(c,it.value,0,0,s);break;
+      case 'jacket': {const gown=SK.jacketPalette(it.value).fancy==='elsa';SK.drawJacket(c,it.value,0,gown?-s*.25:0,s*(gown?.78:1));break;}
+      case 'bootStyle': for(const side of [-1,1])SK.drawCharacterBoot(c,{bootStyle:it.value},side<0?-s*.95:s*.05,-s*.9,s*.9,s*1.8,'front',side);break;
       case 'pants': SK.drawPants(c,it.value,0,0,s);break;
-      case 'hat': if(it.value==='none'){c.fillStyle='#9db1bb';c.beginPath();c.arc(0,-s*.18,s*.53,0,TAU);c.fill();c.beginPath();c.ellipse(0,s*.75,s*.84,s*.47,0,Math.PI,TAU);c.fill();c.strokeStyle='#f6fafc';c.lineWidth=s*.07;c.beginPath();c.arc(0,0,s,0,TAU);c.stroke();}else SK.drawHeadwear(c,it.value,it.tint||'#1565c0',0,-s*.6,s*1.6,s*1.5);break;
-      case 'hatColor': { c.fillStyle = it.value; c.beginPath(); c.arc(0, 0, s * 0.9, Math.PI, 0); c.fill(); c.beginPath(); c.ellipse(s * 0.5, s * 0.05, s * 0.8, s * 0.22, 0, 0, Math.PI); c.fill(); c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = s * 0.06; c.stroke(); break; }
+      case 'hat': if(it.value==='none'){c.fillStyle='#9db1bb';c.beginPath();c.arc(0,-s*.18,s*.53,0,TAU);c.fill();c.beginPath();c.ellipse(0,s*.75,s*.84,s*.47,0,Math.PI,TAU);c.fill();c.strokeStyle='#f6fafc';c.lineWidth=s*.07;c.beginPath();c.arc(0,0,s,0,TAU);c.stroke();}else SK.drawHeadwear(c,it.value,it.tint||SK.KNIT_STYLES[it.value]?.color||'#1565c0',0,-s*.6,s*1.6,s*(it.value==='costume-ninja'?.95:1.5));break;
+      case 'hatColor': SK.drawHeadwear(c,'beanie',it.value,0,-s*.6,s*1.6,s*1.5);break;
       case 'hair': case 'hairColor': case 'skin': { const L = { hair: it.slot === 'hair' ? it.value : 'short', hairColor: it.slot === 'hairColor' ? it.value : '#5d3a1a', skin: it.slot === 'skin' ? it.value : '#f3c9a3', hat: 'none', hatColor: '#000' }; const fr = { def: SK.CHARACTERS[0], look: L, fx: {}, state: 'ride', h: 0, input: {}, pose: 'side' }; c.save(); c.beginPath(); c.arc(0, 0, s * 1.1, 0, TAU); c.clip(); c.fillStyle = L.skin; c.fill(); c.scale(2.6, 2.6); c.translate(0, 0); c.restore(); SK.Render.drawFace(c, fr, 0, 0, s * 1.05); break; }
       case 'up-speed': case 'up-corner': case 'up-acceleration': case 'up-jump': { const col = id === 'up-speed' ? '#4fc3f7' : id === 'up-corner' ? '#69f0ae' : id === 'up-jump' ? '#ff8a65' : '#ffd54a'; c.fillStyle = it.color || '#4caf50'; rr2(-s * 0.3, -s * 0.2, s * 0.6, s * 1.3, s * 0.3); c.fill(); c.fillStyle = col; c.beginPath(); c.moveTo(0, -s * 1.2); c.lineTo(s * 0.8, -s * 0.3); c.lineTo(s * 0.35, -s * 0.3); c.lineTo(s * 0.35, s * 0.3); c.lineTo(-s * 0.35, s * 0.3); c.lineTo(-s * 0.35, -s * 0.3); c.lineTo(-s * 0.8, -s * 0.3); c.closePath(); c.fill(); c.fillStyle = '#fff'; c.font = '900 ' + s * 0.5 + 'px sans-serif'; c.textAlign = 'center'; c.fillText(id === 'up-speed' ? '⚡' : id === 'up-corner' ? '↻' : id === 'up-jump' ? '↑' : '»', 0, s * 0.95); break; }
       default: { c.fillStyle = '#9e9e9e'; c.beginPath(); c.arc(0, 0, s * 0.8, 0, TAU); c.fill(); }

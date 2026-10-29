@@ -1,63 +1,27 @@
 #!/bin/bash
-# Met à jour le site avec la dernière version de chaque jeu, puis pousse sur GitHub Pages.
-# Usage : ./deploy.sh ["message de commit"]
-set -e
-cd "$(dirname "$0")"
-PROJETS="$(cd .. && pwd)"
-MSG="${1:-Mise à jour des jeux}"; [ "$MSG" = "--force" ] && MSG="Mise à jour des jeux"
-
-# Versions : chaque jeu affiche sa version (ZC.VERSION, HK.VERSION). Si le code d'un jeu a changé depuis la dernière
-# mise en ligne mais pas sa version, on refuse (sauf --force), pour ne jamais republier un « 1.0 » périmé.
-ver_of() { node -e "const w={};global.window=w;require('$1');process.stdout.write((w.ZC||w.HK||w.SK||w.FS||w.BC).VERSION)"; }
-VER_ZC=$(ver_of "$PROJETS/ZoneControl/js/config.js"); VER_HK=$(ver_of "$PROJETS/HockeyBoisjoli/js/config.js"); VER_SK=$(ver_of "$PROJETS/SnowKids/js/config.js"); VER_FS=$(ver_of "$PROJETS/FrigoSnap/js/config.js"); VER_BC=$(ver_of "$PROJETS/BallonChasseur/js/config.js")
-HEAD_ZC=$(git -C "$PROJETS/ZoneControl" rev-parse HEAD); HEAD_HK=$(git -C "$PROJETS/HockeyBoisjoli" rev-parse HEAD); HEAD_SK=$(git -C "$PROJETS/SnowKids" rev-parse HEAD); HEAD_FS=$(git -C "$PROJETS/FrigoSnap" rev-parse HEAD); HEAD_BC=$(git -C "$PROJETS/BallonChasseur" rev-parse HEAD)
-if [ -f versions.json ] && [[ " $* " != *" --force "* ]]; then
-  for j in "bunker $VER_ZC $HEAD_ZC" "hockey $VER_HK $HEAD_HK" "snow $VER_SK $HEAD_SK" "frigo $VER_FS $HEAD_FS" "ballon $VER_BC $HEAD_BC"; do set -- $j
-    OLDV=$(node -e "const v=require('./versions.json');process.stdout.write(v['$1']?v['$1'].version:'')")
-    OLDC=$(node -e "const v=require('./versions.json');process.stdout.write(v['$1']?v['$1'].commit:'')")
-    if [ "$OLDC" != "$3" ] && [ "$OLDV" = "$2" ]; then echo "✖ $1 : le code a changé mais la version est encore $2. Augmente VERSION dans js/config.js (ou ./deploy.sh --force)."; exit 1; fi
-  done
+# Local aliases remain local; build and publish from a disposable Git worktree.
+set -euo pipefail
+SITE="$(cd "$(dirname "$0")" && pwd)"
+export GAME_PROJECTS_ROOT="$(cd "$SITE/.." && pwd)"
+export GAME_PUBLISH_BRANCH="$(git -C "$SITE" symbolic-ref --short HEAD)"
+BASE="$(git -C "$SITE" rev-parse HEAD)"
+REMOTE="refs/remotes/origin/$GAME_PUBLISH_BRANCH"
+if git -C "$SITE" show-ref --verify --quiet "$REMOTE"; then
+  if git -C "$SITE" merge-base --is-ancestor "$BASE" "$REMOTE"; then BASE="$REMOTE"
+  elif ! git -C "$SITE" merge-base --is-ancestor "$REMOTE" "$BASE"; then
+    echo "Les historiques local et publié divergent : réconcilie-les avant de publier." >&2; exit 1
+  fi
 fi
-echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"hockey\": { \"version\": \"$VER_HK\", \"commit\": \"$HEAD_HK\" }, \"snow\": { \"version\": \"$VER_SK\", \"commit\": \"$HEAD_SK\" } }" > versions.json
-echo "window.GAME_VERSIONS = { 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK', 'snow-kids/': '$VER_SK', 'frigo-snap/': '$VER_FS', 'ballon-chasseur/': '$VER_BC' };" > versions.js
-echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK · Snow Kids $VER_SK · Frigo Snap $VER_FS · Ballon Chasseur $VER_BC"
-
-echo "▸ Bunker Zone (copie de ZoneControl/)"
-rsync -a --delete --exclude .git --exclude .DS_Store --exclude '_extract.html' "$PROJETS/ZoneControl/" bunker-zone/
-
-echo "▸ Hockey Boisjoli (copie de HockeyBoisjoli/)"
-rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/HockeyBoisjoli/" hockey-boisjoli/
-
-echo "▸ Snow Kids (copie de SnowKids/)"
-python3 "$PROJETS/SnowKids/tools/export-public.py" "$PWD/snow-kids"
-
-echo "▸ Frigo Snap (copie de FrigoSnap/)"
-rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/FrigoSnap/" frigo-snap/
-
-echo "▸ Ballon Chasseur Boisjoli (copie de BallonChasseur/)"
-rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/BallonChasseur/" ballon-chasseur/
-
-echo "▸ Sosaria Online (bundle + assets chargés à l'exécution)"
-(cd "$PROJETS/sosaria" && node build.js >/dev/null)
-cp "$PROJETS/sosaria/dist/sosaria.html" sosaria/index.html
-for d in NPC battle donjon interface inventory misc music other portraits tool world; do
-  rsync -a --delete --exclude .DS_Store "$PROJETS/sosaria/assets/$d/" "sosaria/assets/$d/"
-done
-
-echo "▸ Relais Sosaria (LLM) : adresse lue dans config.js"
-API=$(node -e "const w={};global.window=w;require('./config.js');process.stdout.write(w.SITE_CONFIG.sosariaApi||'')")
-if [ -n "$API" ]; then
-  # Le bundle appelle /api/... en relatif : on redirige ces appels vers le relais hébergé.
-  python3 - "$API" <<'PY'
-import sys; api=sys.argv[1]; p='sosaria/index.html'; s=open(p).read()
-inj='<script>/* relais LLM hébergé */(function(){var B='+repr(api)+';var f=window.fetch;window.fetch=function(u,o){if(typeof u==="string"&&u.indexOf("/api/")===0)u=B+u;return f.call(this,u,o);};})();</script>'
-s=s.replace('<head>','<head>'+inj,1); open(p,'w').write(s)
-PY
-  echo "  → $API"
-else echo "  (aucun relais : les âmes resteront muettes en ligne)"; fi
-
-echo "▸ Commit et envoi"
-git add -A
-git commit -q -m "$MSG" || echo "  (rien à commiter)"
-git push
-echo "✔ En ligne dans une minute ou deux : https://clichoraire.github.io/"
+BUILD_PARENT="$(mktemp -d "${TMPDIR:-/tmp}/jeux-publication.XXXXXX")"
+BUILD="$BUILD_PARENT/site"
+cleanup(){ git -C "$SITE" worktree remove --force "$BUILD" >/dev/null 2>&1 || true; rmdir "$BUILD_PARENT" 2>/dev/null || true; }
+trap cleanup EXIT
+# The normal worktree deliberately excludes the generated SnowKids files.
+git -C "$SITE" worktree add --detach --no-checkout "$BUILD" "$BASE"
+git -C "$BUILD" config --worktree core.sparseCheckout false
+git -C "$BUILD" config --worktree core.sparseCheckoutCone false
+git -C "$BUILD" read-tree --reset -u HEAD
+# Preserve current edits to the site while excluding the local source shortcut.
+rsync -a --exclude .git --exclude .DS_Store --exclude snow-kids "$SITE/" "$BUILD/"
+if [ "${1:-}" = "--prepare-only" ]; then export GAME_PREPARE_ONLY=1; shift; fi
+GAME_PUBLISH_BRANCH="$GAME_PUBLISH_BRANCH" GAME_PROJECTS_ROOT="$GAME_PROJECTS_ROOT" bash "$BUILD/deploy-build.sh" "$@"

@@ -3,17 +3,19 @@
   'use strict';const S=SK.Shop,TAU=Math.PI*2;
   S.mountMotifWall=function(section,save,onChange){
     section.classList.add('motif-wall');const panel=document.createElement('div');panel.className='motif-workshop';
-    panel.innerHTML='<h2>Les motifs de Jérémie</h2><div class="motif-catalog"></div><div class="motif-service"><button>Changer son motif<br>50 pièces</button></div>';
+    panel.innerHTML='<h2>Les motifs de Jérémie</h2><div class="motif-catalog"></div><div class="motif-service"><button>Changer son motif<br> 50 pièces</button></div>';
     panel.querySelector('.motif-service button').onclick=()=>S.openBoardSkins(save,save.boards.includes(save.advBoard)?save.advBoard:save.boards[0],onChange);
-    for(const motif of SK.BOARD_MOTIFS){const owned=SK.ownsBoardSkin(save,motif.id),button=document.createElement('button');button.dataset.motif=motif.id;button.className='motif-offer';button.title=motif.name;button.setAttribute('aria-label',motif.name+' — '+(owned?'Déjà obtenu':motif.price+' pièces'));const cv=document.createElement('canvas');cv.width=120;cv.height=260;S.drawItem(cv.getContext('2d'),{...motif,kind:'board'},60,130,103,0,true);SK.animateBoardPreview(cv,{...motif,kind:'board'},60,130,103);button.append(cv);const name=document.createElement('strong');name.textContent=motif.name;const price=document.createElement('span');price.className='product-price';price.innerHTML=owned?'✓ Obtenu':'<img src="'+SK.COIN_SVG+'" alt="pièces"> '+motif.price;button.append(name,price);button.onclick=()=>purchase(motif,save,onChange);panel.querySelector('.motif-catalog').append(button);}
+    const catalog=panel.querySelector('.motif-catalog'),rackSize=7;
+    const racks=[];for(let i=0;i<Math.ceil(SK.BOARD_MOTIFS.length/rackSize);i++){const rack=document.createElement('div');rack.className='motif-rack';rack.setAttribute('role','group');rack.setAttribute('aria-label','Présentoir de motifs '+(i+1));catalog.append(rack);racks.push(rack);}
+    for(const [index,motif] of SK.BOARD_MOTIFS.entries()){const owned=SK.ownsBoardSkin(save,motif.id),button=document.createElement('button');button.dataset.motif=motif.id;button.style.setProperty('--stack',index%rackSize);button.style.setProperty('--lean',((index%3)-1)*3+'deg');button.className='motif-offer';button.title=motif.name;button.setAttribute('aria-label',motif.name+' — '+(owned?'Déjà obtenu':motif.price+' pièces'));const cv=document.createElement('canvas');cv.width=300;cv.height=300;S.drawItem(cv.getContext('2d'),{...motif,kind:'board'},150,150,100,0,true);SK.animateBoardPreview(cv,{...motif,kind:'board'},150,150,100);button.append(cv);const name=document.createElement('strong');name.textContent=motif.name;const price=document.createElement('span');price.className='product-price';price.innerHTML=owned?'✓ Obtenu':'<img src="'+SK.COIN_SVG+'" alt="pièces"> '+motif.price;button.append(name,price);button.onclick=()=>purchase(motif,save,onChange);racks[Math.floor(index/rackSize)].append(button);}
     section.append(panel);
   };
   function purchase(motif,save,onChange){
     const owned=SK.ownsBoardSkin(save,motif.id),dialog=document.createElement('dialog');dialog.className='board-skin-dialog motif-purchase';dialog.setAttribute('aria-label','Motif '+motif.name);
-    dialog.innerHTML='<h2></h2><canvas width="150" height="310"></canvas><p class="motif-description"></p><p class="motif-price"></p><div class="skin-actions"><button class="cancel">Retour</button><button class="buy"></button></div>';
+    dialog.innerHTML='<h2></h2><canvas width="300" height="330"></canvas><p class="motif-description"></p><p class="motif-price"></p><div class="skin-actions"><button class="cancel">Retour</button><button class="buy"></button></div>';
     dialog.querySelector('h2').textContent=motif.name;dialog.querySelector('.motif-description').textContent=motif.desc;
     dialog.querySelector('.motif-price').textContent=owned?'Ce motif est déjà dans ta collection. Jérémie peut l’appliquer pour 50 pièces.':'Acheter ce motif pour '+motif.price+' pièces ? Il restera disponible pour toutes tes planches. L’application coûte ensuite 50 pièces.';
-    const cv=dialog.querySelector('canvas');S.drawItem(cv.getContext('2d'),{...motif,kind:'board'},75,155,125,0,true);SK.animateBoardPreview(cv,{...motif,kind:'board'},75,155,125);
+    const cv=dialog.querySelector('canvas');S.drawItem(cv.getContext('2d'),{...motif,kind:'board'},150,165,105,0,true);SK.animateBoardPreview(cv,{...motif,kind:'board'},150,165,105);
     const buy=dialog.querySelector('.buy');buy.textContent=owned?'Déjà obtenu':save.gold<motif.price?'Il manque '+(motif.price-save.gold)+' pièces':'Confirmer l’achat · '+motif.price+' pièces';buy.disabled=owned||save.gold<motif.price;
     const close=()=>{dialog.close();dialog.remove();};dialog.querySelector('.cancel').onclick=close;
     buy.onclick=()=>{if(SK.buyBoardMotif(save,motif.id)==='bought'){onChange();SK.Audio.sfx('buy');close();}};dialog.onclose=()=>dialog.remove();dialog.addEventListener('keydown',e=>e.stopPropagation());dialog.addEventListener('keyup',e=>e.stopPropagation());document.body.append(dialog);dialog.showModal();
@@ -24,7 +26,10 @@
     const oval=(x,y,rx,ry,col)=>{c.fillStyle=col;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();};
     const poly=(pts,col)=>{c.fillStyle=col;c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();};
     const rect=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h);};
-    if(pattern==='custom-electric'){
+    if(pattern==='custom-banana'){
+      rect(-.5,-1.6,1,3.2,'#126e78');
+      for(let i=0;i<5;i++){c.save();c.translate((i%2?1:-1)*.12,-1+i*.48);c.rotate((i%2?1:-1)*.5);c.fillStyle='#ffdf40';c.strokeStyle='#a67421';c.lineWidth=.025;c.beginPath();c.moveTo(-.21,-.12);c.bezierCurveTo(-.05,.20,.22,.20,.23,-.16);c.bezierCurveTo(.1,.04,-.05,.04,-.21,-.12);c.fill();c.stroke();line([[-.18,-.08],[-.22,-.16]],'#754627',.045);c.restore();}
+    }else if(pattern==='custom-electric'){
       for(let k=0;k<3;k++){const pts=[];for(let j=0;j<=16;j++)pts.push([Math.sin(p*4+j*2.4+k*2)*.15+(k-1)*.12,-1.25+j*.16]);line(pts,'#075b9c',.065);line(pts,k===1?'#fff783':'#45efff',.018);}
     }else if(pattern==='custom-molten'){
       for(let k=0;k<4;k++){const pts=[];for(let j=0;j<10;j++)pts.push([Math.sin(j*1.8+k)*.13+(k-1.5)*.15,-1.3+j*.3]);line(pts,'#731f19',.07);line(pts,'#ff5a12',.035);line(pts,'rgba(255,225,50,'+(.45+.4*Math.sin(p+k))+')',.014);}

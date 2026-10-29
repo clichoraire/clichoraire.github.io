@@ -1,14 +1,33 @@
 // School interior and illustrated, replayable lesson cards.
 (function(SK){
  'use strict';const S=SK.School={};let raf=0;
- S.close=()=>{cancelAnimationFrame(raf);document.getElementById('mission-level-choice')?.remove();};
- S.open=(save,onMission,onBack)=>{
+ S.close=()=>{SK.AdvancedTricks?.close();cancelAnimationFrame(raf);document.getElementById('mission-level-choice')?.remove();};
+ S.previewRace=(m,save)=>{
+  const racers=[{charId:save.advChar||save.char||'adam',boardId:save.advBoard,ctrl:'human',player:0}];if(m.type==='pushes')racers.push({charId:'zach',ctrl:'cpu'});
+  const race=new SK.Race({course:SK.courseById(m.course),mission:m,racers,seed:7,laps:1});race.preview=true;race.previewZoom=1.4;race.phase='race';race.time=2;
+  race.humans[0].look=SK.lookOf(race.humans[0].def,save);
+  const r=race.humans[0],interest=race.track.segs.find(s=>m.type==='slalom'?s.gate:m.type==='coins'?s.coins.length:m.type==='edges'?Math.abs(s.curve)>.025:m.type==='nofall'?s.props.some(p=>!p.decor):s.ramp);
+  r.z=m.type==='hits'?race.track.targets[0].z-10:interest?Math.max(3,interest.z-9):65;
+  if(m.type==='slalom'){r.x=interest.gate.x;r.z=interest.z+.5;}
+  if(m.type==='coins'){r.x=interest.coins[0].x-1.5;r.z=interest.z-1;}
+  r.yAbs=race.track.groundY(r.z);r.speed=16;r.state='ride';
+  if(m.type==='hits'){SK.Shooting.updateTargets(race);r.shot='snowball';}
+  if(m.type==='tricks'){r.h=1;r.yAbs+=r.h;r.state='air';const id=m.trickId||'spin2L',def=SK.TRICKS[id];if(def)r.curTrick={id,def,t:def.dur*.3};}
+  if(m.type==='pushes'){const o=race.racers[1];o.z=r.z+2;o.x=r.x+1.6;o.yAbs=race.track.groundY(o.z);r.pushPose=.35;r.pushDirection=1;}
+  return race;
+ };
+ S.drawMissionPreview=(canvas,m,save)=>{const race=S.previewRace(m,save);return ()=>{const c=canvas.getContext('2d');SK.Render.drawView(c,race,race.humans[0],0,0,canvas.width,canvas.height,2);
+  if(m.type==='time'){c.fillStyle='#17384e';c.beginPath();c.roundRect(canvas.width*.62,18,canvas.width*.33,45,12);c.fill();c.fillStyle='#ffe17a';c.font='bold 22px Arial';c.textAlign='center';c.fillText('⏱ '+SK.fmtTime(m.goal),canvas.width*.785,48);}
+ };};
+ S.open=(save,onMission,onBack,store=()=>{})=>{
   S.close();const list=document.getElementById('missions'),more=document.getElementById('school-more'),cv=document.getElementById('school-scene'),c=cv.getContext('2d');
   const done=SK.MISSIONS.filter(m=>save.missions?.[m.id]!=null).length;
   document.getElementById('school-sub').textContent=`${done} / ${SK.MISSIONS.length} missions réussies`;
   const progress=document.getElementById('school-progress');progress.max=SK.MISSIONS.length;progress.value=done;
   document.getElementById('school-gold').innerHTML='<img src="'+SK.COIN_SVG+'" alt="Or">'+SK.fmtGold(save.gold,false);
   list.replaceChildren();list.scrollTop=0;
+  const lessons=document.createElement('button');lessons.type='button';lessons.className='richard-lessons';lessons.textContent='★ Richard · Apprendre des acrobaties';lessons.onclick=()=>SK.AdvancedTricks.open(save,()=>{store();document.getElementById('school-gold').innerHTML='<img src="'+SK.COIN_SVG+'" alt="Or">'+SK.fmtGold(save.gold,false);});list.append(lessons);
+  cv.onclick=e=>{const b=cv.getBoundingClientRect(),x=(e.clientX-b.left)*cv.width/b.width,y=(e.clientY-b.top)*cv.height/b.height;if(x>1120&&x<1360&&y>300&&y<650)lessons.click();};
   const previews=[];
   const groups=Object.values(SK.MISSIONS.reduce((all,m)=>{(all[m.type]??=[]).push(m);return all;},{}));
   const chooseLevel=(levels)=>{
@@ -21,7 +40,8 @@
    for(const m of levels.filter(m=>SK.missionUnlocked(m,save))){
     const passed=save.missions?.[m.id]!=null,b=document.createElement('button');b.type='button';b.className='mission-level-option'+(passed?' completed':'');if(save.missionPerfect?.[m.id]){b.classList.add('perfect');b.setAttribute('aria-label',m.name+' niveau '+m.level+' — parfait');}
     b.innerHTML=`<span class="level-number">${m.level||1}</span><strong>Niveau ${m.level||1}</strong><span>${passed?'★ Réussi':`<span class="gold-inline"><img src="${SK.COIN_SVG}" alt="pièces d’or">${SK.fmtGold(SK.firstMissionGold(m),false)}</span>`}</span>`;
-    const desc=document.createElement('p');desc.textContent=['slalom','coins'].includes(m.type)?(m.type==='coins'?'🪙 ':'🚩 ')+m.goal:m.desc+(passed?'':' Première réussite : +120 XP.');if(['slalom','coins'].includes(m.type)){desc.title=m.type==='coins'?'Ramasse '+m.goal+' pièces pour l’or':'Passe au moins '+m.goal+' portes pour réussir';desc.setAttribute('aria-label',desc.title);b.classList.add('slalom-card');}if(m.type==='coins')desc.innerHTML=coinIcon+' '+m.goal;b.append(desc);
+    const preview=document.createElement('canvas');preview.width=480;preview.height=240;preview.style='width:100%;height:auto;border-radius:12px;grid-column:1/-1';preview.setAttribute('aria-label',m.desc);b.append(preview);const paint=S.drawMissionPreview(preview,m,save);paint();
+    const desc=document.createElement('p');desc.textContent=['slalom','coins'].includes(m.type)?(m.type==='coins'?'🪙 ':'🚩 ')+m.goal:m.desc+(passed?'':' Première réussite : +120 XP.');if(['slalom','coins'].includes(m.type)){desc.title=m.type==='coins'?'Ramasse '+m.goal+' pièces pour l’or':'Passe au moins '+m.goal+' portes pour réussir';desc.setAttribute('aria-label',desc.title);b.classList.add('slalom-card');}if(m.type==='coins')desc.innerHTML=coinIcon+' '+m.goal;b.append(desc);if(m.type==='tricks'){const keys=document.createElement('div');keys.innerHTML=SK.trickLessonKeysHTML(m);b.append(keys);}
     if(['slalom','coins'].includes(m.type)){
       const thresholds=document.createElement('div');thresholds.className='slalom-thresholds';
       thresholds.innerHTML=['gold','silver','bronze'].map(key=>'<div><span>'+SK.MEDALS[key].icon+'</span><b>'+(m.type==='coins'?coinIcon+' '+m.medalCounts[key]:SK.fmtMedalTime(m.medalTimes[key]))+'</b></div>').join('');b.append(thresholds);
@@ -51,9 +71,7 @@
    const shot=document.createElement('canvas');shot.width=640;shot.height=320;shot.setAttribute('aria-label',m.desc);
    const footer=document.createElement('span');footer.className='school-reward';footer.textContent='Choisir le niveau →';
    button.append(title,level,shot,footer);button.title=m.desc;button.onclick=()=>chooseLevel(levels);list.append(button);
-   const race=new SK.Race({course:SK.courseById(m.course),mission:m,racers:[{charId:save.advChar||save.char,boardId:save.advBoard,ctrl:'human',player:0}],seed:7});race.preview=true;
-   const r=race.humans[0];const interest=race.track.segs.find(s=>m.type==='slalom'?s.gate:m.type==='coins'?s.coins.length:m.type==='edges'?Math.abs(s.curve)>.02:m.type==='nofall'?s.props.some(p=>p.trainingBarrier):s.ramp);r.z=interest?Math.max(10,interest.z-28):45;r.yAbs=race.track.groundY(r.z);r.speed=16;r.state='ride';
-   previews.push(()=>SK.Render.drawView(shot.getContext('2d'),race,r,0,0,640,320,0));
+   previews.push(S.drawMissionPreview(shot,m,save));
   }
   const updateArrow=()=>{more.hidden=list.scrollTop+list.clientHeight>=list.scrollHeight-8;};list.onscroll=updateArrow;
   more.onclick=()=>list.scrollBy({top:list.clientHeight*.9,behavior:'smooth'});document.getElementById('btn-school-back').onclick=onBack;
@@ -75,7 +93,7 @@
    c.textAlign='left';c.fillStyle='#ffe49a';c.font='bold 20px "Trebuchet MS",sans-serif';c.fillText('LES ASTUCES DU CHALET',916,272);
    c.strokeStyle='#e8eac080';c.lineWidth=2;c.beginPath();c.moveTo(917,283);c.lineTo(1218,283);c.stroke();
    c.font='bold 15px "Trebuchet MS",sans-serif';c.fillStyle='#edf5dd';
-   ['← → : dirige ta planche','↑ accélère · ↓ freine','X : plie, puis relâche pour sauter','En l’air : C + une flèche = figure','V : tir · B : objet','N + ← / → : pousse de ce côté'].forEach((tip,i)=>c.fillText(tip,917,312+i*25));
+   ['← → : dirige ta planche','↑ accélère · ↓ freine','X : plie, puis relâche pour sauter','En l’air : C = grab · X = rotation','V : tir · B : objet','N + ← / → : pousse de ce côté'].forEach((tip,i)=>c.fillText(tip,917,312+i*25));
    c.font='italic 14px "Trebuchet MS",sans-serif';c.fillStyle='#f5dc91';c.fillText('Plus tu plies, plus tu sautes haut !',917,468);
    poly([[1300,245],[1420,210],[1420,500],[1300,520]],'#503923');
    poly([[1310,253],[1410,224],[1410,488],[1310,505]],'#bee8fb');

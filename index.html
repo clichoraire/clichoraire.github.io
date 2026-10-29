@@ -83,6 +83,25 @@
     .soon .big { font-family: Rajdhani, sans-serif; font-size: 40px; font-weight: 700; color: var(--line); line-height: 1; }
     .soon h3 { font-size: 20px; margin-top: 8px; }
 
+    /* ------------------------------------------------ la banque : bouton doré façon casino */
+    .bank { grid-column: 1 / -1; position: relative; display: block; text-decoration: none; color: #2a1a05; border-radius: var(--radius); padding: 14px; overflow: hidden; border: 0;
+      background: #2a1206 radial-gradient(circle, #fff6c0 0 2.5px, rgba(255,214,90,.55) 3.5px, transparent 4.5px) 0 0 / 22px 22px; animation: bank-chase 1s steps(2) infinite; box-shadow: 0 0 0 1px #6a3f0b, 0 0 40px rgba(255,208,64,0.25), 0 20px 50px rgba(0,0,0,0.6); }
+    .bank:hover { transform: translateY(-4px); box-shadow: 0 0 0 1px #9a6410, 0 0 60px rgba(255,208,64,0.45), 0 26px 60px rgba(0,0,0,0.7); }
+    @keyframes bank-chase { to { background-position: 22px 0; } }
+    .bank-inner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; padding: 26px 32px; border-radius: 10px;
+      background: linear-gradient(180deg, #fff3b8 0%, #f6d365 22%, #e0a82e 50%, #b8860b 78%, #f3cf5a 100%); box-shadow: inset 0 2px 0 #fff9dc, inset 0 -3px 0 #7a4e0a, 0 3px 0 #5a3607, 0 8px 18px rgba(0,0,0,0.5); overflow: hidden; }
+    .bank-inner::before { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.7) 48%, transparent 58%); transform: translateX(-130%); animation: bank-sheen 3.4s ease-in-out infinite; pointer-events: none; }
+    @keyframes bank-sheen { 40%, 100% { transform: translateX(130%); } }
+    .bank-text { position: relative; }
+    .bank-kicker { font-family: Rajdhani, sans-serif; font-weight: 700; letter-spacing: 4px; font-size: 13px; color: #6a3f0b; }
+    .bank-title { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: clamp(30px, 5vw, 54px); line-height: 1; letter-spacing: 3px; text-transform: uppercase; margin: 2px 0 6px; color: #3a2208; text-shadow: 0 1px 0 #fff3b8, 0 3px 0 #9a6410, 0 6px 14px rgba(0,0,0,0.35); }
+    .bank-desc { font-size: 15px; color: #4a2e0c; font-weight: 500; max-width: 560px; }
+    .bank-coins { position: relative; display: flex; gap: 6px; font-size: clamp(34px, 5vw, 56px); filter: drop-shadow(0 6px 10px rgba(0,0,0,0.4)); }
+    .bank-coins span { animation: bank-bounce 1.6s ease-in-out infinite; } .bank-coins span:nth-child(2) { animation-delay: .2s; } .bank-coins span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bank-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .bank-cta { position: relative; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; padding: 12px 22px; border-radius: 10px; background: #2a1206; color: #ffd040; box-shadow: 0 0 0 2px #ffd040, 0 0 24px rgba(255,208,64,0.5), inset 0 1px 0 rgba(255,255,255,0.15); white-space: nowrap; }
+    @media (prefers-reduced-motion: reduce) { .bank, .bank-inner::before, .bank-coins span { animation: none; } }
+
     /* ------------------------------------------------ à propos */
     .about { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
     .about div { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
@@ -141,7 +160,7 @@
       <h1>Des jeux <span>faits maison</span></h1>
       <p class="lead">Des jeux écrits en JavaScript, sans rien à installer : cliquez sur « Jouer » et c'est parti. Stratégie en temps réel, jeu de rôle en monde ouvert, et d'autres à venir.</p>
       <a class="cta" href="#jeux">Voir les jeux ↓</a>
-      <p><a class="cta" href="families/" style="background:#9bdcff;color:#122c42">✨ Ajouter une personne à la famille</a></p>
+      <p><a class="cta" href="families/" style="background:#9bdcff;color:#122c42">✨ Ajouter ou retirer des personnages</a> <a class="cta" href="families/member.html" style="background:#1b2230;color:#9bdcff;box-shadow:0 0 0 1px rgba(155,220,255,.5)">👤 Fiches des membres</a></p>
     <div class="facts"><span><b>0</b> installation</span><span><b>0 $</b> pour jouer</span><span><b>100 %</b> navigateur</span></div>
     </div>
   </section>
@@ -198,6 +217,10 @@
         desc: "Affrontez les familles au ballon chasseur avec des lancers spéciaux. Esquivez, attrapez et lancez pour mener votre équipe à la victoire.",
       },
       {
+        title: 'Canon Big Boom', path: 'canon-big-boom/', cover: 'covers/canon-big-boom.jpg', badge: 'Nouveau', badgeClass: 'alpha',
+        desc: "Défendez votre canon contre des bébittes volantes, monde après monde, jusqu'aux chasseurs spatiaux. Améliorez le canon, débloquez des boulets fous et choisissez vos cartes.",
+      },
+      {
         title: 'Frigo Snap', locked: true, path: 'frigo-snap/', cover: 'covers/frigo-snap.jpg', badge: 'Photo',
         desc: "Partez en safari photo dans un frigo où les aliments prennent vie. Surprenez les créatures et capturez leurs moments les plus drôles.",
       },
@@ -208,7 +231,14 @@
     ];
     const el = document.getElementById('games');
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    el.innerHTML = GAMES.map(g => `
+    el.innerHTML = `
+      <a class="bank" href="banque/" aria-label="La Banque : tout l'or gagné dans les jeux">
+        <div class="bank-inner">
+          <div class="bank-coins" aria-hidden="true"><span>🪙</span><span>💰</span><span>🪙</span></div>
+          <div class="bank-text"><div class="bank-kicker">★ NOUVEAU ★ COFFRE-FORT DE LA FAMILLE</div><div class="bank-title">La Banque</div><div class="bank-desc">Tout l'or gagné dans les jeux, réuni dans un grand coffre-fort. Choisis ton personnage, tourne la roue, ouvre la porte… et regarde tes pièces s'empiler jusqu'au million.</div></div>
+          <span class="bank-cta">Ouvrir le coffre →</span>
+        </div>
+      </a>` + GAMES.map(g => `
       <article class="game ${g.locked ? 'locked' : ''}">
         <a class="cover" ${g.locked ? 'aria-disabled="true"' : `href="${g.path}"`} aria-label="${g.locked ? 'Bientôt disponible : ' : 'Jouer à '}${esc(g.title)}">${g.locked ? '<span class="game-lock" aria-hidden="true">🔒</span>' : ''}
           <span class="badge ${g.badgeClass || ''}">${esc(g.badge)}</span>

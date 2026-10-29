@@ -138,7 +138,8 @@
     A.char(state, state.leader);
     BC.ArcadeUI.campaign(state, {
       choice:challenge,
-      prepare: choice => {challenge=choice;const m=A.buildMatch(state,choice);app().startMatch({...m,ctrl:['p1','cpu'],mode:'adventure'});},
+      // La difficulté peut encore changer sur l'écran d'affrontement : rebuild recompose le match et mémorise le choix.
+      prepare: choice => {const build=c=>{challenge=c;return {...A.buildMatch(state,c),ctrl:['p1','cpu'],mode:'adventure',rebuild:d=>build({...c,difficulty:d})};};app().startMatch(build(choice));},
       compose: () => U.setupMatch(),
       manage: () => U.pickTeam(),
       replay: teamId => U.setupMatch({teamId,replay:true}),

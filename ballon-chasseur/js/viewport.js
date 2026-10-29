@@ -4,7 +4,7 @@
  function fit(){pending=false;const root=document.querySelector('.screen:not(.hidden)');if(!root)return;
   document.querySelectorAll('.screen').forEach(s=>{if(s!==root){s.style.transform='';s.style.width='';}});
   if(matchMedia('(max-width:1100px), (pointer:coarse) and (max-width:1400px)').matches){if(root.classList.contains('fitted-screen'))root.classList.remove('fitted-screen');root.style.transform='';root.style.width='';root.style.height='';return;}
-  if(root.classList.contains('shared-adventure')||root.id==='screen-practice'||root.id==='screen-match'||root.querySelector('.arcade-versus,.arcade-selection')){if(root.classList.contains('fitted-screen'))root.classList.remove('fitted-screen');root.style.transform='';root.style.width='';root.style.height='';return;}
+  if(root.classList.contains('shared-adventure')||root.id==='screen-menu'||root.id==='screen-practice'||root.id==='screen-match'||root.querySelector('.arcade-versus,.arcade-selection')){if(root.classList.contains('fitted-screen'))root.classList.remove('fitted-screen');root.style.transform='';root.style.width='';root.style.height='';return;}
   if(!root.classList.contains('fitted-screen'))root.classList.add('fitted-screen');
   root.style.transform='none';root.style.setProperty('height','auto','important');
   let scale=Math.min(1,innerWidth/1200);

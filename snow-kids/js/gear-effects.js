@@ -7,7 +7,7 @@
  ['boussole','Boussole de montagne',450,1,'Indique la direction du prochain virage et la distance avant celui-ci.','🧭'],
  ['ressort','Bottes à ressort',800,2,'Bottes rebondissantes ! +1 en saut. Charge ton saut à fond pour bondir super haut : recharge en 30 secondes.','🦘'],
  ['sifflet','Sifflet de secours',900,2,'Évite le premier choc contre un sapin, un drapeau ou un cône. Une charge par course.','📣'],
- ['casqueAero','Casque aérodynamique',1800,3,'+10 % de vitesse maximale en ligne droite.','⛑'],
+ ['casqueAero','Casque aérodynamique',1800,3,'+10 % de vitesse en ligne droite tant qu’il est porté. Absorbe la première chute, puis s’envole. Revient à la prochaine course.','⛑'],
  ['thermos','Thermos de chocolat chaud',1600,3,'Un saut réussi depuis une butte à ligne rouge remplit le turbo deux fois plus vite : 2 sauts au lieu de 4.','☕'],
  ['sablier','Sablier d’or',4500,4,'Ralentit le temps pendant 1,5 s dans un virage critique ou en vol. Recharge : 12 s.','⌛'],
  ['meteore','Météore de poche',5500,4,'Pulvérise les obstacles proches pendant les 3 premières secondes de chaque turbo.','🌠'],

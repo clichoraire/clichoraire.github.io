@@ -79,21 +79,15 @@
     buildHowto();
     // scène d'accueil : toute la famille lance des balles sur le terrain du parc
     const c = $('#menu-anim'), ctx = c.getContext('2d');
-    const actors = [];
-    let hovered = null, mouse = null;
-    c.addEventListener('mousemove', e => { const r = c.getBoundingClientRect(); const scale = Math.max(r.width / c.width, r.height / c.height); mouse = { x: (e.clientX - r.left + (c.width * scale - r.width) / 2) / scale, y: (e.clientY - r.top + (c.height * scale - r.height) / 2) / scale, cx: e.clientX, cy: e.clientY }; });
-    c.addEventListener('mouseleave', () => { mouse = null; hovered = null; hideCard(); });
-    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');let lastMenuFrame=-Infinity;
+    const actors = [], hovered = null;
+    // Le décor est redessiné à chaque image (il est presque entièrement en cache) ; les portraits, plus coûteux, à ~30 images/s.
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');let lastPortraitFrame=-Infinity,wasVisible=false;
     (function loop(now) {
-      if (app.screen === 'menu'&&now-lastMenuFrame>=32) {
-        let hit = null;
-        for (const a of actors) if (mouse && Math.abs(mouse.x - a.x) < 28 && mouse.y < a.y + 8 && mouse.y > a.y - 90) hit = a;
-        if (hit !== hovered) { hovered = hit; if (hit) showCard(hit.d, hit.team, mouse.cx, mouse.cy); else hideCard(); }
-        c.style.cursor = hit ? 'pointer' : 'default';
-        lastMenuFrame=now;const menuTime=reducedMotion.matches?0:now/1000;BC.render.drawMenuScene(ctx, actors, menuTime, hovered);for(const a of menuPortraits){const active=!reducedMotion.matches&&Math.floor(a.index/2)===Math.floor(menuTime/11)%3;if(active||a.wasActive!==active){BC.render.drawMenuHero(a.canvas,a.d,a.team,active?menuTime:0,a.index,!active);a.wasActive=active;}}
-
-      }
       requestAnimationFrame(loop);
+      if (app.screen !== 'menu'||document.hidden) { wasVisible=false; return; }
+      const menuTime=reducedMotion.matches?0:now/1000;
+      if(!wasVisible||!reducedMotion.matches){BC.render.drawMenuScene(ctx, actors, menuTime, hovered);wasVisible=true;}
+      if(now-lastPortraitFrame>=32){lastPortraitFrame=now;for(const a of menuPortraits){const active=!reducedMotion.matches&&Math.floor(a.index/2)===Math.floor(menuTime/11)%3;if(active||a.wasActive!==active){BC.render.drawMenuHero(a.canvas,a.d,a.team,active?menuTime:0,a.index,!active);a.wasActive=active;}}}
     })(performance.now());
   }
 
@@ -139,7 +133,7 @@
   function startMatchIds(aId, bId, ctrl) { startMatch({ teams: [BC.teamById(aId), BC.teamById(bId)], ctrl, difficulty: app.settings.difficulty }); }
   // o : { teams, ctrl, difficulty, stats (aventure), mode }
   function startMatch(o) {
-    if (!o.confirmed) { BC.ArcadeUI.versus(o,()=>startMatch({...o,confirmed:true}),()=>{if(o.mode==='adventure')BC.AdventureUI.hub();else if(app.mode==='cup')startSelect('cup');else startSelect('solo');}); return; }
+    if (!o.confirmed) { BC.ArcadeUI.versus(o,final=>startMatch({...(final||o),confirmed:true}),()=>{if(o.mode==='adventure')BC.AdventureUI.hub();else if(app.mode==='cup')startSelect('cup');else startSelect('solo');}); return; }
     BC.audio.init();
     const g = new BC.Game({ teams: o.teams, ctrl: o.ctrl, difficulty: o.difficulty == null ? app.settings.difficulty : o.difficulty, intro: true, controlMode:app.settings.controlMode, stats: o.stats, mode: o.mode, adventure:o.adventure });
     if(o.practice)BC.Practice.attach(g,o.practice);
