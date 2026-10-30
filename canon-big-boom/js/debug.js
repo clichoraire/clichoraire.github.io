@@ -5,7 +5,7 @@
   const D = CB.Debug = {};
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const TYPES = { kill: 'Abattre N ennemis', survive: 'Survivre X secondes', killTimed: 'Abattre N avant la fin du chrono', boss: 'Boss' };
+  const TYPES = { endless: 'Nuit sans fin (infini)', kill: 'Abattre N ennemis', survive: 'Survivre X secondes', killTimed: 'Abattre N avant la fin du chrono', boss: 'Boss' };
   const SPEEDS = [.25, .5, 1, 2, 4];
 
   D.fromSlot = (wi, vi) => {

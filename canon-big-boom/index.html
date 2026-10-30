@@ -50,7 +50,9 @@
       <div class="map-bottom">
         <div class="objective" id="map-objective"></div>
         <div class="map-actions">
-          <button id="btn-level" class="lego primary pulse hidden">⭐ Évolution !</button>
+          <button id="btn-worlds" class="lego">🌍 Mondes</button>
+          <button id="btn-codex" class="lego">📖 Encyclopédie</button>
+          <button id="btn-level" class="lego">📊 Fiche</button>
           <button class="lego" data-back><b class="btn-badge">B</b> Retour</button>
           <button id="btn-shop" class="lego">🔧 Hangar</button>
           <button id="btn-start" class="lego primary"><b class="btn-badge">A</b> Jouer</button>
@@ -69,8 +71,18 @@
         <div class="gold-pill" id="shop-gold"></div>
         <button class="back" data-back><b>B</b> RETOUR</button>
       </header>
-      <p class="shop-intro" id="shop-intro"></p>
-      <div id="shop-list" class="shop-list"></div>
+      <div class="shop-body">
+        <aside class="shop-hero" aria-label="Mon canon">
+          <canvas id="shop-art" width="460" height="340" aria-hidden="true"></canvas>
+          <h3 id="shop-name"></h3>
+          <p id="shop-cannon" class="sheet-cannon"></p>
+          <div id="shop-stats" class="stat-list compact"></div>
+        </aside>
+        <div class="shop-main">
+          <p class="shop-intro" id="shop-intro"></p>
+          <div id="shop-list" class="shop-list"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -80,6 +92,7 @@
       <div class="hud">
         <div class="badge" id="wave-badge"></div>
         <div class="gold-pill" id="wave-gold"></div>
+        <div class="run-level" id="wave-level"><b id="wave-level-n">NIV. 1</b><div class="xpbar"><i id="wave-level-bar"></i></div></div>
         <div class="objective-panel">
           <div class="objective-tag"><span class="bang">!</span><span id="wave-tag">Vague 1</span></div>
           <div class="objective-text" id="wave-text"></div>
@@ -93,6 +106,7 @@
         </div>
         <div class="timer" id="wave-timer"></div>
         <div class="cards-owned" id="wave-cards"></div>
+        <div class="tutorial news hidden" id="wave-news"><div class="tut-head">NOUVEAU</div><div class="tut-body"></div></div>
         <div class="tutorial hidden" id="wave-tutorial"><div class="tut-head">TUTORIEL <span>?</span></div><div class="tut-body" id="wave-tutorial-text"></div></div>
         <button id="btn-fire" class="fire-btn" aria-label="Tirer">💥</button>
         <button id="btn-pause" class="pause-btn" aria-label="Pause">❚❚</button>
@@ -108,7 +122,7 @@
       </div>
       <div id="overlay-cards" class="overlay hidden">
         <div class="cards-box">
-          <div class="cards-kicker">ENNEMI SPÉCIAL ABATTU !</div>
+          <div class="cards-kicker" id="cards-kicker">NIVEAU SUPÉRIEUR !</div>
           <h2>Choisis une carte</h2>
           <p>Son pouvoir dure jusqu’à la fin de ce tableau.</p>
           <div class="cards" id="card-list"></div>
@@ -120,19 +134,48 @@
   </section>
 
   <dialog id="levelup" class="lego-dialog levelup" aria-labelledby="level-title">
-    <div class="kicker">NIVEAU SUPÉRIEUR !</div>
+    <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
+    <div class="kicker" id="level-kicker">NIVEAU SUPÉRIEUR !</div>
     <h2 id="level-title">CHOISIS TON ÉVOLUTION</h2>
-    <p id="level-intro" class="level-intro"></p>
-    <div id="talent-list" class="talent-grid"></div>
+    <div class="sheet">
+      <div class="sheet-hero">
+        <canvas id="sheet-art" width="420" height="440" aria-hidden="true"></canvas>
+        <h3 id="sheet-name"></h3>
+        <div class="sheet-level"><span id="sheet-level" class="hero-level"></span><b id="sheet-xp-text"></b></div>
+        <progress id="sheet-xp" max="100" value="0"></progress>
+        <p id="sheet-cannon" class="sheet-cannon"></p>
+      </div>
+      <div class="sheet-stats">
+        <div id="talent-list" class="stat-list"></div>
+        <p id="level-intro" class="level-intro"></p>
+      </div>
+    </div>
+    <form method="dialog" class="sheet-footer"><button class="lego primary" id="btn-level-ok"><b class="btn-badge">A</b> Continuer</button></form>
+  </dialog>
+
+  <dialog id="worlds" class="lego-dialog worlds" aria-labelledby="worlds-title">
+    <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
+    <div class="kicker">LA GRANDE CARTE</div>
+    <h2 id="worlds-title">LES MONDES</h2>
+    <p class="level-intro">Réussis <b>3 tableaux</b> d’un monde pour ouvrir le suivant.</p>
+    <div id="worlds-list" class="worlds-grid"></div>
+  </dialog>
+
+  <dialog id="codex" class="lego-dialog codex" aria-labelledby="codex-title">
+    <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
+    <div class="kicker">LE GRAND CAHIER</div>
+    <h2 id="codex-title">ENCYCLOPÉDIE</h2>
+    <div class="codex-tabs" id="codex-tabs"></div>
+    <div id="codex-body" class="codex-body"></div>
   </dialog>
 
   <dialog id="help" class="lego-dialog" aria-labelledby="help-title">
     <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
     <h2 id="help-title">COMMENT JOUER</h2>
     <div class="help-grid">
-      <div><b>🎯 Viser et tirer</b><p>Souris ou doigt : vise et clique pour tirer un boulet. Clavier : flèches + Espace. Manette : stick + ZR / A. Au début, un clic = un tir : achète le <b>tir automatique</b> au hangar pour tirer en continu.</p></div>
+      <div><b>🎯 Viser et tirer</b><p>Souris ou doigt : vise et clique pour tirer un boulet. Clavier : flèches + Espace. Manette : stick + ZR / A. Maintiens pour tirer en continu : le canon est lent au départ, améliore sa <b>cadence</b> au hangar.</p></div>
       <div><b>🗺 La carte</b><p>Chaque monde a cinq tableaux : abats des ennemis, survis au chrono, et termine par le boss. Trois étoiles si ton canon est encore en pleine forme.</p></div>
-      <div><b>🪙 L’or</b><p>Un ennemi = une pièce au premier monde, et de plus en plus ensuite. Les combos (ennemis abattus à la suite) multiplient le butin.</p></div>
+      <div><b><i class="coin"></i> L’or</b><p>Un ennemi = une pièce au premier monde, et de plus en plus ensuite. Les combos (ennemis abattus à la suite) multiplient le butin.</p></div>
       <div><b>🔧 Le hangar</b><p>Améliore la cadence, la portée, les dégâts, les points de vie… Achète de nouveaux canons, de nouveaux boulets et des effets spéciaux.</p></div>
       <div><b>★ Les ennemis spéciaux</b><p>Une chauve-souris rouge, un fantôme vert… Abats-les pour choisir une carte : un pouvoir gardé seulement pour ce tableau.</p></div>
       <div><b>⭐ Les niveaux</b><p>À chaque niveau gagné, c’est toi qui choisis ton évolution : vie, dégâts, cadence, portée, critique ou butin.</p></div>
