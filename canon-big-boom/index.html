@@ -14,12 +14,11 @@
     <div class="title-box">
       <p class="eyebrow">LES FAMILLES · BRIGADE ANTI-BÉBITTES</p>
       <h1 class="logo"><span class="t1">CANON</span><span class="t2">BIG BOOM</span></h1>
-      <p class="tagline">Ta famille. Ton canon. Et des bébittes volantes qui n'ont rien demandé.</p>
       <div class="title-buttons">
         <button id="btn-continue" class="lego primary hidden"></button>
         <button id="btn-play" class="lego primary">▶ Jouer</button>
         <button id="btn-help" class="lego">? Comment jouer</button>
-        <button id="btn-sound" class="lego small">🔊 Son</button>
+        <button id="btn-settings" class="lego small">⚙️ Réglages</button>
       </div>
       <span id="version"></span>
     </div>
@@ -75,6 +74,8 @@
         <aside class="shop-hero" aria-label="Mon canon">
           <canvas id="shop-art" width="460" height="340" aria-hidden="true"></canvas>
           <h3 id="shop-name"></h3>
+          <div class="sheet-level"><span id="shop-level" class="hero-level"></span><b id="shop-xp-text"></b></div>
+          <progress id="shop-xp" max="100" value="0"></progress>
           <p id="shop-cannon" class="sheet-cannon"></p>
           <div id="shop-stats" class="stat-list compact"></div>
         </aside>
@@ -95,7 +96,7 @@
         <div class="run-level" id="wave-level"><b id="wave-level-n">NIV. 1</b><div class="xpbar"><i id="wave-level-bar"></i></div></div>
         <div class="objective-panel">
           <div class="objective-tag"><span class="bang">!</span><span id="wave-tag">Vague 1</span></div>
-          <div class="objective-text" id="wave-text"></div>
+          <div class="objective-text hidden" id="wave-text"></div>
           <div class="objective-bar"><i id="wave-bar"></i></div>
           <div class="objective-sub" id="wave-sub"></div>
         </div>
@@ -109,6 +110,9 @@
         <div class="tutorial news hidden" id="wave-news"><div class="tut-head">NOUVEAU</div><div class="tut-body"></div></div>
         <div class="tutorial hidden" id="wave-tutorial"><div class="tut-head">TUTORIEL <span>?</span></div><div class="tut-body" id="wave-tutorial-text"></div></div>
         <button id="btn-fire" class="fire-btn" aria-label="Tirer">💥</button>
+        <div id="dodge-btns" class="dodge-btns hidden"><button type="button" data-d="-1" aria-label="Se tasser à gauche">◀</button><button type="button" data-d="1" aria-label="Se tasser à droite">▶</button></div>
+        <button id="btn-special" class="special-btn" aria-label="Attaque spéciale" title="Attaque spéciale (Maj, X ou bouton X de la manette)"><span class="ico"></span><small>MAJ</small></button>
+        <button id="btn-special2" class="special-btn second hidden" aria-label="Deuxième pouvoir" title="Deuxième pouvoir (C ou bouton Y de la manette)"><span class="ico"></span><small>C</small></button>
         <button id="btn-pause" class="pause-btn" aria-label="Pause">❚❚</button>
         <div class="rotate-hint">📱 Tourne ton appareil pour voir plus grand !</div>
       </div>
@@ -117,7 +121,7 @@
           <div class="pause-kicker">Pause</div>
           <div class="pause-ring"><div class="pause-logo"><span class="t1">CANON</span><span class="t2">BIG BOOM</span></div><div class="pause-world" id="pause-world"></div><div class="pause-pct" id="pause-pct"></div></div>
           <div class="pause-stats" id="pause-stats"></div>
-          <div class="pause-buttons"><button id="btn-resume" class="lego primary">▶ Reprendre</button><button id="btn-restart" class="lego">↻ Recommencer</button><button id="btn-quit" class="lego">🗺 Carte</button></div>
+          <div class="pause-buttons"><button id="btn-resume" class="lego primary">▶ Reprendre</button><button id="btn-restart" class="lego">↻ Recommencer</button><button id="btn-quit" class="lego">🗺 Carte</button><button id="btn-settings-pause" class="lego">⚙️ Réglages</button></div>
         </div>
       </div>
       <div id="overlay-cards" class="overlay hidden">
@@ -146,11 +150,42 @@
         <p id="sheet-cannon" class="sheet-cannon"></p>
       </div>
       <div class="sheet-stats">
-        <div id="talent-list" class="stat-list"></div>
+        <div id="talent-list" class="talent-grid"></div>
         <p id="level-intro" class="level-intro"></p>
       </div>
     </div>
     <form method="dialog" class="sheet-footer"><button class="lego primary" id="btn-level-ok"><b class="btn-badge">A</b> Continuer</button></form>
+  </dialog>
+
+  <dialog id="settings" class="lego-dialog settings" aria-labelledby="settings-title">
+    <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
+    <div class="kicker">OPTIONS</div>
+    <h2 id="settings-title">RÉGLAGES</h2>
+    <div class="setting">
+      <label for="vol-sound"><span class="ico">🔊</span> Effets sonores <b id="vol-sound-val">100 %</b></label>
+      <div class="setting-row"><button type="button" id="btn-sound" class="lego small" aria-label="Couper ou remettre les effets sonores">🔊</button><input type="range" id="vol-sound" min="0" max="100" step="5" value="100" aria-label="Volume des effets sonores"></div>
+    </div>
+    <div class="setting">
+      <label for="vol-music"><span class="ico">🎵</span> Musique <b id="vol-music-val">55 %</b></label>
+      <div class="setting-row"><button type="button" id="btn-music" class="lego small" aria-label="Couper ou remettre la musique">🎵</button><input type="range" id="vol-music" min="0" max="100" step="5" value="55" aria-label="Volume de la musique"></div>
+    </div>
+    <p class="level-intro">Glisse les barres pour régler chaque volume. Le petit bouton coupe ou remet le son d’un coup.</p>
+    <div class="setting danger-zone">
+      <label><span class="ico">🗑️</span> Données du jeu</label>
+      <div class="setting-row"><button type="button" id="btn-wipe" class="lego small danger">🗑️ Tout effacer</button><small>Profils, or, niveaux et étoiles de toute la famille.</small></div>
+    </div>
+    <form method="dialog" class="sheet-footer"><button class="lego primary"><b class="btn-badge">A</b> OK</button></form>
+  </dialog>
+
+  <dialog id="confirm-wipe" class="lego-dialog confirm" aria-labelledby="confirm-wipe-title">
+    <div class="confirm-icon" aria-hidden="true">🗑️</div>
+    <div class="kicker">ATTENTION</div>
+    <h2 id="confirm-wipe-title">TOUT EFFACER ?</h2>
+    <p class="level-intro">Tous les profils de la famille, l’or, les niveaux, les canons et les étoiles seront <b>perdus pour toujours</b>.</p>
+    <div class="confirm-buttons">
+      <button type="button" id="btn-wipe-cancel" class="lego primary">↩ Non, garder</button>
+      <button type="button" id="btn-wipe-yes" class="lego danger" disabled>Oui, tout effacer <span class="count">3</span></button>
+    </div>
   </dialog>
 
   <dialog id="worlds" class="lego-dialog worlds" aria-labelledby="worlds-title">
@@ -169,19 +204,20 @@
     <div id="codex-body" class="codex-body"></div>
   </dialog>
 
-  <dialog id="help" class="lego-dialog" aria-labelledby="help-title">
+  <dialog id="help" class="lego-dialog confirm help" aria-labelledby="help-title">
     <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
+    <div class="confirm-icon" aria-hidden="true">🎯</div>
+    <div class="kicker">C’EST FACILE</div>
     <h2 id="help-title">COMMENT JOUER</h2>
-    <div class="help-grid">
-      <div><b>🎯 Viser et tirer</b><p>Souris ou doigt : vise et clique pour tirer un boulet. Clavier : flèches + Espace. Manette : stick + ZR / A. Maintiens pour tirer en continu : le canon est lent au départ, améliore sa <b>cadence</b> au hangar.</p></div>
-      <div><b>🗺 La carte</b><p>Chaque monde a cinq tableaux : abats des ennemis, survis au chrono, et termine par le boss. Trois étoiles si ton canon est encore en pleine forme.</p></div>
-      <div><b><i class="coin"></i> L’or</b><p>Un ennemi = une pièce au premier monde, et de plus en plus ensuite. Les combos (ennemis abattus à la suite) multiplient le butin.</p></div>
-      <div><b>🔧 Le hangar</b><p>Améliore la cadence, la portée, les dégâts, les points de vie… Achète de nouveaux canons, de nouveaux boulets et des effets spéciaux.</p></div>
-      <div><b>★ Les ennemis spéciaux</b><p>Une chauve-souris rouge, un fantôme vert… Abats-les pour choisir une carte : un pouvoir gardé seulement pour ce tableau.</p></div>
-      <div><b>⭐ Les niveaux</b><p>À chaque niveau gagné, c’est toi qui choisis ton évolution : vie, dégâts, cadence, portée, critique ou butin.</p></div>
-      <div><b>👥 L’équipe</b><p>Au hangar, recrute un coéquipier : un autre membre de la famille tire tout seul à tes côtés, avec des boulets deux fois moins forts.</p></div>
-      <div><b>💥 Détruit ?</b><p>Tu gardes l’or et l’expérience gagnés. Retourne au hangar, deviens plus fort, et recommence !</p></div>
-    </div>
+    <ul class="help-steps">
+      <li><b>1</b><span>Vise les bébittes et <b>TIRE</b> ! Souris, doigt, Espace ou manette.</span></li>
+      <li><b>2</b><span>Reste appuyé : <b>BOUM BOUM BOUM</b> sans arrêt.</span></li>
+      <li><b>3</b><span>La jauge en bas à gauche brille ? <b>Maj</b> ou <b>X</b> : ton super pouvoir !</span></li>
+      <li><b>4</b><span>Ramasse l’or, passe au <b>hangar</b>, deviens plus fort.</span></li>
+      <li><b>5</b><span>Détruit ? Pas grave, tu gardes tout. <b>On recommence !</b></span></li>
+    </ul>
+    <div class="confirm-buttons"><form method="dialog"><button class="lego primary">🚀 C’est parti !</button></form></div>
+    <p class="credits">Musique : Kevin MacLeod (incompetech.com), Creative Commons BY 4.0.</p>
   </dialog>
 </div>
 <script src="js/config.js"></script>
@@ -192,6 +228,7 @@
 <script src="js/render.js"></script>
 <script src="js/map.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/music.js"></script>
 <script src="js/input.js"></script>
 <script src="js/custom-waves.js"></script>
 <script src="js/debug.js"></script>

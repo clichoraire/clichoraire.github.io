@@ -1,0 +1,17 @@
+Musique de Canon Big Boom — Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0 License
+http://creativecommons.org/licenses/by/4.0/
+
+Listes de lecture (le premier morceau est le thème du contexte, les suivants s'enchaînent) :
+menus                      : monkeys-spinning-monkeys.mp3 "Monkeys Spinning Monkeys", pixelland.mp3 "Pixelland", fluffing-a-duck.mp3 "Fluffing a Duck"
+monde 1, la Forêt          : ghost-dance.mp3 "Ghost Dance", investigations.mp3 "Investigations", mechanolith.mp3 "Mechanolith", night-of-chaos.mp3 "Night of Chaos"
+monde 2, le Manoir hanté   : investigations.mp3, night-of-chaos.mp3, ghost-dance.mp3, mechanolith.mp3
+monde 3, la Foire          : carefree.mp3 "Carefree", pamgaea.mp3 "Pamgaea", electrodoodle.mp3 "Electrodoodle", arcadia.mp3 "Arcadia"
+monde 4, le Ciel des abeilles : run-amok.mp3 "Run Amok", bit-quest.mp3 "Bit Quest", arcadia.mp3, electrodoodle.mp3
+monde 5, le Volcan         : volatile-reaction.mp3 "Volatile Reaction", rhinoceros.mp3 "Rhinoceros", killers.mp3 "Killers", movement-proposition.mp3 "Movement Proposition"
+monde 6, l'Espace          : space-jazz.mp3 "Space Jazz", wallpaper.mp3 "Wallpaper", movement-proposition.mp3, pixelland.mp3
+la Vallée des dinosaures   : adventure-meme.mp3 "Adventure Meme", bit-quest.mp3, run-amok.mp3, pamgaea.mp3
+actes de boss              : exhilarate.mp3 "Exhilarate", volatile-reaction.mp3, night-of-chaos.mp3, killers.mp3
+
+Toutes par Kevin MacLeod (incompetech.com), téléchargées depuis https://incompetech.com/music/royalty-free/ puis ré-encodées
+en MP3 128 kb/s (sans autre modification).
