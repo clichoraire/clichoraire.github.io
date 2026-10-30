@@ -41,6 +41,9 @@ echo "▸ Canon Big Boom (copie de CanonBigBoom/)"
 rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/CanonBigBoom/" canon-big-boom/
 
 echo "▸ Bomberkid (copie de Bomberkid/)"
+# L'ancienne copie « Bomberkid/ » (majuscule) doit disparaître de Git avant d'écrire « bomberkid/ » : sur macOS, le disque
+# ne distingue pas la casse mais GitHub Pages, oui.
+if git ls-files --error-unmatch -- Bomberkid >/dev/null 2>&1; then git rm -r -q --cached -- Bomberkid; rm -rf Bomberkid; fi
 rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/Bomberkid/" bomberkid/
 
 echo "▸ Sosaria Online (bundle + assets chargés à l'exécution)"
