@@ -8,6 +8,21 @@
   function circle(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.closePath(); }
   const shade = (hex, k) => { if (!hex || hex[0] !== '#') return hex; const n = parseInt(hex.slice(1), 16), f = c => Math.max(0, Math.min(255, Math.round(c * k))); return '#' + [f(n >> 16), f(n >> 8 & 255), f(n & 255)].map(c => c.toString(16).padStart(2, '0')).join(''); };
   S.rr = rr; S.circle = circle; S.shade = shade;
+  // ---- Cadres et boutons du jeu : même famille que les dialogues (fond bleu clair, bord blanc, ombre douce, texte bleu
+  // foncé, or pour les nombres, boutons dorés / mauves).
+  S.UI = { panel: 'rgba(234,246,255,0.93)', border: '#ffffff', text: '#354d7d', muted: '#60769e', gold: '#c7841a', good: '#2e9e5b', bad: '#d9342b' };
+  S.uiPanel = function (ctx, x, y, w, h, o) {
+    o = o || {}; const r = o.r == null ? 14 : o.r;
+    ctx.save(); ctx.shadowColor = 'rgba(25,54,92,0.28)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4; ctx.fillStyle = o.fill || S.UI.panel; rr(ctx, x, y, w, h, r); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.strokeStyle = o.border || S.UI.border; ctx.lineWidth = o.lineWidth || 3; rr(ctx, x, y, w, h, r); ctx.stroke(); ctx.restore();
+  };
+  S.uiButton = function (ctx, x, y, w, h, label, o) {
+    o = o || {}; const g = ctx.createLinearGradient(0, y, 0, y + h);
+    if (o.primary) { g.addColorStop(0, '#ffe97c'); g.addColorStop(1, '#ffc53f'); } else if (o.danger) { g.addColorStop(0, '#ff7d7d'); g.addColorStop(1, '#d8403f'); } else { g.addColorStop(0, '#a27be1'); g.addColorStop(1, '#8054c5'); }
+    ctx.save(); ctx.fillStyle = o.primary ? '#bd8431' : o.danger ? '#8f1f1f' : '#5e3e97'; rr(ctx, x, y + 4, w, h, 14); ctx.fill();
+    ctx.fillStyle = g; rr(ctx, x, y, w, h, 14); ctx.fill(); ctx.strokeStyle = o.primary ? '#fff3b7' : o.danger ? '#ffd0d0' : '#d9c6ff'; ctx.lineWidth = 2; rr(ctx, x, y, w, h, 14); ctx.stroke();
+    ctx.font = '900 ' + (o.size || 19) + 'px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = o.primary ? '#67452c' : '#fff'; S.textWithCoin(ctx, label, x + w / 2, y + h / 2); ctx.restore();
+  };
   // Petites bulles d’aide : largeur mesurée et retours à la ligne, au-dessus de la ceinture.
   S.drawHelpBubble = function(ctx,text,remaining,bottom=BK.H-100) {
     if(!text||remaining<=0)return;
@@ -26,7 +41,7 @@
     const width=Math.min(maxWidth,Math.max(140,...lines.map(l=>ctx.measureText(l).width+padding*2))),height=lines.length*23+24,x=(BK.W-width)/2,y=bottom-height;
     ctx.globalAlpha=Math.min(1,remaining*2);ctx.fillStyle='rgba(255,249,226,0.96)';ctx.strokeStyle='#85b6d4';ctx.lineWidth=2;
     rr(ctx,x,y,width,height,15);ctx.fill();ctx.stroke();ctx.fillStyle='#304a65';
-    lines.forEach((line,i)=>ctx.fillText(line.trim(),x+padding,y+12+11.5+i*23));ctx.restore();
+    lines.forEach((line,i)=>S.textWithCoin(ctx,line.trim(),x+padding,y+12+11.5+i*23));ctx.restore();
     return {x,y,width,height,lines};
   };
   const clamp01 = v => Math.max(0, Math.min(1, v));
@@ -126,9 +141,13 @@
     const bob = walking ? Math.abs(Math.sin(ph)) * H * 0.035 : Math.sin(t * 2.2) * H * 0.008;
     let crouch = 0, lean = 0, jump = 0, spin = 0, fade = 1, armMode = carrying ? 'up' : 'swing', headTilt = 0, scaleY = 1;
     const pt = o.poseT == null ? t : o.poseT;   // temps depuis le début de la pose (animations courtes)
-    if (pose === 'pickup') { const u = pt / 0.4; crouch = Math.sin(clamp01(u) * Math.PI) * H * 0.12; armMode = u < 0.5 ? 'down' : 'up'; }
+    // Les bras passent en douceur d'une position à l'autre (ramasser : vers le bas puis au-dessus de la tête ; lancer : de
+    // la tête vers l'avant) : armMode peut être un mélange { from, to, u }.
+    const smooth = u => { u = clamp01(u); return u * u * (3 - 2 * u); };
+    let liftU = 1;   // 0 : la bombe est encore au sol, 1 : au-dessus de la tête
+    if (pose === 'pickup') { const u = pt / 0.4; crouch = Math.sin(clamp01(u) * Math.PI) * H * 0.12; liftU = smooth((u - 0.25) / 0.45); armMode = { from: 'down', to: 'up', u: liftU }; }
     else if (pose === 'place') { const u = pt / 0.25; crouch = Math.sin(clamp01(u) * Math.PI) * H * 0.1; armMode = 'down'; }
-    else if (pose === 'throw') { const u = pt / 0.35; armMode = u < 0.35 ? 'up' : 'forward'; lean = (u < 0.35 ? -0.12 : 0.18) * (side ? 1 : 0); }
+    else if (pose === 'throw') { const u = pt / 0.35, f = smooth((u - 0.15) / 0.4); armMode = { from: 'up', to: 'forward', u: f }; lean = (-0.12 + 0.3 * f) * (side ? 1 : 0); }
     else if (pose === 'hit') { lean = -0.25 * Math.sin(clamp01(pt / 0.5) * Math.PI); armMode = 'flail'; headTilt = -0.2; }
     else if (pose === 'dead') { const u = clamp01(pt / 1.3); spin = u * TAU * 2; fade = 1 - ease((u - 0.55) / 0.45); jump = Math.sin(clamp01(u / 0.5) * Math.PI) * H * 0.6; armMode = 'flail'; }
     else if (pose === 'win') { const u = (t % 0.9) / 0.9; jump = Math.sin(u * Math.PI) * H * 0.35; armMode = 'cheer'; }
@@ -150,10 +169,10 @@
       if(pose==='sit'){
         for(const sign of [-1,1]){ctx.fillStyle=shade(outfit,.85);rr(ctx,sign*H*.11-legW/2,legY,legW,lh*.55,legW*.4);ctx.fill();ctx.fillStyle=boot;rr(ctx,sign*H*.11-legW*.65,legY+lh*.42,legW*1.4,H*.1,legW*.3);ctx.fill();}
       } else if (side) {
-        for (const front of [false, true]) {   // jambe arrière puis jambe avant
+        for (const front of [false, true]) {   // jambe arrière puis jambe avant ; la jambe levée monte avec le pied et plie un peu
           const sw = swing * H * 0.12, xs = front ? sw : -sw, lift = (front ? Math.max(0, swing) : Math.max(0, -swing)) * H * 0.07;
           ctx.fillStyle = front ? shade(outfit, 0.85) : shade(outfit, 0.6);
-          rr(ctx, xs - legW / 2, legY - lift, legW, lh + bob - crouch * 0.4 + lift, legW * 0.4); ctx.fill();
+          rr(ctx, xs - legW / 2, legY - lift, legW, lh + bob - crouch * 0.4 - lift * 0.35, legW * 0.4); ctx.fill();
           ctx.fillStyle = front ? boot : shade(boot, 0.7);
           rr(ctx, xs - legW * 0.55, -H * 0.07 - lift, legW * 1.35, H * 0.07, legW * 0.3); ctx.fill();
         }
@@ -161,7 +180,7 @@
         for (const sgn of [-1, 1]) {
           const lift = (sgn * swing > 0 ? sgn * swing : 0) * H * 0.07;
           ctx.fillStyle = shade(outfit, 0.85);
-          rr(ctx, sgn * H * 0.11 - legW / 2, legY - lift, legW, lh + bob - crouch * 0.4 + lift, legW * 0.4); ctx.fill();
+          rr(ctx, sgn * H * 0.11 - legW / 2, legY - lift, legW, lh + bob - crouch * 0.4 - lift * 0.35, legW * 0.4); ctx.fill();
           ctx.fillStyle = boot;
           rr(ctx, sgn * H * 0.11 - legW * 0.65, -H * 0.07 - lift, legW * 1.3, H * 0.07, legW * 0.3); ctx.fill();
         }
@@ -193,30 +212,47 @@
     };
     let hands = [];
     const sw = swing * 0.8;
+    // La bombe portée a la même taille qu'au sol (rayon 0,34 case) ; les mains viennent la tenir par en dessous.
+    const headYc = torsoTop - hd * 0.42 + H * 0.03, br = s * 0.34, bombTopY = headYc - hd * 0.5 - H * 0.26, bombY = carrying && pose === 'pickup' ? -br * 0.9 + (bombTopY + br * 0.9) * liftU : bombTopY;
+    const holdY = bombY + br * 0.55, holdX = br * 0.8;
+    const reach = (sx, tx, ty) => { const dx = tx - sx, dy = ty - shY; return { ang: Math.atan2(dx, dy), len: Math.hypot(dx, dy) }; };
+    const lerp = (a, b, u) => a + (b - a) * u;
     if (side) {
       // bras arrière (plus foncé) puis bras avant ; le balancement se voit de profil
-      let backA, frontA, len = armL, big = 1;
-      if (armMode === 'up') { backA = Math.PI - 0.25; frontA = Math.PI - 0.25; }
-      else if (armMode === 'down') { backA = 0.9; frontA = 0.9; len = armL * 1.05; }
-      else if (armMode === 'forward') { backA = Math.PI / 2; frontA = Math.PI / 2 + 0.1; }
-      else if (armMode === 'flail') { backA = Math.PI - 0.6 + Math.sin(t * 20) * 0.3; frontA = Math.PI - 1.0 - Math.sin(t * 20) * 0.3; }
-      else if (armMode === 'cheer') { backA = Math.PI - 0.4 + Math.sin(t * 8) * 0.15; frontA = Math.PI - 0.6 - Math.sin(t * 8) * 0.15; }
-      else if (armMode === 'hang') { backA = 0.05; frontA = -0.05; }
-      else { backA = -sw; frontA = sw; }
-      hands.push(arm(-tw * 0.05, backA, len, { dark: true })); torso(); hands.push(arm(tw * 0.1, frontA, len, { big }));   // bras arrière, corps, bras avant : un seul bras devant
+      const pose2 = mode => {
+        let backA, frontA, len = armL, big = 1;
+        if (mode === 'up') { if (carrying) { const f = reach(tw * 0.1, holdX, holdY), b = reach(-tw * 0.05, holdX * 0.3, holdY); backA = b.ang; frontA = f.ang; len = f.len; } else { backA = Math.PI - 0.25; frontA = Math.PI - 0.25; } }
+        else if (mode === 'down') { backA = 0.9; frontA = 0.9; len = armL * 1.05; }
+        else if (mode === 'forward') { backA = Math.PI / 2; frontA = Math.PI / 2 + 0.1; }
+        else if (mode === 'flail') { backA = Math.PI - 0.6 + Math.sin(t * 20) * 0.3; frontA = Math.PI - 1.0 - Math.sin(t * 20) * 0.3; }
+        else if (mode === 'cheer') { backA = Math.PI - 0.4 + Math.sin(t * 8) * 0.15; frontA = Math.PI - 0.6 - Math.sin(t * 8) * 0.15; }
+        else if (mode === 'hang') { backA = 0.05; frontA = -0.05; }
+        else { backA = -sw; frontA = sw; }
+        return { backA, frontA, len, big };
+      };
+      let P;
+      if (typeof armMode === 'object') { const a = pose2(armMode.from), b = pose2(armMode.to), u = armMode.u; P = { backA: lerp(a.backA, b.backA, u), frontA: lerp(a.frontA, b.frontA, u), len: lerp(a.len, b.len, u), big: lerp(a.big, b.big, u) }; }
+      else P = pose2(armMode);
+      hands.push(arm(-tw * 0.05, P.backA, P.len, { dark: true })); torso(); hands.push(arm(tw * 0.1, P.frontA, P.len, { big: P.big }));   // bras arrière, corps, bras avant : un seul bras devant
     } else {
-      // vue de face / de dos : les bras pendent sur les côtés ; en marchant ils raccourcissent (balancement en profondeur)
-      let aL, aR, len = armL, big = 1;
-      if (armMode === 'up') { aL = Math.PI + 0.3; aR = Math.PI - 0.3; }
-      else if (armMode === 'down') { aL = -0.35; aR = 0.35; len = armL * 1.08; }
-      else if (armMode === 'forward') { aL = -0.25; aR = 0.25; len = armL * 0.5; big = 1.35; }
-      else if (armMode === 'flail') { aL = Math.PI + 0.8 - Math.sin(t * 20) * 0.3; aR = Math.PI - 0.8 + Math.sin(t * 20) * 0.3; }
-      else if (armMode === 'cheer') { aL = Math.PI + 0.5 - Math.sin(t * 8) * 0.2; aR = Math.PI - 0.5 + Math.sin(t * 8) * 0.2; }
-      else if (armMode === 'hang') { aL = -0.08; aR = 0.08; }
-      else { aL = -0.22; aR = 0.22; }
-      const lenL = armMode === 'swing' ? len * (0.6 + 0.4 * Math.cos(sw)) : len, lenR = armMode === 'swing' ? len * (0.6 + 0.4 * Math.cos(sw + Math.PI)) : len;
-      hands.push(arm(-tw / 2 + armW * 0.25, back ? -aR : aL, lenL, { big: back ? 1 : big }));
-      hands.push(arm(tw / 2 - armW * 0.25, back ? -aL : aR, lenR, { big: back ? 1 : big }));
+      // vue de face / de dos : les bras pendent le long du corps (même longueur au repos) ; en marchant ils balancent en profondeur
+      const sxL = -tw / 2 + armW * 0.25, sxR = tw / 2 - armW * 0.25;
+      const pose2 = mode => {
+        let aL, aR, lenL = armL, lenR = armL, big = 1;
+        if (mode === 'up') { if (carrying) { const l = reach(sxL, -holdX, holdY), r = reach(sxR, holdX, holdY); aL = l.ang; aR = r.ang; lenL = l.len; lenR = r.len; } else { aL = Math.PI + 0.3; aR = Math.PI - 0.3; } }
+        else if (mode === 'down') { aL = -0.35; aR = 0.35; lenL = lenR = armL * 1.08; }
+        else if (mode === 'forward') { aL = -0.25; aR = 0.25; lenL = lenR = armL * 0.5; big = 1.35; }
+        else if (mode === 'flail') { aL = Math.PI + 0.8 - Math.sin(t * 20) * 0.3; aR = Math.PI - 0.8 + Math.sin(t * 20) * 0.3; }
+        else if (mode === 'cheer') { aL = Math.PI + 0.5 - Math.sin(t * 8) * 0.2; aR = Math.PI - 0.5 + Math.sin(t * 8) * 0.2; }
+        else if (mode === 'hang') { aL = -0.08; aR = 0.08; }
+        else { aL = -0.22; aR = 0.22; if (walking) { lenL = armL * (0.78 + 0.22 * Math.sin(sw)); lenR = armL * (0.78 - 0.22 * Math.sin(sw)); } }
+        return { aL, aR, lenL, lenR, big };
+      };
+      let P;
+      if (typeof armMode === 'object') { const a = pose2(armMode.from), b = pose2(armMode.to), u = armMode.u; P = { aL: lerp(a.aL, b.aL, u), aR: lerp(a.aR, b.aR, u), lenL: lerp(a.lenL, b.lenL, u), lenR: lerp(a.lenR, b.lenR, u), big: lerp(a.big, b.big, u) }; }
+      else P = pose2(armMode);
+      hands.push(arm(sxL, back ? -P.aR : P.aL, back ? P.lenR : P.lenL, { big: back ? 1 : P.big }));
+      hands.push(arm(sxR, back ? -P.aL : P.aR, back ? P.lenL : P.lenR, { big: back ? 1 : P.big }));
     }
     // ---- tête
     const headY = torsoTop - hd * 0.42 + H * 0.03;    // centre
@@ -239,12 +275,22 @@
     ctx.restore();
     if (pose === 'hit' || (pose === 'dead' && pt < 0.6)) { ctx.fillStyle = '#ffe36b'; for (let i = 0; i < 3; i++) { const a = t * 7 + i * 2.1; circle(ctx, Math.cos(a) * hd * 0.7, headY - hd * 0.75 + Math.sin(a) * hd * 0.2, Math.max(2, H * 0.03)); ctx.fill(); } }
     // ---- bombe portée au-dessus de la tête
-    if (carrying && armMode === 'up') {
-      const by = headY - hd * 0.5 - H * 0.26, br = H * 0.17;
+    if (carrying && (armMode === 'up' || (typeof armMode === 'object' && armMode.to === 'up'))) {
+      const by = bombY;
       if (o.rock) S.drawBoulder(ctx, 0, by + br * 0.1, br * 2.4, { cracked: o.rockCracked }); else S.drawBomb(ctx, 0, by, br, { level:o.bombLevel, giga:o.bombGiga, inflation:o.bombInflation, gift:o.bombGift, t: o.bombT != null ? o.bombT : t, fuse: o.bombFuse == null ? 1 : o.bombFuse });
-      ctx.fillStyle = glove; for (const sgn of (side ? [1] : [-1, 1])) { circle(ctx, sgn * br * 0.8, by + br * 0.55, armW * 0.5); ctx.fill(); }
+      // les mains, au bout des bras, viennent devant la bombe pour la tenir
+      ctx.fillStyle = glove; for (const h of (side ? hands.slice(-1) : hands)) { circle(ctx, h.x, h.y, armW * 0.62); ctx.fill(); ctx.strokeStyle = shade(glove === '#ffffff' ? '#cfd3d8' : glove, 0.75); ctx.lineWidth = 1; circle(ctx, h.x, h.y, armW * 0.62); ctx.stroke(); }
     }
     ctx.restore();
+    // Touché : le personnage clignote en rouge (copie teintée dessinée par-dessus).
+    if (pose === 'hit' && pt < 0.5 && !o.noTint && typeof document !== 'undefined') {
+      const w = Math.ceil(H * 2.6), h = Math.ceil(H * 2.9), oc = S._tintCanvas || (S._tintCanvas = document.createElement('canvas'));
+      if (oc.width !== w || oc.height !== h) { oc.width = w; oc.height = h; }
+      const c2 = oc.getContext('2d'); c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, w, h); c2.translate(w / 2, h * 0.9);
+      S.drawCharacter(c2, def, { ...o, noTint: true, alpha: 1 });
+      c2.globalCompositeOperation = 'source-atop'; c2.fillStyle = '#ff2d2d'; c2.fillRect(-w / 2, -h * 0.9, w, h); c2.globalCompositeOperation = 'source-over';
+      ctx.save(); ctx.globalAlpha *= 0.3 + 0.4 * Math.max(0, Math.sin(pt * 36)); ctx.drawImage(oc, -w / 2, -h * 0.9); ctx.restore();
+    }
     return { height: H, headY: -(lh + bh) - hd };
   };
 
@@ -299,13 +345,15 @@
       ctx.save(); ctx.translate(-0.08,-0.26); ctx.rotate(-0.3+flap*0.85); ellipse(-0.08,0,0.16,0.075,'#367cae'); line([[-0.18,0.01],[-0.04,0.035]],'#78b8d9',0.018); ctx.restore();
       ellipse(0.16,-0.37,0.13,0.125,'#6bbde4'); poly([[0.26,-0.38],[0.38,-0.34],[0.26,-0.31]],'#f5b93e'); eye(0.195,-0.395);
     } else {
-      const fur=cat?'#e7a05a':'#bc8048', light=cat?'#ffd5a0':'#eac193', dark=cat?'#aa6639':'#754d35', sit=cat&&!moving;
+      const cc=cat?(BK.CAT_COLORS[o.catColor||o.creature?.catColor]||BK.CAT_COLORS.roux):null, fur=cat?cc.fur:'#bc8048', light=cat?cc.light:'#eac193', dark=cat?cc.dark:'#754d35', sit=cat&&!moving;
       const stride=moving?Math.sin(t*11)*0.045:0;
       ctx.save(); ctx.translate(-0.25,-0.26); ctx.rotate(Math.sin(t*(cat?2.5:9))*(cat?0.15:0.3));
       ctx.strokeStyle=fur; ctx.lineWidth=cat?0.065:0.09; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(-0.23,-0.1,-0.19,-0.34); ctx.stroke(); ctx.restore();
       for (const x of [-0.2,0.16]) { line([[x,-0.23],[x-stride,-0.035],[x+0.045-stride,-0.025]],dark,0.075); }
       const g=ctx.createLinearGradient(0,-0.5,0,-0.1); g.addColorStop(0,light); g.addColorStop(1,fur);
       ellipse(sit?-0.09:-0.03,sit?-0.26:-0.25,sit?0.19:0.3,sit?0.25:0.19,g);
+      if (cc?.stripes) for (const x of [-0.17,-0.07,0.03]) line([[x,sit?-0.46:-0.4],[x-0.02,sit?-0.3:-0.24]],dark,0.035);
+      if (cc?.patches) { ellipse(-0.14,-0.3,0.09,0.07,dark,0.3); ellipse(0.06,-0.36,0.07,0.06,'#3b3b47',-0.2); }
       for (const x of [sit?-0.02:-0.23,0.16]) { line([[x,sit?-0.32:-0.22],[x+stride,-0.04],[x+0.05+stride,-0.03]],light,0.07); }
       ctx.save(); const sniff=!cat&&!moving?0.07+Math.sin(t*3)*0.02:0; ctx.translate(0,sniff);
       if (cat) {

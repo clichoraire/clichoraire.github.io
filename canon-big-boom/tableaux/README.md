@@ -54,3 +54,5 @@ par un toutes les `every` secondes (0 = tous d'un coup). `rel` (± s) le fait pa
 groupe d'avant (négatif = il commence avant que l'autre ait fini de sortir). Sans `at` ni `rel`, un groupe part 1,5 s après l'élimination du groupe d'avant (le premier à
 1 s) ; avec `at`, il part à ce moment-là dès que son tour vient. L'ancien format `spawns` (paquets répétés) reste lu par le
 jeu et est converti en `sequence` quand on l'ouvre dans l'éditeur.
+
+Depuis le 2026-10-30, `portalAt` fonctionne dans n'importe quel tableau (pas seulement la nuit sans fin) : toucher le coffre doré ouvre le portail, le tableau se termine sans étoile et on part tout de suite dans le tableau secret du monde (1-6 le passé, N-6 l'avant-goût du monde caché). Les tableaux de boss sont des combats en solo : pas de monstres, des boîtes bonus « ? » à tirer pour monter de niveau.

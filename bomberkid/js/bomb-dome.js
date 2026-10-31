@@ -2,20 +2,20 @@
 (function(BK){
 'use strict';
 const W=BK.World.prototype;
+// Le souffle couvre un carré (distance de « fire » cases de chaque côté) et se propage de case en case, comme un feu en 2D :
+// il traverse et casse les blocs destructibles, contourne les murs, et ne passe que par les cases reliées au centre.
 W.domeCells=function(b,c,r){
- const radius=Math.max(1,Math.min(12,Number(b.fire)||1)),cells=[],z=this.hAt(c,r);
- const stops=(x,y)=>!this.inside(x,y)||this.cell(x,y)!==0||this.solidEnemyAt(x,y)||this.blastDrawbridges?.some(q=>q.state!=='open'&&q.c===x&&q.r===y)||(this.explore&&Math.abs(this.hAt(x,y)-z)>.01&&!this.ramp[this.idx(x,y)]);
- for(let y=Math.max(0,r-Math.ceil(radius));y<=Math.min(this.rows-1,r+radius);y++)for(let x=Math.max(0,c-Math.ceil(radius));x<=Math.min(this.cols-1,c+radius);x++){
-  const distance=Math.hypot(x-c,y-r);if(distance>radius)continue;
-  let visible=true,pc=c,pr=r;const steps=Math.max(1,Math.ceil(distance*12));
-  for(let n=1;n<=steps;n++){
-   const nc=Math.floor(c+.5+(x-c)*n/steps),nr=Math.floor(r+.5+(y-r)*n/steps);
-   // Un contact diagonal ne permet pas de contourner le coin d'un mur.
-   if(nc!==pc&&nr!==pr&&(stops(nc,pr)||stops(pc,nr))){visible=false;break;}
-   if((nc!==x||nr!==y)&&(nc!==c||nr!==r)&&stops(nc,nr)){visible=false;break;}pc=nc;pr=nr;
-  }
-  if(!visible||(this.explore&&Math.abs(this.hAt(x,y)-z)>.01&&!this.ramp[this.idx(x,y)]&&!this.props[x+','+y]?.bridgeColumn))continue;
-  cells.push({c:x,r:y,distance});
+ const radius=Math.max(1,Math.min(12,Number(b.fire)||1)),z=this.hAt(c,r),cells=[],seen=new Set([c+','+r]),queue=[{c,r}];
+ const wall=(x,y)=>!this.inside(x,y)||[BK.HARD,BK.GATE,BK.SEALED,BK.METAL].includes(this.cell(x,y))||this.solidEnemyAt(x,y)||this.blastDrawbridges?.some(q=>q.state!=='open'&&q.c===x&&q.r===y)||(this.explore&&Math.abs(this.hAt(x,y)-z)>.01&&!this.ramp[this.idx(x,y)]&&!this.props[x+','+y]?.bridgeColumn);
+ for(let i=0;i<queue.length;i++){
+  const q=queue[i];cells.push({c:q.c,r:q.r,distance:Math.hypot(q.c-c,q.r-r)});
+  BK.DIRS.forEach((d,di)=>{
+   const x=q.c+d.dx,y=q.r+d.dy,k=x+','+y;if(seen.has(k)||Math.max(Math.abs(x-c),Math.abs(y-r))>radius)return;seen.add(k);
+   // Bloc de métal : seule sa face en bois cède, quand le feu arrive dessus (face opposée à sa direction) ; il ne traverse pas.
+   if(this.inside(x,y)&&this.cell(x,y)===BK.METAL){if((this.metal[this.idx(x,y)]+2)%4===di)cells.push({c:x,r:y,distance:Math.hypot(x-c,y-r),wood:true});return;}
+   if(wall(x,y)){if(this.inside(x,y)&&['chest','mailbox','beehive'].includes(this.deco[this.idx(x,y)]))cells.push({c:x,r:y,distance:Math.hypot(x-c,y-r)});return;}   // un coffre au bord du souffle éclate quand même
+   queue.push({c:x,r:y});
+  });
  }
  return cells;
 };
@@ -24,7 +24,8 @@ W.explodeDome=function(b,c,r){
  for(const q of cells){const x=q.c,y=q.r,v=this.cell(x,y),kind=this.deco[this.idx(x,y)];
   if(this.hitBridgeColumn?.(x,y,b))continue;
   if(this.hitBlastDrawbridge?.(x,y,b))continue;
-  if([BK.HARD,BK.GATE,BK.SEALED,BK.METAL].includes(v)){
+  if(v===BK.METAL){if(!q.wood)continue;this.destroyMetal(x,y,b.owner);}
+  else if([BK.HARD,BK.GATE,BK.SEALED].includes(v)){
    if(kind==='chest')this.destroyChest(x,y,b.owner);else if(kind==='mailbox')this.destroyMailbox(x,y,b.owner);else if(kind==='beehive')this.destroyHive(x,y,b.owner);else continue;
   }
   if(v===BK.SOFT)this.destroyBlock(x,y,b.owner);

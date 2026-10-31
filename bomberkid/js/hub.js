@@ -57,9 +57,9 @@
     render(ctx) {
       this.world.render(ctx, this.cam, {});
       ctx.save(); ctx.font = 'bold 22px Nunito, sans-serif'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, 14, 12, 460, 60, 14); ctx.fill(); ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText('🏠 Chez grand-maman et grand-papa', 30, 30);
-      ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = '#cfe3ff'; ctx.fillText('Espace : parler · Entrée devant la porte : magasin · Tab : fiche · Quai doré : retour aux îles', 30, 56);
-      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, BK.W - 234, 12, 220, 60, 14); ctx.fill(); ctx.font = 'bold 26px Nunito, sans-serif'; ctx.fillStyle = '#ffd54a'; BK.sprites.textWithCoin(ctx, '🪙 ' + (this.save.gold || 0), BK.W - 30, 42);
+      const hint = 'Espace : parler · Entrée à la porte : magasin · Tab : fiche · Quai doré : les îles'; ctx.font = 'bold 17px Nunito, sans-serif'; BK.sprites.uiPanel(ctx, 14, 12, Math.max(460, ctx.measureText(hint).width + 34), 60); ctx.font = 'bold 22px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = BK.sprites.UI.text; ctx.fillText('🏠 Chez grand-maman et grand-papa', 30, 30);
+      ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.fillText(hint, 30, 56);
+      ctx.textAlign = 'right'; BK.sprites.uiPanel(ctx, BK.W - 354, 12, 220, 60); ctx.font = 'bold 26px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.gold; BK.sprites.textWithCoin(ctx, '🪙 ' + (this.save.gold || 0), BK.W - 150, 42);
       BK.sprites.drawHelpBubble(ctx,this.msg,this.msgT,BK.H-24);
       ctx.restore();
     }
@@ -67,10 +67,12 @@
   // ---------------------------------------------------------------- achat (partagé)
   BK.buyUpgrade = (save, id) => {
     const it = BK.SHOP.find(x => x.id === id); save.upgrades = save.upgrades || {}; save.gold = save.gold || 0;
-    const owned = save.upgrades[id] || 0, price = BK.shopPrice(it, owned);
+    const owned = id === 'lantern' ? ((save.inv || []).some(s => s.type === 'lantern' && s.n > 0) ? 1 : 0) : save.upgrades[id] || 0, price = BK.shopPrice(it, owned);
     if (owned >= it.max) return { ok: false, msg: 'Tu as déjà tout ce que j’ai de ça, mon ange !' };
     if (save.gold < price) { const m = price - save.gold; return { ok: false, msg: 'Il te manque ' + m + ' pièce' + (m > 1 ? 's' : '') + '. Va chercher des pièces d’or dans les tableaux !' }; }
-    save.gold -= price; save.upgrades[id] = owned + 1; return { ok: true, msg: 'Merci ! ' + it.name + ' : ' + it.desc, item: it };
+    save.gold -= price;
+    if (id === 'lantern') { save.inv = save.inv || []; save.inv.push({ type: 'lantern', n: 1 }); return { ok: true, msg: 'Merci ! La lanterne est dans ton sac : range-la dans ta ceinture (raccourcis 1 à 8) pour la porter. La fée s’allume le soir.', item: it }; }
+    save.upgrades[id] = owned + 1; return { ok: true, msg: 'Merci ! ' + it.name + ' : ' + it.desc, item: it };
   };
   // ---------------------------------------------------------------- intérieur du magasin : on s'y promène
   const SHOP_MAP = ['###############', '#yyyyyyyyyyyyy#', '#NNNyyNNNyyNNN#', '#yyyyyyyyyyyyy#', '#yyyyyyyyyyyyy#', '#yqqqqqqqqqqqy#', '#yqqqqqqqqqqqy#', '#VyyyyyyyyyyyV#', '#yyyyyy1yyyyyy#', '#######G#######'];
@@ -91,11 +93,11 @@
       this.toast('Bienvenue au magasin ! Avance sur un article et appuie sur Espace.', 4);
     }
     toast(t, d) { this.msg = t; this.msgT = d || 3; }
-    refresh() { for (const d of this.world.displays) { const it = BK.SHOP.find(x => x.id === d.id), owned = this.save.upgrades[d.id] || 0; d.price = BK.shopPrice(it, owned); d.soldOut = owned >= it.max; d.affordable = this.save.gold >= d.price; d.owned = owned; d.max = it.max; } }
+    refresh() { for (const d of this.world.displays) { const it = BK.SHOP.find(x => x.id === d.id), owned = d.id === 'lantern' ? ((this.save.inv || []).some(s => s.type === 'lantern' && s.n > 0) ? 1 : 0) : this.save.upgrades[d.id] || 0; d.price = BK.shopPrice(it, owned); d.soldOut = owned >= it.max; d.affordable = this.save.gold >= d.price; d.owned = owned; d.max = it.max; } }
     displayAt(p) { const c = Math.floor(p.x), r = Math.floor(p.y); return this.world.displays.find(d => d.c === c && d.r === r) || null; }
     buy(d) {
       const res = BK.buyUpgrade(this.save, d.id); const npc = this.merchants.find(n => n.merchant.id === d.merchant);
-      if (npc) { npc.say = res.msg; npc.sayT = 4; npc.dir = 0; }
+      if (npc) { BK.say(npc, res.msg); npc.dir = 0; }
       if (res.ok) { BK.saveAdventure(this.charId, this.save); BK.audio.item(); this.world.burst(d.c + 0.5, d.r + 0.5, 0.4, '#ffd54a', 12); this.refresh(); } else BK.audio.hurt();
       return res.ok;
     }
@@ -115,13 +117,13 @@
       const g = ctx.createLinearGradient(0, 0, 0, BK.H); g.addColorStop(0, '#1a110a'); g.addColorStop(1, '#3b2412'); ctx.fillStyle = g; ctx.fillRect(0, 0, BK.W, BK.H);
       this.world.render(ctx, this.cam, { noBackground: true });
       const S = BK.sprites; ctx.save(); ctx.font = 'bold 22px Nunito, sans-serif'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(0,0,0,0.5)'; S.rr(ctx, 14, 12, 420, 60, 14); ctx.fill(); ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText('🏪 Le magasin de grand-maman', 30, 30); ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = '#cfe3ff'; ctx.fillText('Espace : acheter / parler · porte en bas ou Échap : sortir', 30, 56);
-      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(0,0,0,0.5)'; S.rr(ctx, BK.W - 234, 12, 220, 60, 14); ctx.fill(); ctx.font = 'bold 26px Nunito, sans-serif'; ctx.fillStyle = '#ffd54a'; S.textWithCoin(ctx, '🪙 ' + this.save.gold, BK.W - 30, 42);
+      const hint = 'Espace : acheter / parler · porte en bas ou Échap : sortir'; ctx.font = 'bold 17px Nunito, sans-serif'; S.uiPanel(ctx, 14, 12, Math.max(420, ctx.measureText(hint).width + 34), 60); ctx.font = 'bold 22px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = S.UI.text; ctx.fillText('🏪 Le magasin de grand-maman', 30, 30); ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = S.UI.muted; ctx.fillText(hint, 30, 56);
+      ctx.textAlign = 'right'; S.uiPanel(ctx, BK.W - 354, 12, 220, 60); ctx.font = 'bold 26px Nunito, sans-serif'; ctx.fillStyle = S.UI.gold; S.textWithCoin(ctx, '🪙 ' + this.save.gold, BK.W - 150, 42);
       const d = this.displayAt(this.player);
-      ctx.fillStyle = 'rgba(10,8,6,0.88)'; S.rr(ctx, 40, BK.H - 92, BK.W - 80, 76, 14); ctx.fill(); ctx.strokeStyle = '#ffd54a'; ctx.lineWidth = 2; S.rr(ctx, 40, BK.H - 92, BK.W - 80, 76, 14); ctx.stroke();
-      ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 21px Nunito, sans-serif';
-      if (d) { const it = BK.SHOP.find(x => x.id === d.id); S.textWithCoin(ctx, it.icon + ' ' + it.name + (it.max > 1 ? '  ' + d.owned + '/' + it.max : '') + '   ·   ' + (d.soldOut ? 'Épuisé' : '🪙 ' + d.price), 64, BK.H - 68); ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = '#f4e2b8'; ctx.fillText(it.desc + (d.soldOut ? '' : d.affordable ? '   —   Entrée ou Espace pour acheter' : '   —   pas assez de pièces'), 64, BK.H - 38); }
-      else { ctx.fillText(this.msgT > 0 ? this.msg : 'Promène-toi entre les comptoirs.', 64, BK.H - 68); ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = '#9fb3c8'; ctx.fillText('Josée : bombes et flammes · Richard : patins et coup de pied · Matthieu : cœurs et vies', 64, BK.H - 38); }
+      S.uiPanel(ctx, 40, BK.H - 92, BK.W - 80, 76, { border: '#ffc53f' });
+      ctx.textAlign = 'left'; ctx.fillStyle = S.UI.text; ctx.font = 'bold 21px Nunito, sans-serif';
+      if (d) { const it = BK.SHOP.find(x => x.id === d.id); S.textWithCoin(ctx, it.icon + ' ' + it.name + (it.max > 1 ? '  ' + d.owned + '/' + it.max : '') + '   ·   ' + (d.soldOut ? 'Épuisé' : '🪙 ' + d.price), 64, BK.H - 68); ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = S.UI.muted; ctx.fillText(it.desc + (d.soldOut ? '' : d.affordable ? '   —   Entrée ou Espace pour acheter' : '   —   pas assez de pièces'), 64, BK.H - 38); }
+      else { ctx.fillText(this.msgT > 0 ? this.msg : 'Promène-toi entre les comptoirs.', 64, BK.H - 68); ctx.font = 'bold 17px Nunito, sans-serif'; ctx.fillStyle = S.UI.muted; ctx.fillText('Josée : bombes et flammes · Richard : patins et coup de pied · Matthieu : cœurs et vies', 64, BK.H - 38); }
       ctx.restore();
     }
   }

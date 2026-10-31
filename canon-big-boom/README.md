@@ -8,6 +8,27 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
 
 ## Comment ça marche
 
+- **Quatre autres mondes cachés** (2026-10-30, `CB.WORLDS[7..10]`, `hidden: true`, `from` = le monde parent, `CB.hiddenFrom(wi)`) :
+  les Abysses (`abysses`, depuis le Manoir : sous l'eau, on est un **sous-marin** `R.submarine`, boulets dessinés en torpilles,
+  `wave.under`, ◀ ▶ ; monstres marins sans ligne d'eau, nouveaux poisson-lanterne, anguille électrique, raie manta ; boss le
+  Kraken), le Cirque des ballons (`cirque`, depuis la Foire : chapiteau `R.circus`, animaux en ballons chien / lapin / girafe /
+  singe / éléphant / cygne ; boss le Roi des ballons), la Grotte sans fin (`grotte`, depuis le Volcan : `R.cave`, la sortie
+  lumineuse grandit avec `def.depth` à chaque tableau ; trolls, golems de lave, stalactites, champignons ; mini-boss le Cerbère
+  fantôme à trois têtes, queue de chien, pattes d'aigle) et Au-delà des étoiles (`galaxie`, depuis l'Espace : `R.galaxy` avec
+  `def.backdrop` planète / soleil / lune / nébuleuse / trou noir ; aliens dans un petit vaisseau : `def.shield` = PV du vaisseau à
+  casser d'abord, l'alien à nu est plus vif ; boss l'Empereur alien). Chaque monde parent a un **tableau secret N-6**
+  (`world.secret { vi: 5, from: 2 }`, défini dans `SECRETS` de `waveDef`, avant-goût du monde caché) révélé par le **portail du
+  coffre doré du tableau N-3** (`def.portalAt = 60` ; `profile.portals[monde]`, `S.portalFound/setPortal`, le portail d'un
+  tableau ordinaire finit sans étoile, `reason 'portail'`, et emmène tout de suite dans le secret avec ses cartes) ; réussir le
+  secret ouvre le monde (`reward: 'world:id'`, `wave.worldWon`, `profile.hiddenWorlds[id]`, `S.hiddenOpen/openHidden`), avec une
+  passerelle sur la carte (`M.GATES`, `world.gate` = le nœud de départ, `GATE_ICONS` par monde, `S.hiddenShown`). Les boss des
+  mondes cachés donnent un **pouvoir unique** (`reward: 'power:id'`, `wave.powerWon`, `CB.POWERS` : pirate, `torpilles` chercheuses,
+  `ballons` la parade, `cerbere` les trois têtes, `meteores` la pluie ; `profile.powers[id].level`, `profile.usePower`,
+  `S.powerOwned/grantPower/usedPower/togglePower/buyPowerLevel`, une tuile par pouvoir dans l'onglet Pouvoirs du hangar). ◀ ▶ de la
+  carte sautent les mondes cachés pas encore trouvés (`nextWorldIndex`). Tests dans `tools/test-game.cjs` (560 vérifications).
+- **Mondes 2 à 6 refaits** dans l'esprit du monde 1 (`waveDef`, k = tier) : la patrouille (abattre 120 + 30 (k − 1), `ramp`, première
+  vague du monstre du monde d'un coup), tenir bon (90 + 15 (k − 1) s, `ramp`), contre la montre, la grande vague, puis le boss seul.
+
 - **La Mer des pirates, monde caché** (`CB.WORLDS[6]`, `hidden: true`, `tier: 1.2` → `CB.tierOf` pour PV / vitesse / or / XP d'un monde 2 ;
   `S.worldUnlocked` le réserve à `profile.pirateWorld`, gagné en réussissant le bateau 1-9 (`reward: 'pirateWorld'`, `wave.pirateWorldWon`) ;
   sur la carte du monde 1, une passerelle (`M.GATE`, `gate` dans `M.draw`, `profile.pirateShown` anime le chemin) mène à l'île bleue ;
@@ -20,7 +41,7 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   louvoie), galion noir (3, voiles noires), vaisseau fantôme (`ghostly`, boulets fantômes rapides) ; leurs boulets (`bouletCanon`,
   `bouletFantome`, `bombeNoire`, `shot`) visent la position du canon au départ (`e.tx`) : on les abat d'un tir ou on se tasse
   (« RATÉ ! », `wave.dodged`). Nouveaux monstres marins : murène, tortue géante, poisson volant. **Boss à deux étapes**
-  (`def.bossFull` : un seul grand combat dès le niveau 5) : le Léviathan (`swim`, `sea`, pouvoirs `rayonMer` = `wave.beam`,
+  (`def.bossFull` : un seul grand combat, dès le début) : le Léviathan (`swim`, `sea`, pouvoirs `rayonMer` = `wave.beam`,
   charge 1,25 s visible (`R.beam`) puis frappe si le canon est resté dans la ligne, `vague`) plonge à 20 % de ses PV (`def.next`,
   `def.nextAt`, `e.diving`) et le Capitaine Crochet arrive en navire aux voiles rouges (`bordee` six boulets, `bombarde`,
   `abordage` chaloupes, `canonnade`). Le couler donne le **pouvoir pirate** (`reward: 'pirate'`), qui n'est plus donné par 1-9.
@@ -124,9 +145,9 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   écho flou des monstres, anneaux qui se resserrent sur le viseur (dessiné hors zoom, donc toujours sous la souris).
 - **Laser de Mickaël** : 10 s (`fx.laser`), `wave.laserGrow` passe de 0,2 à 1 en 2,5 s (largeur, lueur, rayon de
   touche et dégâts par tick grandissent avec).
-- **Pika-choc d'Adam** : jauge de 10 monstres seulement ; `fx.pika` 2,5 s : textes « PI… KA… CHUUUUUU !!! », flash,
-  tout le monde figé, foudre en chaîne toutes les 0,2 s (×4 dégâts au total), voile jaune qui clignote et éclairs dans
-  le ciel ; cri synthétisé `pikachu` dans audio.js.
+- **Pika-choc d'Adam** : jauge de 10 monstres seulement ; `fx.pika` 2,5 s : flash, tout le monde figé, foudre en chaîne
+  toutes les 0,2 s (×4 dégâts au total), voile jaune qui clignote et éclairs dans le ciel. Depuis v1.5 : plus de cri Pikachu
+  (son `shock`) ni de gros texte « CHUUU » ; `pikachu` reste dans audio.js, inutilisé.
 - **Pouvoirs débloqués en avançant** : la *Sphère protectrice* (`CB.ITEMS.sphere`, `unlockWorld` 0 = monde 1 réussi,
   600 pièces, `wave.sphere`, `updateSphere` : tout monstre sous z 11 est brûlé ×0,6 toutes les 0,35 s et repoussé ;
   `Render.sphere`) et les *Tours de défense* (`CB.TOWER`, monde 2 réussi, 700 puis 1200 pièces, max 2, gauche puis droite,
@@ -139,6 +160,81 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   hangar) : niv. 2 au niveau 9 du personnage (300 pièces : durée ×1,25, force ×1,3, jauge −15 %), niv. 3 au niveau 20
   (800 pièces : ×1,5, ×1,6, −30 %). `wave.spPower` multiplie les dégâts des attaques. Mickaël a ses propres paliers
   (`levels`) : laser petit et court (6 s, taille 60 %), gros et long (10 s), bleu et plus fort (12 s, 115 %, `laserLevel` 3).
+- **Hangar : canon et améliorations réunis** (onglet « Canon ») : les canons d'abord (palier, multiplicateur, niveaux achetés),
+  puis les améliorations **du canon équipé** et ses **spécialités**, puis les objets et pouvoirs du personnage. Les niveaux
+  d'amélioration appartiennent au canon (`profile.cannonUpgrades[canon]`, `S.cannonUp`, `S.upgradeLevel`) : changer de canon,
+  c'est repartir de zéro sur celui-là, mais chaque canon a une base plus forte et un palier (`CB.CANNONS[k].tier`,
+  `CB.cannonBoost` : +25 % de force et +40 % de prix par niveau d'amélioration et par palier, `CB.upgradeCost(key, level,
+  canon)`). Les anciens profils gardent leurs niveaux sur le canon équipé (migration dans `S.load`). Deux spécialités uniques
+  par canon (`CB.CANNON_UNIQUES`, 3 niveaux, `S.buyUnique`) : classique Blindage (−10 % de dégâts subis par niveau) et
+  Entretien (+1 PV / 5 s) ; pirate Flotte alliée (un navire ami passe toutes les 60 / 45 / 30 s et tire 8 s, `wave.fleet`,
+  `updateFleet`, `shipsFire` partagé avec le pouvoir pirate) et Boulets lourds (recul) ; confetti Pluie de cadeaux (boîtes
+  bonus « ? » hors des boss) et Jackpot (+10 % d'or) ; turbo Surchauffe (un tir sur 5 / 4 / 3 part en double, `extraShot`)
+  et Refroidissement (+6 % de cadence) ; lave Brûlure (`e.burn`, dégâts sur 3 s) et Fonte (+12 % sur les boss) ; laser
+  Visée (+4 % critique) et Rayon perçant (`ball.pierceLeft`) ; jumeau Triplé (chance d'un troisième boulet) et Synchro
+  (+8 % de dégâts). Le coffre doré (portail) ne passe qu'une fois le tableau déjà réussi (`wave.boardDone`). Les trois cibles
+  du 1-3 se comptent dans une même partie (le profil garde le meilleur résultat), plus de cumul d'une partie à l'autre.
+- **Vie et armure, boulets à thème, hangar refait (2026-10-31, v1.5)** :
+  - *Vie du personnage / armure du canon* : `CB.stats` donne `maxHp` (BASE_HP + talent vie + talent de famille) et `maxArmor`
+    (`CB.cannonArmor(canon)` : 20 pour le classique jusqu'à 90 pour le jumeau, + l'amélioration « Armure », ex-« vie »,
+    10 par niveau × palier ; migration `vie → armure` dans `S.load`). `Wave.damage` retire d'abord `wave.armor`
+    (« ARMURE BRISÉE ! » quand elle tombe à zéro), la réparation remet d'abord l'armure. HUD : deux jauges verticales
+    (vie, armure) avec leurs chiffres ; le portail garde `armorRatio`.
+  - *Canon confetti* : volée de confettis de série (`CB.CONFETTI`, `wave.confetti`, `updateConfetti`) : tous les 5 s, les
+    monstres à moins de 12 de profondeur prennent 1,5 × dégâts, reculent et gèlent 0,4 s (éclat `confetti`, `Render.confettiAura`) ;
+    troisième spécialité « Volée de confettis » (toutes les 4 / 3 / 2 s, ×1,5 / 2 / 2,5, plus loin).
+  - *Boîtes bonus « ? » partout* (`CB.BOXES.normal`) : dans tous les tableaux sauf les mini-jeux, première entre 18 et 34 s puis
+    toutes les 32 à 58 s (chez les boss, comme avant).
+  - *Murs magiques* (événement « boucliers », `CB.WALL`, `e.wall = { i, n }`, `Render.walls`) : 2 ou 3 bandes translucides qui coupent
+    l'écran (moitié, tiers) à la profondeur 20, avec motif d'hexagones, fissures et points de vie. Les monstres ne sont plus
+    invincibles : seuls les boulets qui traversent la bande d'un mur s'y écrasent (`wave.wallHits`) ; le méga boulet et la fusée passent.
+  - *Puzzle raté* : −25 % de la vie, directement (`CB.PUZZLE_FAIL`, sans passer par l'armure).
+  - *Cartes* : 3 s de présentation (`CB.CARD_LOCK`, barre `#cards-lock`, classe `locked`) pendant lesquelles rien ne se clique ni ne se tire ;
+    la carte Renfort est dorée et scintillante (`.card.gold`) avec le vrai visage du membre qui arrive.
+  - *Jauge* : `fillCharge` pendant un pouvoir à durée note `refillAfter` et remplit la jauge dès que le pouvoir se termine.
+  - *Richard* : plus de méga boulet ; « Boulet du vétéran » = `fx.veteran` 10 s (× niveau du hangar), boulets 2× plus gros et 3× plus
+    forts (`ball.veteran`, halo de feu, ondes autour du canon). *Adam* : plus de cri Pikachu (son `shock`) ni de gros texte.
+  - *Phases des boss* : plus de bandeau ni de description ; `wave.plane = makePlane('PHASE 2')` : un membre de la famille (jamais le héros)
+    traverse le ciel en petit avion rouge en tirant une bannière jaune « PHASE 2 » (`CB.PLANE.seconds`, `Render.plane`, son `plane`).
+  - *Fin de tableau* : plus de bouton « Suivant ». De retour sur la carte (`app.afterWin` → `app.cheer`), fête sur le tableau battu
+    (ondes, étoiles, « RÉUSSI ! », `M.draw({ cheer })`), puis le tableau suivant se dessine (`reveal.unlock`) et le personnage y marche.
+  - *Objectif en haut à gauche* (`.objective-card`) : carte avec le monstre (ou le boss) du tableau, le nom en gros, barre et compteur.
+  - *Boulets* (`CB.BALLS`, `variants`, `CB.ballVariant`, `ball.variant` tiré au lancer, `js/render-plus.js`) : Bonbons (6 variantes),
+    Fruits (ex-pommes et bananes, 6), Légumes du jardin (6), Nuages (6), et trois premium (`premium: true`, impacts dessinés
+    `Render.IMPACT`, éclat `impact`, son `sfx`) : Fête & Anniversaire (ballon, cadeau, cupcake, chapeau), Espace & Astronomie
+    (planète à anneaux, météorite, étoile souriante, soucoupe), Pierres précieuses (diamant, rubis, émeraude, perle). Prix bien plus
+    élevés (400 à 9 000). Migration `pomme` / `banane` → `fruits`.
+  - *Hangar* : onglet Canon sans texte d'intro ; les canons dans un ruban horizontal fixé en bas, pleine largeur de l'écran
+    (`#cannon-strip`, canon seul via `battleCannon(..., { noRider: true })`) ; on choisit un canon (`app.shopCannon`) et le contenu
+    montre sa fiche, ses améliorations (`S.buyUpgrade(p, key, canon)`), ses spécialités (`S.buyUnique(p, id, canon)`) même s'il
+    n'est pas équipé (achat refusé s'il n'est pas à nous). Onglet Boulets : cliquer un boulet lance la démo de tir sur la fiche
+    (`Render.ballDemo`, variantes qui défilent, impact). Onglet Équipe en deux parties : « Mon équipe » (sièges gauche / droite /
+    réserve, `CB.SEATS`, `S.buySeat/setSeat/clearSeat/seatOf`, le siège reste vide jusqu'au choix, bonus famille) et « Coéquipiers »
+    (clic = asseoir sur le siège choisi). L'objet Trio de choc est le troisième siège.
+- **Retouches v1.5 (2026-10-31, soir)** : Jérémie : le vortex se referme après 6 s (`wave.vortex.life`) mais `fx.teleport` dure 12 s
+  (esquive, doubles, étoiles, voile : « même après le vortex »). Plus de carte Potion de vie (doublon de la Trousse de soins).
+  Bug du retour de mini-jeu : avec une médaille de diamant (4 étoiles) `mapInfo` faisait `'★'.repeat(3 - 4)` et la carte
+  plantait avant de lancer sa boucle (plus rien ne bougeait) ; corrigé, et après la fête sans nouveau tableau le personnage
+  marche vers le prochain tableau à réussir (`nextToDo()`). Canon confetti vu de dos : vraie gueule de canon (liseré jaune,
+  intérieur sombre) à la place des anneaux plats ; volée et éventail de confettis avec 70 / 90 morceaux deux fois plus petits.
+- **Cartes vivantes, puzzle, pouvoirs des alliés, effets légers (2026-10-31, nuit)** : `js/map-life.js` (après map.js) : `M.sky`
+  (pleine lune des mondes 1 et 2, nuages d'encre au manoir), `M.life` (10 monstres du monde en tout petit via `Render.enemyIcon`,
+  les ailés — liste `FLY` — volent au-dessus de l'île, les autres marchent en se dandinant loin des cases), particules par monde
+  (lucioles, ballons, pollen, braises, bulles, confettis, étoiles) et scènes animées (`SCENE`) : grande roue, carrousel et balançoire
+  volante de la foire (positions `RIDES` dans map.js, les tentes les évitent), brume et éclair du manoir, fleurs de la ruche, fumée du
+  volcan, étoiles filantes et satellite de l'espace, algues, flaques de lave, anneaux galactiques. `DECOR.foire` redessiné : tentes
+  rayées / rondes / grandes avec fanions, stands de tir. Puzzle 1-2-3 : `updateAlly`, `updateTowers`, `updateSphere`, `updateConfetti`
+  attendent tant que `wave.puzzle` existe ; les boulets alliés traversent les orbes. Pouvoirs à durée : `wave.fxBy[k]` = 'player' /
+  'ally' et `fxMine(k, ally)` : les boulets disco / du vétéran / fantômes / téléportés et l'esquive ne concernent que le canon qui a
+  lancé le pouvoir ; `specialBusy` ignore un effet lancé par un allié. Effets légers : `Render.lite` (shadowBlur et filter en no-op via
+  `Render.applyLite`, dpr 1 dans `fitWave` / `fitCanvas`), réglage `settings.fx` auto / rich / lite (dialogue Réglages, bouton
+  `#btn-fx`) ; en auto, `waveFrame` passe en léger pour la session si la moyenne tombe sous 38 images/s (`app.liteAuto`).
+- **Suite v1.5 (2026-10-31)** : les pouvoirs des autres membres (case vierge) se débloquent en terminant le monde 1 avec ce membre
+  (`S.powerUnlockedBy(data, id)`, `S.buyPower2(p, id, data)`) ; barre de vie toujours rouge, qui pulse sous 25 % ; tableaux à temps : chrono
+  dans la carte d'objectif en haut à gauche (`#wave-obj-timer`, en gros et jaune sous 10 s), survie : 3… 2… 1… GAGNÉ !!! au centre
+  (`wave.countdown`, avancé par main.js) ; première victoire d'un tableau = un seul bouton « Continuer » ; bouton « ▶ Monde suivant »
+  sur la carte dès que 3 tableaux sont réussis (`#btn-world-go`, plus besoin d'atteindre le boss) ; 1-3 adouci au départ (8 chauves-souris,
+  densité 1,2, +25 % PV / 45 s) ; mondes 2 à 6 plus longs et plus denses (`waveDef` : 150 à abattre au 2-1, survies 115 / 145 s…).
 - **Objets uniques du hangar** (`CB.ITEMS`, `profile.items`, `S.buyItem`, tuile dorée dans l'onglet Améliorations) : achetés
   une fois, permanents. Premier objet « Jauge pleine » (450 pièces) : `stats.fullCharge` fait démarrer chaque tableau avec
   la jauge d'attaque spéciale pleine. Deux tuiles « ??? » restent pour la suite.
@@ -150,9 +246,8 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   Aucune statistique affichée. Les bombes magiques du tableau 1-2 rougissent et pulsent de plus en plus vite avant
   d'exploser (`heat` dans `E.bombeMagique`). Le « Texte affiché » d'un tableau de l'éditeur apparaît dans un encadré
   sous l'étiquette en haut à gauche (`#wave-text`, seulement pour les tableaux personnalisés).
-- **Le méga boulet de Richard** (`ball.mega`, `Render.megaBall`) : Richard part avec `size` 2 (perk `mods.size`) ; son attaque
-  lance un seul boulet de fer incandescent (taille ≥ 18, dégâts ×12, perforant, ×1,7 en vitesse) en ligne droite à
-  travers tout le ciel, avec secousse d'écran continue et un coup à chaque monstre touché.
+- **Le boulet du vétéran de Richard** (depuis v1.5, `fx.veteran`) : Richard part avec `size` 2 (perk `mods.size`) ; son attaque
+  rend ses boulets deux fois plus gros et trois fois plus forts pendant 10 s (l'ancien méga boulet `Render.megaBall` reste dans le code, inutilisé).
 - **La Prière de Josée** (`fx.priere`, `wave.angels`, `Wave.updateAngels`, `Render.angel/prayerSky/holyShield`) : flash blanc
   (`wave.flash`), grande lumière à rayons tournants dans le ciel, deux anges qui descendent et lancent des rayons de lumière
   (dégâts ×1,2) pendant 15 s, bouclier sacré à la croix autour du canon (aucun dégât, texte « PROTÉGÉ ! ») et +40 % de PV.
@@ -182,12 +277,48 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
 - **Monde 1, tableaux 3 à 5** (`def.night`) : les monstres de la nuit sans fin reviennent dans le même ordre, sans
   paliers de couleur, avec le temps de la nuit compressé (`timeScale`) pour que seuls les premiers styles arrivent,
   mais plus rapides (`speed`).
-- **Boss en trois actes** (dernier tableau de chaque monde ; le Roi des chauves-souris a 600 PV, 200 par acte ; grande barre
-  de vie en haut avec les PV affichés) : on abat des monstres jusqu'au niveau de partie 5
-  (`CB.BOSS_LEVELS`, XP ×`CB.BOSS_XP`), le boss sort seul et il faut lui enlever un tiers de ses PV ; il s'enfuit, on
-  remonte au niveau 10, il revient avec de nouveaux pouvoirs (`CB.BOSS_POWERS` : tir rapide, boulet lourd, éventail,
-  bombe à retardement qui s'arrête et explose si on ne la détruit pas, rayon chargé), puis l'acte final au niveau 15.
-  Toutes ses attaques sont des projectiles (`def.shot`) qu'on peut faire exploser avant qu'ils nous touchent.
+- **Carte à pied, cheats, trio, décors vivants** (nuit du 2026-10-30) : sur la carte, les flèches suivent les chemins (`M.neighbors`,
+  `M.pos`, `mapMove` : haut / bas / gauche / droite vers la case voisine), un chemin de sortie après le boss mène au monde suivant
+  (`M.EXIT`, panneau « ▶ Monde ») et un chemin d'entrée revient au monde d'avant (`M.ENTRY`) ou, pour un monde caché, à la
+  passerelle du monde parent ; `travelTo` fait marcher le personnage d'un monde à l'autre (`app.marker.travel`), et la passerelle
+  se rejoint à pied (`app.at = 'gate'`, Jouer = « Y aller »). Bouton **🧪 Cheats** (Matthieu, carte et pause, `CB.CHEATS`,
+  `showCheats`) : tout débloquer, +1 000 / 5 000 / 10 000 or, invincible (`S.cheatGod`, `wave.god`), tous les objets
+  (`S.cheatItems`), niveau +5, inviter qui il veut (même en plein tableau via `Wave.swapAlly`). Objet unique **Trio de choc**
+  (`CB.ITEMS.trio`, demande deux coéquipiers) : un troisième coéquipier en réserve (`profile.ally3`, `S.setAlly3`,
+  `stats.ally3` → `wave.bench`) échangeable en pause (« ← Gauche / Droite → », `pauseTeam`). Sous-marin : le canon sort de derrière
+  la tourelle. Décors : monuments des cartes vus de près (manoir hanté `manor`, chapiteaux `bigTent`, ruche géante, volcan
+  `bigVolcano` avec coulées et fumée, planète à anneaux et station spatiale) et animations (`bgEnemy` dessine un monstre du monde
+  tout petit : chauves-souris de la forêt, fantôme et feux follets du manoir, clowns qui font les cent pas et ballons qui s'envolent
+  à la foire, abeilles de la ruche, braises et jets de lave, poissons des Abysses entre les algues qui ondulent, grosses bulles).
+  Bug corrigé : la ligne d'eau (`let wl`) des nageurs était avalée par un commentaire (plantage du rendu dans le monde des pirates).
+- **Mise en scène des boss et cartes** (soir du 2026-10-30, `CB.BOSS_ANIM`) : grande entrée (le boss plonge du ciel en zigzag,
+  `b.intro`, « GRAAAH ! »), et à chaque phase il a mal (« AÏE !!! »), s'enfuit, disparaît puis revient plus fâché (`e.retreat`,
+  intouchable pendant ce temps) : rouge en phase 2, doré en phase 3 (`colors`), un peu plus gros, plus vif (`agile`), avec flammes
+  ou étoiles autour (`R.enemy`). Il avance et recule (`hover0 + hover[]`), choisit ses attaques **au hasard** à des intervalles
+  variés, et les boules rouges partent parfois en rafale de 1 à 4 (`b.salvo`, `burst`, `gap`). Le Roi des chauves-souris est
+  `agile` (il se tasse parfois devant un boulet, « HOP ! ») et lance la `nuee` (4 à 8 chauves-souris en rafale, phases 2-3) ; sa
+  couronne est un **point faible** (`def.weak`, aussi le Roi des ballons) : ×1,6 et le rubis flashe (« COURONNE ! »).
+  Le boss est désormais une **plaque à sa profondeur** pour les collisions (plus une sphère) : une boîte bonus devant lui encaisse
+  le boulet, pas lui ; et les ennemis sont testés du plus proche au plus loin. Tirer une boîte (ou un cadeau) : explosion, la
+  **carte vole vers nous** (`wave.cardFly`, `R.cardFly`, `CB.CARD_FLY` = 0,55 s) puis les trois choix. Le claquement de Matthieu
+  enlève toujours 15 % du boss (`CB.BOSS_SPECIAL.flat.triche`) et efface tous les tirs, bombes et rayons en vol. La bombe à
+  retardement explose en grand (« BOUM !!! ») et blesse même de loin. Cartes : couleurs par genre (bleu pouvoir, violet `unique`
+  avec ruban « UNIQUE », doré combo, rose `surprise`), nouvelle carte **Cœur solide** (`vitalite`, vie max +10 %) et **Cadeau
+  surprise** (`surprise`, parfois à la place de la 3e carte, `CB.SURPRISE.chance`, `Wave.openSurprise` : or, deux cartes de plus,
+  vie pleine, grosse bombe, gel, jauge, carte mystère, boulets énormes). Vrais visages (`FamilyHeads`) : sur la carte Renfort
+  (l'invité est choisi d'avance, `guestPick`), et un portrait glisse à l'écran (`wave.portrait`, `R.portrait`) quand un membre
+  lance son attaque spéciale ou arrive en renfort.
+- **Boss : un seul combat, seul, en trois phases** (depuis le 2026-10-30, `CB.BOSS_PHASES = [2/3, 1/3]`) : dans un tableau de
+  boss il n'y a plus de monstres ordinaires ni de paliers de niveau (`CB.BOSS_LEVELS` et `bossRetreat` ont disparu) : le boss
+  sort une seconde après l'intro (`spawnBoss`, vitesse 9), et à 2/3 puis 1/3 de ses PV `Wave.bossPhase` le fâche (pouvoirs de la
+  phase suivante : `CB.BOSSES[k].powers` = trois listes, sinon `CB.BOSS_POWERS`, tirs plus rapprochés, bandeau « PHASE 2 / 3 »).
+  Pour monter de niveau, des **boîtes bonus « ? »** façon Mario Kart (`CB.BOXES`, `ENEMIES.boite`, `Wave.spawnBox`, cube
+  arc-en-ciel `E.boite`) apparaissent au hasard et disparaissent après 5,5 s : la tirer = +1 niveau (trois cartes) et 30 % de
+  jauge ; frapper le boss remplit aussi la jauge (`CB.BOSS_CHARGE`). Tous les tableaux de boss permettent l'esquive ◀ ▶
+  (`canDodge`). Nouveaux pouvoirs de boss (`bossAttack`) : `salve` (cinq tirs serrés), `mur` (mur de boulets avec un seul trou),
+  `pluie` (boulets qui tombent du ciel), `faisceau` (rayon chargé à esquiver, couleur `def.beamColor`), `triple`, `hurlement`,
+  `encre`, `tentacules`, `confettis`, `ballonsBombe`. PV : 600 à 900 avant `CB.hpScale`. Grande barre de vie avec les PV.
+
 - **Fiche du canon bicolore** : dans le hangar, chaque barre montre la part du personnage (talents + talent de famille,
   jaune) et la part du canon (améliorations + canon équipé, bleu), d'après `CB.STAT_PER`.
 - **La Vallée des dinosaures, suite** : des cadeaux étoilés passent régulièrement (`cadeau`, `def.gift`) : les tirer ouvre

@@ -7,22 +7,15 @@
   BK.loadChallenges = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } };
   BK.saveChallenges = s => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { } };
   BK.CHALLENGE_LEVELS = [null, { name: 'Facile', color: '#49e26a' }, { name: 'Moyen', color: '#3f9cff' }, { name: 'Difficile', color: '#ffd54a' }, { name: 'Expert', color: '#ff8a1f' }, { name: 'Légende', color: '#ff4d6d' }];
-  // kind 'arena' : arène générée (cols × rows, blocs mous « soft », monstres, carottes) avec un chrono ; kind 'match' : match classique.
+  // kind 'match' : les quatre styles de duel ; dans chacun, il faut battre toute la famille (or par adversaire vaincu la
+  // première fois, bonus « reward » quand tout le monde y est passé). Les arènes à monstres (kind 'arena', un tableau par
+  // monstre dans son biome) et le curling (kind 'curling') sont ajoutés par challenges-plus.js.
   BK.CHALLENGES = [
-    { id: 'ballons', level: 1, name: 'Premiers pas', icon: '🎈', desc: 'Quatre ballounets dans une petite arène. Fais-les tous sauter avant la fin du temps.', reward: 20, kind: 'arena', time: 90, theme: 'forest', cols: 13, rows: 11, soft: 0.35, enemies: [['ballon', 4]] },
-    { id: 'match1', level: 1, name: 'Match d’échauffement', icon: '💣', desc: 'Un match classique contre un adversaire facile. Une manche gagnante.', reward: 20, kind: 'match', foes: 1, botLevel: 'facile', rounds: 1, theme: 'arena' },
-    { id: 'gluants', level: 2, name: 'Gluants collants', icon: '🟢', desc: 'Six gluants et deux ballounets. Ils te suivent à la trace !', reward: 35, kind: 'arena', time: 120, theme: 'forest', cols: 15, rows: 11, soft: 0.35, enemies: [['gluant', 6], ['ballon', 2]] },
-    { id: 'lapins', level: 2, name: 'Garenne maléfique', icon: '🐰', desc: 'Quatre lapins maléfiques. Cueille les carottes : un lapin qui en mange une devient gentil et ne compte plus.', reward: 40, kind: 'arena', time: 120, theme: 'garden', cols: 15, rows: 11, soft: 0.3, carrots: 3, enemies: [['lapin', 4]] },
-    { id: 'match2', level: 2, name: 'Match à trois', icon: '💣', desc: 'Deux adversaires moyens. Une manche gagnante.', reward: 35, kind: 'match', foes: 2, botLevel: 'moyen', rounds: 1, theme: 'forest' },
-    { id: 'serpents', level: 3, name: 'Nid de serpents', icon: '🐍', desc: 'Six serpents venimeux. Une morsure et tu perds de la vie pendant six secondes.', reward: 55, kind: 'arena', time: 120, theme: 'lava', cols: 15, rows: 11, soft: 0.3, enemies: [['serpent', 6]] },
-    { id: 'chevaliers', level: 3, name: 'En garde !', icon: '🛡️', desc: 'Deux chevaliers de pierre, deux rouges et un bleu. Évite les charges.', reward: 60, kind: 'arena', time: 150, theme: 'castle', cols: 15, rows: 13, soft: 0.3, enemies: [['chevalier', 2], ['chevalier_rouge', 2], ['chevalier_bleu', 1]] },
-    { id: 'match3', level: 3, name: 'Match complet', icon: '💣', desc: 'Trois adversaires moyens, deux manches gagnantes.', reward: 60, kind: 'match', foes: 3, botLevel: 'moyen', rounds: 2, theme: 'random' },
-    { id: 'orques', level: 4, name: 'Le camp des orques', icon: '⚔️', desc: 'Deux orques en armure et leur shaman, qui les soigne. Sépare-les !', reward: 90, kind: 'arena', time: 180, theme: 'castle', cols: 17, rows: 13, soft: 0.3, enemies: [['shaman', 1], ['orque', 2]], group: true },
-    { id: 'match4', level: 4, name: 'Match des champions', icon: '🏆', desc: 'Trois adversaires difficiles, deux manches gagnantes.', reward: 90, kind: 'match', foes: 3, botLevel: 'difficile', rounds: 2, theme: 'random' },
-    { id: 'dore', level: 5, name: 'Le chevalier doré', icon: '👑', desc: 'Le chevalier doré et sa garde : deux rouges, deux bleus. Huit bombes pour le doré !', reward: 130, kind: 'arena', time: 180, theme: 'castle', cols: 17, rows: 13, soft: 0.3, enemies: [['chevalier_dore', 1], ['chevalier_rouge', 2], ['chevalier_bleu', 2]] },
-    { id: 'horde', level: 5, name: 'La horde', icon: '💀', desc: 'Deux orques, un shaman, trois serpents et trois lapins. Bonne chance…', reward: 150, kind: 'arena', time: 240, theme: 'lava', cols: 19, rows: 15, soft: 0.3, carrots: 2, enemies: [['shaman', 1], ['orque', 2], ['serpent', 3], ['lapin', 3]], group: true },
+    { id: 'match1', level: 1, name: 'Duel d’échauffement', icon: '💣', desc: 'Un duel classique contre un adversaire facile. Une manche gagnante.', reward: 40, kind: 'match', foes: 1, botLevel: 'facile', rounds: 1, theme: 'arena' },
+    { id: 'match2', level: 2, name: 'Duel à trois', icon: '💣', desc: 'Deux adversaires moyens. Une manche gagnante.', reward: 60, kind: 'match', foes: 2, botLevel: 'moyen', rounds: 1, theme: 'forest' },
+    { id: 'match3', level: 3, name: 'Duel complet', icon: '💣', desc: 'Trois adversaires moyens, deux manches gagnantes.', reward: 90, kind: 'match', foes: 3, botLevel: 'moyen', rounds: 2, theme: 'random' },
+    { id: 'match4', level: 4, name: 'Duel des champions', icon: '🏆', desc: 'Trois adversaires difficiles, deux manches gagnantes.', reward: 150, kind: 'match', foes: 3, botLevel: 'difficile', rounds: 2, theme: 'random' },
   ];
-  for(const [id,level,name,target,count,time] of [['kick1',1,'Le bon moment',6,1,90],['kick2',2,'Double précision',7,2,90],['kick3',3,'Maître du timing',8,3,75]])BK.CHALLENGES.push({id,level,name,icon:'🥾',kind:'timing',target,count,time,reward:25*level,theme:'garden',desc:'Attends près du distributeur, puis avance contre la bombe pour la botter. Elle doit exploser au centre de la cible ! '+count+' réussite(s).'});
   BK.CHALLENGES.sort((a,b)=>a.level-b.level);
   BK.challengeMedal=score=>score>=850?{name:'Or',icon:'🥇',xp:150}:score>=600?{name:'Argent',icon:'🥈',xp:100}:{name:'Bronze',icon:'🥉',xp:50};
   BK.challengeScore=(ch,left,lives)=>{const time=Math.max(0,Math.min(1,left/(ch.time||1))),health=Math.max(0,Math.min(1,lives/(ch.lives||2)));return Math.max(300,Math.min(1000,Math.round(300+500*time+200*health)));};
@@ -54,9 +47,9 @@
   };
   BK.drawChallengeProgress=(ctx,ch,run,y=90)=>{
     const info=BK.challengeProgress(ch,run),w=280,h=54,x=BK.W/2-w/2;
-    const color=info.medal.name==='Or'?'#ffe270':info.medal.name==='Argent'?'#d9e7f4':'#edb180';
+    const color=info.medal.name==='Or'?'#d9a21b':info.medal.name==='Argent'?'#8fa2bd':'#b2652b';
     const seconds=Math.ceil(info.medal.name==='Or'?info.goldSeconds:info.silverSeconds),clock=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
-    ctx.save();ctx.fillStyle='rgba(30,39,67,.92)';ctx.strokeStyle=color;ctx.lineWidth=2;BK.sprites.rr(ctx,x,y,w,h,14);ctx.fill();ctx.stroke();
+    ctx.save();BK.sprites.uiPanel(ctx,x,y,w,h,{border:color});
     const feedback=run.medalFeedback,reduced=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const warning=info.medal.name!=='Bronze'&&seconds>0&&seconds<=10,u=feedback?.transition>0?1-feedback.transition/.8:1;
     ctx.textAlign='left';ctx.textBaseline='middle';ctx.font='28px sans-serif';
@@ -69,7 +62,7 @@
     }else ctx.fillText(info.medal.icon,x+12,y+26);
     ctx.restore();
     ctx.font='900 15px Nunito,sans-serif';ctx.fillStyle=color;ctx.fillText(info.medal.name+' estimé · '+info.score+' / 1 000',x+54,y+17,w-64);
-    ctx.font='bold 13px Nunito,sans-serif';ctx.fillStyle=seconds>0&&seconds<=10?'#ffbc9c':'#fff';ctx.fillText(info.medal.name==='Or'?'⏱ Encore '+clock+' pour l’or':info.medal.name==='Argent'?'⏱ Encore '+clock+' pour l’argent':'🥉 Bronze · termine la mission !',x+54,y+38,w-64);ctx.restore();
+    ctx.font='bold 13px Nunito,sans-serif';ctx.fillStyle=seconds>0&&seconds<=10?BK.sprites.UI.bad:BK.sprites.UI.text;ctx.fillText(info.medal.name==='Or'?'⏱ Encore '+clock+' pour l’or':info.medal.name==='Argent'?'⏱ Encore '+clock+' pour l’argent':'🥉 Bronze · termine la mission !',x+54,y+38,w-64);ctx.restore();
   };
   BK.awardChallenge=(ch,score,charId,save)=>{
     save=save||BK.loadAdventure(charId);const gold=BK.completeChallenge(ch,score),medal=BK.challengeMedal(score),records=save.challengeRecords||(save.challengeRecords={}),old=records[ch.id],xp=Math.round(medal.xp*ch.level*(old?.done ? .25 : 1)),before=BK.levelFromXp(save.xp||0).level;
@@ -103,24 +96,34 @@
     if (won) { const reward=BK.awardChallenge(ch,score,charId); BK.audio.win(); BK.overlay.show({ title: 'Défi réussi !', html: BK.challengeResultHtml(ch,score,reward), buttons: [...(next ? [{ label: 'Défi suivant : ' + next.name, primary: true, onClick: () => { BK.overlay.hide(); BK.startChallenge(charId, next); } }] : []), { label: 'Retour aux défis', primary: !next, onClick: () => { BK.overlay.hide(); BK.showChallenges(charId); } }, { label: 'Menu', onClick: () => { BK.overlay.hide(); BK.toMenu(); } }] }); }
     else { BK.audio.lose(); BK.overlay.show({ title: 'Défi raté', text: (extra || '') + ' On réessaie ?', buttons: [{ label: 'Réessayer', primary: true, onClick: () => { BK.overlay.hide(); BK.startChallenge(charId, ch); } }, { label: 'Retour aux défis', onClick: () => { BK.overlay.hide(); BK.showChallenges(charId); } }] }); }
   };
-  BK.startChallenge = (charId, ch) => {
-    BK.editor = null;
+  // Duel remporté : chaque adversaire vaincu pour la première fois dans ce style rapporte de l'or ; tout le monde vaincu = bonus.
+  const duelResult = (charId, ch, foes, score) => {
+    const reward = BK.awardDuel(ch, score, charId, foes), next = BK.nextChallenge(ch);
+    BK.audio.win(); BK.overlay.show({ playful: 'challenge', title: reward.first ? '🏆 Style complété !' : 'Duel remporté !', html: BK.duelResultHtml(ch, score, reward), buttons: [
+      ...(reward.complete ? [] : [{ label: 'Prochains adversaires →', primary: true, onClick: () => { BK.overlay.hide(); BK.startChallenge(charId, ch, { foes: BK.defaultDuelFoes(charId, ch) }); } }]),
+      ...(next ? [{ label: 'Défi suivant : ' + next.name, primary: !!reward.complete, onClick: () => { BK.overlay.hide(); BK.startChallenge(charId, next); } }] : []),
+      { label: 'Retour aux défis', onClick: () => { BK.overlay.hide(); BK.showChallenges(charId); } }, { label: 'Menu', onClick: () => { BK.overlay.hide(); BK.toMenu(); } }] });
+  };
+  // opts.foes : adversaires choisis d'un duel ; opts.players : les quatre joueurs du curling en famille.
+  BK.startChallenge = (charId, ch, opts) => {
+    BK.editor = null; opts = opts || {};
     if (ch.kind === 'match') {
-      const pool = BK.ORDER.filter(x => x !== charId).sort(() => Math.random() - 0.5), players = [{ charId, human: 0 }];
-      for (let i = 0; i < ch.foes; i++) players.push({ charId: pool[i], human: null, level: ch.botLevel });
-      BK.show('game'); BK.current = new BK.Match({ challenge:ch, players, roundsToWin: ch.rounds, theme: ch.theme, onResult: champ => { result(charId, ch, champ.humanMap === 0, BK.matchChallengeScore(ch,BK.current), champ.humanMap === 0 ? 'match gagné' : champ.name + ' remporte le match.'); return true; } });
+      const foes = (opts.foes && opts.foes.length === ch.foes ? opts.foes : BK.defaultDuelFoes(charId, ch)), players = [{ charId, human: 0 }, ...foes.map(id => ({ charId: id, human: null, level: ch.botLevel }))];
+      BK.show('game'); BK.current = new BK.Match({ challenge:ch, players, roundsToWin: ch.rounds, theme: ch.theme, onResult: champ => { const score = BK.matchChallengeScore(ch,BK.current); if (champ.humanMap === 0) duelResult(charId, ch, foes, score); else result(charId, ch, false, score, champ.name + ' remporte le duel.'); return true; } });
       return;
     }
+    if (ch.kind === 'curling') { BK.show('game'); BK.current = new BK.Curling(charId, ch, { players: ch.family ? (opts.players && opts.players.length === 4 ? opts.players : [charId, ...BK.duelOthers(charId).slice(0, 3)]) : [charId] }); return; }
     BK.show('game'); BK.current = new BK.Adventure(charId, 0, { custom: BK.challengeStage(ch), challenge: ch });
   };
   BK.CHALLENGE_ISLANDS=[
     {kind:'arena',name:'Monstres',icon:'👾',hint:'Attrape les petits monstres !',color:'#79db88'},
-    {kind:'match',name:'Duels',icon:'💣',hint:'Affronte les autres héros !',color:'#ffbc72'},
-    {kind:'timing',name:'Bon timing',icon:'🎯',hint:'Botte la bombe au bon moment !',color:'#b9a0ff'}
+    {kind:'match',name:'Duels',icon:'💣',hint:'Bats toute la famille, 3 cœurs chacun !',color:'#ffbc72'},
+    {kind:'curling',name:'Bon timing',icon:'🥌',hint:'Fais glisser ta bombe sur la cible !',color:'#b9a0ff'}
   ];
   BK.challengeIslandPreview=(canvas,kind,charId)=>{
-    const maps={arena:['       ',' ,T,,, ',' ,#x#, ',' ,,,,, ',' ,x,#, ',' ,,,,, ','       '],match:['       ',' .#.#. ',' ..... ',' .#.#. ',' ..... ',' .#.#. ','       '],timing:['       ',' ,T,T, ',' ,,,,, ',' ,,A,, ',' ----- ',' ,,,,, ','       ']};
-    const W=new BK.World({map:maps[kind],theme:kind==='match'?'castle':'garden',mode:'adventure',explore:true,hearts:true,itemChance:0});W.frozen=true;W.time=25;
+    const maps={arena:['       ',' ,T,,, ',' ,#x#, ',' ,,,,, ',' ,x,#, ',' ,,,,, ','       '],match:['       ',' .#.#. ',' ..... ',' .#.#. ',' ..... ',' .#.#. ','       '],curling:['       ',' ))]]] ',' ))]]] ',' ))]]] ',' ))]]] ',' nn))) ','       ']};
+    const W=new BK.World({map:maps[kind]||maps.arena,theme:kind==='match'?'castle':kind==='curling'?'winter':'garden',mode:'adventure',explore:true,hearts:true,itemChance:0});W.frozen=true;W.time=25;
+    if(kind==='curling')W.timingTarget={c:4,r:2};
     if(kind==='arena'){W.addEnemy('ballon',2,3);W.addEnemy('gluant',4,4);}
     else{W.addPlayer(BK.charById(charId),2,4);if(kind==='match')W.addPlayer(BK.charById(charId==='eliott'?'adam':'eliott'),4,2);}
     const preview={cam:new BK.Camera(BK.W,BK.H),t:0},ctx=canvas.getContext('2d'),cam=preview.cam;
@@ -144,9 +147,13 @@
     }
     if(group)for(const [i,ch] of BK.CHALLENGES.filter(ch=>ch.kind===kind).entries()){
       const p=prog[ch.id],b=document.createElement('button');b.className='challenge-trial';b.style.setProperty('--enter-delay',Math.min(i,7)*55+'ms');
-      const medal=p?.scoreVersion===2?BK.challengeMedal(p.best).icon:p?.done?'⭐':ch.icon;
-      b.innerHTML='<span class="trial-icon">'+medal+'</span><strong>'+ch.name+'</strong><span>'+BK.CHALLENGE_LEVELS[ch.level].name+'</span><small>🪙 '+BK.challengeReward(ch,prog)+'</small>';
-      b.onclick=()=>{BK.audio.click();BK.overlay.show({playful:'challenge',title:ch.icon+' '+ch.name,html:'<p class="challenge-instruction">'+ch.desc+'</p><p>🥉 🥈 🥇 Gagne ta médaille !</p><details><summary>Mes récompenses</summary><p>🪙 '+BK.challengeReward(ch,prog)+' pièces · XP selon ta médaille</p>'+(p?.scoreVersion===2?'<p>Record : '+p.best+' points</p>':'')+'</details>',buttons:[{label:'← Retour',onClick:()=>BK.overlay.hide()},{label:'C’est parti ! →',primary:true,onClick:()=>{BK.overlay.hide();BK.startChallenge(charId,ch);}}]});};el.append(b);
+      const medal=p?.scoreVersion===2&&p.best?BK.challengeMedal(p.best).icon:p?.done?'⭐':ch.icon;
+      const duel=ch.kind==='match'?BK.duelProgress(ch,charId,prog):null;
+      b.innerHTML='<span class="trial-icon">'+medal+'</span><strong>'+ch.name+'</strong><span>'+BK.CHALLENGE_LEVELS[ch.level].name+(ch.monster?' · '+(BK.ENEMIES[ch.monster]?.name||'')+'':'')+'</span><small>'+(duel?'👥 '+duel.count+' / '+duel.total+' vaincus · <i class="goldcoin sm"></i> '+BK.DUEL_FOE_GOLD[ch.level]+' chacun':'<i class="goldcoin sm"></i> '+BK.challengeReward(ch,prog))+'</small>';
+      b.onclick=()=>{BK.audio.click();
+        if(ch.kind==='match')return BK.pickDuelFoes(charId,ch);
+        if(ch.kind==='curling'&&ch.family)return BK.pickCurlingFamily(charId,ch);
+        BK.overlay.show({playful:'challenge',title:ch.icon+' '+ch.name,html:'<p class="challenge-instruction">'+ch.desc+'</p><p>🥉 🥈 🥇 Gagne ta médaille !</p><details><summary>Mes récompenses</summary><p><i class="goldcoin sm"></i> '+BK.challengeReward(ch,prog)+' pièces d’or · XP selon ta médaille</p>'+(p?.scoreVersion===2?'<p>Record : '+p.best+' points</p>':'')+'</details>',buttons:[{label:'← Retour',onClick:()=>BK.overlay.hide()},{label:'C’est parti ! →',primary:true,onClick:()=>{BK.overlay.hide();BK.startChallenge(charId,ch);}}]});};el.append(b);
     }
     const back=document.getElementById('challenge-back');back.textContent=group?'← Les îles':'← Accueil';back.onclick=()=>{BK.audio.click();group?BK.showChallenges(charId):BK.toMenu();};
   };

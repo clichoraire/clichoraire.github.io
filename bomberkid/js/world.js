@@ -350,7 +350,7 @@
       p.x=c+.5+D.dx*.12;p.y=r+.5+D.dy*.12;p.dir=dir;p.moving=p.running=false;this.setPose(p,'sit');return true;
     }
     nearbySeat(p) {
-      if(!p.human||p.npc||!p.alive||p.seat||p.boat||p.air||p.falling||p.fishing||p.carrying||p.heldSnail||p.drinkT>0)return null;
+      if(!p.human||p.npc||!p.alive||p.seat||p.boat||p.air||p.falling||p.fishing||p.carrying||p.heldSnail||p.drinkT>0||p.nearDisplay)return null;   // sur un article du comptoir, c'est l'achat qui compte
       const c=Math.floor(p.x),r=Math.floor(p.y);
       for(const d of DIRS){const x=c+d.dx,y=r+d.dy,kind=this.deco[this.idx(x,y)];
         if(this.inside(x,y)&&['chair','stool'].includes(kind)&&Math.hypot(x+.5-p.x,y+.5-p.y)<1.3&&Math.abs(this.hAt(x,y)-this.groundZ(p.x,p.y))<.1&&!this.players.some(q=>q.seat&&q.seat.c===x&&q.seat.r===y))return {c:x,r:y,kind};
@@ -642,7 +642,7 @@
     talkTo(speaker) {
       let best = null, bd = 1.6; for (const n of this.players) { if (!n.npc) continue; const d = Math.hypot(n.x - speaker.x, n.y - speaker.y); if (d < bd) { bd = d; best = n; } }
       if (!best || !best.lines.length) return false;
-      best.say = best.lines[best.lineIndex % best.lines.length]; best.lineIndex++; best.sayT = 3.5;
+      BK.say(best, best.lines[best.lineIndex % best.lines.length]); best.lineIndex++;
       const dx = speaker.x - best.x, dy = speaker.y - best.y; if(!best.seat) best.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 3 : 1) : (dy > 0 ? 0 : 2);
       this.events.push({ type: 'talk', npc: best, text: best.say }); return true;
     }
@@ -822,7 +822,7 @@
       if (p.heldSnail || p.boat || p.bombsOut >= p.bombsMax) return false;
       const c = Math.floor(p.x), r = Math.floor(p.y);
       if (this.cell(c, r) || this.bombAt(c, r) || this.special.get(c + ',' + r)?.type === 'exit') return false;
-      const b = { cx: c, cy: r, x: c + 0.5, y: r + 0.5, z: 0, t: BK.BOMB_FUSE * (p.shortfuseT>0?0.5:1), fire: p.fire, damage:p.bomb2?2:1, level:p.bomb2?2:1, safeItems:!!p.safeitems, dome:!!p.dome, owner: p, state: 'idle', passers: new Set([p]), born: this.time, dir: 0 };
+      const b = { cx: c, cy: r, x: c + 0.5, y: r + 0.5, z: 0, big: (p.sizeScale || 1) > 1, t: BK.BOMB_FUSE * (p.shortfuseT>0?0.5:1), fire: p.fire, damage:p.bomb2?2:1, level:p.bomb2?2:1, safeItems:!!p.safeitems, dome:!!p.dome, owner: p, state: 'idle', passers: new Set([p]), born: this.time, dir: 0 };
       this.bombs.push(b); p.bombsOut++; this.setPose(p, 'place', 0.25);
       this.events.push({ type: 'bombPlaced', player: p, bomb: b }); return true;
     }
@@ -1095,7 +1095,7 @@
     }
     isNight() { return this.darkness() > 0.3; }
     dayIcon() { const d = this.darkness(); return d === 0 ? '☀️' : d < 0.3 ? '🌇' : d < 1 ? '🌙' : '🌙'; }
-    lanternOn(p) { return !!p.lantern && this.darkness() > 0.25; }
+    lanternOn(p) { return BK.wearsLantern(p) && this.darkness() > 0.25; }
     // Les sources de lumière (rayon en cases) : lampadaires, feux de camp, volcans, lanternes à fée allumées, flammes.
     lights() {
       const L = [];
@@ -1363,7 +1363,7 @@
     }
     updatePlayer(p, dt) {
       p.animT += dt; p.poseT += dt; if (p.invuln > 0) p.invuln -= dt;
-      if (p.npc) { if (p.sayT > 0) p.sayT -= dt; p.pose = p.seat ? 'sit' : 'idle'; return; }
+      if (p.npc) { if (p.sayT > 0) { p.sayT -= dt; if (p.sayT <= 0) BK.sayNext(p); } p.pose = p.seat ? 'sit' : 'idle'; return; }
       if (!p.alive) { p.deadT += dt; return; }
       p.tongueSlow=Math.max(0,(p.tongueSlow||0)-dt);
       p.swallowSafe=Math.max(0,(p.swallowSafe||0)-dt);
@@ -1436,7 +1436,7 @@
       // course : deux appuis rapides dans la même direction ; elle use la stamina et s'arrête quand on lâche
       if (!p.bot && p.moving && !p.wasMoving) { if (p.lastTap && p.lastTap.dir === p.dir && this.time - p.lastTap.t < BK.DOUBLE_TAP && p.stamina > 5) { p.running = true; p.curSpeed = p.speed; } p.lastTap = { dir: p.dir, t: this.time }; }
       if (!p.moving || p.stamina <= 0) p.running = false;
-      const target = p.speed * (p.running ? BK.RUN_MULT : 1) * (p.tongueSlow>0?.2:1) * this.toadSlimeSlow(p);
+      const target = p.speed * (p.running ? BK.RUN_MULT * ((p.sizeScale || 1) < 1 ? 2 : 1) : 1) * (p.tongueSlow>0?.2:1) * this.toadSlimeSlow(p);
       p.curSpeed = p.running ? Math.min(target, Math.max(p.speed, p.curSpeed) + BK.RUN_ACCEL * dt) : target;
       if (p.running) { p.stamina = Math.max(0, p.stamina - BK.RUN_COST * dt); p.staminaWait = 0.7; p.dustT += dt; if (p.dustT > 0.14) { p.dustT = 0; this.burst(p.x - DIRS[p.dir].dx * 0.2, p.y - DIRS[p.dir].dy * 0.2, 0.15, 'rgba(230,220,200,0.8)', 2); } }
       else { p.staminaWait -= dt; if (p.staminaWait <= 0 && p.stamina < p.staminaMax) p.stamina = Math.min(p.staminaMax, p.stamina + p.staminaMax * p.staminaRegen / 100 * dt); }
@@ -1630,6 +1630,7 @@
     updateEnemy(e, dt) {
       e.t += dt; e.stateT += dt; if (e.hurt > 0) e.hurt -= dt;
       if (e.dead) { e.deadT += dt; return; }
+      if (e.stunT > 0) { e.stunT = Math.max(0, e.stunT - dt); return; }   // étourdi par une bombe bottée : des étoiles, et il ne fait rien
       if(e.arenaBoss)return this.updateFirstBoss(e,dt);
       if(e.def.bestiary)return this.updateBestiary(e,dt);
       const bh = e.def.behavior;
@@ -2446,10 +2447,10 @@
       for(const bar of this.firebars)for(const q of this.firebarPoints(bar))push(q.y,q.x,()=>BK.sprites.drawFlame(ctx,cam,q.x-.5,q.y-.5,.45+Math.sin(time*9+q.x)*.1,'center',0,time+q.y,q.z,false));
       for (const f of this.flames) if(!f.domeHeight || !f.bomb?.dome || f.bomb.giga) push(f.cy + 0.5, f.cx + 0.5, () => BK.sprites.drawFlame(ctx, cam, f.cx, f.cy, f.t / (f.duration||BK.FLAME_TIME), f.kind, f.dir, f.seed, gz(f.cx + 0.5, f.cy + 0.5), f.magic, f.level, f.domeHeight));
       for (const sp of this.sparks) push(sp.r + 0.5, sp.c + 0.5, () => { const pr = cam.project(sp.c + 0.5, sp.r + 0.5, gz(sp.c + 0.5, sp.r + 0.5)); ctx.fillStyle = '#fff6c0'; ctx.beginPath(); ctx.arc(pr.x, pr.y - pr.k * 0.1, pr.k * (0.1 + 0.04 * Math.sin(time * 40)), 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#ffb03a'; ctx.lineWidth = 2; for (let k = 0; k < 5; k++) { const a = time * 30 + k * 1.3, l = pr.k * (0.15 + 0.1 * Math.sin(time * 25 + k)); ctx.beginPath(); ctx.moveTo(pr.x, pr.y - pr.k * 0.1); ctx.lineTo(pr.x + Math.cos(a) * l, pr.y - pr.k * 0.1 + Math.sin(a) * l * 0.6); ctx.stroke(); } });
-      for (const b of this.bombs) if (b.state !== 'carried') push(b.y + (this.elevAt(Math.floor(b.x),Math.floor(b.y))&&!b.underElevator ? .015 : 0), b.x, () => {
+      for (const b of this.bombs) if (b.state !== 'carried') push(b.y + (b.state === 'flying' ? Math.max(0, b.z) * 0.9 : 0) + (this.elevAt(Math.floor(b.x),Math.floor(b.y))&&!b.underElevator ? .015 : 0), b.x, () => {
         const Eb = this.elevators.length && b.state !== 'flying' ? this.elevAt(Math.floor(b.x), Math.floor(b.y)) : null, z0 = b.underElevator ? b.underElevator.base : gz(b.x, b.y), zb = b.state === 'flying' ? b.z : z0 + b.z, pr = cam.project(b.x, b.y, z0), top = cam.project(b.x, b.y, zb);
         D3.shadow(ctx, cam, b.x, b.y, 0.3 * Math.max(0.4, 1 - (zb - z0) / 3), 0.3, z0);
-        if (b.rock) BK.sprites.drawRock(ctx, top.x, top.y - pr.k * 0.3, pr.k, { cracked: b.uses < 2 }); else BK.sprites.drawBomb(ctx, top.x, top.y - pr.k * 0.34, pr.k * 0.34, { level:b.level, giga:b.giga, inflation:b.inflation, gift:b.gift, t: time - b.born, fuse: Math.max(0, b.t / BK.BOMB_FUSE) });
+        if (b.rock) BK.sprites.drawRock(ctx, top.x, top.y - pr.k * 0.3, pr.k, { cracked: b.uses < 2 }); else { const bs = pr.k * 0.34 * (b.big ? 1.3 : 1); BK.sprites.drawBomb(ctx, top.x, top.y - bs, bs, { level:b.level, giga:b.giga, inflation:b.inflation, gift:b.gift, t: time - b.born, fuse: Math.max(0, b.t / BK.BOMB_FUSE) }); }
       });
       for (const E of this.elevators) push(E.r + 0.5, E.c + 0.5, () => drawElevatorSlab(E));
       for (const M of this.movers) push(M.y, M.x, () => {   // plateau glissant : dalle métal, bandes jaunes et noires, petite lueur dessous
@@ -2467,6 +2468,7 @@
         if (e.dead) { const u = e.deadT / 1.2; ctx.globalAlpha = Math.max(0, 1 - u); ctx.translate(0, -u * pr.k * 0.8); ctx.rotate(u * 3); }
         BK.sprites.drawEnemy(ctx, e.type, { creature:e, charged:e.charged, warning:!!e.warning, swallowed:!!e.swallowed,bellyFill:e.bellyFill,bellyKick:e.bellyKick,bellySide:e.bellySide,toadAttack:e.toadAttack?.kind,inferno:e.arenaBoss&&e.phase===2, s: pr.k * (e.def.hitR ? e.def.hitR / e.r : 1), t: e.t, hurt: e.hurt, flip: e.flip || e.dir === 1, charging: e.state === 'charge', squash: e.squash, stomp: e.stomp, aim: e.aim, recoil: e.recoil, swell: e.swell, state: e.state, shell: e.shell, shellColor:e.shellColor, baby:e.baby,growth:e.growth, mouth: e.mouth, charge: e.charge, water: this.explore && this.tAt(Math.floor(e.x), Math.floor(e.y)) === T_WATER, wind: e.wind, cast: e.cast, up: e.up, bone: !!e.bone, throwT: e.throwT, swing: e.swing, tame: e.tame, heal: e.heal, run: e.run, chasing: e.state === 'chase' || e.state === 'return' });
         ctx.restore();
+        if(e.stunT>0&&!e.dead){ctx.save();ctx.font='bold '+Math.round(pr.k*.3)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=0;i<4;i++){const a=time*5+i*Math.PI/2,sx=top.x+Math.cos(a)*pr.k*.55,sy=top.y-pr.k*1.15+Math.sin(a)*pr.k*.16;ctx.fillStyle=i%2?'#ffe36b':'#fff6c2';ctx.strokeStyle='#5b3d1a';ctx.lineWidth=2;ctx.strokeText('★',sx,sy);ctx.fillText('★',sx,sy);}ctx.restore();}
         if(e.arenaBoss&&!e.dead){ctx.save();ctx.textAlign='center';ctx.font='bold 15px Nunito';ctx.fillStyle='#fff3aa';ctx.strokeStyle='#302236';ctx.lineWidth=4;const label=e.state==='sealed'?'🔒 Bats les deux crapauds':e.state==='transform'?'🔥 Transformation !':e.attack?({fire:'🔥 Souffle de feu !',anvils:'⚠ Enclumes !',bomb:'💣 Bombe !',wave:'⚠ Onde de choc !'}[e.attack.kind]):'';ctx.strokeText(label,top.x,top.y-pr.k*3.5);ctx.fillText(label,top.x,top.y-pr.k*3.5);ctx.restore();}
         if (e.boss && !e.dead && !e.arenaBoss) { // petites barres des gardiens et autres monstres
           const w = e.arenaGuard?Math.max(38,Math.min(70,pr.k*1.3)):pr.k * 1.6, x = top.x - w / 2, y = top.y - pr.k * (e.type === 'golem' ? 3.3 : 2.4);
@@ -2505,7 +2507,7 @@
       for (const p of this.players) if (p.fishing && p.alive) push(p.y + 0.01, p.x, () => this.drawFishing(ctx, cam, p, time));
       for(const b of this.boats) if(!b.rider) push(b.y+.1,b.x,()=>{const pr=cam.project(b.x,b.y,0);BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,false);BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,true);});
       for (const d of this.doors) push(d.r + 1.02, d.c + 0.5, () => BK.sprites.drawHouse(ctx, cam, d.c, d.r, time, this.explore ? this.groundZ(d.c + 0.5, d.r + 0.5) : 0, this.houses[d.c + ',' + d.r]));
-      for (const p of this.players) push(p.y, p.x, () => {
+      for (const p of this.players) push(p.seat ? p.seat.r + 0.5 + (p.dir === 2 ? -0.3 : 0.3) : p.y, p.x, () => {   // assis : devant la chaise (dos au dossier) ou derrière quand il regarde au loin
         if(p.swallowedBy)return;
         if(p.boat && p.boat.rider!==p)return;
         if (!p.alive && p.deadT > 1.3) return;
@@ -2531,7 +2533,7 @@
         const b = p.carrying;
         BK.sprites.drawCharacter(ctx, p.def, { s: pr.k, pose: p.seat?'sit':p.pose, t: p.animT, poseT: p.poseT, view, flip: p.dir === 1, walk: p.walk, jolt: !!(p.fishing && p.fishing.bit && !p.fishing.caught), carrying: !!b, rock: !!(b && b.rock), rockCracked: !!(b && b.rock && b.uses < 2), bombLevel:b?.level, bombGiga:b?.giga, bombInflation:b?.inflation, bombGift:b?.gift, bombT: b ? time - b.born : 0, bombFuse: b ? Math.max(0, b.t / BK.BOMB_FUSE) : 1 });
         if (p.axeUntil > this.time) { ctx.save();ctx.translate(pr.k*(p.dir===1?-0.35:0.35),-pr.k*0.65);ctx.rotate((p.dir===1?-1:1)*(0.8-(p.axeUntil-this.time)*3));BK.sprites.drawAxe(ctx,0,0,pr.k*0.8);ctx.restore(); }
-        if (p.lantern && p.alive && !p.falling) BK.sprites.drawLantern(ctx, pr.k * 0.3 * (p.dir === 1 ? -1 : 1), -pr.k * 0.42, pr.k, this.lanternOn(p), time, p.dir === 2);
+        if (BK.wearsLantern(p) && p.alive && !p.falling) BK.sprites.drawLantern(ctx, pr.k * 0.3 * (p.dir === 1 ? -1 : 1), -pr.k * 0.42, pr.k, this.lanternOn(p), time, p.dir === 2);
         if (p.frozen > 0 && p.alive) { const H = pr.k * (0.8 + 0.7 * (p.def.size || 1)); ctx.globalAlpha = 0.55; ctx.fillStyle = '#bfefff'; BK.sprites.rr(ctx, -pr.k * 0.4, -H * 1.08, pr.k * 0.8, H * 1.12, pr.k * 0.12); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#eafcff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-pr.k * 0.3, -H * 1.0, pr.k * 0.07, H * 0.55); }
         if (p.shield > 0 && p.alive) { ctx.strokeStyle = 'rgba(180,140,240,' + (0.5 + 0.3 * Math.sin(time * 8)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, -pr.k * 0.55, pr.k * 0.55, pr.k * 0.7, 0, 0, Math.PI * 2); ctx.stroke(); }
         ctx.restore();

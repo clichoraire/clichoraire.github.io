@@ -179,12 +179,47 @@ Deux modes :
   Avec le coup de pied, marcher dans la bombe la pousse ; courir dedans permet de sauter dessus (double appui sur une direction).
   L'eau et le vide ne bloquent plus le joueur : il y tombe (plouf et il coule / il rapetisse en tournoyant), perd un cœur
   et réapparaît sur la dernière case sûre (sans cœur restant, il meurt ; chez les grands-parents, aucun dégât).
-- **Défis** (remplace le bouton Match) — douze épreuves sur cinq niveaux (Facile → Légende, `js/challenges.js`) : arènes
-  générées (bordure, piliers, buissons et blocs cubiques, monstres loin du départ, carottes) avec chrono et deux vies —
-  ballounets, gluants, lapins, serpents, chevaliers, orques et shaman, chevalier doré, la horde — et des matchs classiques
-  contre les bots (1 à 3 adversaires, facile à difficile). Un défi réussi donne sa récompense en or à toute la famille
-  (première réussite : tout ; les suivantes : le quart), la progression est partagée (`bk.challenges`). Raccourcis :
-  `#challenges`, `#challenge=lapins,skip`. Le match classique reste accessible par `#pick=match` ou `#match`.
+- **Défis** (remplace le bouton Match) — trois îles (`js/challenges.js`, `js/challenges-plus.js`), cinq niveaux (Facile → Légende) :
+  - **Monstres** : un tableau par monstre (34 arènes), chacun dans un biome assorti généré à partir d’une graine (`BK.ARENA_BIOMES` :
+    prairie fleurie, marais aux champignons, cimetière de nuit, cour du château, forge avec lave, grotte gelée, volcan, désert,
+    lagon avec les monstres marins dans l’eau, camp des orques, cirque, dojo…) : bordure, piliers du biome, décors solides, taches
+    de sol, flaques (eau, lave, glace), blocs mous ; tous les monstres sont reliés au départ (sinon l’arène est regénérée).
+    Chrono et deux vies ; le défi réussi donne sa récompense en or à toute la famille (première réussite : tout ; les suivantes : le
+    quart), progression partagée (`bk.challenges`).
+  - **Duels** : quatre styles (1 adversaire facile, 2 moyens, 3 moyens en deux manches, 3 difficiles en deux manches), **trois
+    cœurs** chacun (un coup de flamme = un cœur, `BK.MATCH_HEARTS`, aussi en match classique). Dans chaque style, il faut battre
+    toute la famille : on choisit ses adversaires (✓ = déjà vaincu), chaque personne vaincue pour la première fois rapporte
+    10 / 15 / 20 / 30 pièces selon le style (`BK.DUEL_FOE_GOLD`), et tout le monde vaincu donne le bonus du style
+    (`prog[id].beaten`, `BK.awardDuel`).
+  - **Bon timing** (curling, `BK.Curling`) : piste de glace, zone de neige à gauche (« TA ZONE ») où l’on pose sa bombe, cible en
+    anneaux (10 · 7 · 4 · 2 points selon la case où la bombe explose). On attend le bon moment puis on avance sur la bombe pour la
+    botter ; une bombe posée hors de la zone est retirée, une bombe jamais bottée vaut 0. Trois défis solos de 8 lancers avec une
+    cible qui change de place (28, 40 et 52 points à atteindre ; médailles selon les points) et le **Curling en famille** : quatre
+    joueurs choisis dans la famille, chacun son tour (on se passe le clavier), quatre lancers chacun, le plus de points gagne.
+    Les joueurs qui attendent sont sur le banc sous la piste et font les fous (danse, sieste « Zzz », vague, pop-corn, mouche…)
+    et commentent chaque lancer.
+  Raccourcis : `#challenges`, `#challenges=match` (une île), `#challenge=lapins,skip`, `#picker=match3` (choix des adversaires), `#picker=curlfam`
+  (choix des joueurs). Le match classique reste accessible par `#pick=match` ou `#match`.
+
+- **Interface** — tous les dialogues (pause, résultats, options, confirmations) partagent le style « pause » : boîte bleu clair à
+  en-tête dégradé, bouton principal doré, boutons secondaires mauves, action irréversible en rouge avec case à cocher (Options →
+  « Effacer mes données » supprime toutes les clés `bk.*` ; effacer la progression d’un personnage demande aussi confirmation,
+  plus aucun `confirm()` natif). Les cadres dessinés dans le canevas (`BK.sprites.uiPanel`, `uiButton`, palette `BK.sprites.UI`)
+  suivent la même famille : HUD du tableau, maison et magasin, carte des mondes, cartes de match, curling. L’or s’affiche avec
+  la pièce dessinée (`textWithCoin` dans le canevas, `<i class="goldcoin sm">` en HTML), jamais l’emoji argenté. Le bouton Pause
+  occupe une case réservée du HUD (`BK.PAUSE_RECT`, coin haut droit) que les autres cadres évitent. Le sac s’ouvre aussi sur la
+  carte des mondes (I ou le bouton) : le héros de la carte porte l’inventaire de la sauvegarde. Chats de sept pelages (éditeur →
+  Chat → couleur, `BK.CAT_COLORS`, `catColor` dans la liste des ennemis). Animations : jambe levée qui plie avec le pied, bras
+  de même longueur au repos, bombe portée à la même taille qu’au sol tenue par les deux mains, ramasser et lancer avec des bras
+  qui glissent d’une position à l’autre, flash rouge quand on est touché, bombe lancée dessinée devant les blocs survolés.
+
+- **Comptoirs, lanterne, tailles, magicien** — les commerçants parlent en bulles successives quand le texte est long
+  (`BK.say`, `BK.splitSpeech` : phrases entières, 60 caractères par bulle). La lanterne à fée achetée arrive dans le sac
+  (objet unique) et ne se porte que depuis la ceinture (raccourcis 1 à 8) : `BK.wearsLantern` ; l’ancienne amélioration reste
+  valable. Sur un article du comptoir, c’est l’achat qui est proposé, pas la chaise voisine ; assis, le héros est dessiné devant
+  la chaise (ou derrière le dossier quand il tourne le dos). Géant : bombes 1,3 × plus grosses ; mini : course deux fois plus
+  rapide. Un magicien qui reçoit une bombe bottée voit des étoiles et reste étourdi trois secondes (`stunT`). Page de contrôle :
+  `tools/test-extras-visual.html`.
 
 Le bouton **Éditeur** ouvre un éditeur de tableaux : on choisit la taille, le décor et le fond, puis on peint la carte à la souris
 avec un tiroir d'outils par onglets (Décor, Blocs, Objets, Maisons, Déco, Ennemis, Tableau, Outils) sur une seule rangée qui
@@ -217,6 +252,7 @@ js/hub.js           île des grands-parents et magasin
 js/editor.js        éditeur de tableaux
 js/match.js         déroulement d'un match (option onResult pour les défis)
 js/challenges.js    les défis : liste, arènes générées, récompenses partagées, écran
+js/challenges-plus.js  arènes par monstre (biomes), duels contre toute la famille, curling « Bon timing » (solo et en famille)
 js/debug.js         visionneuse des personnages
 js/main.js          écrans, menu, boucle de jeu
 js/family-heads.js, js/family-head-sources.js   portraits de famille (copiés de Ballon chasseur)
@@ -342,7 +378,7 @@ Vérification : `node tools/test-castle-mechanisms.cjs` simule le parcours compl
 - **Décor → Ascenseur** : botter une bombe depuis le sol voisin pour la glisser sous le plateau. Une bombe posée sur le plateau reste dessus et explose normalement. Les ascenseurs automatiques gardent leur fonctionnement.
 - **Décor → Pont-levis à bombe** : poser la base sur la première case du fossé, choisir direction et longueur (2 à 6 cases). Une explosion contre la base déclenche la rotation ; le pont devient franchissable au bout de 1,2 seconde.
 - **Décor → Pont sur colonnes**, puis **Grosse colonne du pont** sur ses cases : chaque lettre identifie une section. Une bombe gonflée à au moins 65 % casse une colonne ; une bombe rouge ordinaire ne suffit pas. Quand la dernière colonne de la section casse, le tablier tremble puis s’écroule après 0,8 seconde.
-- **Objets → Explosion en dôme** : souffle circulaire, diagonales comprises, et bulle de feu animée. La portée est le rayon (4 = quatre cases de chaque côté du centre). Le souffle s’arrête à la première couche de blocs et aux murs ; la giga-fusion conserve la traversée des blocs destructibles. Le dôme se combine avec gonflage, bombes rouges et protection des objets. Les alliés anticipent son rayon.
+- **Objets → Explosion en dôme** : souffle en carré, diagonales comprises, et bulle de feu animée. La portée est la distance (4 = tout ce qui est à quatre cases du centre, en carré). Le feu se propage de case en case comme en 2D : il casse les blocs destructibles et continue derrière, contourne les murs et ne traverse que par les cases libres ; la giga-fusion conserve la traversée des blocs destructibles. Le dôme se combine avec gonflage, bombes rouges et protection des objets. Les alliés anticipent son rayon.
 
 ### Monstres supplémentaires (éditeur → Ennemis)
 

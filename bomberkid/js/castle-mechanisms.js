@@ -123,7 +123,13 @@ W.renderArenaEffects=function(ctx,cam,time,push){
 W.kickedBombImpact=function(b,c,r){
  if(!b.kicker||b.rock||this.cell(c,r)||!this.canStep(b.cx,b.cy,c,r))return false;
  const p=this.players.find(p=>p.alive&&!p.npc&&!p.air&&!p.falling&&!p.boat&&Math.floor(p.x)===c&&Math.floor(p.y)===r);
- if(!p)return false;
+ if(!p){
+  // Un magicien qui reçoit une bombe bottée en pleine figure voit des étoiles pendant trois secondes.
+  const mage=this.enemies.find(e=>!e.dead&&e.def.behavior==='mage'&&Math.floor(e.x)===c&&Math.floor(e.y)===r);
+  if(!mage)return false;
+  mage.stunT=3;mage.hurt=Math.max(mage.hurt||0,.3);this.burst(mage.x,mage.y,.45,'#ffe36b',14);this.events.push({type:'enemyStunned',enemy:mage,bomb:b});
+  b.state='idle';b.x=b.cx+.5;b.y=b.cy+.5;b.passers=new Set();this.events.push({type:'bombKicked',bomb:b});if(b.t<=0)this.explodeBomb(b);return true;
+ }
  if(p!==b.kicker&&this.mode==='adventure'&&!BK.settings.friendlyFire&&(p.leader||p)===(b.kicker.leader||b.kicker))return false;
  p.bombStun=1;p.bombPush={dir:b.dir,left:.95};p.inflating=null;p.onBomb=null;p.zOff=0;this.setPose(p,'hit',1);
  b.state='idle';b.x=b.cx+.5;b.y=b.cy+.5;b.passers=new Set();this.events.push({type:'bombKicked',bomb:b});

@@ -54,9 +54,11 @@
           <button id="btn-level" class="lego">📊 Fiche</button>
           <button class="lego" data-back><b class="btn-badge">B</b> Retour</button>
           <button id="btn-shop" class="lego">🔧 Hangar</button>
+          <button id="btn-world-go" class="lego hidden">▶ Monde suivant</button>
           <button id="btn-start" class="lego primary"><b class="btn-badge">A</b> Jouer</button>
           <button id="btn-debug" class="lego small dev hidden" title="Lance ce tableau en mode debug (Matthieu seulement)">🐞 Debug</button>
           <button id="btn-new-wave" class="lego small dev hidden" title="Crée un tableau vide à partir de zéro">🆕 Créer un tableau</button>
+          <button id="btn-cheats" class="lego small dev hidden" title="Cheats (Matthieu seulement)">🧪</button>
         </div>
       </div>
     </div>
@@ -85,6 +87,7 @@
         </div>
       </div>
     </div>
+    <div id="cannon-strip" class="cannon-strip hidden" aria-label="Mes canons"><div class="strip-inner"></div></div>
   </section>
 
   <section id="screen-wave" class="screen hidden">
@@ -95,15 +98,24 @@
         <div class="gold-pill" id="wave-gold"></div>
         <div class="run-level" id="wave-level"><b id="wave-level-n">NIV. 1</b><div class="xpbar"><i id="wave-level-bar"></i></div></div>
         <div class="objective-panel">
-          <div class="objective-tag"><span class="bang">!</span><span id="wave-tag">Vague 1</span></div>
+          <div class="objective-card">
+            <canvas class="obj-icon" id="wave-obj-icon" width="72" height="72" aria-hidden="true"></canvas>
+            <div class="obj-body">
+              <div class="objective-tag"><span class="bang">!</span><span id="wave-tag">Vague 1</span></div>
+              <div class="objective-bar"><i id="wave-bar"></i></div>
+              <div class="objective-sub" id="wave-sub"></div>
+            </div>
+            <div class="obj-timer hidden" id="wave-obj-timer"></div>
+          </div>
           <div class="objective-text hidden" id="wave-text"></div>
-          <div class="objective-bar"><i id="wave-bar"></i></div>
-          <div class="objective-sub" id="wave-sub"></div>
         </div>
         <div class="right-hud">
           <div class="combo" id="wave-combo">x0</div>
-          <div class="hp-meter" title="Points de vie"><i id="wave-hp"></i></div>
-          <div class="hp-text" id="wave-hp-text"></div>
+          <div class="meters">
+            <div class="meter-col"><div class="hp-meter" title="Points de vie"><i id="wave-hp"></i></div><b class="meter-num" id="wave-hp-text"></b><small>❤️ VIE</small></div>
+            <div class="meter-col"><div class="hp-meter armor" title="Armure du canon"><i id="wave-armor"></i></div><b class="meter-num" id="wave-armor-text"></b><small>🛡️ ARMURE</small></div>
+          </div>
+          <div class="shield-text hidden" id="wave-shield-text"></div>
         </div>
         <div class="timer" id="wave-timer"></div>
         <div class="cards-owned" id="wave-cards"></div>
@@ -121,7 +133,8 @@
           <div class="pause-kicker">Pause</div>
           <div class="pause-ring"><div class="pause-logo"><span class="t1">CANON</span><span class="t2">BIG BOOM</span></div><div class="pause-world" id="pause-world"></div><div class="pause-pct" id="pause-pct"></div></div>
           <div class="pause-stats" id="pause-stats"></div>
-          <div class="pause-buttons"><button id="btn-resume" class="lego primary">▶ Reprendre</button><button id="btn-restart" class="lego">↻ Recommencer</button><button id="btn-quit" class="lego">🗺 Carte</button><button id="btn-settings-pause" class="lego">⚙️ Réglages</button></div>
+          <div class="pause-team hidden" id="pause-team"></div>
+          <div class="pause-buttons"><button id="btn-resume" class="lego primary">▶ Reprendre</button><button id="btn-restart" class="lego">↻ Recommencer</button><button id="btn-quit" class="lego">🗺 Carte</button><button id="btn-settings-pause" class="lego">⚙️ Réglages</button><button id="btn-cheats-pause" class="lego small dev hidden" title="Cheats">🧪</button></div>
         </div>
       </div>
       <div id="overlay-cards" class="overlay hidden">
@@ -129,10 +142,12 @@
           <div class="cards-kicker" id="cards-kicker">NIVEAU SUPÉRIEUR !</div>
           <h2>Choisis une carte</h2>
           <p>Son pouvoir dure jusqu’à la fin de ce tableau.</p>
+          <div class="cards-lock" id="cards-lock"><i></i><span class="wait">Regarde bien…</span><span class="go">Choisis une carte !</span></div>
           <div class="cards" id="card-list"></div>
         </div>
       </div>
       <div id="overlay-result" class="overlay hidden"><div class="result-panel" id="result-panel"></div></div>
+      <div id="overlay-cheats" class="overlay hidden"><div class="cheat-box"><div class="pause-kicker">🧪 Cheats</div><div class="cheat-list" id="cheat-list"></div><div class="cheat-team hidden" id="cheat-team"></div><div class="pause-buttons"><button id="btn-cheats-close" class="lego primary">✔ Fermer</button></div></div></div>
       <aside id="debug-panel" class="debug-panel hidden" aria-label="Debug"></aside>
     </div>
   </section>
@@ -170,6 +185,10 @@
       <div class="setting-row"><button type="button" id="btn-music" class="lego small" aria-label="Couper ou remettre la musique">🎵</button><input type="range" id="vol-music" min="0" max="100" step="5" value="55" aria-label="Volume de la musique"></div>
     </div>
     <p class="level-intro">Glisse les barres pour régler chaque volume. Le petit bouton coupe ou remet le son d’un coup.</p>
+    <div class="setting">
+      <label><span class="ico">✨</span> Effets visuels <b id="fx-val">Auto</b></label>
+      <div class="setting-row"><button type="button" id="btn-fx" class="lego small">✨ Changer</button><small id="fx-hint">Auto : le jeu allège les effets tout seul si ça rame.</small></div>
+    </div>
     <div class="setting danger-zone">
       <label><span class="ico">🗑️</span> Données du jeu</label>
       <div class="setting-row"><button type="button" id="btn-wipe" class="lego small danger">🗑️ Tout effacer</button><small>Profils, or, niveaux et étoiles de toute la famille.</small></div>
@@ -226,7 +245,9 @@
 <script src="js/save.js"></script>
 <script src="js/game.js"></script>
 <script src="js/render.js"></script>
+<script src="js/render-plus.js"></script>
 <script src="js/map.js"></script>
+<script src="js/map-life.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/music.js"></script>
 <script src="js/input.js"></script>

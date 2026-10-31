@@ -63,7 +63,7 @@
       { enemy: 'cerf', name: 'Cerf', icon: '🦌', hint: 'Paisible. Donne deux morceaux de viande : cuits si une bombe le tue, crus avec un autre coup.' },
       { enemy: 'lapin_gentil', name: 'Lapin gentil', icon: '🐇', hint: 'Paisible. Donne un morceau de viande : cuit si une bombe le tue, cru autrement.' },
       { enemy: 'chien', name: 'Chien', icon: '🐶', hint: 'Pacifique : renifle et remue la queue. Approche-toi : il te suit un peu. Entrée ou Shift pour le caresser.' },
-      { enemy: 'chat', name: 'Chat', icon: '🐱', hint: 'Pacifique : marche et se repose assis. Il te suit un peu quand tu approches. Entrée ou Shift pour le caresser.' },
+      { enemy: 'chat', opts:'cat', name: 'Chat', icon: '🐱', hint: 'Pacifique : marche et se repose assis. Il te suit un peu quand tu approches. Entrée ou Shift pour le caresser.' },
       { enemy: 'oiseau', name: 'Oiseau', icon: '🐦', hint: 'Pacifique : petits vols près du sol, puis se pose. Ces animaux restent près de leur point de départ et ne comptent pas comme monstres.' },
     ] },
     { id: 'ennemis', name: 'Ennemis', items: [
@@ -140,7 +140,7 @@
     rebuild() {
       const prev = this.world, W = this.world = new BK.World({ map: this.rows(), theme: this.map.theme, mode: 'adventure', hearts: true, explore: true, itemChance: 0, exitKind:this.map.roomExit?'door':'portal', houses: this.houses, props: this.props }); W.frozen = true;W.editorPreview=true; if(this.map.roomExit) W.ensureRoomExit(false);
       if (prev) { W.clouds = prev.clouds; W.time = prev.time; }   // le ciel ne change pas à chaque coup de pinceau
-      for (const e of this.enemies) W.addEnemy(e.type, e.c, e.r, {shellColor:e.shellColor});
+      for (const e of this.enemies) W.addEnemy(e.type, e.c, e.r, {shellColor:e.shellColor, catColor:e.catColor});
       for (const n of this.npcs) { const npc = W.addNpc(BK.charById(n.id) || BK.charById('richard'), n.c, n.r, n.lines || []);  if(n.ally){npc.recruit=true;npc.say='🤝 '+(n.price||0)+' pièces · '+(n.lives||3)+' vies';npc.sayT=999;} }
       W.displays = this.shop.map(s => ({ c: s.c, r: s.r, id: s.item, icon: (BK.ITEMS[s.item] || BK.ITEMS.bomb).icon, price: s.price, once: s.once, affordable: true }));
       if (W.starts[0]) { const p = W.addPlayer(BK.charById(BK.selectedChar || 'zachary'), W.starts[0].c, W.starts[0].r); p.pose = 'idle'; }
@@ -196,7 +196,7 @@
       if(it.ally) {if(!first)return;this.npcs=this.npcs.filter(n=>n.c!==c||n.r!==r);this.npcs.push({c,r,ally:true,id:this.opts.ally.id,price:Math.max(0,Math.round(this.opts.ally.price)),lives:Math.max(1,Math.min(9,Math.round(this.opts.ally.lives)))});if('~ '.includes(this.grid[r][c]))this.grid[r][c]=this.map.base;this.rebuild();return;}
       if (it.npc) { if (!first) return; this.npcs = this.npcs.filter(e => e.c !== c || e.r !== r); this.npcs.push({ c, r, id: this.opts.npc.id, lines: [this.opts.npc.line || 'Bienvenue !'] }); if ('~ '.includes(this.grid[r][c])) this.grid[r][c] = this.map.base; this.rebuild(); return; }
       if (it.shop) { if (!first) return; this.shop = this.shop.filter(e => e.c !== c || e.r !== r); this.shop.push({ c, r, item: this.opts.shop.item, price: Math.max(0, Math.round(+this.opts.shop.price || 0)), once: !!this.opts.shop.once }); if ('~ '.includes(this.grid[r][c])) this.grid[r][c] = this.map.base; this.rebuild(); return; }
-      if (it.enemy) { if (!first) return; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r); this.enemies.push({ type: it.enemy, c, r, ...(it.enemy==='escargot'?{shellColor:this.snailColor||'default'}:{}) }); if (this.grid[r][c] === ' ' || (this.grid[r][c] === '~' && it.enemy !== 'marin')) this.grid[r][c] = '.'; this.rebuild(); return; }
+      if (it.enemy) { if (!first) return; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r); this.enemies.push({ type: it.enemy, c, r, ...(it.enemy==='escargot'?{shellColor:this.snailColor||'default'}:{}), ...(it.enemy==='chat'?{catColor:this.catColor||'roux'}:{}) }); if (this.grid[r][c] === ' ' || (this.grid[r][c] === '~' && it.enemy !== 'marin')) this.grid[r][c] = '.'; this.rebuild(); return; }
       const key = c + ',' + r, same = this.grid[r][c] === it.ch && (!it.deco || (this.props[key] || {}).deco === it.deco) && (!it.pickup || (this.props[key] || {}).item === it.pickup), TERRAIN = '~ .,:;/=-_%&!yzq}{[])¡¢£¥€';
       if (same && !it.opts && !it.deco && !BK.DECO[it.ch]) return;
       // niveau du plancher sous l'objet : on le mémorise pour qu'il reste sur le plateau (ou au sol)
@@ -342,7 +342,7 @@
         const roomDoor=this.map.roomExit && it.ch==='G', icon=roomDoor?'🚪':it.icon, name=roomDoor?'Sortie de la pièce':it.name;
         const b = document.createElement('button'); b.className = 'item' + (it === this.item ? ' on' : ''); b.innerHTML = '<span class="ic">' + icon + '</span><span>' + name + '</span>' + (tabName ? '<span class="small">' + tabName + '</span>' : ''); if (it.hint) b.title = roomDoor?'Une case de plancher pour retourner dehors.':it.hint;
         if(it.enemy&&BK.ENEMIES[it.enemy]?.bestiary){const canvas=document.createElement('canvas');canvas.width=96;canvas.height=96;canvas.style.width='64px';canvas.style.height='64px';canvas.setAttribute('aria-hidden','true');const ctx=canvas.getContext('2d');ctx.translate(48,88);BK.sprites.drawEnemy(ctx,it.enemy,{s:BK.ENEMIES[it.enemy].boss?47:75,t:0});b.querySelector('.ic').replaceChildren(canvas);}
-        b.addEventListener('click', () => { if (it.tool === 'undo') { this.undo(); return; } if (it.tool === 'fill') { if (confirm('Remplir tout le tableau avec « ' + (TABS[0].items.find(x => x.ch === (this.lastTerrain || '.')) || {}).name + ' » ? Les ennemis seront retirés.')) { this.snapshot(); this.paint(0, 0, true); } return; } this.item = it; items.querySelectorAll('.item').forEach(x => x.classList.toggle('on', x === b)); this.renderOptions(); });
+        b.addEventListener('click', () => { if (it.tool === 'undo') { this.undo(); return; } if (it.tool === 'fill') { BK.confirmDialog({ title: '🪣 Tout remplir ?', text: 'Remplir tout le tableau avec « ' + (TABS[0].items.find(x => x.ch === (this.lastTerrain || '.')) || {}).name + ' » ? Les ennemis seront retirés.', confirmLabel: 'Remplir', onConfirm: () => { this.snapshot(); this.paint(0, 0, true); } }); return; } this.item = it; items.querySelectorAll('.item').forEach(x => x.classList.toggle('on', x === b)); this.renderOptions(); });
         return b;
       };
       this.showTab = showTab;
@@ -432,6 +432,7 @@
         box.appendChild(note);
       }
       if(it.opts==='snail') sel('couleur de coquille',Object.entries(BK.SNAIL_COLORS).map(([k,v])=>[k,v.name]),this.snailColor||'default',v=>this.snailColor=v);
+      if(it.opts==='cat') sel('couleur du chat',Object.entries(BK.CAT_COLORS).map(([k,v])=>[k,v.name]),this.catColor||'roux',v=>this.catColor=v);
       if(it.opts!=='secretWall'&&(it.deco||BK.DECO[it.ch])) sel('orientation',[[0,'↓ Sud (devant)'],[1,'← Ouest (gauche)'],[2,'↑ Nord (derrière)'],[3,'→ Est (droite)']],this.orientation,v=>this.orientation=Number(v));
       if(BK.LIGHT_KINDS.includes(it.deco||BK.DECO[it.ch]?.[0])) sel('couleur de lumière',Object.entries(BK.LIGHT_COLORS).map(([id,v])=>[id,v.name]),this.lightColor,v=>this.lightColor=v);
       if(BK.WALL_DECOR.has(it.deco)){const hint=document.createElement('span');hint.textContent='Dans une pièce, clique un mur pour accrocher le décor. Gomme : décrocher sans enlever le mur.';box.appendChild(hint);}
@@ -441,7 +442,7 @@
       if (it.opts === 'npc') { sel('qui', Object.keys(BK.CHARACTERS).map(id => [id, BK.CHARACTERS[id].name]), this.opts.npc.id, v => this.opts.npc.id = v); const l = document.createElement('label'); l.textContent = 'phrase '; const inp = document.createElement('input'); inp.type = 'text'; inp.value = this.opts.npc.line; inp.size = 28; inp.addEventListener('input', () => this.opts.npc.line = inp.value); l.appendChild(inp); box.appendChild(l); }
       else if (it.opts === 'shop') {
         sel('objet', Object.keys(BK.ITEMS).filter(k=>!BK.ITEMS[k].snailColor).map(k => [k, BK.ITEMS[k].icon + ' ' + BK.ITEMS[k].name]), this.opts.shop.item, v => this.opts.shop.item = v);
-        const l = document.createElement('label'); l.textContent = 'prix 🪙 '; const inp = document.createElement('input'); inp.type = 'number'; inp.min = 0; inp.max = 999; inp.value = this.opts.shop.price; inp.style.width = '70px'; inp.addEventListener('input', () => this.opts.shop.price = +inp.value); l.appendChild(inp); box.appendChild(l);
+        const l = document.createElement('label'); l.textContent = 'prix (pièces d’or) '; const inp = document.createElement('input'); inp.type = 'number'; inp.min = 0; inp.max = 999; inp.value = this.opts.shop.price; inp.style.width = '70px'; inp.addEventListener('input', () => this.opts.shop.price = +inp.value); l.appendChild(inp); box.appendChild(l);
         sel('vente', [['once', 'Une seule fois (disparaît)'], ['many', 'Autant qu’on veut']], this.opts.shop.once ? 'once' : 'many', v => this.opts.shop.once = v === 'once');
       }
       if (it.opts === 'mountain') { const M = this.opts.mountain; sel('largeur', [1, 2, 3, 4, 5, 6, 7].map(n => [n, n + (n > 1 ? ' cases' : ' case')]), M.w, v => M.w = +v); sel('profondeur', [1, 2, 3, 4, 5].map(n => [n, n + (n > 1 ? ' cases' : ' case')]), M.d, v => M.d = +v); sel('hauteur', [2, 3, 4, 5, 6, 7, 8].map(n => [n, n + ' étages']), M.h, v => M.h = +v); sel('type', [['neige', 'Montagne de neige'], ['terre', 'Montagne de terre'], ['roche', 'Montagne de roche'], ['herbe', 'Montagne d’herbe']], M.type, v => M.type = v); }
@@ -538,8 +539,8 @@
     }
     exportJson() { const blob = new Blob([JSON.stringify(this.data(), null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (this.map.name || 'tableau').replace(/[^\w\-]+/g, '_') + '.bomberkid.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
     importJson() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json'; inp.addEventListener('change', () => { const f = inp.files[0]; if (!f) return; f.text().then(txt => { const m = JSON.parse(txt); if (!m || !Array.isArray(m.grid)) throw Error('format'); BK.openEditor(m); }).catch(() => alert('Fichier non reconnu.')); }); inp.click(); }
-    remove() { if (!confirm('Supprimer « ' + this.map.name + ' » ? Le tableau disparaîtra de « Mes tableaux ».')) return; BK.deleteMap(this.map.id); BK.editor = null; BK.current = null; BK.toMenu(); }
-    quit() { if (this.parent) { this.returnToParent(); return; } if (this.dirty && !confirm('Des changements ne sont pas sauvegardés. Quitter quand même ?')) return; BK.current = null; BK.toMenu(); }
+    remove() { BK.confirmDialog({ title: '🗑️ Supprimer le tableau ?', text: '« ' + this.map.name + ' » disparaîtra de « Mes tableaux ».', confirmLabel: 'Supprimer', onConfirm: () => { BK.deleteMap(this.map.id); BK.editor = null; BK.current = null; BK.toMenu(); } }); }
+    quit() { if (this.parent) { this.returnToParent(); return; } const leave = () => { BK.current = null; BK.toMenu(); }; if (this.dirty) BK.confirmDialog({ title: '✏️ Changements non sauvegardés', text: 'Des changements ne sont pas sauvegardés. Quitter quand même ?', cancelLabel: 'Rester', confirmLabel: 'Quitter sans sauvegarder', onConfirm: leave }); else leave(); }
   }
   BK.Editor = Editor; BK.EDITOR_TABS = TABS;
 })(window.BK);

@@ -101,7 +101,7 @@
       p.found = []; p.inv = (this.save.inv || []).filter(s => s.n > 0).map(s => ({ type: s.type, n: s.n, perm: s.n, ...(s.snails?{snails:s.snails.map(sn=>({...sn}))}:{}) })); p.bagSlots = (this.save.bagSlots || []).slice(); p.quickSlots = (this.save.quickSlots || []).slice(); void prev; void keepPowers;
       if(this.challenge?.kind==='timing'){p.kick=true;this.timingHits=0;this.timingNext=0;W.timingTarget={c:this.challenge.target,r:3};}
       this.deliverBossLoot();
-      for (const en of s.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor});
+      for (const en of s.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor, catColor:en.catColor});
       if (BK.music) BK.music.play(s.music && BK.hasInstrument(W) ? s.music : this.stageMusic());
       if (s.custom || (s.npcs && s.npcs.length) || (s.shop && s.shop.length)) this.setupShop(W, s, 'map:' + (s.mapId || s.name));
       for (const sp of W.spawns) { const type = ENEMY_CODES[sp.code]; if (!type) continue; const e = W.addEnemy(type, sp.c, sp.r); if (e.boss && s.bossHp) { e.hp = e.maxHp = s.bossHp; } if (e.boss && s.bossName) e.name = s.bossName; if (s.id === '2-3') e.fast = true; }
@@ -207,8 +207,8 @@
           if (e.type === 'honeyUsed' && e.player === p) this.toast('Flaque de miel ! Les monstres qui y marchent sont englués.', 2.5);
           if (e.type === 'honeyEmpty' && e.player === p) this.toast('Tu as utilisé tout le pot de miel.', 2.5);
           if (e.type === 'invFull' && e.player === p) this.toast('Sac plein : 24 objets différents au maximum.', 2);
-          if (e.type === 'dusk') this.toast(p.lantern ? 'Le soir tombe… la fée de ta lanterne se réveille et s’allume.' : 'Le soir tombe. Une lanterne à fée (magasin) éclairerait la nuit.', 3.5);
-          if (e.type === 'dawn') this.toast(p.lantern ? 'Le jour se lève. La fée s’endort… zzz' : 'Le jour se lève.', 3);
+          if (e.type === 'dusk') this.toast(BK.wearsLantern(p) ? 'Le soir tombe… la fée de ta lanterne se réveille et s’allume.' : 'Le soir tombe. Une lanterne à fée (magasin) éclairerait la nuit.', 3.5);
+          if (e.type === 'dawn') this.toast(BK.wearsLantern(p) ? 'Le jour se lève. La fée s’endort… zzz' : 'Le jour se lève.', 3);
           if (e.type === 'needKick' && e.player === p) this.toast('Il faut d’abord trouver le coup de pied.', 2);
           if(e.type==='campfireFueled'&&e.player===p)this.toast('Bois ajouté : +15 secondes !',2);
           if (e.type === 'campfireBuilt' && e.player === p) this.toast('Feu de camp allumé ! Approche-toi pour te soigner ou cuisiner.', 3);
@@ -398,16 +398,17 @@
     }
     buy(d) {
       if(d.ally)return this.recruit(d);
-      const W = this.world, p = this.player, it = BK.ITEMS[d.id], npc = W.players.find(n => n.npc) || null, say = (t) => { if (npc) { npc.say = t; npc.sayT = 3.5; } };
+      const W = this.world, p = this.player, it = BK.ITEMS[d.id], npc = W.players.find(n => n.npc) || null, say = (t) => BK.say(npc, t);
       if (d.soldOut) { this.toast('Épuisé : cet article a déjà été acheté.', 2); say('Désolé, c’est vendu !'); BK.audio.hurt(); return false; }
       const gold = this.save.gold || 0; if (gold < d.price) { const m = d.price - gold; this.toast('Il te manque ' + m + ' pièce' + (m > 1 ? 's' : '') + ' d’or.', 2.5); say('Reviens avec plus de pièces !'); BK.audio.hurt(); return false; }
       // un achat est pour toujours : bombe, flamme, patins et coup de pied s'ajoutent aux améliorations (comme chez grand-maman), les pots de miel restent dans l'inventaire
-      const PERM = { bomb: ['bombsMax', BK.MAX_BOMBS], fire: ['fire', BK.MAX_FIRE], speed: ['speedUp', BK.MAX_SPEED_UP], kick: ['kick', 1], gloves: ['gloves', 1], lantern: ['lantern', 1] };
+      const PERM = { bomb: ['bombsMax', BK.MAX_BOMBS], fire: ['fire', BK.MAX_FIRE], speed: ['speedUp', BK.MAX_SPEED_UP], kick: ['kick', 1], gloves: ['gloves', 1] };   // la lanterne, elle, va dans le sac puis la ceinture
       for (const key of BK.BOMB_POWERS) PERM[key] = [key,1];
       if (d.id === 'fusion' && !p.kick) { this.toast('Il faut d’abord trouver le coup de pied.', 2); return false; }
       if (PERM[d.id] && (p[PERM[d.id][0]] || 0) >= PERM[d.id][1]) { this.toast('Déjà au maximum !', 2); say('Tu en as déjà le maximum !'); BK.audio.hurt(); return false; }
-      if (!W.giveItem(p, d.id, d.id === 'heart' ? 20 : 3, true)) { this.toast('Sac plein : 24 objets différents au maximum.', 2); return false; }
-      if (PERM[d.id]) { this.save.upgrades = this.save.upgrades || {}; this.save.upgrades[d.id] = d.id === 'kick' || d.id === 'gloves' || d.id === 'lantern' || BK.BOMB_POWERS.includes(d.id) ? 1 : (this.save.upgrades[d.id] || 0) + 1; }
+      if (d.id === 'lantern' && (p.inv || []).some(s => s.type === 'lantern' && s.n > 0)) { this.toast('Tu as déjà une lanterne dans ton sac : mets-la dans ta ceinture pour la porter.', 3); say('Tu en as déjà une ! Range-la dans ta ceinture.'); BK.audio.hurt(); return false; }
+      if (!W.giveItem(p, d.id, d.id === 'heart' ? 20 : d.id === 'lantern' ? 1 : 3, true)) { this.toast('Sac plein : 24 objets différents au maximum.', 2); return false; }
+      if (PERM[d.id]) { this.save.upgrades = this.save.upgrades || {}; this.save.upgrades[d.id] = d.id === 'kick' || d.id === 'gloves' || BK.BOMB_POWERS.includes(d.id) ? 1 : (this.save.upgrades[d.id] || 0) + 1; }
       this.save.gold = gold - d.price; this.goldDirty = true; if (d.once) { d.soldOut = true; this.save.bought = this.save.bought || {}; this.save.bought[d.key] = true; }
       this.syncInv(); BK.saveAdventure(this.charId, this.save); say('Merci ! ' + it.name + ' : ' + it.desc); this.toast(it.icon + ' ' + it.name + ' acheté pour 🪙 ' + d.price + '.', 2.5); W.burst(d.c + 0.5, d.r + 0.5, 0.4, '#ffd54a', 12);
       return true;
@@ -523,7 +524,7 @@
       const W = this.world = new BK.World({ map: BK.roomMap(it.grid,it.roomExit), theme: it.theme || 'interior', mode: 'adventure', hearts: true, explore: true, itemChance: 0.25, softChance: 0.75, coins: true, houses: {}, props: it.props || {}, exitKind: 'door' });
       const savedTerrariums=this.outer.world.terrariumRooms?.[key];if(savedTerrariums)for(const [k,state] of Object.entries(savedTerrariums))if(W.props[k]?.deco==='terrarium'){W.props[k].snails=state.snails.map(s=>({...s}));W.props[k].snailFood=state.food?JSON.parse(JSON.stringify(state.food)):null;W.props[k].snailSatiety=state.satiety||0;}
       W.ensureRoomExit();
-      for (const en of it.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor});
+      for (const en of it.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor, catColor:en.catColor});
       const residents=this.outer.world.snailResidents?.[key];if(residents){W.enemies=W.enemies.filter(e=>e.type!=='escargot');for(const sn of residents)W.addEnemy('escargot',Math.floor(sn.x),Math.floor(sn.y),{...sn,home:{c:Math.floor(sn.x),r:Math.floor(sn.y)}});}
       this.setupShop(W, it, 'house:' + (this.stage.mapId || this.stage.id) + ':' + key);
       const st = W.starts[0] || { c: 1, r: 1 }, o = this.outer.player, p = this.player = W.addPlayer(this.def, st.c, st.r, { hp: o.maxHp });
@@ -729,7 +730,7 @@
       // HUD
       const s = this.stage;
       ctx.save(); ctx.font = 'bold 22px Nunito, sans-serif'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, 14, 12, 420, 60, 14); ctx.fill();
+      BK.sprites.uiPanel(ctx, 14, 12, 420, 60);
       // barre de vie : cœur, cadre métal, dégradé rouge → orange → jaune selon les points de vie restants
       ctx.font = '26px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('❤️', 22, 30);
       const bx = 58, by = 19, bw = 350, bh = 22; ctx.fillStyle = '#5a6678'; BK.sprites.rr(ctx, bx - 3, by - 3, bw + 6, bh + 6, 9); ctx.fill(); ctx.fillStyle = '#1b2236'; BK.sprites.rr(ctx, bx, by, bw, bh, 7); ctx.fill();
@@ -737,15 +738,15 @@
       ctx.font = 'bold 13px Nunito, sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 3; ctx.strokeText(Math.ceil(p.hp) + ' / ' + p.maxHp, bx + bw - 8, by + bh / 2 + 1); ctx.fillText(Math.ceil(p.hp) + ' / ' + p.maxHp, bx + bw - 8, by + bh / 2 + 1);
       if (p.feastT > 0) { const m = Math.floor(p.feastT / 60), sec = Math.floor(p.feastT % 60); ctx.fillStyle = '#ff8a1f'; BK.sprites.rr(ctx, bx + bw + 10, by - 2, 118, 26, 9); ctx.fill(); ctx.font = 'bold 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText('🍖 vie ×2 ' + m + ':' + String(sec).padStart(2, '0'), bx + bw + 69, by + 12); }
       if (p.poison > 0) { const px = bx + bw + 10 + (p.feastT > 0 ? 126 : 0); ctx.fillStyle = Math.floor(this.stateT * 4) % 2 ? '#2e7d32' : '#43a047'; BK.sprites.rr(ctx, px, by - 2, 112, 26, 9); ctx.fill(); ctx.font = 'bold 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText('☠️ poison ' + Math.ceil(p.poison) + ' s', px + 56, by + 12); }
-      ctx.globalAlpha = 1; ctx.font = 'bold 20px Nunito, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
-      ctx.fillText('💣 ×' + (p.bombsMax - p.bombsOut) + '/' + p.bombsMax + '   🔥 ' + p.fire + (p.kick ? '   🦵' : '') + (p.gloves ? '   🧤' : '') + (p.lantern ? '   🏮' : '') + (p.speedUp ? '   ⚡' + p.speedUp : ''), 22, 58);
-      const lv = BK.levelFromXp(this.save.xp || 0); ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, 14, 78, 260, 26, 10); ctx.fill();
-      ctx.fillStyle = '#2a3650'; BK.sprites.rr(ctx, 96, 86, 168, 10, 5); ctx.fill(); ctx.fillStyle = '#8fe3ff'; BK.sprites.rr(ctx, 96, 86, 168 * lv.current / lv.needed, 10, 5); ctx.fill();
-      ctx.font = 'bold 15px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText('Niveau ' + lv.level, 24, 91); ctx.font = 'bold 11px Nunito, sans-serif'; ctx.fillStyle = '#cfe3ff'; ctx.textAlign = 'right'; ctx.fillText(lv.current + ' / ' + lv.needed + ' XP', 262, 91);
+      ctx.globalAlpha = 1; ctx.font = 'bold 20px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.text; ctx.textAlign = 'left';
+      ctx.fillText('💣 ×' + (p.bombsMax - p.bombsOut) + '/' + p.bombsMax + '   🔥 ' + p.fire + (p.kick ? '   🦵' : '') + (p.gloves ? '   🧤' : '') + (BK.wearsLantern(p) ? '   🏮' : '') + (p.speedUp ? '   ⚡' + p.speedUp : ''), 22, 58);
+      const lv = BK.levelFromXp(this.save.xp || 0); BK.sprites.uiPanel(ctx, 14, 78, 260, 26, { r: 10 });
+      ctx.fillStyle = '#c9dcf0'; BK.sprites.rr(ctx, 96, 86, 168, 10, 5); ctx.fill(); ctx.fillStyle = '#3f9cff'; BK.sprites.rr(ctx, 96, 86, 168 * lv.current / lv.needed, 10, 5); ctx.fill();
+      ctx.font = 'bold 15px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = BK.sprites.UI.text; ctx.fillText('Niveau ' + lv.level, 24, 91); ctx.font = 'bold 11px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.textAlign = 'right'; ctx.fillText(lv.current + ' / ' + lv.needed + ' XP', 262, 91);
       // stamina : barre verte (jaune quand on court), points de stat à placer
-      ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, 14, 108, 260, 24, 10); ctx.fill(); ctx.fillStyle = '#2a3650'; BK.sprites.rr(ctx, 96, 115, 168, 10, 5); ctx.fill();
+      BK.sprites.uiPanel(ctx, 14, 108, 260, 24, { r: 10 }); ctx.fillStyle = '#c9dcf0'; BK.sprites.rr(ctx, 96, 115, 168, 10, 5); ctx.fill();
       ctx.fillStyle = p.running ? '#ffd54a' : p.stamina < 20 ? '#ff6b6b' : '#49e26a'; BK.sprites.rr(ctx, 96, 115, 168 * p.stamina / p.staminaMax, 10, 5); ctx.fill();
-      ctx.font = 'bold 14px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText('Stamina', 24, 120); ctx.font = 'bold 11px Nunito, sans-serif'; ctx.fillStyle = '#cfe3ff'; ctx.textAlign = 'right'; ctx.fillText(Math.round(p.stamina) + ' / ' + p.staminaMax, 262, 120);
+      ctx.font = 'bold 14px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = BK.sprites.UI.text; ctx.fillText('Stamina', 24, 120); ctx.font = 'bold 11px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.textAlign = 'right'; ctx.fillText(Math.round(p.stamina) + ' / ' + p.staminaMax, 262, 120);
       const effects = [];
       if (p.diarrheaT > 0) effects.push('💣 Diarrhée de bombes · '+Math.ceil(p.diarrheaT)+' s');
       if (p.shortfuseT > 0) effects.push('⏱ Mèche courte · '+Math.ceil(p.shortfuseT)+' s');
@@ -753,24 +754,24 @@
       effects.forEach((label,i) => { ctx.fillStyle='rgba(70,25,45,.9)'; BK.sprites.rr(ctx,14,172+i*30,370,26,9);ctx.fill();ctx.font='bold 14px Nunito, sans-serif';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(label,24,185+i*30); });
       if (p.found && p.found.length) {   // objets trouvés dans ce tableau (perdus à la fin), avec leur nombre
         let x = 14; const y = 138;
-        for (const f of p.found) { const it = BK.ITEMS[f.type]; if (!it) continue; const w = 30 + (f.n > 1 ? 30 : 8); ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, x, y, w, 26, 9); ctx.fill(); ctx.font = '17px sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText(it.icon, x + 7, y + 14); if (f.n > 1) { ctx.font = 'bold 13px Nunito, sans-serif'; ctx.fillStyle = '#ffd54a'; ctx.fillText('×' + f.n, x + 31, y + 14); } x += w + 6; }
+        for (const f of p.found) { const it = BK.ITEMS[f.type]; if (!it) continue; const w = 30 + (f.n > 1 ? 30 : 8); BK.sprites.uiPanel(ctx, x, y, w, 26, { r: 9, lineWidth: 2 }); ctx.font = '17px sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText(it.icon, x + 7, y + 14); if (f.n > 1) { ctx.font = 'bold 13px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.gold; ctx.fillText('×' + f.n, x + 31, y + 14); } x += w + 6; }
 
       }
       if (this.save.points) { ctx.save();if(W.enemies.some(e=>(e.arenaBoss||e.castleBoss)&&!e.dead))ctx.translate(BK.W-486,0);ctx.fillStyle = '#ffd54a'; BK.sprites.rr(ctx, 282, 108, 190, 24, 10); ctx.fill(); ctx.font = 'bold 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2a4a'; ctx.fillText('Tab : ' + this.save.points + ' point' + (this.save.points > 1 ? 's' : '') + ' à placer', 377, 120);ctx.restore(); }
       ctx.font = 'bold 22px Nunito, sans-serif';
-      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, BK.W - 334, 12, 320, 60, 14); ctx.fill();
-      ctx.fillStyle = '#ffd54a'; BK.sprites.textWithCoin(ctx, 'SCORE ' + String(this.score).padStart(6, '0') + '   🪙 ' + (this.save.gold || 0), BK.W - 30, 30);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillText(this.objectiveText() + '   ·   ' + '👤 × ' + this.lives, BK.W - 30, 56);
-      ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, BK.W / 2 - 150, 12, 300, 36, 12); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillText(s.id + ' · ' + s.name + (W.dayCycle ? '   ' + W.dayIcon() : ''), BK.W / 2, 30);
+      ctx.textAlign = 'right'; BK.sprites.uiPanel(ctx, BK.W - 454, 12, 320, 60);   // laisse la case du bouton Pause libre
+      ctx.fillStyle = BK.sprites.UI.gold; BK.sprites.textWithCoin(ctx, 'SCORE ' + String(this.score).padStart(6, '0') + '   🪙 ' + (this.save.gold || 0), BK.W - 150, 30);
+      ctx.fillStyle = BK.sprites.UI.text; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillText(this.objectiveText() + '   ·   ' + '👤 × ' + this.lives, BK.W - 150, 56);
+      ctx.textAlign = 'center'; BK.sprites.uiPanel(ctx, BK.W / 2 - 150, 12, 300, 36, { r: 12 });
+      ctx.fillStyle = BK.sprites.UI.text; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillText(s.id + ' · ' + s.name + (W.dayCycle ? '   ' + W.dayIcon() : ''), BK.W / 2, 30);
       if(this.challenge)BK.drawChallengeProgress(ctx,this.challenge,this);
-      if (this.challenge && this.challenge.time) { const tl = Math.max(0, this.timeLeft), low = tl < 15; ctx.fillStyle = low && Math.floor(this.stateT * 4) % 2 ? 'rgba(217,52,43,0.8)' : 'rgba(0,0,0,0.45)'; BK.sprites.rr(ctx, BK.W / 2 - 60, 52, 120, 30, 10); ctx.fill(); ctx.fillStyle = low ? '#ffb3a7' : '#ffd54a'; ctx.font = '900 20px Nunito, sans-serif'; ctx.fillText('⏱ ' + Math.floor(tl / 60) + ':' + String(Math.floor(tl % 60)).padStart(2, '0'), BK.W / 2, 67); }
+      if (this.challenge && this.challenge.time) { const tl = Math.max(0, this.timeLeft), low = tl < 15; BK.sprites.uiPanel(ctx, BK.W / 2 - 60, 52, 120, 30, { r: 10, fill: low && Math.floor(this.stateT * 4) % 2 ? 'rgba(255,205,200,0.95)' : undefined }); ctx.fillStyle = low ? BK.sprites.UI.bad : BK.sprites.UI.gold; ctx.font = '900 20px Nunito, sans-serif'; ctx.fillText('⏱ ' + Math.floor(tl / 60) + ':' + String(Math.floor(tl % 60)).padStart(2, '0'), BK.W / 2, 67); }
       this.drawAllyPanel(ctx);
       this.drawBossHealth(ctx);
       if(p.swallowedBy||p.tongueSlow>0){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#49325f';BK.sprites.rr(ctx,BK.W/2-240,BK.H-185,480,p.swallowedBy?82:66,16);ctx.fill();ctx.fillStyle='#fff0a3';ctx.font='900 20px Nunito,sans-serif';ctx.fillText(p.swallowedBy?'🐸 Avalé ! Tapote vite 💣 / Espace !':'🐸 Langue collante : vitesse −80 %',BK.W/2,BK.H-162);ctx.font='bold 16px Nunito,sans-serif';ctx.fillStyle='#fff';ctx.fillText(p.swallowedBy?'Libération dans '+Math.ceil(p.swallowT)+' s · Chaque appui aide !':Math.ceil(p.tongueSlow)+' s restantes',BK.W/2,BK.H-137);if(p.swallowedBy){const bw=400,ratio=Math.max(0,Math.min(1,p.swallowT/(p.swallowMax||6)));ctx.fillStyle='#241b36';BK.sprites.rr(ctx,BK.W/2-bw/2,BK.H-121,bw,9,5);ctx.fill();if(ratio>0){ctx.fillStyle='#82e3b0';BK.sprites.rr(ctx,BK.W/2-bw/2,BK.H-121,bw*ratio,9,5);ctx.fill();}}ctx.restore();}
       BK.inventoryLayout(p); this.invRects = []; for (let i = 0; i < BK.QUICK_SIZE; i++) {   // huit raccourcis, touches 1–8 (Q/W pour les deux premiers)
         const x = BK.W / 2 - 252 + i * 64, y = BK.H - 76, sz = 56, slot = (p.inv || []).find(s => s.type === p.quickSlots[i]); this.invRects.push({ x, y, w: sz, h: sz, i });
-        ctx.fillStyle = slot ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.3)'; BK.sprites.rr(ctx, x, y, sz, sz, 14); ctx.fill(); ctx.strokeStyle = slot ? '#ffd54a' : 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; BK.sprites.rr(ctx, x, y, sz, sz, 14); ctx.stroke();
+        ctx.fillStyle = slot ? 'rgba(234,246,255,0.93)' : 'rgba(234,246,255,0.4)'; BK.sprites.rr(ctx, x, y, sz, sz, 14); ctx.fill(); ctx.strokeStyle = slot ? '#ffc53f' : 'rgba(255,255,255,0.75)'; ctx.lineWidth = 3; BK.sprites.rr(ctx, x, y, sz, sz, 14); ctx.stroke();
         ctx.font = 'bold 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#cfe3ff'; ctx.fillText(i === 0 ? '1 · Q' : i === 1 ? '2 · W' : String(i + 1), x + sz / 2, y - 10);
         if (slot) { ctx.save(); ctx.translate(x + sz/2,y + sz*0.75); BK.sprites.drawItem(ctx,slot.type,sz*0.7,0); ctx.restore(); if (!BK.ITEMS[slot.type].unique) { ctx.fillStyle = '#ff5a4a'; ctx.beginPath(); ctx.arc(x + sz - 8, y + sz - 8, 13, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.font = '900 15px Nunito, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(slot.n, x + sz - 8, y + sz - 7); } }
       }

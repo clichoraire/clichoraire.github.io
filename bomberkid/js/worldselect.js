@@ -51,8 +51,11 @@
       for (const W of this.islands) W.players.length = 0; for (const s of this.stageIslands) s.W.players.length = 0;
       const onStage = (this.mode === 'stages' || this.mode === 'zoomIn') && this.stageIslands.length;
       const W = onStage ? this.stageIslands[this.stageIndex].W : this.islands[this.index];
-      this.player = W.addPlayer(this.def, onStage ? 3 : 2, onStage&&W.previewStage?5:3); this.player.dir = 0; this.player.pose = 'idle';
+      this.player = W.addPlayer(this.def, onStage ? 3 : 2, onStage&&W.previewStage?5:3); this.player.dir = 0; this.player.pose = 'idle'; this.playerWorld = W; this.equipPlayer();
     }
+    // Le héros de la carte porte son sac (achats et pots de miel de la sauvegarde) : I ou le bouton « Mon sac » l'ouvrent.
+    equipPlayer() { const p = this.player, save = this.save; if (!p) return; BK.applyStats(p, save); p.found = []; p.inv = (save.inv || []).filter(s => s.n > 0).map(s => ({ type: s.type, n: s.n, perm: s.n, ...(s.snails ? { snails: s.snails.map(sn => ({ ...sn })) } : {}) })); p.bagSlots = (save.bagSlots || []).slice(); p.quickSlots = (save.quickSlots || []).slice(); }
+    bagHost() { const p = this.player, W = this.playerWorld; if (!p || !W) return null; return { player: p, world: W, save: this.save, charId: this.charId, syncInv: () => { BK.normalizeRemedyBag(p); this.save.bagSlots = (p.bagSlots || []).slice(); this.save.quickSlots = (p.quickSlots || []).slice(); this.save.inv = (p.inv || []).filter(s => (s.perm || 0) > 0).map(s => ({ type: s.type, n: s.perm, ...(BK.ITEMS[s.type]?.snailColor ? { snails: BK.snailStack(s).filter(sn => sn.perm).map(sn => ({ ...sn })) } : {}) })); } }; }
     // Ouvre un monde : une petite île par tableau, avec au centre le marqueur de son objectif
     // (portail, boss, monstres ou interrupteur). Le tableau choisi d'office : le premier pas encore réussi.
     openWorld(i, instant) {
@@ -104,8 +107,8 @@
       if (x < 300 && y > 250 && y < 520) this.move(-1); else if (x > 980 && y > 250 && y < 520) this.move(1);
       else if (x > 300 && x < 980 && y > 150 && y < 600) this.enter();
     }
-    resetProgress() {
-      if (!confirm('Effacer la progression de ' + this.def.name + ' ?')) return;
+    resetProgress() { BK.confirmDialog({ title: '🗑️ Effacer la progression ?', text: 'La progression de ' + this.def.name + ' dans l’aventure (tableaux réussis, meilleurs scores) sera effacée. L’or de la famille et les défis sont conservés.', confirmLabel: 'Effacer', onConfirm: () => this.doResetProgress() }); }
+    doResetProgress() {
       BK.saveAdventure(this.charId, { unlocked: 1, best: {}, score: 0 }); this.save = BK.loadAdventure(this.charId);
       this.unlocked = this.worlds.map((w, i) => w.custom || w.hub || (!w.soon && (this.firstIndex[i] === 0 || this.save.unlocked > this.firstIndex[i])));
 if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.index = this.pos = 1; this.openWorld(1, true); }
@@ -124,6 +127,7 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
         }
         return;
       }
+      if (K.hit(['KeyI']) && (this.mode === 'worlds' || this.mode === 'stages')) { BK.openInventory(this); return; }
       if (K.hit(['ArrowLeft', 'KeyA'])) this.move(-1); if (K.hit(['ArrowRight', 'KeyD'])) this.move(1);
       if (K.hit(['Enter', 'Space', 'KeyX'])) this.enter();
       if (K.hit(['Escape'])) { if (this.mode === 'stages') this.back(); else { BK.current = null; BK.pickCharacter(BK.adventurePicker()); } }
@@ -145,11 +149,10 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
       ctx.restore();
       if (locked) { const c = cam.project(W.cols / 2, W.rows / 2, o.castle ? 3.4 : 2.2); ctx.font = Math.round(56 * scale) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🔒', c.x, c.y); }
     }
-    panel(ctx, x, y, w, h) { ctx.fillStyle = 'rgba(10,20,40,0.55)'; BK.sprites.rr(ctx, x, y, w, h, 18); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; BK.sprites.rr(ctx, x, y, w, h, 18); ctx.stroke(); }
-    title(ctx, text, x, y, size, color) { ctx.font = '900 ' + size + 'px Nunito, "Arial Rounded MT Bold", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b2a4a'; ctx.lineWidth = size * 0.18; ctx.strokeText(text, x, y + size * 0.06); ctx.fillStyle = color; ctx.fillText(text, x, y); }
+    panel(ctx, x, y, w, h) { BK.sprites.uiPanel(ctx, x, y, w, h, { r: 18 }); }
+    title(ctx, text, x, y, size, color) { ctx.font = '900 ' + size + 'px Nunito, "Arial Rounded MT Bold", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.strokeStyle = color === BK.sprites.UI.text || color === BK.sprites.UI.bad ? '#ffffff' : '#1b2a4a'; ctx.lineWidth = size * (color === BK.sprites.UI.text || color === BK.sprites.UI.bad ? 0.1 : 0.18); ctx.strokeText(text, x, y + size * 0.06); ctx.fillStyle = color; ctx.fillText(text, x, y); }
     button(ctx, label, x, y, w, h, action, primary) {
-      ctx.fillStyle = primary ? '#ff5a4a' : 'rgba(10,20,40,0.7)'; BK.sprites.rr(ctx, x, y, w, h, 14); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2; BK.sprites.rr(ctx, x, y, w, h, 14); ctx.stroke();
-      ctx.font = 'bold 19px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(label, x + w / 2, y + h / 2);
+      BK.sprites.uiButton(ctx, x, y, w, h, label, { primary });
       this.rects.push({ x, y, w, h, action });
     }
     render(ctx) {
@@ -183,11 +186,11 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
         this.title(ctx, 'CHOISIS TON MONDE', 640, 58, 54, '#ffd54a');
         const w = this.worlds[this.index], done = w.stages.filter(s => this.save.best[s.id]).length;
         this.panel(ctx, 340, 598, 600, 96);
-        this.title(ctx, w.name, 640, 630, 40, this.flash > 0 ? '#ff6b6b' : '#ffffff');
-        ctx.font = 'bold 20px Nunito, sans-serif'; ctx.fillStyle = '#cfe3ff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; BK.sprites.textWithCoin(ctx, w.soon ? 'Bientôt…' : w.hub ? 'La maison de Josée et Richard, et le magasin · 🪙 ' + (this.save.gold || 0) : w.custom ? (w.stages.length ? w.stages.length + ' tableau' + (w.stages.length > 1 ? 'x' : '') + ' créé' + (w.stages.length > 1 ? 's' : '') + ' dans l’éditeur' : 'Aucun tableau : crée-en un avec l’Éditeur !') : this.unlocked[this.index] ? done + ' / ' + w.stages.length + ' tableaux réussis' : 'Termine le monde précédent pour y aller', 640, 672);
+        this.title(ctx, w.name, 640, 630, 40, this.flash > 0 ? BK.sprites.UI.bad : BK.sprites.UI.text);
+        ctx.font = 'bold 20px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; BK.sprites.textWithCoin(ctx, w.soon ? 'Bientôt…' : w.hub ? 'La maison de Josée et Richard, et le magasin · 🪙 ' + (this.save.gold || 0) : w.custom ? (w.stages.length ? w.stages.length + ' tableau' + (w.stages.length > 1 ? 'x' : '') + ' créé' + (w.stages.length > 1 ? 's' : '') + ' dans l’éditeur' : 'Aucun tableau : crée-en un avec l’Éditeur !') : this.unlocked[this.index] ? done + ' / ' + w.stages.length + ' tableaux réussis' : 'Termine le monde précédent pour y aller', 640, 672);
         const pt = Math.floor(BK.playTime || 0), hh = String(Math.floor(pt / 3600)).padStart(2, '0'), mm = String(Math.floor(pt % 3600 / 60)).padStart(2, '0');
-        this.panel(ctx, 24, 614, 250, 80); ctx.textAlign = 'left'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillStyle = '#cfe3ff'; ctx.fillText('Temps de jeu', 44, 640); ctx.font = '900 30px Nunito, sans-serif'; ctx.fillStyle = '#ffd54a'; ctx.fillText(hh + ' h ' + mm + ' min', 44, 674);
-        this.panel(ctx, 1006, 614, 250, 80); ctx.textAlign = 'right'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillStyle = '#cfe3ff'; ctx.fillText(this.def.name, 1236, 640); ctx.font = '900 26px Nunito, sans-serif'; ctx.fillStyle = '#ffd54a'; BK.sprites.textWithCoin(ctx, 'Niveau ' + BK.levelFromXp(this.save.xp || 0).level + ' · 🪙 ' + (this.save.gold || 0), 1236, 674);
+        this.panel(ctx, 24, 24, 250, 80); ctx.textAlign = 'left'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.fillText('Temps de jeu', 44, 50); ctx.font = '900 30px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.gold; ctx.fillText(hh + ' h ' + mm + ' min', 44, 84);
+        this.panel(ctx, 1006, 24, 250, 80); ctx.textAlign = 'right'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.fillText(this.def.name, 1236, 50); ctx.font = '900 26px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.gold; BK.sprites.textWithCoin(ctx, 'Niveau ' + BK.levelFromXp(this.save.xp || 0).level + ' · 🪙 ' + (this.save.gold || 0), 1236, 84);
         ctx.font = 'bold 17px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText('← → choisir   ·   Entrée ou clic : entrer   ·   Échap : retour', 640, 712);
         ctx.restore();
       }
@@ -197,8 +200,8 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
     renderStages(ctx, z) {
       const S = this.stageIslands, n = S.length, w = this.world, spacing = Math.min(250, 1120 / Math.max(1, n));
       ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, (z - 0.5) * 2));
-      this.title(ctx, w.name.toUpperCase(), 640, 58, 48, '#ffd54a');
-      ctx.font = 'bold 20px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff'; ctx.fillText(this.save.score ? 'Meilleur score : ' + this.save.score + '  ·  Choisis un tableau' : 'Choisis un tableau. Les suivants se débloquent en réussissant le précédent.', 640, 100);
+      this.title(ctx, w.name.toUpperCase(), 640, 58, 48, BK.sprites.UI.gold);
+      ctx.font = 'bold 20px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = BK.sprites.UI.text; ctx.fillText(this.save.score ? 'Meilleur score : ' + this.save.score + '  ·  Choisis un tableau' : 'Choisis un tableau. Les suivants se débloquent en réussissant le précédent.', 640, 100);
       ctx.restore();
       const order = S.map((s, k) => k).sort((a, b) => (a === this.stageIndex) - (b === this.stageIndex));
       for (const k of order) {
@@ -209,7 +212,7 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
         this.drawIsland(ctx, s.W, x, y, scale, s.locked, {});
         // étiquette : numéro, nom, objectif
         const u = scale / 0.6;
-        this.title(ctx, s.stage.id+(s.stage.id==='1-5'?' · BOSS':''), x, y - (s.stage.id==='1-5'?134:104) * u, Math.round(26 * u), sel ? '#ffd54a' : '#ffffff');
+        this.title(ctx, s.stage.id+(s.stage.id==='1-5'?' · BOSS':''), x, y - (s.stage.id==='1-5'?134:104) * u, Math.round(26 * u), sel ? BK.sprites.UI.gold : BK.sprites.UI.text);
         ctx.font = 'bold ' + Math.round(17 * u) + 'px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b2a4a'; ctx.lineWidth = 4; ctx.strokeText((s.locked ? '🔒 ' : s.done ? '⭐ ' : '') + s.stage.name, x, y + 98 * u); ctx.fillStyle = '#fff'; ctx.fillText((s.locked ? '🔒 ' : s.done ? '⭐ ' : '') + s.stage.name, x, y + 98 * u);
         ctx.restore();
         this.rects.push({ x: x - 115 * u, y: y - 125 * u, w: 230 * u, h: 250 * u, k });
@@ -220,12 +223,12 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
       if (st) {
         const s = st.stage, obj = s.objective === 'boss' ? (s.bossName || (s.id.endsWith('5') ? 'Mini-boss' : 'Boss')) + ' 👑' : s.objective === 'switches' ? 'Interrupteurs 🔘' : s.objective === 'goal' ? 'Trouve le portail 🌀' : 'Monstres 👾';
         this.panel(ctx, 300, 596, 680, 100);
-        this.title(ctx, s.id + ' · ' + s.name, 640, 628, 34, this.flash > 0 ? '#ff6b6b' : st.locked ? '#9fb0c8' : '#ffffff');
-        ctx.font = 'bold 19px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#cfe3ff';
+        this.title(ctx, s.id + ' · ' + s.name, 640, 628, 34, this.flash > 0 ? BK.sprites.UI.bad : st.locked ? '#9fb0c8' : BK.sprites.UI.text);
+        ctx.font = 'bold 19px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = BK.sprites.UI.muted;
         ctx.fillText(st.locked ? 'Réussis le tableau précédent pour le débloquer' : obj + (this.save.best[s.id] ? '   ·   Meilleur : ' + this.save.best[s.id] + ' pts' : '   ·   Pas encore réussi'), 640, 668);
       }
       this.button(ctx, '← Retour', 40, 640, 170, 50, () => this.back());
-      this.button(ctx, 'Effacer la progression', 1040, 640, 210, 50, () => this.resetProgress());
+      this.button(ctx, 'Effacer la progression', 1040, 24, 210, 50, () => this.resetProgress());
       ctx.font = 'bold 17px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText('← → choisir   ·   Entrée ou clic : jouer   ·   Échap : retour aux mondes', 640, 712);
     }
   }

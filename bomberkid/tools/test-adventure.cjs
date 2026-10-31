@@ -740,18 +740,18 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
 }
 // 50. défis : douze épreuves sur cinq niveaux, arènes jouables, récompense entière puis au quart
 {
-  ok(BK.CHALLENGES.length === 15 && BK.CHALLENGES.every(c => c.level >= 1 && c.level <= 5 && c.reward > 0 && ['arena','match','timing'].includes(c.kind)), 'quinze défis, dont trois missions de timing, niveaux 1 à 5');
+  ok(BK.CHALLENGES.length === 42 && BK.CHALLENGES.every(c => c.level >= 1 && c.level <= 5 && c.reward > 0 && ['arena','match','curling'].includes(c.kind)), 'quarante-deux défis (34 arènes à monstres, 4 styles de duel, 4 curlings), niveaux 1 à 5');
   for (const ch of BK.CHALLENGES.filter(c => c.kind === 'arena')) {
     const s = BK.challengeStage(ch), W = new BK.World({ map: s.map, theme: s.theme, mode: 'adventure', hearts: true, explore: true, houses: {}, props: s.props });
     const want = ch.enemies.reduce((a, [, n]) => a + n, 0); ok(s.enemies.length === want && W.starts[0] && s.objective === 'enemies', ch.id + ' : ' + want + ' monstres, un départ, objectif élimination');
     ok(s.enemies.every(e => !W.cell(e.c, e.r) && Math.abs(e.c - W.starts[0].c) + Math.abs(e.r - W.starts[0].r) >= 5), ch.id + ' : monstres sur des cases libres, loin du départ');
     if (ch.carrots) ok(Object.values(s.props).filter(v => v.deco === 'carrot').length === ch.carrots, ch.id + ' : ' + ch.carrots + ' carottes plantées');
     if (ch.group) { const sh = s.enemies.find(e => e.type === 'shaman'); ok(s.enemies.filter(e => e.type === 'orque').every(o => Math.abs(o.c - sh.c) + Math.abs(o.r - sh.r) <= 2), ch.id + ' : les orques commencent collés au shaman'); }
-    ok(Object.values(s.props).some(v => ['melon', 'cheese', 'gift', 'dirtblock'].includes(v.deco)), ch.id + ' : des blocs cubiques dans l’arène');
+    if (BK.ARENA_BIOMES[ch.biome].cubes) ok(Object.values(s.props).some(v => ['melon', 'cheese', 'gift', 'dirtblock'].includes(v.deco)), ch.id + ' : des blocs cubiques dans l’arène');
     const a = new BK.Adventure('adam', 0, { custom: s, challenge: ch }); a.state = 'play'; a.world.frozen = false; a.player.invuln = 999; for (let i = 0; i < 120; i++) a.update(1 / 60);
     ok(a.state === 'play' && a.lives === 2 && a.timeLeft < ch.time && a.timeLeft > ch.time - 3, ch.id + ' : deux vies, le chrono tourne');
   }
-  const ch = BK.CHALLENGES[0]; BK.saveChallenges({}); const g0 = BK.loadGold();
+  const ch = BK.CHALLENGES.find(c => c.kind === 'arena'); BK.saveChallenges({}); const g0 = BK.loadGold();
   { const a = new BK.Adventure('adam', 0, { custom: BK.challengeStage(ch), challenge: ch }); a.state = 'play'; a.world.frozen = false; a.timeLeft = 0.01; a.update(1 / 60); ok(a.state === 'over' && BK.loadGold() === g0, 'temps écoulé : défi raté, pas d’or'); }
   { const a = new BK.Adventure('adam', 0, { custom: BK.challengeStage(ch), challenge: ch }); a.state = 'play'; a.world.frozen = false; for (const e of a.world.enemies) e.dead = true; a.update(1 / 60); ok(a.state === 'clear' && BK.loadGold() === g0 + ch.reward && BK.loadChallenges()[ch.id].done === 1, 'tous les monstres vaincus : +' + ch.reward + ' pièces pour la famille'); }
   ok(BK.challengeReward(ch) === Math.round(ch.reward / 4) && BK.completeChallenge(ch, 0) === Math.round(ch.reward / 4) && BK.loadGold() === g0 + ch.reward + Math.round(ch.reward / 4), 'la deuxième réussite donne le quart');
@@ -1873,18 +1873,12 @@ for(const source of ['bomb','projectile']){
 }
 {
  ok(BK.challengeMedal(300).name==='Bronze'&&BK.challengeMedal(600).name==='Argent'&&BK.challengeMedal(850).name==='Or','seuils bronze, argent et or');
- const ch=BK.CHALLENGES.find(c=>c.id==='kick1'),save={unlocked:1,best:{},score:0,xp:0,gold:BK.loadGold()};
+ const ch=BK.CHALLENGES.find(c=>c.id==='curl1'),save={unlocked:1,best:{},score:0,xp:0,gold:BK.loadGold()};
  const reward=BK.awardChallenge(ch,900,'adam',save);ok(reward.xp===150&&save.xp===150&&save.points===BK.levelFromXp(150).level-1,'médailles donnent de l’expérience et les points des niveaux gagnés');
- const again=BK.awardChallenge(ch,400,'adam',save);ok(again.xp===13&&save.challengeRecords.kick1.best===900,'rejeu donne moins d’XP et conserve le meilleur score');
+ const again=BK.awardChallenge(ch,400,'adam',save);ok(again.xp===13&&save.challengeRecords.curl1.best===900,'rejeu donne moins d’XP et conserve le meilleur score');
  ok(BK.matchChallengeScore({rounds:1},{round:1,elapsed:0})===1000&&BK.matchChallengeScore({rounds:1},{round:1,elapsed:180})===500,'les matchs récompensent aussi la rapidité');
 }
-for(const ch of BK.CHALLENGES.filter(c=>c.kind==='timing')){
- const a=new BK.Adventure('adam',0,{custom:BK.challengeStage(ch),challenge:ch}),W=a.world,p=a.player;a.state='play';W.frozen=false;p.invuln=999;a.update(.01);
- ok(p.kick&&W.bombs[0]?.timingBall&&!a.objectiveDone(),ch.id+' fournit le kick et une bombe, sans victoire automatique');
- const wrong=W.bombs[0];wrong.cx=ch.target;wrong.cy=3;W.explodeBomb(wrong);W.events.forEach(e=>e.carry=true);a.update(.01);ok(a.timingHits===0,'explosion sur cible sans kick refusée');
- for(let n=0;n<ch.count;n++){W.flames=[];W.flameAt.clear();a.timingNext=0;a.update(.01);const b=W.bombs.find(b=>b.timingBall);b.t=(ch.target-3+.25)/BK.KICK_SPEED;W.kickBomb(b,3,p);for(let i=0;i<60&&a.state==='play'&&!b.exploded;i++)a.update(1/60);}
- ok(a.timingHits===ch.count&&a.state==='clear',ch.id+' validé par de vraies bombes glissantes explosant au centre');const done=BK.loadChallenges()[ch.id].done;a.clearStage();ok(BK.loadChallenges()[ch.id].done===done,'pas de double récompense');
-}
+// (Le curling « Bon timing » est testé dans tools/test-challenges-plus.cjs.)
 {
  const a=new BK.Adventure('adam',4),W=a.world,e=W.enemies.find(e=>e.arenaBoss);a.revealBossCrystal(e);a.spawnBossChest(e);ok(W.bossCrystal&&!W.bossCrystal.captured,'grand cristal révélé avec le coffre');a.openBossChest();ok(BK.loadAdventure('adam').crystals['1-5'],'cristal du premier boss sauvegardé à la récupération');
  const i=BK.stageList().findIndex(s=>s.id==='2-5'),last=new BK.Adventure('adam',i),boss=last.world.enemies.find(e=>e.boss);last.world.hurtEnemy(boss,last.player,99,'bomb');last.world.updateArenaEffects(4.1);const finalBoss=last.world.enemies.find(e=>e.castleFinal);last.world.hurtEnemy(finalBoss,last.player,99,'bomb');last.revealBossCrystal(finalBoss);last.spawnBossChest(finalBoss);ok(last.world.bossCrystal&&last.world.bossChest,'dernier boss révèle cristal et coffre');last.openBossChest();ok(BK.loadAdventure('adam').crystals['2-5'],'dernier cristal sauvegardé dans la collection');
@@ -1893,7 +1887,7 @@ for(const ch of BK.CHALLENGES.filter(c=>c.kind==='timing')){
 
 // La médaille et le chrono utilisent exactement le barème de la récompense.
 {
- const ch=BK.CHALLENGES.find(c=>c.id==='kick1'),run={timeLeft:90,lives:2};let v=BK.challengeProgress(ch,run);
+ const ch=BK.CHALLENGES.find(c=>c.id==='ballons'),run={timeLeft:90,lives:2};let v=BK.challengeProgress(ch,run);
  ok(v.medal.name==='Or'&&Math.abs(v.goldSeconds-27.09)<.001,'compte à rebours or au début de la mission');
  run.timeLeft-=v.goldSeconds-.001;ok(BK.challengeProgress(ch,run).medal.name==='Or','or juste avant la limite arrondie');run.timeLeft-=.002;v=BK.challengeProgress(ch,run);ok(v.medal.name==='Argent'&&v.goldSeconds===0,'argent dès que le délai de l’or est écoulé');
  run.timeLeft=90;run.lives=1;ok(BK.challengeProgress(ch,run).goldSeconds<10,'perdre une vie réduit le temps disponible pour l’or');run.timeLeft=0;ok(BK.challengeProgress(ch,run).medal.name==='Bronze','bronze en fin de chrono');
@@ -1903,7 +1897,7 @@ for(const ch of BK.CHALLENGES.filter(c=>c.kind==='timing')){
 
 // Alerte unique et transition or → argent, sans effets sonores déclenchés par le rendu.
 {
- const ch=BK.CHALLENGES.find(c=>c.id==='kick1'),run={timeLeft:90,lives:2};let sounds=0;const old=BK.audio.medalWarning;BK.audio.medalWarning=()=>sounds++;
+ const ch=BK.CHALLENGES.find(c=>c.id==='ballons'),run={timeLeft:90,lives:2};let sounds=0;const old=BK.audio.medalWarning;BK.audio.medalWarning=()=>sounds++;
  try{
   BK.updateChallengeFeedback(ch,run,.1);ok(!sounds,'aucune alerte avant les dix dernières secondes');
   run.timeLeft=72;BK.updateChallengeFeedback(ch,run,.1);ok(sounds===1&&run.medalFeedback.warned,'petit son en entrant dans les dix dernières secondes');
@@ -1915,7 +1909,7 @@ for(const ch of BK.CHALLENGES.filter(c=>c.kind==='timing')){
 }
 
 {
- const ch=BK.CHALLENGES.find(c=>c.id==='kick1'),run={timeLeft:25,lives:2};let warnings=0,drops=0;const old=BK.audio.medalWarning,oldDrop=BK.audio.medalDrop;BK.audio.medalWarning=()=>warnings++;BK.audio.medalDrop=()=>drops++;
+ const ch=BK.CHALLENGES.find(c=>c.id==='ballons'),run={timeLeft:25,lives:2};let warnings=0,drops=0;const old=BK.audio.medalWarning,oldDrop=BK.audio.medalDrop;BK.audio.medalWarning=()=>warnings++;BK.audio.medalDrop=()=>drops++;
  try{let v=BK.challengeProgress(ch,run);ok(v.medal.name==='Argent'&&Math.abs(v.silverSeconds-7.09)<.001,'compteur argent basé sur le seuil exact de 600 points');BK.updateChallengeFeedback(ch,run,.1);BK.updateChallengeFeedback(ch,run,.1);ok(warnings===1,'avertissement argent joué une seule fois');run.timeLeft=17;BK.updateChallengeFeedback(ch,run,.1);ok(drops===1&&run.medalFeedback.from==='🥈'&&run.medalFeedback.to==='🥉','son et animation argent vers bronze');BK.updateChallengeFeedback(ch,run,1);ok(drops===1&&!run.medalFeedback.transition,'transition bronze terminée sans répétition');}finally{BK.audio.medalWarning=old;BK.audio.medalDrop=oldDrop;}
 }
 {

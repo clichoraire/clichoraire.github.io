@@ -11,10 +11,22 @@
   BK.wrapText = (ctx, text, x, y, maxW, lh) => { const words = text.split(' '); let line = ''; for (const w of words) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); line = w; y += lh; } else line = t; } if (line) ctx.fillText(line, x, y); };
 
   // ---- fenêtre modale
-  const ov = { el: null, show(o) { const e = ov.el; e.classList.toggle('playful',!!o.playful); e.dataset.menu=o.playful||''; e.querySelector('h2').textContent = o.title || ''; const body = e.querySelector('.body'); body.innerHTML = o.html || (o.text ? '<p>' + o.text + '</p>' : ''); const btns = e.querySelector('.buttons'); btns.innerHTML = ''; for (const b of o.buttons || []) { const el = document.createElement('button'); el.textContent = b.label; if (b.primary) el.className = 'primary'; el.addEventListener('click', () => { BK.audio.click(); b.onClick && b.onClick(); }); btns.appendChild(el); } e.classList.add('on'); const first = btns.querySelector('button.primary') || btns.querySelector('button'); if (first) setTimeout(() => first.focus(), 50); }, hide() { ov.el.classList.remove('on'); } };
+  const ov = { el: null, show(o) { const e = ov.el; e.classList.toggle('playful',!o.plain); e.dataset.menu=o.plain?'':(o.playful||'default'); e.querySelector('h2').textContent = o.title || ''; const body = e.querySelector('.body'); body.innerHTML = o.html || (o.text ? '<p>' + o.text + '</p>' : ''); const btns = e.querySelector('.buttons'); btns.innerHTML = ''; for (const b of o.buttons || []) { const el = document.createElement('button'); el.textContent = b.label; if (b.primary) el.className = 'primary'; el.addEventListener('click', () => { BK.audio.click(); b.onClick && b.onClick(); }); btns.appendChild(el); } e.classList.add('on'); const first = btns.querySelector('button.primary') || btns.querySelector('button'); if (first) setTimeout(() => first.focus(), 50); }, hide() { ov.el.classList.remove('on'); } };
   BK.overlay = ov;
 
-  BK.showOptions = done => {BK.overlay.show({title:'Options',html:'<label><input id="friendly-fire" type="checkbox" '+(BK.settings.friendlyFire?'checked':'')+'> Tir allié</label><p>Autorise les bombes du héros à blesser ses alliés. Désactivé par défaut. Tes propres bombes restent dangereuses pour toi.</p>',buttons:[{label:'Fermer',primary:true,onClick:()=>{BK.overlay.hide();if(done)done();}}]});document.querySelector('#friendly-fire').onchange=e=>BK.setFriendlyFire(e.target.checked);};
+  BK.showOptions = done => {
+    BK.overlay.show({playful:'options',title:'⚙️ Options',html:'<label class="opt-switch"><input id="friendly-fire" type="checkbox" '+(BK.settings.friendlyFire?'checked':'')+'> <span><b>Tir allié</b><small>Autorise les bombes du héros à blesser ses alliés. Désactivé par défaut. Tes propres bombes restent dangereuses pour toi.</small></span></label><div class="opt-danger"><b>🗑️ Mes données</b><small>Efface toute la progression de Bomberkid sur cet appareil : aventures, or de la famille, défis, tableaux créés et réglages.</small><button type="button" id="btn-erase-data" class="danger">Effacer mes données…</button></div>',buttons:[{label:'Fermer',primary:true,onClick:()=>{BK.overlay.hide();if(done)done();}}]});
+    document.querySelector('#friendly-fire').onchange=e=>BK.setFriendlyFire(e.target.checked);
+    document.querySelector('#btn-erase-data').onclick=()=>{BK.audio.click();BK.confirmEraseData(done);};
+  };
+  // Confirmation moderne (remplace confirm()) : bouton principal = garder, bouton rouge = l'action irréversible.
+  BK.confirmDialog = o => { BK.overlay.show({ playful: 'danger', title: o.title, html: '<p>' + o.text + '</p>', buttons: [{ label: o.cancelLabel || 'Annuler', primary: true, onClick: () => { BK.overlay.hide(); if (o.onCancel) o.onCancel(); } }, { label: o.confirmLabel || 'Confirmer', onClick: () => { BK.overlay.hide(); if (o.onConfirm) o.onConfirm(); } }] }); const b = [...document.querySelectorAll('#overlay .buttons button')].find(x => x.textContent === (o.confirmLabel || 'Confirmer')); if (b) b.classList.add('danger'); };
+  // Effacement des données : dialogue de confirmation avec case à cocher, comme dans les autres jeux de la famille.
+  BK.confirmEraseData = done => {
+    BK.overlay.show({playful:'danger',title:'⚠️ Tout effacer ?',html:'<p class="danger-kicker">ATTENTION · ACTION DÉFINITIVE</p><p>Toutes les aventures, les niveaux, les pièces d’or de la famille, les objets, les défis et les tableaux créés dans Bomberkid seront effacés sur cet appareil.</p><p class="danger-warning">Tu ne pourras pas revenir en arrière.</p><label class="opt-switch"><input id="erase-consent" type="checkbox"> <span><b>Je comprends que toute la progression sera perdue.</b></span></label><p id="erase-error" class="danger-error" role="alert"></p>',buttons:[{label:'Garder mes données',primary:true,onClick:()=>BK.showOptions(done)},{label:'Tout effacer',onClick:()=>{if(!document.querySelector('#erase-consent')?.checked)return;try{for(const key of Object.keys(localStorage).filter(k=>k.startsWith('bk.')))localStorage.removeItem(key);location.reload();}catch(e){document.querySelector('#erase-error').textContent='Impossible d’effacer les données. Réessaie après avoir autorisé le stockage du navigateur.';}}}]});
+    const erase=[...document.querySelectorAll('#overlay .buttons button')].find(b=>b.textContent==='Tout effacer');if(erase){erase.disabled=true;erase.classList.add('danger');}
+    document.querySelector('#erase-consent').onchange=e=>{if(erase)erase.disabled=!e.target.checked;};
+  };
 
   // ---- sélection d'un personnage (commune aux deux modes)
   function portrait(def, size) {
@@ -22,6 +34,7 @@
     ctx.translate(size / 2, size * 0.9); BK.sprites.drawCharacter(ctx, def, { s: size * 0.62, pose: 'idle', t: 0, view: 'front' });
     return c;
   }
+  BK.portrait = portrait;
   BK.pickCharacter = o => {
     BK.show('chars'); $('#chars-title').textContent = o.title==='Défis'?'Qui relève le défi ?':o.title==='Aventure'?'Qui part à l’aventure ?':'Choisis ton héros !'; $('#chars-sub').textContent = 'Touche ton personnage préféré.';
     const grid = $('#char-grid'); grid.innerHTML = '';
@@ -47,7 +60,7 @@
     if (worldIndex === 'custom') {
       $('#adventure-title').textContent = 'Mes tableaux'; const maps = BK.loadMaps();
       $('#adventure-sub').textContent = maps.length ? 'Les tableaux créés dans l’éditeur, du plus récent au plus ancien.' : 'Aucun tableau pour l’instant : crée-en un avec le bouton Éditeur du menu.';
-      for (const m of maps) { const b = document.createElement('button'); b.className = 'stage'; b.innerHTML = '<b>' + esc(m.name) + '</b><span>' + m.cols + ' × ' + m.rows + ' · ' + esc((BK.THEMES[m.theme] || {}).name || m.theme) + '</span><small>' + (m.enemies || []).length + ' ennemi' + ((m.enemies || []).length > 1 ? 's' : '') + (m.grid.some(l => l.includes('G') || l.includes('|')) ? ' · but' : ' · élimination') + '</small>'; b.addEventListener('click', () => { BK.audio.click(); BK.editor = null; BK.show('game'); BK.current = new BK.Adventure(charId, 0, { custom: BK.mapToStage(m) }); }); const del = document.createElement('span'); del.className = 'del'; del.textContent = '🗑️'; del.title = 'Supprimer'; del.addEventListener('click', e => { e.stopPropagation(); if (confirm('Supprimer « ' + m.name + ' » ?')) { BK.deleteMap(m.id); BK.showAdventureSelect(charId, 'custom'); } }); b.appendChild(del); el.appendChild(b); }
+      for (const m of maps) { const b = document.createElement('button'); b.className = 'stage'; b.innerHTML = '<b>' + esc(m.name) + '</b><span>' + m.cols + ' × ' + m.rows + ' · ' + esc((BK.THEMES[m.theme] || {}).name || m.theme) + '</span><small>' + (m.enemies || []).length + ' ennemi' + ((m.enemies || []).length > 1 ? 's' : '') + (m.grid.some(l => l.includes('G') || l.includes('|')) ? ' · but' : ' · élimination') + '</small>'; b.addEventListener('click', () => { BK.audio.click(); BK.editor = null; BK.show('game'); BK.current = new BK.Adventure(charId, 0, { custom: BK.mapToStage(m) }); }); const del = document.createElement('span'); del.className = 'del'; del.textContent = '🗑️'; del.title = 'Supprimer'; del.addEventListener('click', e => { e.stopPropagation(); BK.confirmDialog({ title: '🗑️ Supprimer le tableau ?', text: '« ' + m.name + ' » disparaîtra de « Mes tableaux ».', confirmLabel: 'Supprimer', onConfirm: () => { BK.deleteMap(m.id); BK.showAdventureSelect(charId, 'custom'); } }); }); b.appendChild(del); el.appendChild(b); }
       $('#adventure-back').onclick = () => { BK.audio.click(); BK.showWorldSelect(charId); }; $('#adventure-reset').onclick = () => { BK.audio.click(); BK.openEditorSetup(); };
       $('#adventure-reset').textContent = 'Ouvrir l’éditeur'; return;
     }
@@ -65,7 +78,7 @@
       el.appendChild(b);
     });
     $('#adventure-back').onclick = () => { BK.audio.click(); BK.showWorldSelect(charId); };
-    $('#adventure-reset').onclick = () => { if (confirm('Effacer la progression de ' + BK.charById(charId).name + ' ?')) { BK.saveAdventure(charId, { unlocked: 1, best: {}, score: 0 }); BK.showAdventureSelect(charId, worldIndex); } };
+    $('#adventure-reset').onclick = () => { BK.confirmDialog({ title: '🗑️ Effacer la progression ?', text: 'La progression de ' + BK.charById(charId).name + ' dans l’aventure sera effacée. L’or de la famille et les défis sont conservés.', confirmLabel: 'Effacer', onConfirm: () => { BK.saveAdventure(charId, { unlocked: 1, best: {}, score: 0 }); BK.showAdventureSelect(charId, worldIndex); } }); };
   };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // ---- éditeur : taille, décor et fond, ou un tableau sauvegardé
@@ -76,7 +89,7 @@
     BK.overlay.show({ title: 'Nouveau tableau', html: '<div class="opt form"><label>Nom <input id="e-name" value="Mon tableau" maxlength="40"></label><label>Largeur <input id="e-cols" type="number" min="9" max="48" value="20"></label><label>Hauteur <input id="e-rows" type="number" min="7" max="48" value="16"></label><label>Décor <select id="e-theme">' + themes + '</select></label><label>Fond <select id="e-base"><option value="~">Eau</option><option value=" ">Vide (ciel)</option><option value=".">Pierre</option><option value=",">Gazon</option></select></label></div>' + saved,
       buttons: [{ label: 'Créer', primary: true, onClick: () => { const v = id => document.getElementById(id).value; const cols = Math.max(9, Math.min(48, +v('e-cols') || 20)), rows = Math.max(7, Math.min(48, +v('e-rows') || 16)); BK.overlay.hide(); BK.openEditor({ name: v('e-name') || 'Mon tableau', cols, rows, theme: v('e-theme'), base: v('e-base') }); } }, { label: 'Annuler', onClick: () => { BK.overlay.hide(); } }] });
     document.querySelectorAll('#overlay .saved button[data-id]').forEach(b => b.addEventListener('click', () => { const m = maps.find(x => x.id === b.dataset.id); if (m) { BK.overlay.hide(); BK.openEditor(m); } }));
-    document.querySelectorAll('#overlay .saved button[data-del]').forEach(b => b.addEventListener('click', () => { const m = maps.find(x => x.id === b.dataset.del); if (m && confirm('Supprimer « ' + m.name + ' » ?')) { BK.deleteMap(m.id); BK.overlay.hide(); BK.openEditorSetup(); } }));
+    document.querySelectorAll('#overlay .saved button[data-del]').forEach(b => b.addEventListener('click', () => { const m = maps.find(x => x.id === b.dataset.del); if (m) BK.confirmDialog({ title: '🗑️ Supprimer le tableau ?', text: '« ' + m.name + ' » disparaîtra de « Mes tableaux ».', confirmLabel: 'Supprimer', onConfirm: () => { BK.deleteMap(m.id); BK.openEditorSetup(); }, onCancel: () => BK.openEditorSetup() }); }));
   };
   BK.openEditor = (m, o) => { BK.show('editor'); BK.current = BK.editor = new BK.Editor(m, o); };
   BK.startHub = charId => { BK.show('game'); BK.current = new BK.Hub(charId); };
@@ -113,6 +126,7 @@
     const dt = Math.min(0.1, (now - last) / 1000 || 0); last = now; acc += dt;
     if (BK.refreshBagButton) BK.refreshBagButton();
     const pauseButton=$('#btn-pause'); if(pauseButton) pauseButton.hidden=!(BK.screen==='game' && BK.current?.showPause && BK.current.state==='play' && !BK.inventoryOpen);
+    if(pauseButton&&!pauseButton.hidden){const r=BK.canvas.getBoundingClientRect(),sc=r.width/BK.W,test=!$('#btn-stop-test').hidden;pauseButton.style.left=(r.left+BK.PAUSE_RECT.x*sc)+'px';pauseButton.style.top=(r.top+(test?BK.PAUSE_RECT.y+58:BK.PAUSE_RECT.y)*sc)+'px';pauseButton.style.width=(BK.PAUSE_RECT.w*sc)+'px';pauseButton.style.height=(BK.PAUSE_RECT.h*sc)+'px';pauseButton.style.fontSize=(17*sc)+'px';pauseButton.style.borderRadius=(14*sc)+'px';}
     const cur = BK.current; if (!cur) { BK.input.flush(); return; }
     let steps = 0;
     while (acc >= BK.STEP && steps < 4) { if (!BK.inventoryOpen) cur.update(BK.STEP); BK.input.flush(); acc -= BK.STEP; steps++; }
@@ -164,7 +178,9 @@
     if (h.has('map')) { fetch(h.get('map')).then(r => r.json()).then(m => { if (h.has('char') && BK.charById(h.get('char'))) BK.selectedChar = h.get('char'); if (h.has('editor')) BK.openEditor(m); else { BK.show('game'); BK.current = new BK.Adventure(BK.selectedChar, 0, { custom: BK.mapToStage(m) }); if (h.has('skip')) { BK.current.state = 'play'; BK.current.world.frozen = false; } } applyHash(h); }).catch(e => console.warn('map :', e)); return; }
     if (h.has('char') && BK.charById(h.get('char'))) BK.selectedChar = h.get('char');
     if (h.has('pick')) BK.pickCharacter(h.get('pick') === 'match' ? matchPicker() : adventurePicker());
-    else if (h.has('challenges')) BK.showChallenges(BK.selectedChar);
+    else if (h.has('options')) BK.showOptions();
+    else if (h.has('challenges')) BK.showChallenges(BK.selectedChar, h.get('challenges') || undefined);   // #challenges=match ouvre directement une île
+    else if (h.has('picker')) { const ch = BK.CHALLENGES.find(x => x.id === h.get('picker')); if (ch) { BK.showChallenges(BK.selectedChar, ch.kind); if (ch.kind === 'match') BK.pickDuelFoes(BK.selectedChar, ch); else if (ch.family) BK.pickCurlingFamily(BK.selectedChar, ch); } }
     else if (h.has('challenge')) { const ch = BK.CHALLENGES.find(x => x.id === h.get('challenge')); if (ch) { BK.startChallenge(BK.selectedChar, ch); if (h.has('skip') && BK.current && BK.current.world) { BK.current.state = 'play'; BK.current.world.frozen = false; } } }
     else if (h.has('worlds')) { BK.showWorldSelect(BK.selectedChar, h.has('zoom') ? { zoom: isNaN(+h.get('zoom')) ? h.get('zoom') : +h.get('zoom'), pick: h.get('choose') } : undefined); if (h.has('ff') && BK.current) { const n = Math.round(+h.get('ff') * 60); for (let i = 0; i < n; i++) BK.current.update(1 / 60); } }
     else if (h.has('hub')) BK.startHub(BK.selectedChar);

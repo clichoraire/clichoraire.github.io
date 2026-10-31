@@ -70,6 +70,10 @@
     sparkle: () => { tone(1800, 2600, .08, 'sine', .08); tone(2400, 3200, .08, 'sine', .06, .05); },
     bolt: () => { noise(.15, .2, 0, 4000); tone(2000, 400, .12, 'square', .1); },
     walk: () => tone(300, 400, .05, 'triangle', .06),
+    plane: () => { tone(110, 140, 2.2, 'sawtooth', .07); tone(220, 260, 2.2, 'square', .04, .1); noise(2, .05, 0, 800); },
+    party: () => { tone(700, 1400, .18, 'square', .12); tone(1400, 900, .22, 'square', .1, .18); noise(.08, .25, .02, 6000); for (let i = 0; i < 5; i++) tone(1800 + i * 150, 2200, .05, 'sine', .06, .3 + i * .06); },
+    zap: () => { tone(1600, 200, .16, 'square', .12); tone(2400, 400, .1, 'square', .08, .05); tone(60, 30, .4, 'sawtooth', .18, .1); },
+    chime: () => { [2093, 2637, 3136, 3951].forEach((f, i) => tone(f, f * 1.005, .6, 'sine', .09, i * .05)); noise(.04, .15, 0, 9000); },
   };
   A.sfx = name => { if (!A.enabled || !A.ctx || !SFX[name]) return; try { SFX[name](); } catch (e) { } };
 })(window.CB);
