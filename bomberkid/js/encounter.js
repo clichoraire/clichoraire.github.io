@@ -39,19 +39,22 @@
     if(e.toadAttack){const a=e.toadAttack;a.t-=dt;if(a.t>0)return true;
       e.toadAttack=null;e.toadCool=4;e.state='sit';e.stateT=0;
       const p=a.target;if(!p.alive||p.swallowedBy||p.air||p.falling||p.boat||!this.canSee(e,p,a.kind==='tongue'?3.5:1.8)||Math.abs(this.groundZ(e.x,e.y)-this.groundZ(p.x,p.y))>.4)return true;
-      if(a.kind==='tongue'){const dx=p.x-e.x,dy=p.y-e.y,along=dx*Math.cos(a.angle)+dy*Math.sin(a.angle),side=Math.abs(-dx*Math.sin(a.angle)+dy*Math.cos(a.angle));e.tongueT=.35;e.tongueEnd={x:e.x+Math.cos(a.angle)*3.5,y:e.y+Math.sin(a.angle)*3.5};if(along>0&&along<3.5&&side<p.r+.35&&!(p.invuln>0)){p.tongueSlow=3;p.running=false;p.vx=p.vy=0;}}
+      if(a.kind==='tongue'){const dx=p.x-e.x,dy=p.y-e.y,along=dx*Math.cos(a.angle)+dy*Math.sin(a.angle),side=Math.abs(-dx*Math.sin(a.angle)+dy*Math.cos(a.angle));e.tongueT=.35;e.tongueEnd={x:e.x+Math.cos(a.angle)*3.5,y:e.y+Math.sin(a.angle)*3.5};if(along>0&&along<3.5&&side<p.r+.45&&!(p.invuln>0)){
+        // langue collante : ralentit ; langue gloutonne : ramène le héros dans la bouche et l'avale
+        if(a.grab&&!(p.swallowSafe>0)){e.tongueEnd={x:p.x,y:p.y};p.x=e.x+Math.cos(a.angle)*.6;p.y=e.y+Math.sin(a.angle)*.6;if(this.swallowPlayer(e,p))return true;}
+        p.tongueSlow=3;p.running=false;p.vx=p.vy=0;}}
       else this.swallowPlayer(e,p);return true;
     }
     if(e.z>.1||e.state==='jump'||e.toadCool>0)return false;
     const p=this.nearestPlayer(e.x,e.y);if(!p||p.swallowedBy||p.boat||p.air||p.falling||p.swallowSafe>0||!this.canSee(e,p,3.5))return false;
     const kind=(e.toadAttackIndex||0)%2?'swallow':'tongue';if(kind==='swallow'&&Math.hypot(p.x-e.x,p.y-e.y)>1.8)return false;
     if(kind==='swallow'){e.preparingSwallow=true;if(p.invuln>0){e.state='sit';e.stateT=0;return true;}}
-    e.toadAttackIndex=(e.toadAttackIndex||0)+1;e.toadAttack={kind,t:.7,target:p,angle:Math.atan2(p.y-e.y,p.x-e.x)};return true;
+    e.toadAttackIndex=(e.toadAttackIndex||0)+1;e.toadAttack={kind,t:.7,target:p,angle:Math.atan2(p.y-e.y,p.x-e.x),grab:kind==='tongue'&&Math.random()<.5};return true;
   };
   W.setupFirstBoss=function(){
-    this.addEnemy('crapaud',8,13,{hp:4,maxHp:4,name:'Gardien crapaud',arenaGuard:true});
-    this.addEnemy('crapaud',16,13,{hp:4,maxHp:4,name:'Gardien crapaud',arenaGuard:true});
-    this.addEnemy('golem',12,8,{arenaBoss:true,phase:1,state:'sealed',name:'Roi Golem',hp:10,maxHp:10,score:0,kills:0,bombsOut:0,kick:true,attackIndex:0,attackCool:2});
+    this.addEnemy('crapaud',8,13,{hp:8,maxHp:8,name:'Gardien crapaud',arenaGuard:true});
+    this.addEnemy('crapaud',16,13,{hp:8,maxHp:8,name:'Gardien crapaud',arenaGuard:true});
+    this.addEnemy('golem',12,8,{arenaBoss:true,phase:1,state:'sealed',name:'Roi Golem',hp:20,maxHp:20,score:0,kills:0,bombsOut:0,kick:true,attackIndex:0,attackCool:2});
   };
   W.waterJetPoints=function(c,r){
     const props=this.props[c+','+r]||{},dir=((props.orientation||0)%4+4)%4,D=BK.DIRS[dir],out=[],z=this.hAt(c,r);
@@ -68,16 +71,44 @@
     this.arenaAnvils=(this.arenaAnvils||[]).filter(a=>a.t<a.warn+.8);
     for(const wave of this.arenaWaves||[]){wave.t+=dt;const radius=wave.t*2.8;for(const p of this.players)if(p.alive&&!p.npc&&!p.air&&!p.onBomb&&!wave.hit.has(p)&&Math.abs(Math.hypot(p.x-wave.x,p.y-wave.y)-radius)<.32&&this.canSee(wave,p,6)){wave.hit.add(p);this.hitPlayer(p,{kind:'shockwave',dmg:10});}}
     this.arenaWaves=(this.arenaWaves||[]).filter(w=>w.t<2);
+    // Séismes du golem : le sol se fend jusqu'au rayon annoncé, sauf pour qui est en l'air ou sur une bombe.
+    for(const q of this.arenaQuakes||[]){q.t+=dt;const radius=Math.min(q.R,q.t/.25*q.R);for(const p of this.players)if(p.alive&&!p.npc&&!p.air&&!p.onBomb&&!q.hit.has(p)&&Math.hypot(p.x-q.x,p.y-q.y)<radius+p.r&&Math.abs(this.groundZ(p.x,p.y)-q.z)<.6){q.hit.add(p);this.hitPlayer(p,{kind:'shockwave',dmg:q.dmg});}}
+    this.arenaQuakes=(this.arenaQuakes||[]).filter(q=>q.t<1.1);
+    for(const r of this.arenaRocks||[]){r.t+=dt;if(r.t>=r.dur&&!r.hit){r.hit=true;this.shake=Math.max(this.shake||0,.18);this.burst(r.x,r.y,.45,'#8f7a62',14,1);for(const p of this.players)if(p.alive&&!p.npc&&!p.air&&Math.hypot(p.x-r.x,p.y-r.y)<.8)this.hitPlayer(p,{kind:'anvil',dmg:12});}}
+    this.arenaRocks=(this.arenaRocks||[]).filter(r=>r.t<r.dur+.4);
+  };
+  W.firstBossQuake=function(x,y,R,dmg,e){
+    this.arenaQuakes=this.arenaQuakes||[];const cracks=Array.from({length:9},(_,i)=>i/9*Math.PI*2+Math.random()*.5);
+    this.arenaQuakes.push({x,y,z:this.groundZ(x,y),R,dmg,t:0,hit:new Set(),cracks});
+    this.shake=Math.max(this.shake||0,R>3?.65:.45);this.burst(x,y,R*.4,'#c9a06a',R>3?36:24,1);this.events.push({type:'stomp',enemy:e});
+  };
+  // Grand saut : il monte hors de l'écran, son ombre suit le héros puis s'arrête et grossit, et il retombe en séisme.
+  W.updateFirstBossLeap=function(e,dt){
+    const L=e.leap,UP=.45,SKY=e.phase===2?2.1:2.4,DOWN=.3;L.t+=dt;
+    if(L.stage==='up'){e.z=(Math.min(1,L.t/UP))**2*14;if(L.t>=UP){L.stage='sky';L.t=0;e.sky=true;}return;}
+    if(L.stage==='sky'){
+      const p=L.target;L.locked=L.t>=SKY*.55;
+      if(!L.locked&&p&&p.alive&&!p.swallowedBy){const dx=p.x-L.x,dy=p.y-L.y,d=Math.hypot(dx,dy),step=Math.min(d,2.6*dt);if(d>.01){L.x+=dx/d*step;L.y+=dy/d*step;}}
+      if(L.t>=SKY){const c=Math.floor(L.x),r=Math.floor(L.y);if(!this.inside(c,r)||this.cell(c,r)||!this.walkableTerrain(c,r)){const spot=this.freeCellNear(c,r)||{c:Math.floor(e.x),r:Math.floor(e.y)};L.x=spot.c+.5;L.y=spot.r+.5;}
+        L.stage='down';L.t=0;e.sky=false;e.x=L.x;e.y=L.y;}
+      return;
+    }
+    e.z=14*(1-Math.min(1,L.t/DOWN)**2);
+    if(L.t>=DOWN){e.z=0;e.leap=null;e.state='walk';e.attackCool=e.phase===2?1.8:2.6;this.firstBossQuake(e.x,e.y,3.5,e.phase===2?25:20,e);}
   };
   W.updateFirstBoss=function(e,dt){
     if(e.state==='sealed'){if(this.enemies.some(q=>q.arenaGuard&&!q.dead))return;e.state='walk';e.attackCool=2;this.events.push({type:'arenaAwake'});return;}
     if(e.state==='transform'){if(e.stateT<2)return;e.state='walk';e.attackCool=1.5;}
+    if(e.leap)return this.updateFirstBossLeap(e,dt);
     const p=this.nearestPlayer(e.x,e.y);if(!p)return;
     e.kickCool=Math.max(0,(e.kickCool||0)-dt);
     if(!e.kickCool){const b=this.bombs.find(b=>!b.rock&&b.state==='idle'&&Math.hypot(b.x-e.x,b.y-e.y)<1.4);if(b){const dx=p.x-b.x,dy=p.y-b.y,dir=Math.abs(dx)>Math.abs(dy)?(dx>0?3:1):(dy>0?0:2),D=BK.DIRS[dir];if(!this.cell(b.cx+D.dx,b.cy+D.dy)){this.kickBomb(b,dir,e);e.kickCool=1.8;}}}
-    if(e.attack){e.attack.t-=dt;if(e.attack.t>0)return;this.performFirstBossAttack(e,p,e.attack.kind);e.attack=null;e.attackCool=e.phase===2?1.5:2.3;return;}
+    if(e.attack){const a=e.attack;a.t-=dt;const u=1-Math.max(0,a.t)/a.max;
+      // prise d'élan : il lève le bras (et décolle un peu pour frapper le sol)
+      e.stomp=a.kind==='slam'?Math.min(1,u*1.4):a.kind==='rocks'?Math.min(1,u*1.2):a.kind==='leap'?Math.min(1,u*2):0;e.z=a.kind==='slam'&&u>.75?(u-.75)/.25*.7:0;
+      if(a.t>0)return;e.stomp=0;e.z=0;this.performFirstBossAttack(e,p,a.kind);e.attack=null;e.attackCool=e.phase===2?1.5:2.3;return;}
     e.attackCool-=dt;
-    if(e.attackCool<=0){const kinds=e.phase===2?['fire','anvils','bomb','wave']:['fire','anvils','bomb'];e.attack={kind:kinds[e.attackIndex++%kinds.length],t:e.phase===2?.85:1.1};e.aim=Math.atan2(p.y-e.y,p.x-e.x);return;}
+    if(e.attackCool<=0){const kinds=e.phase===2?['fire','rocks','slam','anvils','bomb','leap','wave','slam']:['fire','rocks','slam','anvils','bomb','leap'],kind=kinds[e.attackIndex++%kinds.length],t=kind==='slam'?(e.phase===2?1:1.2):kind==='leap'?.7:e.phase===2?.85:1.1;e.attack={kind,t,max:t};e.aim=Math.atan2(p.y-e.y,p.x-e.x);return;}
     const target=this.stepToward(Math.floor(e.x),Math.floor(e.y),Math.floor(p.x),Math.floor(p.y),(n,from)=>!this.blocked(n.c,n.r,e)&&this.walkableTerrain(n.c,n.r)&&this.canStep(from.c,from.r,n.c,n.r,e));
     if(target&&Math.hypot(p.x-e.x,p.y-e.y)>2)this.moveFree(e,target.c+.5,target.r+.5,e.phase===2?1.45:.85,dt);e.flip=p.x<e.x;
   };
@@ -88,13 +119,19 @@
       const spot=this.freeCellNear(Math.floor(p.x),Math.floor(p.y));if(!spot)return;const to={x:spot.c+.5,y:spot.r+.5};
       this.bombs.push({cx:Math.floor(e.x),cy:Math.floor(e.y),x:e.x,y:e.y,z:1,t:BK.BOMB_FUSE,fire:e.phase===2?3:2,damage:e.phase===2?2:1,level:e.phase===2?2:1,owner:e,state:'flying',from:{x:e.x,y:e.y,z:this.groundZ(e.x,e.y)+1.1},to:{...to,z:this.groundZ(to.x,to.y)},arc:1.3,thrower:e,flyT:0,flyDur:.75,passers:new Set(),born:this.time,dir:0});e.bombsOut++;
     }
+    if(kind==='slam')this.firstBossQuake(e.x,e.y,3,e.phase===2?20:15,e);
+    if(kind==='rocks'){this.arenaRocks=this.arenaRocks||[];const n=e.phase===2?3:2;for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,d=i?1+Math.random()*1.3:0,x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d;if(this.inside(Math.floor(x),Math.floor(y)))this.arenaRocks.push({x0:e.x,y0:e.y,x,y,t:-i*.25,dur:1.15,hit:false,seed:Math.random()*9});}}
+    if(kind==='leap'){e.leap={stage:'up',t:0,x:p.x,y:p.y,target:p};this.shake=Math.max(this.shake||0,.25);this.burst(e.x,e.y,.8,'#c9a06a',16,1);this.events.push({type:'stomp',enemy:e});}
     if(kind==='wave'){this.arenaWaves=this.arenaWaves||[];this.arenaWaves.push({x:e.x,y:e.y,t:0,hit:new Set()});this.shake=.2;}
   };
   W.renderArenaEffects=function(ctx,cam,time,push){
     this.renderTraps(ctx,cam,time,push);
     for(const e of this.enemies)if(e.type==='crapaud'&&!e.dead){
-      if(e.tongueT>0&&e.tongueEnd)push(e.y+.02,e.x,()=>{const a=cam.project(e.x,e.y,this.groundZ(e.x,e.y)+.45),b=cam.project(e.tongueEnd.x,e.tongueEnd.y,this.groundZ(e.x,e.y)+.3);ctx.save();ctx.strokeStyle='#ff79a5';ctx.lineWidth=Math.max(4,a.k*.1);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();});
-      if(e.toadAttack||e.swallowed)push(e.y+.03,e.x,()=>{const p=cam.project(e.x,e.y,this.groundZ(e.x,e.y));ctx.save();ctx.textAlign='center';ctx.font='bold 17px Nunito';ctx.strokeStyle='#352345';ctx.lineWidth=4;ctx.fillStyle='#fff1a1';const label=e.swallowed?'💣 '+e.swallowed.name+' est avalé !':e.toadAttack.kind==='tongue'?'⚠ Langue collante !':'⚠ Attention, il avale !';ctx.strokeText(label,p.x,p.y-p.k*2);ctx.fillText(label,p.x,p.y-p.k*2);ctx.restore();});
+      if(e.tongueT>0&&e.tongueEnd)push(e.y+.02,e.x,()=>{const a=cam.project(e.x,e.y,this.groundZ(e.x,e.y)+.45),b=cam.project(e.tongueEnd.x,e.tongueEnd.y,this.groundZ(e.x,e.y)+.3),w=Math.max(9,a.k*.26);ctx.save();ctx.lineCap='round';
+        // vraie langue de crapaud : large, bordée, une rainure au milieu et un gros bout collant
+        const line=(c,lw)=>{ctx.strokeStyle=c;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();};line('#a8325a',w+4);line('#ff79a5',w);line('#ffb3cc',w*.25);
+        ctx.fillStyle='#ff6b9a';ctx.strokeStyle='#a8325a';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(b.x,b.y,w*.95,w*.7,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='rgba(255,255,255,.55)';ctx.beginPath();ctx.ellipse(b.x-w*.3,b.y-w*.25,w*.3,w*.18,0,0,Math.PI*2);ctx.fill();ctx.restore();});
+      if(e.toadAttack||e.swallowed)push(e.y+.03,e.x,()=>{const p=cam.project(e.x,e.y,this.groundZ(e.x,e.y));ctx.save();ctx.textAlign='center';ctx.font='bold 17px Nunito';ctx.strokeStyle='#352345';ctx.lineWidth=4;ctx.fillStyle='#fff1a1';const label=e.swallowed?'💣 '+e.swallowed.name+' est avalé !':e.toadAttack.kind==='tongue'?(e.toadAttack.grab?'⚠ Langue gloutonne : il va t’avaler !':'⚠ Langue collante !'):'⚠ Attention, il avale !';ctx.strokeText(label,p.x,p.y-p.k*2);ctx.fillText(label,p.x,p.y-p.k*2);ctx.restore();});
     }
 
     if(this.timingTarget){const q=this.timingTarget;push(q.r+.02,q.c,()=>{const p=cam.project(q.c+.5,q.r+.5,.02);ctx.save();ctx.strokeStyle='#ffdf45';ctx.lineWidth=4;for(const radius of [.42,.25,.08]){ctx.beginPath();ctx.ellipse(p.x,p.y,p.k*radius,p.k*radius*.6,0,0,Math.PI*2);ctx.stroke();}ctx.restore();});}
@@ -107,6 +144,16 @@
       for(const [i,q] of this.waterJetPoints(c,r).entries())push(q.y,q.x,()=>{const p=cam.project(q.x,q.y,q.z+.25+Math.sin(time*12-i)*.035);ctx.save();ctx.fillStyle=i%2?'#c4f6ff':'#68c8ef';ctx.globalAlpha=.8;ctx.beginPath();ctx.ellipse(p.x,p.y,p.k*.15,p.k*.1,0,0,Math.PI*2);ctx.fill();ctx.restore();});
     }
     for(const a of this.arenaAnvils||[])push(a.y,a.x,()=>{const p=cam.project(a.x,a.y,this.groundZ(a.x,a.y));ctx.save();ctx.strokeStyle='#ff584f';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(p.x,p.y,p.k*.6,p.k*.3,0,0,Math.PI*2);ctx.stroke();ctx.font='bold 20px Nunito';ctx.textAlign='center';if(a.t<a.warn)ctx.fillText('⚠',p.x,p.y);else{const top=cam.project(a.x,a.y,this.groundZ(a.x,a.y)+Math.max(0,5*(1-(a.t-a.warn)/.45)));BK.sprites.drawDeco(ctx,'anvil',top.x,top.y,p.k*.8,time);}ctx.restore();});
+    const disc=(x,y,z,R,fill,stroke,lw)=>{ctx.beginPath();for(let i=0;i<=48;i++){const a=i/48*Math.PI*2,p=cam.project(x+Math.cos(a)*R,y+Math.sin(a)*R,z);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||3;ctx.stroke();}};
+    for(const e of this.enemies)if(e.arenaBoss&&!e.dead){
+      if(e.attack?.kind==='slam'){const u=1-Math.max(0,e.attack.t)/e.attack.max,z=this.groundZ(e.x,e.y)+.04;push(e.y-.45,e.x,()=>{ctx.save();disc(e.x,e.y,z,3,'rgba(255,90,50,'+(.1+.18*u+.06*Math.sin(time*16))+')','#ff5a3c',3);ctx.restore();});}
+      const L=e.leap;if(L&&L.stage!=='up'){const SKY=e.phase===2?2.1:2.4,u=L.stage==='down'?1:Math.min(1,L.t/SKY),z=this.groundZ(L.x,L.y)+.03;
+        push(L.y-.45,L.x,()=>{ctx.save();if(L.locked||L.stage==='down')disc(L.x,L.y,z,3.5,'rgba(255,90,50,'+(.06+.1*u)+')','rgba(255,90,50,'+(.5+.3*Math.sin(time*14))+')',3);disc(L.x,L.y,z,.3+1.3*u,'rgba(20,10,25,'+(.25+.45*u)+')');if(L.stage==='sky'){const t=cam.project(L.x,L.y,z+1.6);ctx.textAlign='center';ctx.font='bold 17px Nunito';ctx.lineWidth=4;ctx.strokeStyle='#302236';ctx.fillStyle='#fff3aa';const label=L.locked?'⬇ Il retombe ici ! Sauve-toi !':'⬆ Le golem a sauté…';ctx.strokeText(label,t.x,t.y);ctx.fillText(label,t.x,t.y);}ctx.restore();});}
+    }
+    for(const q of this.arenaQuakes||[])push(q.y-.45,q.x,()=>{const u=Math.min(1,q.t/.25),fade=Math.max(0,1-q.t/1.1),c=cam.project(q.x,q.y,q.z+.03);ctx.save();ctx.globalAlpha=fade;disc(q.x,q.y,q.z+.03,q.R*u,'rgba(150,95,50,.35)','#ffb066',4);ctx.strokeStyle='#3b2618';ctx.lineWidth=3;for(const a of q.cracks){ctx.beginPath();ctx.moveTo(c.x,c.y);for(let k=1;k<=4;k++){const d=q.R*u*k/4,w=(k%2?.25:-.25),p=cam.project(q.x+Math.cos(a+w*.3)*d,q.y+Math.sin(a+w*.3)*d,q.z+.03);ctx.lineTo(p.x,p.y);}ctx.stroke();}ctx.restore();});
+    for(const r of this.arenaRocks||[]){const u=Math.max(0,Math.min(1,r.t/r.dur)),gz=this.groundZ(r.x,r.y);
+      push(r.y-.45,r.x,()=>{const p=cam.project(r.x,r.y,gz+.03);ctx.save();ctx.globalAlpha=r.hit?Math.max(0,1-(r.t-r.dur)/.4):1;ctx.fillStyle='rgba(20,10,25,'+(.15+.35*u)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,p.k*(.2+.4*u),p.k*(.1+.2*u),0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ff584f';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(p.x,p.y,p.k*.6,p.k*.3,0,0,Math.PI*2);ctx.stroke();ctx.restore();});
+      if(r.t>0&&!r.hit){const x=r.x0+(r.x-r.x0)*u,y=r.y0+(r.y-r.y0)*u,z=gz+(1-u)*1.8+4*u*(1-u)*3;push(y+.2,x,()=>{const p=cam.project(x,y,z);BK.sprites.drawRock(ctx,p.x,p.y,p.k*.75,r.seed);});}}
     for(const wave of this.arenaWaves||[])push(wave.y,wave.x,()=>{ctx.save();ctx.strokeStyle='#ff9a45';ctx.lineWidth=4;ctx.beginPath();for(let i=0;i<=64;i++){const angle=i/64*Math.PI*2,p=cam.project(wave.x+Math.cos(angle)*wave.t*2.8,wave.y+Math.sin(angle)*wave.t*2.8,.08);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}ctx.stroke();ctx.restore();});
   };
 })(window.BK);

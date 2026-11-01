@@ -21,7 +21,7 @@
     { id: 'kick', name: 'Coup de pied', icon: '🦵', price: 60, max: 1, desc: 'Marche pour pousser une bombe, cours pour sauter dessus.' },
     { id: 'gloves', name: 'Gants de force', icon: '🧤', price: 70, max: 1, desc: 'Soulève les roches (Espace devant) et lance-les : 2 points de dégâts, un bond de plus. Deux lancers par roche.' },
     { id: 'heart', name: 'Cœur', icon: '❤️', price: 80, max: 2, desc: '10 points de vie max de plus, pour toujours.' },
-    { id: 'life', name: 'Vie en plus', icon: '👤', price: 50, max: 2, desc: 'Une vie de plus à chaque aventure.' },
+    { id: 'life', name: 'Vie en plus', icon: '💖', price: 50, max: 2, desc: 'Une vie de plus à chaque aventure.' },
     { id: 'lantern', name: 'Lanterne à fée', icon: '🏮', price: 90, max: 1, desc: 'Une petite fée dans une lanterne, accrochée au pantalon : elle s’allume le soir et éclaire autour de toi. Le jour, elle dort.' },
   ];
   BK.shopPrice = (item, owned) => item.price * (owned + 1);

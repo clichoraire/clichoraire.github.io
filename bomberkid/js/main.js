@@ -3,7 +3,7 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
   BK.current = null; BK.selectedChar = (() => { try { return localStorage.getItem('bk.char') || 'zachary'; } catch (e) { return 'zachary'; } })();
-  BK.show = id => { $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + id)); BK.screen = id; const st = document.getElementById('btn-stop-test'); if (st) st.hidden = true; if (BK.music) { if (id === 'editor') BK.music.play('editor'); else if (id !== 'game') BK.music.play('menu'); } if (id === 'menu') { const g = document.getElementById('menu-gold'); if (g && BK.loadGold) g.querySelector('span').textContent = BK.loadGold(); } };   // l'accueil affiche l'or de la famille
+  BK.show = id => { $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + id)); BK.screen = id; const st = document.getElementById('btn-stop-test'); if (st) st.hidden = true; if (BK.music) { if (id === 'editor') BK.music.play('editor'); else if (id !== 'game') BK.music.play('menu'); } if (id === 'menu') { const g = document.getElementById('menu-gold'); if (g && BK.loadGold) g.querySelector('span').textContent = BK.loadGold(); const dbg = document.getElementById('btn-debug'); if (dbg) dbg.style.display = BK.isCheater(BK.selectedChar) ? '' : 'none'; } };   // le bouton Debug n'apparaît que pour Matthieu   // l'accueil affiche l'or de la famille
   BK.toMenu = () => { BK.current = null; BK.show('menu'); };
   // Pendant un test depuis l'éditeur : un bouton en haut à droite ramène à l'éditeur.
   BK.setTestMode = on => { const b = document.getElementById('btn-stop-test'); if (b) b.hidden = !on; };
@@ -15,8 +15,10 @@
   BK.overlay = ov;
 
   BK.showOptions = done => {
-    BK.overlay.show({playful:'options',title:'⚙️ Options',html:'<label class="opt-switch"><input id="friendly-fire" type="checkbox" '+(BK.settings.friendlyFire?'checked':'')+'> <span><b>Tir allié</b><small>Autorise les bombes du héros à blesser ses alliés. Désactivé par défaut. Tes propres bombes restent dangereuses pour toi.</small></span></label><div class="opt-danger"><b>🗑️ Mes données</b><small>Efface toute la progression de Bomberkid sur cet appareil : aventures, or de la famille, défis, tableaux créés et réglages.</small><button type="button" id="btn-erase-data" class="danger">Effacer mes données…</button></div>',buttons:[{label:'Fermer',primary:true,onClick:()=>{BK.overlay.hide();if(done)done();}}]});
+    const slider=(id,icon,name,v)=>'<label class="opt-volume"><span><b>'+icon+' '+name+'</b><output id="'+id+'-val">'+v+' %</output></span><input id="'+id+'" type="range" min="0" max="100" step="5" value="'+v+'"></label>';
+    BK.overlay.show({playful:'options',title:'⚙️ Options',html:slider('vol-music','🎵','Musique',BK.settings.musicVolume)+slider('vol-sfx','💥','Effets spéciaux',BK.settings.sfxVolume)+'<label class="opt-switch"><input id="friendly-fire" type="checkbox" '+(BK.settings.friendlyFire?'checked':'')+'> <span><b>Tir allié</b><small>Autorise les bombes du héros à blesser ses alliés. Désactivé par défaut. Tes propres bombes restent dangereuses pour toi.</small></span></label><div class="opt-danger"><b>🗑️ Mes données</b><small>Efface toute la progression de Bomberkid sur cet appareil : aventures, or de la famille, défis, tableaux créés et réglages.</small><button type="button" id="btn-erase-data" class="danger">Effacer mes données…</button></div>',buttons:[{label:'Fermer',primary:true,onClick:()=>{BK.overlay.hide();if(done)done();}}]});
     document.querySelector('#friendly-fire').onchange=e=>BK.setFriendlyFire(e.target.checked);
+    for(const [id,kind] of [['vol-music','music'],['vol-sfx','sfx']]){const r=document.getElementById(id);r.oninput=()=>{BK.setVolume(kind,r.value);document.getElementById(id+'-val').textContent=r.value+' %';};if(kind==='sfx')r.onchange=()=>BK.audio.click();}
     document.querySelector('#btn-erase-data').onclick=()=>{BK.audio.click();BK.confirmEraseData(done);};
   };
   // Confirmation moderne (remplace confirm()) : bouton principal = garder, bouton rouge = l'action irréversible.
@@ -125,7 +127,7 @@
     requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000 || 0); last = now; acc += dt;
     if (BK.refreshBagButton) BK.refreshBagButton();
-    const pauseButton=$('#btn-pause'); if(pauseButton) pauseButton.hidden=!(BK.screen==='game' && BK.current?.showPause && BK.current.state==='play' && !BK.inventoryOpen);
+    const pauseButton=$('#btn-pause'); if(pauseButton) pauseButton.hidden=!(BK.screen==='game' && BK.current?.showPause && !BK.current.pauseRect && BK.current.state==='play' && !BK.inventoryOpen);   // l'aventure : P, Échap ou un tap sur le cadre du score
     if(pauseButton&&!pauseButton.hidden){const r=BK.canvas.getBoundingClientRect(),sc=r.width/BK.W,test=!$('#btn-stop-test').hidden;pauseButton.style.left=(r.left+BK.PAUSE_RECT.x*sc)+'px';pauseButton.style.top=(r.top+(test?BK.PAUSE_RECT.y+58:BK.PAUSE_RECT.y)*sc)+'px';pauseButton.style.width=(BK.PAUSE_RECT.w*sc)+'px';pauseButton.style.height=(BK.PAUSE_RECT.h*sc)+'px';pauseButton.style.fontSize=(17*sc)+'px';pauseButton.style.borderRadius=(14*sc)+'px';}
     const cur = BK.current; if (!cur) { BK.input.flush(); return; }
     let steps = 0;

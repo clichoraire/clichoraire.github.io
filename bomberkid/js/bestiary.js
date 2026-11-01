@@ -17,9 +17,9 @@ add('soldiers','creeper','Creeper','creeper','creeper','green',{hp:3});
 variants('soldiers','ball_chain','Ball and Chain Trooper','soldier','flail',['blue','gold'],{hp:4});
 add('soldiers','bomb_soldier','Bomb Soldier','soldier','bomb','red',{hp:3,speed:0,weapon:'bomb'});
 variants('soldiers','bow_soldier','Bow Soldier','soldier','arrow',['green','blue']);
-add('soldiers','soldier','Soldier','soldier','chase','green');
+add('soldiers','soldier','Soldier','soldier','chase','green',{speed:1.6});
 variants('soldiers','spear_soldier','Spear Soldier','soldier','spear',['green','red','blue','gold']);
-variants('soldiers','sword_soldier','Sword Soldier','soldier','charge',['green','blue','red'],{hp:3});
+variants('soldiers','sword_soldier','Sword Soldier','soldier','charge',['green','blue','red'],{hp:3,speed:1.6});
 add('soldiers','cannon_soldier','Cannon Soldier','soldier','beam','blue',{hp:4,weapon:'cannon',speed:0});
 const light=[
 ['armos','Armos','armor','stone','gray'],['bee','Bee','bee','chase','gold'],['buzz_blob','Buzz Blob','blob','electric','green'],['crow','Crow','bird','charge','black'],['cukeman','Cukeman','blob','electric','brown'],['deadrock','Deadrock','lizard','stone','gray'],['geldman','Geldman','sand','burrow','gold'],['hoarder','Hoarder','crab','chase','green'],['octoballoon','Octoballoon','octopus','split','red'],['octorok','Octorok','octopus','arrow','red'],['poe','Poe','ghost','fire','white'],['sand_crab','Sand Crab','crab','chase','orange'],['slime','Slime','blob','chase','green'],['thief','Thief','rogue','steal','purple'],['toppo','Toppo','plant','hop','green'],['vulture','Vulture','bird','charge','brown']];

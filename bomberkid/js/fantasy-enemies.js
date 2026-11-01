@@ -35,7 +35,7 @@ W.updateEnemy=function(e,dt){
  if(e.def.fantasy){e.t+=dt;e.stateT+=dt;e.hurt=Math.max(0,e.hurt-dt);return this.updateFantasyEnemy(e,dt);}
  const previous=this.perceivingEnemy;this.perceivingEnemy=e;
  try{
-  const local=!e.boss&&!e.def.peaceful&&!e.tame&&!e.def.trap&&!e.def.solid&&e.speed>0&&!['wasp','mole','sea','plant','orc','rabbit'].includes(e.def.behavior);
+  const local=!e.boss&&!e.def.peaceful&&!e.tame&&!e.def.trap&&!e.def.solid&&e.speed>0&&!['wasp','mole','sea','plant','orc','rabbit'].includes(e.def.behavior)&&!['orbit','flail'].includes(e.def.bestiary?.action);
   if(local){const range=e.def.behavior==='ghost'||e.def.bestiary?.shape==='ghost'?3.5:Math.min(7,e.def.range||4),p=this.visibleEnemyTarget(e,range);
    if(!p||Math.hypot(e.x-e.spawnHome.x,e.y-e.spawnHome.y)>7){e.t+=dt;e.stateT+=dt;e.hurt=Math.max(0,e.hurt-dt);e.target=null;e.warning=null;e.dashT=0;e.state='walk';e.fuse=0;this.localEnemyPatrol(e,dt,e.def.behavior==='ghost'||e.def.bestiary?.shape==='ghost'?1.5:2);return;}
   }

@@ -18,7 +18,8 @@ button small { display: block; font-weight: 600; font-size: 13px; opacity: .8; m
 .title-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(10,14,30,.85)); }
 .menu-dock { position: absolute; left: 0; right: 0; bottom: 4vh; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .menu-dock .buttons button { min-width: 230px; font-size: 24px; padding: 14px 26px; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
-.menu-dock #btn-challenges { background: linear-gradient(#ffe066, #e0a800); color: #2a1a00; }
+.menu-dock #btn-challenges { background: linear-gradient(#ffc93c, #ee8a00); color: #fff; text-shadow: 0 2px 0 #9a5200; }   /* blanc sur orange doré : lisible comme les autres boutons */
+.menu-dock #btn-challenges small { color: #fff4d6; }
 .gold-badge { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,.55); color: var(--gold); font-weight: 900; font-size: 22px; padding: 6px 18px; border-radius: 16px; text-shadow: 0 1px 2px #000; }
 #challenge-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-bottom: 16px; text-align: left; }
 #challenge-list h3 { grid-column: 1 / -1; margin: 10px 0 0; color: var(--c, var(--gold)); font-size: 22px; }
@@ -65,7 +66,7 @@ select { font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px
 /* ---- tactile */
 #touch { display: none; position: absolute; inset: 0; pointer-events: none; }
 body.touch #screen-game.active #touch { display: block; }
-#btn-stop-test { position: absolute; top: 14px; right: 14px; padding: 9px 16px; font-size: 15px; border-radius: 12px; background: #7a2f2f; color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.35); z-index: 5; }
+#btn-stop-test { position: absolute; bottom: 14px; right: 14px; padding: 9px 16px; font-size: 15px; border-radius: 12px; background: #7a2f2f; color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.35); z-index: 5; }
 #btn-stop-test[hidden] { display: none; }
 #touch .stick { position: absolute; left: 24px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.35); pointer-events: auto; touch-action: none; }
 #touch .knob { position: absolute; left: 35px; top: 35px; width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.6); }
@@ -348,6 +349,10 @@ body.touch #screen-game.active #touch { display: block; }
 #overlay .opt-switch{display:flex;gap:12px;align-items:flex-start;text-align:left;margin:4px 0 14px;padding:14px 16px;border:3px solid #b9d4f0;border-radius:16px;background:#fff}
 #overlay .opt-switch input{width:26px;height:26px;flex-shrink:0;accent-color:#8054c5;margin-top:2px}
 #overlay .opt-switch small,#overlay .opt-danger small{display:block;font-size:14px;color:#60769e;font-weight:700;margin-top:3px}
+#overlay .opt-volume{display:block;text-align:left;margin:4px 0 10px;padding:12px 16px;border:3px solid #b9d4f0;border-radius:16px;background:#fff}
+#overlay .opt-volume span{display:flex;justify-content:space-between;align-items:center;color:#1b2a4a}
+#overlay .opt-volume output{font-weight:900;color:#8054c5}
+#overlay .opt-volume input{width:100%;margin-top:8px;accent-color:#8054c5}
 #overlay .opt-danger{text-align:left;padding:14px 16px;border:3px solid #f3c2c2;border-radius:16px;background:#fff3f3}
 #overlay .opt-danger button.danger,#overlay .buttons button.danger{margin-top:10px;background:linear-gradient(#ff7d7d,#d8403f)!important;border-color:#ffd0d0!important;color:#fff!important;box-shadow:0 4px #8f1f1f!important}
 #overlay .buttons button:disabled{opacity:.45;cursor:not-allowed;transform:none}
@@ -368,3 +373,38 @@ body.touch #screen-game.active #touch { display: block; }
 #editor-panel .toolbar .acts { margin-left: auto; }
 #editor-panel .deco-categories { padding: 2px 0; gap: 4px; }
 #editor-panel .deco-categories button { min-height: 0; padding: 2px 8px; font-size: 11px; }
+/* Fiche du personnage (Tab) : médaille de niveau, barre d'XP, étoiles à donner, pastilles de stats */
+#overlay .lvl-card{display:flex;align-items:center;gap:14px;margin:6px 0 10px;text-align:left}
+#overlay .lvl-badge{flex-shrink:0;width:74px;height:74px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 30%,#fff3a6,#ffc928 55%,#e09400);border:4px solid #fff;box-shadow:0 4px 0 #b97500,0 6px 14px rgba(0,0,0,.25);color:#5a3a00}
+#overlay .lvl-badge small{font-size:11px;font-weight:900;letter-spacing:1px}#overlay .lvl-badge b{font-size:32px;line-height:1;font-weight:900}
+#overlay .lvl-xp{flex:1}#overlay .lvl-xp small{display:block;margin-top:6px;font-weight:800;color:#60769e;font-size:14px}
+#overlay .xp-bar{height:22px;border-radius:12px;background:#1b2a4a;border:3px solid #fff;box-shadow:0 2px 0 #b9d4f0;overflow:hidden}
+#overlay .xp-bar span{display:block;height:100%;min-width:8px;border-radius:9px;background:linear-gradient(90deg,#5fd4ff,#8a7bff,#ff7ad9);background-size:200% 100%;animation:xp-shine 2.4s linear infinite}
+@keyframes xp-shine{to{background-position:-200% 0}}
+#overlay .pts-card{margin:4px 0 10px;padding:10px 14px;border-radius:16px;background:#eef3fb;color:#60769e;border:3px dashed #b9d4f0}
+#overlay .pts-card.has{background:linear-gradient(#fff6c6,#ffe27a);color:#6a4800;border:3px solid #ffc928;animation:pts-bounce 1.2s ease-in-out infinite}
+#overlay .pts-card .stars{display:block;font-size:24px;letter-spacing:2px}
+@keyframes pts-bounce{50%{transform:scale(1.03)}}
+#overlay .stats.fun .stat{grid-template-columns:44px 1fr auto;background:#fff;border:3px solid #e2ecf8;color:#1b2a4a}
+#overlay .stats.fun .ic{font-size:30px;text-align:center}
+#overlay .stats.fun .txt small{display:block;font-size:13px;color:#60769e;font-weight:700}
+#overlay .stats.fun .pips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+#overlay .stats.fun .pips i{width:14px;height:14px;border-radius:50%;background:#e2ecf8;border:2px solid #c9d8ec}
+#overlay .stats.fun .pips i.on{background:radial-gradient(circle at 35% 35%,#fff3a6,#ffb800);border-color:#e09400}
+#overlay .stats.fun button{font-size:18px;padding:8px 12px}
+/* Icônes dessinées de l'éditeur : bloc de ciment gris en 3D, icône « copier » classique */
+.ic-cement{display:inline-block;width:26px;height:26px;border-radius:4px;vertical-align:middle;background:linear-gradient(#c9ced4 0 28%,#9aa1aa 28% 100%);box-shadow:inset -5px 0 0 #7d848d,inset 0 0 0 2px #6b727b}
+.ic-svg{width:26px;height:26px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic-svg rect{fill:rgba(255,255,255,.18)}
+/* Debug · Ouvrir un tableau : filtres et tableau des cartes */
+#overlay .stage-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin:6px 0 10px;font-weight:800;color:#1b2a4a}
+#overlay .stage-filters select,#overlay .stage-filters input{padding:6px 10px;border-radius:10px;border:2px solid #b9d4f0;font:inherit;font-weight:700;background:#fff;color:#1b2a4a}
+#overlay .stage-table-wrap{max-height:min(46vh,380px);overflow:auto;border:3px solid #b9d4f0;border-radius:14px;background:#fff}
+#overlay .stage-table{width:100%;border-collapse:collapse;font-size:15px;color:#1b2a4a;text-align:left}
+#overlay .stage-table th{position:sticky;top:0;background:#e6f0fb;padding:8px 10px;font-weight:900;z-index:1}
+#overlay .stage-table td{padding:6px 10px;border-top:1px solid #e2ecf8;white-space:nowrap}
+#overlay .stage-table td:first-child{white-space:normal}
+#overlay .stage-table tr:hover td{background:#f4f8ff}
+#overlay .stage-table .acts{text-align:right}
+#overlay .stage-table .acts button{padding:5px 10px;font-size:13px;border-radius:9px;margin-left:4px}
+#overlay .stage-table .empty{text-align:center;color:#60769e;padding:16px}

@@ -3,9 +3,10 @@
   'use strict';
   let ctx = null, master = null, muted = false;
   const A = BK.audio = {};
-  const ensure = () => { if (ctx) return ctx; try { ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.gain.value = 0.35; master.connect(ctx.destination); } catch (e) { ctx = null; } return ctx; };
+  const ensure = () => { if (ctx) return ctx; try { ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.gain.value = 0.35 * (BK.settings?.sfxVolume ?? 100) / 100; master.connect(ctx.destination); } catch (e) { ctx = null; } return ctx; };
   A.unlock = () => { const c = ensure(); if (c && c.state === 'suspended') c.resume(); };
   A.mute = m => { muted = m; };
+  A.applyVolume = () => { if (master) master.gain.value = 0.35 * (BK.settings?.sfxVolume ?? 100) / 100; };
   function tone(f0, f1, dur, type, vol, delay) {
     const c = ensure(); if (!c || muted) return; const t0 = c.currentTime + (delay || 0);
     const o = c.createOscillator(), g = c.createGain(); o.type = type || 'square'; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);

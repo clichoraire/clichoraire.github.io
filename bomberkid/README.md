@@ -87,6 +87,23 @@ Deux modes :
   Hiver : thème « Hiver », sol « Neige » (`)`, blanc, les pas du héros y crissent doucement) et dix décorations
   (bonhomme de neige, sapin enneigé, arbre nu, rocher de glace, cristaux de glace, igloo, traîneau, skis, tas de neige
   qu'on traverse, boules de neige).
+  Sols à mécanique (onglet Sols, définis dans js/floors-plus.js, règles dans js/floors-mechanics.js, test
+  tools/test-floors-mechanics.cjs, aperçu tools/test-floors-visual.html et `#nuit`) : roche volcanique `Â` (bombe posée
+  dessus : rayon −1), récif de corail `Ê` (15 % plus lent ; une bombe qui y explose le change en eau profonde), liane
+  rampante `Î` (1 chance sur 4 d'être pris 1 s en entrant), herbe haute (par-dessus une tuile : cache les petites bombes et
+  les objets jusqu'à ce qu'un héros entre ou heurte la bombe ; les ennemis ne voient pas un héros dedans à plus de 1,5 case),
+  ardoise sombre `Û` (on glisse encore une demi-case en s'arrêtant), sol en bronze `Ä` (la branche du souffle ricoche à
+  angle droit des deux côtés au lieu de traverser), briques rouges `Ë` (ni le bouclier qui éclate ni une bombe reçue ne font
+  reculer), linoléum jaune `Ï` (grincement à chaque pas, le héros s'éclaire la nuit), dalles d'émeraude `Ö` (une bombe posée
+  glisse sur une case voisine libre), rondins `Ü` (touchés par une flamme, ils brûlent 3 s : 1 point de vie par seconde, aussi
+  pour les monstres), plaque d'acier `à` (une bombe qui y explose met le feu à toutes les plaques collées, même étage), sol
+  contaminé (par-dessus une tuile : après 0,5 s dessus, poison 1 point de vie toutes les 2 s pendant 6 s), marquage au sol
+  `ì` (+30 % de vitesse 2 s), dalles de miroir `ò` (faux reflet décalé des héros et des bombes), tapis roulant `ù`
+  (`props.beltDir`, sens choisi dans l'éditeur : héros, bombes et objets avancent d'une case par seconde), mycélium `á`
+  (lumière la nuit ; une flamme le détruit : nuage de spores 4 s qui resserre la vue du héros), sol en bonbon `é` (une bombe
+  poussée s'y arrête net), sol électrifié `í` (éteint 3 s, allumé 3 s : −3 et paralysé 0,5 s), carrelage magique `ó`
+  (téléporte vers un autre carrelage magique libre au hasard) et sables mouvants `ú` (attirent vers le centre ; immobile 2 s,
+  on s'enfonce : −10 et retour au dernier endroit sûr).
   Musique d'une pièce : onglet Magasin → « 🎵 Musique » (quatre pistes). Elle ne joue dans la pièce que s'il y a un
   instrument (piano, juke-box, guitare, tambour, onglet Déco) ; pour le joueur, l'instrument n'est qu'une décoration.
   Champ « 🔍 Chercher… » dans la barre des onglets : filtre les objets de tous les onglets (nom, aide, nom d'onglet, sans
@@ -180,6 +197,10 @@ Deux modes :
   L'eau et le vide ne bloquent plus le joueur : il y tombe (plouf et il coule / il rapetisse en tournoyant), perd un cœur
   et réapparaît sur la dernière case sûre (sans cœur restant, il meurt ; chez les grands-parents, aucun dégât).
 - **Défis** (remplace le bouton Match) — trois îles (`js/challenges.js`, `js/challenges-plus.js`), cinq niveaux (Facile → Légende) :
+  - **Tableaux faits à la main** : un défi ouvert dans l’éditeur et exporté (📤) remplace son arène générée après
+    `node tools/import-defis.cjs ~/Downloads/<fichiers>.bomberkid.json` (rangé dans `js/challenge-maps.js`, portail et diamant
+    retirés : on gagne en éliminant tous les monstres ; les animaux gentils ne comptent pas). Déjà faits par Matthieu : Canons de
+    feu, Prairie des ballounets, Clairière sucrée, Marais aux champignons, Champ retourné, Le potager.
   - **Monstres** : un tableau par monstre (34 arènes), chacun dans un biome assorti généré à partir d’une graine (`BK.ARENA_BIOMES` :
     prairie fleurie, marais aux champignons, cimetière de nuit, cour du château, forge avec lave, grotte gelée, volcan, désert,
     lagon avec les monstres marins dans l’eau, camp des orques, cirque, dojo…) : bordure, piliers du biome, décors solides, taches

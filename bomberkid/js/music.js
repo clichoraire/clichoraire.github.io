@@ -12,7 +12,7 @@
   const el = f => {
     if (els[f]) return els[f];
     if (typeof Audio === 'undefined') return (els[f] = { paused: true, play() { this.paused = false; }, pause() { this.paused = true; }, currentTime: 0 });
-    const a = new Audio('assets/music/' + f + '.mp3'); a.loop = true; a.volume = VOLUME; a.preload = 'auto'; return (els[f] = a);
+    const a = new Audio('assets/music/' + f + '.mp3'); a.loop = true; a.volume = VOLUME * (BK.settings?.musicVolume ?? 100) / 100; a.preload = 'auto'; return (els[f] = a);
   };
   const report=(a,blocked)=>{if(a===cur&&M.onPlayback)M.onPlayback(blocked&&enabled);};
   const tryPlay = a => { try { const p = a.play(); if (p && p.then) p.then(()=>report(a,false)).catch(()=>report(a,true));else report(a,false); } catch (e) { report(a,true); } };
@@ -26,6 +26,7 @@
       if (cur) { cur.pause(); try { cur.currentTime = 0; } catch (e) { } }
       curName = f; cur = el(f); if (enabled) tryPlay(cur);
     },
+    applyVolume() { for (const a of Object.values(els)) if ('volume' in a) a.volume = VOLUME * (BK.settings?.musicVolume ?? 100) / 100; },
     stop() { if (cur) cur.pause(); cur = null; curName = null; },
     resume() { if (enabled && cur && cur.paused) tryPlay(cur); },
     toggle() {

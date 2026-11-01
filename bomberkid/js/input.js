@@ -9,7 +9,10 @@
   ];
   K.NAMES = ['Flèches · Espace = bombe · Shift = ramasser/lancer', 'WASD · F = bombe · R = ramasser/lancer'];
   window.addEventListener('keydown', e => {
-    if (e.repeat) return; if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && e.code !== 'Escape') { keys.delete(e.code); return; }   // on tape dans un champ ou une liste : le jeu n'écoute pas (et une liste déroulante avale le relâchement de la touche)
+    if (e.repeat) return;
+    // Ctrl+Z (ou Cmd+Z) pendant qu'une liste déroulante a le focus : on la lâche et l'annulation va au jeu
+    if (e.target && e.target.tagName === 'SELECT' && e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.target.blur(); keys.add(e.ctrlKey ? 'ControlLeft' : 'MetaLeft'); }
+    else if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && e.code !== 'Escape') { keys.delete(e.code); return; }   // on tape dans un champ ou une liste : le jeu n'écoute pas (et une liste déroulante avale le relâchement de la touche)
     keys.add(e.code); pressed.add(e.code);
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code) && !(e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName))) e.preventDefault();
   });

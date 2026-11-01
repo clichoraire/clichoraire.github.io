@@ -34,7 +34,11 @@ S.drawBestiary=function(ctx,type,o={}){
   else if(b.action==='spear'){line([[32,0],[32,-83]],'#b47a43',5);poly([[32,-98],[23,-78],[41,-78]],'#dae9ed');}
   else if(b.action==='flail'){line([[27,-30],[48,-43],[62,-25]],'#adb8c3',5);oval(62,-22,13,13,'#71849a');}
   else if(b.weapon==='cannon'){box(22,-45,34,18,'#df5d62',4);oval(56,-36,5,9,dark);}
-  else if(['charge','chase'].includes(b.action)){poly([[26,-27],[29,-72],[36,-80],[43,-72],[38,-27]],'#dce8ef');line([[23,-26],[46,-26]],'#ffcf55',5);}
+  else if(['charge','chase'].includes(b.action)){   // épée ; coup d'épée : élan vers l'arrière puis grand coup vers l'avant
+   const sw=o.creature?.swingT>0?1-o.creature.swingT/.45:0,ang=!sw?0:sw<.4?-.9*sw/.4:-.9+2.5*Math.min(1,(sw-.4)/.25);
+   ctx.save();ctx.translate(34,-27);ctx.rotate(ang);ctx.translate(-34,27);
+   if(sw>.4&&sw<.8){ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=6;ctx.beginPath();ctx.arc(34,-27,52,-1.9,-1.9+(ang+.9)*1.05);ctx.stroke();ctx.strokeStyle=dark;ctx.lineWidth=3;}
+   poly([[26,-27],[29,-72],[36,-80],[43,-72],[38,-27]],'#dce8ef');line([[23,-26],[46,-26]],'#ffcf55',5);ctx.restore();}
  }else if(['worm','snake','slug','cactus'].includes(shape)){
   const n=shape==='slug'?3:5;for(let i=n-1;i>=0;i--){const x=shape==='cactus'?0:Math.sin(t*4-i*.7)*12-i*7+12,y=shape==='cactus'?-12-i*14:-12-i*6;oval(x,y,shape==='slug'?21:15,14,c);if(shape==='cactus')for(const k of [-1,1])line([[k*12,y],[k*20,y-5]],light,2);}
   const x=shape==='cactus'?0:Math.sin(t*4)*12+12,y=shape==='cactus'?-70:-24;oval(x,y,19,18,c);eye(x-8,y-4,5);eye(x+8,y-4,5);if(shape==='snake')line([[x,y+12],[x+14,y+15],[x+18,y+11]],'#ef5879',3);

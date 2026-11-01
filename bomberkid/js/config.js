@@ -1,7 +1,7 @@
 // Bomberkid — constantes, personnages, objets, ennemis et thèmes.
 // Tout est dans l'espace de noms BK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BK = window.BK || {};
-window.BK.VERSION = '0.33';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BK) {
   'use strict';
   BK.MAX_ALLIES = 2;
@@ -20,6 +20,11 @@ window.BK.VERSION = '0.33';   // à augmenter à chaque mise en ligne (affichée
   BK.PLAYER_R = 0.32;                 // rayon de collision d'un personnage (en cases)
   BK.BOMB_FUSE = 2.6;                 // secondes avant l'explosion
   BK.FLAME_TIME = 0.55;               // durée des flammes
+  // Bombe niveau 2 : boum, les flammes s'éteignent un instant, puis un deuxième boum aux mêmes cases.
+  BK.FLAME_ECHO_GAP = 0.22;
+  BK.flameLife = level => level >= 2 ? BK.FLAME_TIME * 2 + BK.FLAME_ECHO_GAP : BK.FLAME_TIME;
+  // Avancement (0 → 1) du boum en cours ; null pendant la pause entre les deux boums (pas de feu, pas de dégâts).
+  BK.flameBurst = (t, duration) => { if (duration <= BK.FLAME_TIME * 1.5) return t / duration; if (t < BK.FLAME_TIME) return t / BK.FLAME_TIME; const t2 = t - BK.FLAME_TIME - (duration - 2 * BK.FLAME_TIME); return t2 < 0 ? null : Math.min(1, t2 / BK.FLAME_TIME); };
   BK.THROW_CELLS = 3;                 // portée d'un lancer de bombe
   BK.KICK_SPEED = 7;                  // vitesse d'une bombe poussée (cases/s)
   BK.BASE_SPEED = 2.7;                // vitesse de marche (cases/s) pour 3 étoiles (plus lente : on court pour aller vite)
@@ -27,7 +32,8 @@ window.BK.VERSION = '0.33';   // à augmenter à chaque mise en ligne (affichée
   BK.RUN_ACCEL = 6;                   // accélération vers la vitesse de course (cases/s²)
   BK.RUN_COST = 22;                   // stamina dépensée par seconde de course
   BK.DOUBLE_TAP = 0.3;                // délai max entre deux appuis pour partir à la course
-  BK.STATS = { hpMax: { name: 'Vie max', icon: '❤️', step: 10, base: 40, unit: '' }, fireRegen: { name: 'Repos au feu', icon: '🔥', step: 1, base: 2, unit: ' vie / s' }, staminaMax: { name: 'Stamina max', icon: '💪', step: 20, base: 100, unit: '' }, regen: { name: 'Récupération', icon: '♻️', step: 2, base: 8, unit: ' % / s' } };
+  BK.STATS = { hpMax: { name: 'Gros cœur', fun: 'Encaisse plus de coups avant de tomber', icon: '❤️', step: 10, base: 40, unit: '' }, fireRegen: { name: 'Chaleur du feu de camp', fun: 'Tu guéris plus vite près d’un feu', icon: '🔥', step: 1, base: 2, unit: ' vie / s' }, staminaMax: { name: 'Grand souffle', fun: 'Cours plus longtemps sans t’arrêter', icon: '💨', step: 20, base: 100, unit: '' }, regen: { name: 'Pause éclair', fun: 'Ton souffle revient plus vite', icon: '⚡', step: 2, base: 8, unit: ' % / s' } };
+  BK.LEVEL_HP = 5;   // chaque niveau gagné ajoute 5 points de vie max
   BK.defaultStats = () => ({ hpMax: BK.STATS.hpMax.base, fireRegen: BK.STATS.fireRegen.base, staminaMax: BK.STATS.staminaMax.base, regen: BK.STATS.regen.base });
   // Cibles et portes : huit couleurs (clé interne A-H, portes a-h) ; une cible ouvre les portes de sa couleur.
   BK.TARGET_COLORS = [{ key: 'A', name: 'rouge', color: '#e53935' }, { key: 'B', name: 'bleue', color: '#1e88e5' }, { key: 'C', name: 'verte', color: '#43a047' }, { key: 'D', name: 'jaune', color: '#fdd835' }, { key: 'E', name: 'mauve', color: '#8e24aa' }, { key: 'F', name: 'orange', color: '#fb8c00' }, { key: 'G', name: 'cyan', color: '#00acc1' }, { key: 'H', name: 'rose', color: '#ec407a' }];
@@ -58,12 +64,14 @@ window.BK.VERSION = '0.33';   // à augmenter à chaque mise en ligne (affichée
     emily:    { name: 'Émily',    size: 0.94, speed: 3, outfit: '#26c6da', accent: '#ffffff', antenna: '#3f9cff', role: 'maman', girl: true },
   };
   Object.entries(BK.CHARACTERS).forEach(([id, d]) => { d.id = id; d.familyPortrait = id; });
+  // Triches et outils de debug : seulement pour le personnage de Matthieu.
+  BK.isCheater = id => id === 'matthieu';
   BK.ORDER = ['zachary', 'alexie', 'eliott', 'adam', 'milo', 'edison', 'matthieu', 'josee', 'richard', 'mickael', 'marie', 'jeremie', 'jessica', 'josue', 'emily'];
   BK.charById = id => BK.CHARACTERS[id];
   BK.speedOf = stars => BK.BASE_SPEED + (stars - 3) * 0.22;
 
   // Objets ramassés dans les blocs. chance : poids relatif. match/adventure : disponible dans ce mode.
-  BK.ALLY_FOOD_HEAL = {pumpkinpiece:5,meatcooked:10,fishcooked:20,poultrycooked:15};
+  BK.ALLY_FOOD_HEAL = {pumpkinpiece:5,marshmallow:5,meatcooked:10,fishcooked:20,poultrycooked:15};
   BK.COOKABLE = {fish:'fishcooked',meatraw:'meatcooked',poultryraw:'poultrycooked'};
   BK.BRICK_COLOR = '#b34a2a';   // couleur par défaut des murs de briques, dans tous les thèmes
   BK.PET_FOODS = {chat:['fish','fishcooked'],chien:['meatraw','meatcooked','poultryraw','poultrycooked']};
@@ -98,6 +106,7 @@ window.BK.VERSION = '0.33';   // à augmenter à chaque mise en ligne (affichée
     axe: { name: 'Hache', icon: '🪓', color: '#8da9ad', weight: 1, desc: 'Face à un arbre, utilise la hache pour l’abattre. Réutilisable.', adventureOnly: true, usable: true, unique: true },
     meatraw: { name: 'Viande crue', icon: '🥩', color: '#d86f77', weight: 0, desc: 'À cuire au feu de camp : approche-toi et utilise cet objet ou appuie sur Entrée.', adventureOnly: true, usable: true },
     meatcooked: { name: 'Viande cuite', icon: '🍗', color: '#bd773f', weight: 0, desc: 'Manger pour récupérer 10 points de vie.', adventureOnly: true, usable: true },
+    marshmallow: { name: 'Guimauve', icon: '🍥', color: '#ffd1e3', weight: 0, desc: 'Q ou W : manger pour récupérer 5 points de vie. Tombe d’un bloc de guimauve cassé.', adventureOnly: true, usable: true },
     pumpkinpiece: { name: 'Morceau de citrouille', icon: '🎃', color: '#ff8a1f', weight: 0, desc: 'Q ou W : manger pour récupérer 5 points de vie.', adventureOnly: true, usable: true },
     carrot: { name: 'Carotte',         icon: '🥕', color: '#ff8a1f', weight: 0, desc: 'Q ou W : lancée deux cases devant toi. Un lapin maléfique qui la voit court la manger… et devient tout doux.', adventureOnly: true, usable: true },
   };
@@ -128,8 +137,10 @@ window.BK.VERSION = '0.33';   // à augmenter à chaque mise en ligne (affichée
     slot.snails=Array.from({length:slot.n},(_,i)=>slot.snails?.[i]||{color:def.snailColor,baby:!!def.baby,growth:def.growth||0,perm:i>=slot.n-(slot.perm||0)});return slot.snails;
   };
   BK.snailName = value => Array.from(String(value||'').replace(/[\u0000-\u001f\u007f]/g,'').trim()).slice(0,24).join('');
-  BK.settings = {friendlyFire:false};
-  try { BK.settings.friendlyFire = JSON.parse(localStorage.getItem('bk.settings') || '{}').friendlyFire === true; } catch (_) {}
+  BK.settings = {friendlyFire:false,musicVolume:100,sfxVolume:100};
+  try { const saved = JSON.parse(localStorage.getItem('bk.settings') || '{}'); BK.settings.friendlyFire = saved.friendlyFire === true; for (const k of ['musicVolume','sfxVolume']) if (Number.isFinite(saved[k])) BK.settings[k] = Math.max(0, Math.min(100, Math.round(saved[k]))); } catch (_) {}
+  // Volumes en pour cent (options) : la musique et les effets spéciaux se règlent séparément.
+  BK.setVolume = (kind, value) => { const k = kind === 'music' ? 'musicVolume' : 'sfxVolume'; BK.settings[k] = Math.max(0, Math.min(100, Math.round(+value) || 0)); try {localStorage.setItem('bk.settings',JSON.stringify(BK.settings));} catch (_) {} if (kind === 'music') BK.music?.applyVolume?.(); else BK.audio?.applyVolume?.(); };
   BK.setFriendlyFire = value => { BK.settings.friendlyFire=!!value; try {localStorage.setItem('bk.settings',JSON.stringify(BK.settings));} catch (_) {} };
   // Ajoute un seuil extérieur aux anciennes pièces dont la sortie était dans le mur du bas.
   BK.roomMap = (grid, preserve) => { if(preserve)return grid.slice(); const rows=grid.slice(), last=rows.length-1, c=rows[last].indexOf('G'); if(c>=0 && grid.join('').split('G').length===2 && !/^ *G *$/.test(rows[last])) {rows[last]=rows[last].slice(0,c)+'y'+rows[last].slice(c+1);rows.push(' '.repeat(c)+'G'+' '.repeat(rows[0].length-c-1));} return rows; };

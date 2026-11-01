@@ -85,6 +85,11 @@ BK.buildArena=(ch,seed)=>{
 };
 const baseStage=BK.challengeStage;
 BK.challengeStage=ch=>{
+ const own=BK.CHALLENGE_MAPS?.[ch.id];
+ if(own){   // tableau fait à la main dans l'éditeur (js/challenge-maps.js) : on gagne en éliminant tous les monstres
+  const s=BK.mapToStage({id:'defi-'+ch.id,...JSON.parse(JSON.stringify(own))});
+  s.id='Défi';s.name=ch.name;s.hint=ch.desc;s.world={name:'Défis',theme:own.theme};s.items=0.3;s.objective='enemies';return s;
+ }
  if(!ch.biome)return baseStage(ch);
  let arena=null;for(let n=0;n<40&&!arena?.reachable;n++)arena=BK.buildArena(n<30?ch:{...ch,noPools:true},hash(ch.id)+n*7919);
  const s=BK.mapToStage({id:'defi-'+ch.id,name:ch.name,cols:ch.cols,rows:ch.rows,theme:arena.theme,base:'.',grid:arena.grid,enemies:arena.enemies,props:arena.props,houses:{},npcs:[],shop:[]});
@@ -98,11 +103,11 @@ const ICONS={ballon:'🎈',guimauve:'🍥',gluant:'🟢',taupe:'🕳️',lapin:'
 const SIZES=[null,[13,11],[15,11],[15,13],[17,13],[17,13]];
 const M=(id,level,type,n,biome,name,desc,time,reward,extra={})=>({id,level,kind:'arena',icon:ICONS[type]||'👾',monster:type,enemies:[[type,n]],biome,name,desc,time,reward,cols:SIZES[level][0],rows:SIZES[level][1],soft:.3,...extra});
 BK.MONSTER_CHALLENGES=[
- M('ballons',1,'ballon',4,'meadow','Prairie des ballounets','Quatre ballounets flottent dans une prairie fleurie. Fais-les tous éclater avant la fin du temps.',90,20),
- M('guimauves',1,'guimauve',5,'candy','Clairière sucrée','Cinq guimauves se dandinent entre les cadeaux et les buissons étoilés. Elles ne vont jamais bien loin.',90,20),
- M('gluants',1,'gluant',5,'swamp','Marais aux champignons','Cinq gluants te suivent à la trace entre les mares et les champignons.',110,25),
- M('taupes',1,'taupe',3,'field','Champ retourné','Trois taupes creusent sous la terre labourée et surgissent près de toi pour lancer des mottes.',110,25),
- M('lapins',1,'lapin',4,'potager','Le potager','Quatre lapins maléfiques dans le potager. Cueille les carottes : un lapin qui en mange une devient gentil.',120,30,{carrots:3}),
+ M('ballons',1,'ballon',6,'meadow','Prairie des ballounets','Six ballounets flottent dans une prairie fleurie. Fais-les tous éclater avant la fin du temps.',100,20),
+ M('guimauves',1,'guimauve',6,'candy','Clairière sucrée','Six guimauves se dandinent entre les cadeaux et les buissons étoilés. Elles ne vont jamais bien loin.',100,20),
+ M('gluants',1,'gluant',7,'swamp','Marais aux champignons','Sept gluants te suivent à la trace entre les mares et les champignons.',140,25),
+ M('taupes',1,'taupe',9,'field','Champ retourné','Neuf taupes creusent sous la terre labourée et surgissent près de toi pour lancer des mottes. L’escargot et le renard sont gentils.',170,25),
+ M('lapins',1,'lapin',13,'potager','Le potager','Treize lapins maléfiques dans le potager. Cueille les carottes : un lapin qui en mange une devient gentil.',210,30,{carrots:3}),
  M('fantomes',2,'fantome',4,'crypt','Cimetière hanté','Quatre fantômes glissent entre les tombes, la nuit. Ils passent à travers les blocs !',120,35),
  M('plantes',2,'plante',4,'jungle','Jungle vorace','Quatre plantes carnivores sortent du sol entre les fougères géantes. Approche au bon moment.',120,35),
  M('guepes',2,'guepe',4,'orchard','Verger bourdonnant','Quatre guêpes volent au-dessus des buissons de baies. On ne les touche que quand elles piquent.',120,35),
@@ -125,7 +130,7 @@ BK.MONSTER_CHALLENGES=[
  M('loups',3,'loup_garou',3,'darkforest','Forêt sombre','Trois loups-garous rôdent près de leur tanière, la nuit. Ils foncent dès qu’ils te voient.',150,60),
  M('orques',4,'orque',2,'camp','Le camp des orques','Deux orques en armure et leur shaman, qui les soigne, autour du feu de camp. Sépare-les !',180,90,{enemies:[['shaman',1],['orque',2]],group:true,icon:'⚔️'}),
  M('squelettes_noirs',4,'squelette_noir',5,'catacombs','Catacombes noires','Cinq squelettes noirs : plus rapides, et leur os va à sept cases.',180,90),
- M('canons_rouges',4,'canon_rouge',3,'forge','Canons de feu','Trois canons rouges tirent des boulets enflammés entre les coulées de lave.',150,85),
+ M('canons_rouges',4,'canon_rouge',6,'forge','Canons de feu','Six canons rouges tirent des boulets enflammés entre les coulées de lave.',190,85),
  M('canons_bleus',4,'canon_bleu',3,'bastion','Canons de glace','Trois canons bleus tirent deux fois plus souvent, des boulets lents mais nombreux.',150,85),
  M('crapaud',4,'crapaud',1,'pond','La mare du crapaud','Le crapaud géant règne sur la mare. Gare à sa langue collante et à sa grande gueule.',180,90),
  M('dragon',4,'dragon_tricephale',1,'volcano','L’antre du dragon','Le dragon à trois têtes crache un feu qui brûle au sol. Chaque tête a sa propre vie.',180,100),
@@ -133,6 +138,7 @@ BK.MONSTER_CHALLENGES=[
  M('golem',5,'golem',1,'quarry','Le Roi Golem','Le Roi Golem sort de la carrière. Dix coups et des ondes de choc : garde tes distances.',240,150),
  M('horde',5,'horde',0,'volcano','La horde','Deux orques, un shaman, trois serpents et trois lapins au pied du volcan. Bonne chance…',240,150,{enemies:[['shaman',1],['orque',2],['serpent',3],['lapin',3]],group:true,carrots:2,cols:19,rows:15})
 ];
+for(const ch of BK.MONSTER_CHALLENGES){const own=BK.CHALLENGE_MAPS?.[ch.id];if(own){ch.cols=own.cols;ch.rows=own.rows;ch.handmade=true;}}   // tableaux faits à la main : leur taille
 
 // ------------------------------------------------------------------ Duels : battre toute la famille
 BK.DUEL_FOE_GOLD=[0,10,15,20,30];   // or par adversaire vaincu la première fois, selon le niveau du style

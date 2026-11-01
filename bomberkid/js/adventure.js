@@ -40,7 +40,7 @@
       { id:'1-2',name:BK.STAGE_1_2.name,objective:'goal',explore:true,theme:BK.STAGE_1_2.theme,map:BK.STAGE_1_2.grid,props:BK.STAGE_1_2.props,houses:BK.STAGE_1_2.houses,npcs:BK.STAGE_1_2.npcs,shop:BK.STAGE_1_2.shop,music:BK.STAGE_1_2.music,enemies:BK.STAGE_1_2.enemies,mapId:'stage-1-2',items:.25,hint:'Explore le sentier et trouve le portail de sortie.' },
       { id:'1-3',name:BK.STAGE_1_3.name,objective:'goal',explore:true,theme:BK.STAGE_1_3.theme,map:BK.STAGE_1_3.grid,props:BK.STAGE_1_3.props,houses:BK.STAGE_1_3.houses,npcs:BK.STAGE_1_3.npcs,shop:BK.STAGE_1_3.shop,music:BK.STAGE_1_3.music,enemies:BK.STAGE_1_3.enemies,mapId:'stage-1-3',items:.25,hint:'Active les trois cibles pour ouvrir le chemin vers le portail de sortie.' },
       { id:'1-4',name:BK.STAGE_1_4.name,objective:'goal',explore:true,preview:'volcano',theme:BK.STAGE_1_4.theme,map:BK.STAGE_1_4.grid,props:BK.STAGE_1_4.props,houses:BK.STAGE_1_4.houses,npcs:BK.STAGE_1_4.npcs,shop:BK.STAGE_1_4.shop,music:BK.STAGE_1_4.music,enemies:BK.STAGE_1_4.enemies,mapId:'stage-1-4',items:.25,hint:'Explore le volcan, évite la lave et les éruptions, puis trouve le portail de sortie.' },
-      {id:'1-5',name:BK.STAGE_1_5.name,objective:'boss',encounter:'firstBoss',explore:true,theme:BK.STAGE_1_5.theme,map:BK.STAGE_1_5.grid,props:BK.STAGE_1_5.props,houses:BK.STAGE_1_5.houses,enemies:[],mapId:'stage-1-5',items:.2,hint:'Vaincs les deux gardiens crapauds, puis les deux formes du Roi Golem. Attention aux jets d’eau et aux attaques annoncées !'},
+      {id:'1-5',name:BK.STAGE_1_5.name,objective:'boss',encounter:'firstBoss',explore:true,theme:BK.STAGE_1_5.theme,map:BK.STAGE_1_5.grid,props:BK.STAGE_1_5.props,houses:BK.STAGE_1_5.houses,enemies:[],mapId:'stage-1-5',items:.2,hint:'Vaincs les deux gardiens crapauds, puis les deux formes du Roi Golem. Attention aux jets d’eau, aux séismes, aux roches et à son ombre quand il saute !'},
     ] },
     { id: 'chateau', name: 'Le Château des ombres', theme: 'castle', stages: BK.CASTLE_STAGES },
   ];
@@ -54,13 +54,15 @@
 
   const KEY = id => 'bk.adventure.' + id;
   // Stats du personnage : stamina max et récupération ; les points gagnés par niveau s'y placent.
-  BK.applyStats = (p, save, keepCurrent) => { const st = Object.assign(BK.defaultStats(), save.stats || {}); const ratio = keepCurrent && p.staminaMax ? p.stamina / p.staminaMax : 1; p.staminaMax = st.staminaMax; p.staminaRegen = st.regen; p.fireRegen = st.fireRegen; p.stamina = Math.min(st.staminaMax, st.staminaMax * ratio); const hpMax = st.hpMax + 10 * ((save.upgrades || {}).heart || 0); const hpBefore = p.hp, maxBefore = p.maxHp; p.maxHp = hpMax; p.hp = keepCurrent ? Math.min(hpMax, hpBefore + Math.max(0, hpMax - maxBefore)) : hpMax; };
+  BK.applyStats = (p, save, keepCurrent) => { const st = Object.assign(BK.defaultStats(), save.stats || {}); const ratio = keepCurrent && p.staminaMax ? p.stamina / p.staminaMax : 1; p.staminaMax = st.staminaMax; p.staminaRegen = st.regen; p.fireRegen = st.fireRegen; p.stamina = Math.min(st.staminaMax, st.staminaMax * ratio); const hpMax = st.hpMax + 10 * ((save.upgrades || {}).heart || 0) + BK.LEVEL_HP * (BK.levelFromXp(save.xp || 0).level - 1); const hpBefore = p.hp, maxBefore = p.maxHp; p.maxHp = hpMax; p.hp = keepCurrent ? Math.min(hpMax, hpBefore + Math.max(0, hpMax - maxBefore)) : hpMax; };
   BK.showStats = (charId, save, onClose) => {
     save.stats = Object.assign(BK.defaultStats(), save.stats || {}); save.points = save.points || 0;
     const lv = BK.levelFromXp(save.xp || 0);
-    const html = () => '<p>Niveau <b>' + lv.level + '</b> · ' + lv.current + ' / ' + lv.needed + ' XP · <b class="pts">' + save.points + '</b> point' + (save.points > 1 ? 's' : '') + ' à placer</p>' +
-      '<div class="stats">' + Object.entries(BK.STATS).map(([k, d]) => '<div class="stat"><span class="ic">' + d.icon + '</span><b>' + d.name + '</b><span class="val">' + save.stats[k] + d.unit + '</span><button data-stat="' + k + '" ' + (save.points ? '' : 'disabled') + '>+' + d.step + d.unit + '</button></div>').join('') + '</div>' +
-      '<p class="hint">Courir (deux appuis rapides sur une direction) use la stamina ; elle se recharge de ' + save.stats.regen + ' % par seconde au repos. Près d’un feu de camp, la vie remonte de ' + save.stats.fireRegen + ' point' + (save.stats.fireRegen > 1 ? 's' : '') + ' par seconde.</p>';
+    // Niveau en médaille, barre d'XP qui brille, étoiles à placer, et chaque stat en rangée de pastilles plutôt qu'en chiffres.
+    const pips = n => { const shown = Math.max(10, Math.ceil(n / 5) * 5); let h = ''; for (let i = 0; i < shown; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>'; return h; };
+    const html = () => '<div class="lvl-card"><div class="lvl-badge"><small>NIVEAU</small><b>' + lv.level + '</b></div><div class="lvl-xp"><div class="xp-bar"><span style="width:' + Math.round(100 * lv.current / lv.needed) + '%"></span></div><small>✨ Encore ' + (lv.needed - lv.current) + ' XP pour le niveau ' + (lv.level + 1) + ' (+' + BK.LEVEL_HP + ' ❤️)</small></div></div>' +
+      '<div class="pts-card' + (save.points ? ' has' : '') + '">' + (save.points ? '<span class="stars">' + '⭐'.repeat(Math.min(save.points, 8)) + (save.points > 8 ? ' +' + (save.points - 8) : '') + '</span><b>' + save.points + ' étoile' + (save.points > 1 ? 's' : '') + ' à donner !</b>' : '<b>Gagne un niveau pour recevoir une étoile ⭐</b>') + '</div>' +
+      '<div class="stats fun">' + Object.entries(BK.STATS).map(([k, d]) => { const rank = Math.round((save.stats[k] - d.base) / d.step); return '<div class="stat"><span class="ic">' + d.icon + '</span><div class="txt"><b>' + d.name + '</b><small>' + d.fun + '</small><div class="pips">' + pips(rank) + '</div></div><button data-stat="' + k + '" ' + (save.points ? '' : 'disabled') + ' title="Donner une étoile">+⭐</button></div>'; }).join('') + '</div>';
     const render = () => { BK.overlay.show({ title: 'Fiche de ' + BK.charById(charId).name, html: html(), buttons: [{ label: 'Fermer', primary: true, onClick: () => { BK.overlay.hide(); BK.saveAdventure(charId, save); onClose && onClose(); } }] });
       document.querySelectorAll('#overlay button[data-stat]').forEach(b => b.addEventListener('click', () => { if (!save.points) return; const k = b.dataset.stat; save.points--; save.stats[k] += BK.STATS[k].step; BK.audio.item(); BK.saveAdventure(charId, save); render(); })); };
     render();
@@ -129,7 +131,7 @@
       const before = BK.levelFromXp(this.save.xp || 0).level; this.save.xp = (this.save.xp || 0) + n; this.goldDirty = true;
       const p = this.player, W = this.world; W.addFloater(p.x, p.y, '+' + n + ' XP', { color: '#8fe3ff', follow: p });
       const after = BK.levelFromXp(this.save.xp).level;
-      if (after > before) { this.save.points = (this.save.points || 0) + (after - before); p.hp = p.maxHp; setTimeout(() => W.addFloater(p.x, p.y, 'NIVEAU ' + after + ' !', { color: '#ffd54a', size: 0.5, life: 2.4, follow: p }), 450); BK.audio.win(); this.toast('Niveau ' + after + ' ! Vie complète et un point de stat (Tab).', 4); }
+      if (after > before) { this.save.points = (this.save.points || 0) + (after - before); BK.applyStats(p, this.save, true); p.hp = p.maxHp; setTimeout(() => W.addFloater(p.x, p.y, 'NIVEAU ' + after + ' !', { color: '#ffd54a', size: 0.5, life: 2.4, follow: p }), 450); BK.audio.win(); this.toast('Niveau ' + after + ' ! +' + BK.LEVEL_HP * (after - before) + ' ❤️ de vie max, vie complète et une étoile à donner (Tab).', 4); }
     }
     openExit() {
       const W = this.world; if (!W.exit || W.exit.open) return;
@@ -151,7 +153,7 @@
       if (s.objective === 'enemies') return 'Monstres : ' + W.livingEnemies().length;
       if (s.objective === 'switches') return 'Interrupteurs : ' + W.switches.filter(sw => sw.on).length + ' / ' + W.switches.length;
       if (s.objective === 'boss') { const guards=W.enemies.filter(e=>e.arenaGuard&&!e.dead);if(guards.length)return 'Gardiens crapauds : '+guards.length+' / 2';const b = W.enemies.find(e => e.arenaBoss&&!e.dead)||W.enemies.find(e=>e.boss&&!e.dead)||W.enemies.find(e=>e.boss); return b ? (b.dead ? 'Boss vaincu !' : b.name + ' : ' + b.hp + ' ❤') : ''; }
-      if (s.objective === 'goal') return '🃏 ' + (this.player.cards || 0) + ' / ' + W.cardsTotal + '   ·   Trouve le but';
+      if (s.objective === 'goal') return W.cardsTotal ? '🃏 ' + (this.player.cards || 0) + ' / ' + W.cardsTotal : '';
       return '';
     }
     update(dt) {
@@ -186,6 +188,8 @@
           if(e.type==='secretFound')this.toast('✨ Une pièce secrète !',3);
           if(e.type==='pipeMessage')this.toast(e.text,3);
           if(e.type==='pipeTravel')this.updateCamera(0,true);
+          if(e.type==='floorMessage'&&e.player===p)this.toast(e.text,e.dur||2.5);
+          if(e.type==='floorTeleport'&&e.player===p)this.updateCamera(0,true);
           if(e.type==='towerHint')this.toast('Vise une fenêtre et lance une bombe ! Tu peux aussi ramasser celles du bombardier et les renvoyer.',6);
           if(e.type==='towerLoaded')this.toast('Dans la fenêtre ! Éloigne-toi de la tour !',2);
           if(e.type==='castleFalseVictory')this.toast('Le régent est vaincu… Mais pourquoi le portail tremble-t-il ?',4);
@@ -414,7 +418,7 @@
       this.syncInv(); BK.saveAdventure(this.charId, this.save); say('Merci ! ' + it.name + ' : ' + it.desc); this.toast(it.icon + ' ' + it.name + ' acheté pour 🪙 ' + d.price + '.', 2.5); W.burst(d.c + 0.5, d.r + 0.5, 0.4, '#ffd54a', 12);
       return true;
     }
-    showPause() { const W=this.world; BK.input.keys.clear(); BK.input.flush(); Object.assign(BK.input.touch,{dx:0,dy:0,bomb:false,bombHeld:false,action:false}); for(const p of W.players) Object.assign(p.input,{dx:0,dy:0,bomb:false,bombHeld:false,action:false}); this.state = 'pause'; W.frozen = true; BK.overlay.show({ playful:'pause',title: '⏸ Petite pause !', text: 'Ton aventure t’attend. Prêt à repartir ?', buttons: [{label:'💎 Mes cristaux',onClick:()=>this.showCrystals()},{label:'🎮 Contrôles',onClick:()=>this.showControls()}, {label:'🪙 Triche : ajouter de l’or',onClick:()=>this.showGoldCheat()}, {label:'🔓 Triche : tout débloquer',onClick:()=>{this.unlockAllStages();BK.overlay.show({playful:'pause',title:'🔓 À toi l’aventure !',text:'Tous les mondes et tableaux disponibles sont débloqués pour ce personnage.',buttons:[{label:'↩ Retour à la pause',primary:true,onClick:()=>this.showPause()}]});}}, {label:'⚙️ Options',onClick:()=>BK.showOptions(()=>{BK.overlay.hide();this.state='play';W.frozen=false;})}, { label: '▶ C’est parti !', primary: true, onClick: () => { BK.overlay.hide(); this.state = 'play'; W.frozen = false; } }, { label: '🏠 Quitter le tableau', onClick: () => { BK.overlay.hide(); if (this.challenge) BK.showChallenges(this.charId); else if (this.custom && BK.editor) { BK.show('editor'); BK.current = BK.editor; } else BK.toMenu(); } }] }); }
+    showPause() { const W=this.world; BK.input.keys.clear(); BK.input.flush(); Object.assign(BK.input.touch,{dx:0,dy:0,bomb:false,bombHeld:false,action:false}); for(const p of W.players) Object.assign(p.input,{dx:0,dy:0,bomb:false,bombHeld:false,action:false}); this.state = 'pause'; W.frozen = true; BK.overlay.show({ playful:'pause',title: '⏸ Petite pause !', text: 'Ton aventure t’attend. Prêt à repartir ?', buttons: [{label:'💎 Mes cristaux',onClick:()=>this.showCrystals()},{label:'🎮 Contrôles',onClick:()=>this.showControls()}, ...(BK.isCheater(this.charId)?[{label:'🪙 Triche : ajouter de l’or',onClick:()=>this.showGoldCheat()}, {label:'🔓 Triche : tout débloquer',onClick:()=>{this.unlockAllStages();BK.overlay.show({playful:'pause',title:'🔓 À toi l’aventure !',text:'Tous les mondes et tableaux disponibles sont débloqués pour ce personnage.',buttons:[{label:'↩ Retour à la pause',primary:true,onClick:()=>this.showPause()}]});}}]:[]), {label:'⚙️ Options',onClick:()=>BK.showOptions(()=>{BK.overlay.hide();this.state='play';W.frozen=false;})}, { label: '▶ C’est parti !', primary: true, onClick: () => { BK.overlay.hide(); this.state = 'play'; W.frozen = false; } }, { label: '🏠 Quitter le tableau', onClick: () => { BK.overlay.hide(); if (this.challenge) BK.showChallenges(this.charId); else if (this.custom && BK.editor) { BK.show('editor'); BK.current = BK.editor; } else BK.toMenu(); } }] }); }
     showControls() {
       this.state='pause';this.world.frozen=true;
       BK.overlay.show({playful:'controls',title:'🎮 Comment jouer ?',html:`<div class="control-cards"><section>
@@ -426,14 +430,16 @@
         <p>Pose une bombe, éloigne-toi, puis avance vers elle. Avec le pouvoir de botter, <b>cours</b> vers elle pour monter dessus : marcher la pousse. Une fois dessus, <b>relâche la direction puis réappuie</b> pour faire un grand bond.</p>
         <p><b>Gonfler une bombe</b> : avec le pouvoir correspondant, maintiens Espace en la ramassant, puis relâche pour la lancer.</p>
         </section><section><h3>👆 Avec les doigts</h3>
-        <p><b>⏸ Pause à l’écran</b> : contrôles, options et triche pour ajouter de l’or.<br><b>Manette à gauche</b> : se déplacer ou ramer. Deux impulsions dans la même direction permettent de courir.<br><b>💣</b> : bombe (maintenir pour gonfler avec le pouvoir). <b>✋</b> : ramasser, lancer ou interagir.<br>Touche la <b>pancarte au-dessus du héros</b> pour l’action proposée, un <b>objet de la ceinture</b> pour l’utiliser, ou le <b>sac</b> pour ouvrir l’inventaire. Glisse les objets au doigt pour les ranger.</p>
+        <p><b>⏸ Pause à l’écran</b> : contrôles et options${BK.isCheater(this.charId)?' (et les triches de Matthieu)':''}.<br><b>Manette à gauche</b> : se déplacer ou ramer. Deux impulsions dans la même direction permettent de courir.<br><b>💣</b> : bombe (maintenir pour gonfler avec le pouvoir). <b>✋</b> : ramasser, lancer ou interagir.<br>Touche la <b>pancarte au-dessus du héros</b> pour l’action proposée, un <b>objet de la ceinture</b> pour l’utiliser, ou le <b>sac</b> pour ouvrir l’inventaire. Glisse les objets au doigt pour les ranger.</p>
       </section></div>`,buttons:[{label:'↩ Retour à la pause',onClick:()=>this.showPause()},{label:'▶ À moi de jouer !',primary:true,onClick:()=>{BK.overlay.hide();this.state='play';this.world.frozen=false;}}]});
     }
     addCheatGold(amount) {
+      if(!BK.isCheater(this.charId))return false;
       const value=Number(amount);if(!Number.isSafeInteger(value)||value<=0||!Number.isSafeInteger((this.save.gold||0)+value))return false;
       this.save.gold=(this.save.gold||0)+value;BK.saveAdventure(this.charId,this.save);this.toast('🪙 +'+value+' pièces d’or',2);return true;
     }
     unlockAllStages() {
+      if(!BK.isCheater(this.charId))return this.save.unlocked||1;
       this.save.unlocked=Math.max(this.save.unlocked||1,BK.stageList().length);
       this.save0.unlocked=this.save.unlocked;
       BK.saveAdventure(this.charId,this.save);return this.save.unlocked;
@@ -512,6 +518,7 @@
       const stow=this.world.stowSnailRect;if(stow&&x>=stow.x&&x<=stow.x+stow.w&&y>=stow.y&&y<=stow.y+stow.h){if(this.world.stowSnail(this.player)){this.syncInv();BK.saveAdventure(this.charId,this.save);this.toast('Escargot rangé dans le sac !',2);}else this.toast('Ton sac est plein.',2);return;}
       const snail=this.world.snailRect;if(snail&&x>=snail.x&&x<=snail.x+snail.w&&y>=snail.y&&y<=snail.y+snail.h){this.world.useSnail(this.player);return;}
       const fuel=this.world.fuelRect;if(fuel&&x>=fuel.x&&x<=fuel.x+fuel.w&&y>=fuel.y&&y<=fuel.y+fuel.h){if(this.world.addWoodToFire(this.player)){this.syncInv();BK.saveAdventure(this.charId,this.save);this.toast('Bois ajouté : +15 secondes !',2);}return;}
+      const pr = this.pauseRect; if (pr && this.state === 'play' && x >= pr.x && x <= pr.x + pr.w && y >= pr.y && y <= pr.y + pr.h) { BK.audio.click(); this.showPause(); return; }   // le cadre du score sert de bouton Pause (iPad)
       const sr = this.world.signRect;
       if (sr && x >= sr.x - 10 && x <= sr.x + sr.w + 10 && y >= sr.y - 10 && y <= sr.y + sr.h + 16) { this.pressEnter(); return; }
       if (!this.invRects) return; for (const r of this.invRects) if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) BK.useQuickItem(this.world, this.player, r.i);
@@ -760,11 +767,18 @@
       }
       if (this.save.points) { ctx.save();if(W.enemies.some(e=>(e.arenaBoss||e.castleBoss)&&!e.dead))ctx.translate(BK.W-486,0);ctx.fillStyle = '#ffd54a'; BK.sprites.rr(ctx, 282, 108, 190, 24, 10); ctx.fill(); ctx.font = 'bold 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2a4a'; ctx.fillText('Tab : ' + this.save.points + ' point' + (this.save.points > 1 ? 's' : '') + ' à placer', 377, 120);ctx.restore(); }
       ctx.font = 'bold 22px Nunito, sans-serif';
-      ctx.textAlign = 'right'; BK.sprites.uiPanel(ctx, BK.W - 454, 12, 320, 60);   // laisse la case du bouton Pause libre
-      ctx.fillStyle = BK.sprites.UI.gold; BK.sprites.textWithCoin(ctx, 'SCORE ' + String(this.score).padStart(6, '0') + '   🪙 ' + (this.save.gold || 0), BK.W - 150, 30);
-      ctx.fillStyle = BK.sprites.UI.text; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillText(this.objectiveText() + '   ·   ' + '👤 × ' + this.lives, BK.W - 150, 56);
-      ctx.textAlign = 'center'; BK.sprites.uiPanel(ctx, BK.W / 2 - 150, 12, 300, 36, { r: 12 });
-      ctx.fillStyle = BK.sprites.UI.text; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillText(s.id + ' · ' + s.name + (W.dayCycle ? '   ' + W.dayIcon() : ''), BK.W / 2, 30);
+      ctx.textAlign = 'right'; BK.sprites.uiPanel(ctx, BK.W - 334, 12, 320, 60); this.pauseRect = { x: BK.W - 334, y: 12, w: 320, h: 60 };   // tout en haut à droite ; un tap dessus ouvre la pause
+      // score en haut à gauche, or en haut à droite (pièce centrée sur le nombre), objectif et vies en cœurs dessous
+      const hx = BK.W - 320, hr = BK.W - 28, gold = String(this.save.gold || 0);
+      ctx.textAlign = 'left'; ctx.fillStyle = BK.sprites.UI.gold; ctx.fillText('SCORE ' + String(this.score).padStart(6, '0'), hx, 31);
+      ctx.textAlign = 'right'; ctx.fillText(gold, hr, 31); BK.sprites.drawCoin(ctx, hr - ctx.measureText(gold).width - 16, 30, 11, 0);
+      ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.text; ctx.textAlign = 'left'; ctx.fillText(this.objectiveText(), hx, 56);
+      const livesW = ctx.measureText('× ' + this.lives).width; ctx.textAlign = 'right'; ctx.fillText('× ' + this.lives, hr, 56); ctx.font = '18px sans-serif'; ctx.fillText('❤️', hr - livesW - 6, 56); ctx.font = 'bold 18px Nunito, sans-serif';
+      // titre : juste le nom du tableau, qui rétrécit (puis se coupe) pour tenir entre la vie et le score
+      { const label = s.name + (W.dayCycle ? '   ' + W.dayIcon() : ''), maxW = 2 * Math.min(BK.W / 2 - 444, BK.W - 344 - BK.W / 2) - 28; let size = 18, text = label; ctx.font = 'bold ' + size + 'px Nunito, sans-serif';
+        while (ctx.measureText(text).width > maxW && size > 13) { size--; ctx.font = 'bold ' + size + 'px Nunito, sans-serif'; }
+        while (ctx.measureText(text).width > maxW && text.length > 4) text = text.slice(0, -2).trimEnd() + '…';
+        const w = Math.max(220, ctx.measureText(text).width + 28); ctx.textAlign = 'center'; BK.sprites.uiPanel(ctx, BK.W / 2 - w / 2, 12, w, 36, { r: 12 }); ctx.fillStyle = BK.sprites.UI.text; ctx.fillText(text, BK.W / 2, 30); }
       if(this.challenge)BK.drawChallengeProgress(ctx,this.challenge,this);
       if (this.challenge && this.challenge.time) { const tl = Math.max(0, this.timeLeft), low = tl < 15; BK.sprites.uiPanel(ctx, BK.W / 2 - 60, 52, 120, 30, { r: 10, fill: low && Math.floor(this.stateT * 4) % 2 ? 'rgba(255,205,200,0.95)' : undefined }); ctx.fillStyle = low ? BK.sprites.UI.bad : BK.sprites.UI.gold; ctx.font = '900 20px Nunito, sans-serif'; ctx.fillText('⏱ ' + Math.floor(tl / 60) + ':' + String(Math.floor(tl % 60)).padStart(2, '0'), BK.W / 2, 67); }
       this.drawAllyPanel(ctx);

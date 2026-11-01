@@ -434,7 +434,7 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   const r0 = BK.ENEMIES.squelette, r1 = BK.ENEMIES.squelette_rouge, r2 = BK.ENEMIES.squelette_noir;
   ok(r1.range === 5 && Math.abs(r1.boneSpeed / r0.boneSpeed - 1.3) < 0.01 && r2.range === 7 && Math.abs(r2.boneSpeed / r0.boneSpeed - 1.5) < 0.01 && Math.abs(r2.speed / r0.speed - 1.5) < 0.01, 'rouge : 5 cases, os 1,3 × ; noir : 7 cases, marche et os 1,5 ×');
   const Wb = mk(['.....', '.1...', '.....']); const pb = Wb.addPlayer(adam, 1, 1, { hp: 40 }); pb.x = 1.5; const sk2 = Wb.addEnemy('squelette', 3, 1); for (let i = 0; i < 240 && pb.hp === 40; i++) Wb.update(1 / 60); ok(pb.hp === 30, 'l’os blesse le héros au passage'); void sk2;
-  const kinds = Object.keys(BK.DECO_PROPS); ok(kinds.length === 184, 'décorations existantes, château, quatre biomes et huit pièges');
+  const kinds = Object.keys(BK.DECO_PROPS); ok(kinds.length === 187, 'décorations existantes, château, quatre biomes, huit pièges, guimauve, nuage et trampoline');
   const props = {}; kinds.forEach((k, i) => { props[(1 + i) + ',1'] = { deco: k }; });
   const Wd = mk(['.'.repeat(kinds.length + 2), '.' + '"'.repeat(kinds.length) + '.', '.'.repeat(kinds.length + 2)], props);
   ok(kinds.every((k, i) => Wd.deco[Wd.idx(1 + i, 1)] === k) && !Wd.blocked(kinds.indexOf('bones') + 1, 1) && Wd.blocked(kinds.indexOf('wheel') + 1, 1), 'toutes se posent ; les ossements se traversent, la roue bloque');
@@ -741,7 +741,11 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
 // 50. défis : douze épreuves sur cinq niveaux, arènes jouables, récompense entière puis au quart
 {
   ok(BK.CHALLENGES.length === 42 && BK.CHALLENGES.every(c => c.level >= 1 && c.level <= 5 && c.reward > 0 && ['arena','match','curling'].includes(c.kind)), 'quarante-deux défis (34 arènes à monstres, 4 styles de duel, 4 curlings), niveaux 1 à 5');
-  for (const ch of BK.CHALLENGES.filter(c => c.kind === 'arena')) {
+  for (const ch of BK.CHALLENGES.filter(c => c.kind === 'arena' && c.handmade)) {   // tableaux faits à la main : un départ, des monstres, objectif élimination
+    const s = BK.challengeStage(ch), W = new BK.World({ map: s.map, theme: s.theme, mode: 'adventure', hearts: true, explore: true, houses: {}, props: s.props });
+    ok(W.starts[0] && s.enemies.length && s.objective === 'enemies' && !s.map.some(l => /[G|]/.test(l)), ch.id + ' : tableau fait à la main jouable');
+  }
+  for (const ch of BK.CHALLENGES.filter(c => c.kind === 'arena' && !c.handmade)) {
     const s = BK.challengeStage(ch), W = new BK.World({ map: s.map, theme: s.theme, mode: 'adventure', hearts: true, explore: true, houses: {}, props: s.props });
     const want = ch.enemies.reduce((a, [, n]) => a + n, 0); ok(s.enemies.length === want && W.starts[0] && s.objective === 'enemies', ch.id + ' : ' + want + ' monstres, un départ, objectif élimination');
     ok(s.enemies.every(e => !W.cell(e.c, e.r) && Math.abs(e.c - W.starts[0].c) + Math.abs(e.r - W.starts[0].r) >= 5), ch.id + ' : monstres sur des cases libres, loin du départ');
@@ -1199,7 +1203,8 @@ const crewBoat=()=>{
  ok(W.useSeat(p)&&!p.seat,'le bouton permet de se relever');
  p.x=5.5;p.y=3.5;ok(!W.nearbySeat(p),'pas de bouton pour un siège éloigné');
  const ally=W.addNpc(BK.charById('richard'),1,1,[]);ok(!W.nearHuman(ally),'allié éloigné : bulle masquée');p.x=1.5;p.y=2.5;ok(W.nearHuman(ally),'allié voisin : bulle visible');
- const a=new BK.Adventure('adam',0),gold=a.save.gold||0;ok(a.addCheatGold(123456)&&a.save.gold===gold+123456,'triche : ajout du montant choisi');
+ const kid=new BK.Adventure('adam',0),kidGold=kid.save.gold||0;ok(!kid.addCheatGold(1000)&&(kid.save.gold||0)===kidGold&&(kid.unlockAllStages(),BK.loadAdventure('adam').unlocked||1)<BK.stageList().length,'triches refusées pour les autres personnages que Matthieu');
+ const a=new BK.Adventure('matthieu',0),gold=a.save.gold||0;ok(a.addCheatGold(123456)&&a.save.gold===gold+123456,'triche : ajout du montant choisi');
  ok(a.addCheatGold(123456)&&a.save.gold===gold+246912,'triche utilisable plusieurs fois');
  ok([0,-1,1.5,Infinity,NaN,'abc'].every(x=>!a.addCheatGold(x)),'montants invalides refusés sans corrompre l’or');
 }
@@ -1493,10 +1498,12 @@ for(const type of ['abeille','guepe']) {
 {
  const W=new BK.World({map:Array(5).fill('.......'),theme:'garden',mode:'adventure',hearts:true,explore:true}),p=W.addPlayer(BK.charById('adam'),3,2,{hp:40});p.invuln=0;
  const normal=W.addFlame(1,2,'center',0,{level:1,damage:1}),red=W.addFlame(3,2,'center',0,{level:2,damage:2});
- ok(red.duration===2*BK.FLAME_TIME&&normal.duration===BK.FLAME_TIME,'niveau 2 : durée des flammes exactement doublée');
+ ok(red.duration===2*BK.FLAME_TIME+BK.FLAME_ECHO_GAP&&normal.duration===BK.FLAME_TIME,'niveau 2 : deux boums et une petite pause');
  W.updateFlames(BK.FLAME_TIME+.05);ok(!W.flames.includes(normal)&&W.flames.includes(red),'flamme rouge reste après extinction d’une flamme normale');
- const hp=p.hp;W.checkHits();ok(p.hp===hp-20,'flamme rouge encore dangereuse pendant sa seconde moitié');
- W.updateFlames(BK.FLAME_TIME);ok(!W.flames.length&&!W.flameAt.size,'flamme rouge disparaît après sa durée complète');
+ ok(!W.flameTouches(3.5,2.5,0)&&W.flameAt.has(W.idx(3,2)),'pause entre les deux boums : rien ne brûle, la case reste à éviter');
+ let hp=p.hp;W.checkHits();ok(p.hp===hp,'pas de dégâts pendant la pause');
+ W.updateFlames(BK.FLAME_ECHO_GAP);hp=p.hp;W.checkHits();ok(p.hp===hp-20,'deuxième boum aux mêmes cases : encore dangereux');
+ W.updateFlames(BK.FLAME_TIME);ok(!W.flames.length&&!W.flameAt.size,'flamme rouge disparaît après le deuxième boum');
  const f=W.addFlame(2,2,'center',0,{level:2,damage:2});W.updateFlames(.1);const remaining=f.duration-f.t;W.addFlame(2,2,'end',1,{level:1,damage:1});ok(f.level===2&&f.duration>=remaining&&f.bomb.damage===2,'chevauchement normal ne raccourcit ni ne dégrade une flamme rouge');
  const stops=[],ctx=new Proxy({createRadialGradient:()=>({addColorStop:(at,color)=>stops.push(color)})},{get:(o,k)=>o[k]||(()=>{}),set:(o,k,v)=>{o[k]=v;return true;}}),cam=new BK.Camera(1280,720);
  BK.sprites.drawFlame(ctx,cam,2,2,.5,'center',0,1,0,false,2);ok(stops.some(c=>c.startsWith('rgba(220,15,35,')),'palette rouge intense pour les flammes de niveau 2');
@@ -1545,9 +1552,10 @@ for(const wall of ['#','W','x']) {
  e.state='hidden';W.updateMole(e,3);ok(e.x+e.r*.8<=3.01,'grand pas de simulation ne traverse pas le mur '+wall);
 }
 {
- const a=new BK.Adventure('adam',0),best=JSON.stringify(a.save.best),gold=a.save.gold;a.unlockAllStages();
- const saved=BK.loadAdventure('adam');ok(saved.unlocked>=BK.stageList().length&&JSON.stringify(saved.best)===best&&saved.gold===gold,'triche débloque tous les tableaux sans inventer de victoires ni changer l’or');
- const ws=new BK.WorldSelect('adam');ok(ws.worlds.every((w,i)=>w.soon||ws.unlocked[i]),'tous les mondes disponibles sont accessibles après la triche');
+ const a=new BK.Adventure('matthieu',0),best=JSON.stringify(a.save.best),gold=a.save.gold;a.unlockAllStages();
+ const saved=BK.loadAdventure('matthieu');ok(saved.unlocked>=BK.stageList().length&&JSON.stringify(saved.best)===best&&saved.gold===gold,'triche débloque tous les tableaux sans inventer de victoires ni changer l’or');
+ const ws=new BK.WorldSelect('matthieu');ok(ws.worlds.every((w,i)=>w.soon||ws.unlocked[i]),'tous les mondes disponibles sont accessibles après la triche');
+ BK.debugStages=true;ok(new BK.WorldSelect('matthieu').debug&&!new BK.WorldSelect('adam').debug,'mode debug des mondes réservé à Matthieu');BK.debugStages=false;
 }
 {
  const E=new BK.Editor({cols:13,rows:11,base:',',theme:'garden'});E.item=BK.EDITOR_TABS.find(t=>t.id==='deco').items.find(it=>it.deco==='firebar');E.firebarLength=4;E.firebarDirection=-1;E.paint(6,5,true);
@@ -1590,17 +1598,27 @@ for(const [speed,direction] of [['slow',1],['normal',-1],['fast',1]]) {
 {
  const a=new BK.Adventure('adam',4),W=a.world,p=a.player,b=W.enemies.find(e=>e.arenaBoss),guards=W.enemies.filter(e=>e.arenaGuard);
  ok(W.cols===25&&W.volcanoes.length===2&&guards.length===2,'sanctuaire : deux volcans et deux gardiens');
- ok(!W.hurtEnemy(b,p,99,'bomb')&&b.hp===10&&!a.objectiveDone(),'golem scellé et sortie verrouillée');
+ ok(!W.hurtEnemy(b,p,99,'bomb')&&b.hp===20&&guards.every(g=>g.hp===8)&&!a.objectiveDone(),'golem scellé (20 vies), gardiens à 8 vies, sortie verrouillée');
  guards[0].z=0;W.hurtEnemy(guards[0],p,99,'bomb');W.updateEnemy(b,.1);ok(b.state==='sealed','un seul gardien ne libère pas le boss');
  guards[1].z=0;W.hurtEnemy(guards[1],p,99,'bomb');W.updateEnemy(b,.1);ok(b.state==='walk','deux gardiens vaincus : boss réveillé');
  b.aim=0;W.performFirstBossAttack(b,p,'fire');ok(W.shots.length===1,'première phase : souffle simple');W.shots=[];
  p.x=b.x+1;p.y=b.y;W.placeBomb(p);const kicked=W.bombs.at(-1);p.x+=3;W.updateEnemy(b,.01);ok(kicked.state==='sliding'&&kicked.kicker===b,'le boss botte une bombe proche');W.bombs=[];p.x=12.5;p.y=22.5;
- W.hurtEnemy(b,p,99,'bomb');ok(b.phase===2&&!b.dead&&b.hp===12&&b.state==='transform'&&!a.objectiveDone(),'première barre épuisée : deuxième forme, sortie encore fermée');
+ W.hurtEnemy(b,p,99,'bomb');ok(b.phase===2&&!b.dead&&b.hp===24&&b.state==='transform'&&!a.objectiveDone(),'première barre épuisée : deuxième forme, sortie encore fermée');
  ok(!W.hurtEnemy(b,p,99,'bomb'),'transformation protégée');W.updateEnemy(b,2.1);
  b.aim=0;W.performFirstBossAttack(b,p,'fire');ok(W.shots.length===3,'souffle en éventail en deuxième phase');
  W.performFirstBossAttack(b,p,'bomb');const bomb=W.bombs.at(-1);W.updateBombs(.1);ok(bomb.level===2&&Number.isFinite(bomb.z)&&bomb.state==='flying','bombe rouge lancée en arc valide');W.updateBombs(.7);ok(bomb.state==='idle'&&Number.isFinite(bomb.x),'bombe du boss atterrit');
  W.frozen=false;W.performFirstBossAttack(b,p,'anvils');ok(W.arenaAnvils.length===3,'trois enclumes annoncées');p.invuln=0;const hp=p.hp;W.updateArenaEffects(.5);ok(p.hp===hp,'avertissement des enclumes sans dégât');W.updateArenaEffects(1.1);ok(p.hp<hp,'enclume inflige des dégâts après sa chute');
  W.performFirstBossAttack(b,p,'wave');ok(W.arenaWaves.length===1,'onde de choc de deuxième phase');
+ // Séisme au sol : 3 cases autour de lui, pas plus.
+ W.arenaWaves=[];W.arenaAnvils=[];p.x=b.x+2.5;p.y=b.y;p.invuln=0;p.hp=60;W.performFirstBossAttack(b,p,'slam');W.updateArenaEffects(.3);ok(p.hp<60,'séisme : touché à 2,5 cases');
+ W.arenaQuakes=[];p.x=b.x+4;p.invuln=0;p.hp=60;W.performFirstBossAttack(b,p,'slam');W.updateArenaEffects(.3);ok(p.hp===60,'séisme : rien à 4 cases');W.arenaQuakes=[];
+ // Roches lancées sur le héros.
+ p.invuln=0;p.hp=60;W.performFirstBossAttack(b,p,'rocks');ok(W.arenaRocks.length>=1&&W.arenaRocks[0].x===p.x,'roches lancées sur le héros');W.updateArenaEffects(.6);ok(p.hp===60,'roche encore en vol');W.updateArenaEffects(.6);ok(p.hp<60,'la roche écrase le héros');W.arenaRocks=[];
+ // Grand saut : hors écran, l'ombre suit le héros puis s'arrête, et il retombe en gros séisme.
+ p.invuln=0;p.hp=80;p.x=b.x+3;p.y=b.y;const px=p.x;W.performFirstBossAttack(b,p,'leap');ok(b.leap&&b.leap.stage==='up','le golem prend son élan pour sauter');
+ for(let i=0;i<30;i++)W.updateEnemy(b,1/60);ok(b.sky&&b.z>10&&!W.hurtEnemy(b,p,1,'bomb'),'dans le ciel : invisible et intouchable');
+ p.x=px+.6;for(let i=0;i<90;i++)W.updateEnemy(b,1/60);ok(b.leap.locked&&Math.hypot(b.leap.x-p.x,b.leap.y-p.y)<.3,'l’ombre a suivi le héros puis se fige');
+ p.x=b.leap.x+.3;let landed=false;for(let i=0;i<60&&!landed;i++){W.updateEnemy(b,1/60);W.updateArenaEffects(1/60);landed=!b.leap;}ok(landed&&b.z===0&&!b.sky&&Math.abs(b.x-p.x)<1&&p.hp<80,'il retombe sur son ombre en séisme');W.arenaQuakes=[];
  b.hurt=0;W.hurtEnemy(b,p,99,'bomb');ok(b.dead&&a.objectiveDone(),'sortie déverrouillable seulement après les deux formes');
  const ctx=new Proxy({canvas:{width:1280,height:720}},{get:(o,k)=>k in o?o[k]:k==='measureText'?()=>({width:40}):k==='createLinearGradient'||k==='createRadialGradient'?()=>({addColorStop(){}}):()=>{},set:(o,k,v)=>{o[k]=v;return true;}}),cam=new BK.Camera(1280,720);cam.fit(25,25,{top:60,bottom:40,left:40,right:40});W.render(ctx,cam,{});ok(true,'rendu des jets, enclumes et ondes sans erreur');
 }
@@ -1767,6 +1785,7 @@ for(const phase of [1,2]){
 {
  const {W,p}=companionArena();p.ally=false;p.invuln=0;p.x=9.5;p.y=9.5;const e=W.addEnemy('crapaud',7,9);e.state='sit';e.toadAttack={kind:'tongue',t:.01,target:p,angle:0};W.updateToadPowers(e,.02);
  ok(p.tongueSlow===3,'langue : ralentissement pendant trois secondes');p.input.dx=1;p.input.dy=0;p.lastTap=null;const x=p.x;W.updatePlayer(p,.1);ok(Math.abs(p.x-x-p.speed*.2*.1)<.001,'langue : vitesse réduite exactement de 80 %');p.input.dx=0;W.updatePlayer(p,3);ok(!p.tongueSlow,'ralentissement expire');
+ { const {W,p}=companionArena();p.ally=false;p.invuln=0;p.x=9.5;p.y=9.5;const e=W.addEnemy('crapaud',7,9);e.state='sit';e.toadAttack={kind:'tongue',t:.01,target:p,angle:0,grab:true};W.updateToadPowers(e,.02);ok(p.swallowedBy===e&&!(p.tongueSlow>0),'langue gloutonne : le crapaud ramène le héros et l’avale'); }
  p.x=8.5;p.y=9.5;p.invuln=0;ok(W.swallowPlayer(e,p)&&p.poison>0&&p.swallowedBy===e,'avaler empoisonne et immobilise');const before=p.swallowT;p.input.bombHeld=true;W.updatePlayer(p,.1);ok(Math.abs(p.swallowT-(before-.1))<.001,'maintenir Bombe ne compte pas comme des appuis répétés');
  p.input.bomb=true;const t=p.swallowT;W.updatePlayer(p,.1);ok(p.swallowT<t-.7&&!p.input.bomb&&!W.bombs.length,'appui Bombe : libération accélérée sans poser de bombe');
  for(let i=0;i<10&&p.swallowedBy;i++){p.input.bomb=true;W.updatePlayer(p,.05);}ok(!p.swallowedBy&&!e.swallowed&&p.swallowSafe>0,'appuis rapides libèrent et protègent contre une nouvelle ingestion immédiate');
@@ -1887,7 +1906,7 @@ for(const source of ['bomb','projectile']){
 
 // La médaille et le chrono utilisent exactement le barème de la récompense.
 {
- const ch=BK.CHALLENGES.find(c=>c.id==='ballons'),run={timeLeft:90,lives:2};let v=BK.challengeProgress(ch,run);
+ const ch={...BK.CHALLENGES.find(c=>c.id==='ballons'),time:90},run={timeLeft:90,lives:2};let v=BK.challengeProgress(ch,run);
  ok(v.medal.name==='Or'&&Math.abs(v.goldSeconds-27.09)<.001,'compte à rebours or au début de la mission');
  run.timeLeft-=v.goldSeconds-.001;ok(BK.challengeProgress(ch,run).medal.name==='Or','or juste avant la limite arrondie');run.timeLeft-=.002;v=BK.challengeProgress(ch,run);ok(v.medal.name==='Argent'&&v.goldSeconds===0,'argent dès que le délai de l’or est écoulé');
  run.timeLeft=90;run.lives=1;ok(BK.challengeProgress(ch,run).goldSeconds<10,'perdre une vie réduit le temps disponible pour l’or');run.timeLeft=0;ok(BK.challengeProgress(ch,run).medal.name==='Bronze','bronze en fin de chrono');
@@ -1897,7 +1916,7 @@ for(const source of ['bomb','projectile']){
 
 // Alerte unique et transition or → argent, sans effets sonores déclenchés par le rendu.
 {
- const ch=BK.CHALLENGES.find(c=>c.id==='ballons'),run={timeLeft:90,lives:2};let sounds=0;const old=BK.audio.medalWarning;BK.audio.medalWarning=()=>sounds++;
+ const ch={...BK.CHALLENGES.find(c=>c.id==='ballons'),time:90},run={timeLeft:90,lives:2};let sounds=0;const old=BK.audio.medalWarning;BK.audio.medalWarning=()=>sounds++;
  try{
   BK.updateChallengeFeedback(ch,run,.1);ok(!sounds,'aucune alerte avant les dix dernières secondes');
   run.timeLeft=72;BK.updateChallengeFeedback(ch,run,.1);ok(sounds===1&&run.medalFeedback.warned,'petit son en entrant dans les dix dernières secondes');
@@ -1909,7 +1928,7 @@ for(const source of ['bomb','projectile']){
 }
 
 {
- const ch=BK.CHALLENGES.find(c=>c.id==='ballons'),run={timeLeft:25,lives:2};let warnings=0,drops=0;const old=BK.audio.medalWarning,oldDrop=BK.audio.medalDrop;BK.audio.medalWarning=()=>warnings++;BK.audio.medalDrop=()=>drops++;
+ const ch={...BK.CHALLENGES.find(c=>c.id==='ballons'),time:90},run={timeLeft:25,lives:2};let warnings=0,drops=0;const old=BK.audio.medalWarning,oldDrop=BK.audio.medalDrop;BK.audio.medalWarning=()=>warnings++;BK.audio.medalDrop=()=>drops++;
  try{let v=BK.challengeProgress(ch,run);ok(v.medal.name==='Argent'&&Math.abs(v.silverSeconds-7.09)<.001,'compteur argent basé sur le seuil exact de 600 points');BK.updateChallengeFeedback(ch,run,.1);BK.updateChallengeFeedback(ch,run,.1);ok(warnings===1,'avertissement argent joué une seule fois');run.timeLeft=17;BK.updateChallengeFeedback(ch,run,.1);ok(drops===1&&run.medalFeedback.from==='🥈'&&run.medalFeedback.to==='🥉','son et animation argent vers bronze');BK.updateChallengeFeedback(ch,run,1);ok(drops===1&&!run.medalFeedback.transition,'transition bronze terminée sans répétition');}finally{BK.audio.medalWarning=old;BK.audio.medalDrop=oldDrop;}
 }
 {

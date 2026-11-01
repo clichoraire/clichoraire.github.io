@@ -30,7 +30,7 @@ W.destroyBlock=function(c,r,by){
 const playerUpdate=W.updatePlayer;
 W.updatePlayer=function(p,dt){
  const safe=p.safe&&{...p.safe};playerUpdate.call(this,p,dt);
- const c=Math.floor(p.x),r=Math.floor(p.y),M=this.movers.find(m=>m.pit&&m.cells.some(q=>q.c===c&&q.r===r));
+ const c=Math.floor(p.x),r=Math.floor(p.y),M=this.movers.find(m=>m.pit&&m.cells.some((q,k)=>q.c===c&&q.r===r&&(m.floors?.[k]??4)===4));   // un rail posé sur du vrai sol (pas le vide, terrain 4) se marche
  if(M){if(safe)p.safe=safe;if(p.alive&&!p.air&&!p.falling&&!p.boat&&(Math.abs(p.x-M.x)>.56||Math.abs(p.y-M.y)>.56))this.startFall(p,'void');}
  if(this.elevAt(c,r)?.auto&&safe)p.safe=safe;
 };
@@ -55,6 +55,14 @@ const renderEffects=W.renderArenaEffects;
 W.renderArenaEffects=function(ctx,cam,time,push){
  renderEffects.call(this,ctx,cam,time,push);
  if(this.editorPreview)for(const room of this.secretRooms||[])for(const q of room.cells)push(q.r+.04,q.c+.5,()=>{const z=this.hAt(q.c,q.r)+.025;BK.draw3d.quad(ctx,[[q.c,q.r],[q.c+1,q.r],[q.c+1,q.r+1],[q.c,q.r+1]].map(([x,y])=>cam.project(x,y,z)),'rgba(174,110,242,.12)','rgba(202,153,255,.7)');});
+};
+// Mur secret dans le tableau : exactement le bloc de ciment, avec de fines craques discrètes qui changent d'un mur à l'autre.
+BK.sprites.drawSecretWall=function(ctx,cam,c,r,z,col){
+ const D3=BK.draw3d,f=D3.cube(ctx,cam,c+.04,r+.04,c+.96,r+.96,.85,col,{z,topInset:D3.shade(col.top,.9),outline:'rgba(0,0,0,0.22)'});
+ const rnd=k=>{const x=Math.sin(c*91.7+r*47.3+k*13.1)*43758.5;return x-Math.floor(x);};
+ const crack=(q,u0,k0,steps,alpha)=>{if(!q)return;let u=u0,v=0;const s=Math.hypot(q[1].x-q[0].x,q[1].y-q[0].y);ctx.strokeStyle='rgba(30,30,36,'+alpha+')';ctx.lineWidth=Math.max(.8,s*.018);ctx.beginPath();let p=D3.onQuad(q,u,v);ctx.moveTo(p.x,p.y);
+  for(let i=0;i<steps;i++){u=Math.max(.08,Math.min(.92,u+(rnd(k0+i)-.5)*.22));v=Math.min(1,v+.18+rnd(k0+i+9)*.12);p=D3.onQuad(q,u,v);ctx.lineTo(p.x,p.y);if(i===1){const b=D3.onQuad(q,Math.min(.95,u+.12),v+.08);ctx.lineTo(b.x,b.y);ctx.moveTo(p.x,p.y);}}ctx.stroke();};
+ ctx.save();crack(f.front,.3+rnd(1)*.4,2,4,.32);crack(f.side,.4+rnd(3)*.2,20,3,.25);crack(f.top,.25+rnd(5)*.5,40,2,.2);ctx.restore();
 };
 const draw=BK.sprites.drawDeco;
 BK.sprites.drawDeco=function(ctx,kind,x,y,k,t,nb,seed,orientation,lightColor,props){

@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><title>Sols à mécanique — vérification visuelle</title><style>body{margin:0;background:#211936;color:#fff;font:18px system-ui}canvas{display:block;width:min(100vw,1280px);height:auto}</style>
+<canvas id="v" width="1280" height="900"></canvas>
+<div id="screen-title" hidden></div><div id="overlay" hidden></div>
+<script src="../js/config.js?v=20261101h"></script><script src="../js/decor-biomes.js"></script><script src="../js/floors-plus.js?v=20261101i"></script><script src="../js/wildlife.js"></script><script src="../js/bestiary.js"></script><script src="../js/family-head-sources.js"></script><script src="../js/family-heads.js"></script><script src="../js/camera.js"></script><script src="../js/sprites.js?v=20261101h"></script><script src="../js/sprites-biomes.js"></script><script src="../js/sprites-wildlife.js"></script><script src="../js/world.js?v=20261101i"></script><script src="../js/inventory.js"></script><script src="../js/input.js?v=20261101h"></script><script src="../js/audio.js?v=20261101h"></script><script src="../js/ai.js?castle=19"></script><script src="../js/stage-1-1.js"></script><script src="../js/stage-1-2.js"></script><script src="../js/stage-1-3.js"></script><script src="../js/stage-1-4.js"></script><script src="../js/stage-1-5.js"></script><script src="../js/stage-world-2.js?castle=12"></script><script src="../js/encounter.js?v=20261101h"></script><script src="../js/traps.js"></script><script src="../js/bestiary-world.js?v=20261101h"></script><script src="../js/castle-encounter.js?v=4"></script><script src="../js/sprites-bestiary.js?v=20261101h"></script><script src="../js/castle-towers.js?castle=12"></script><script src="../js/castle-finish.js?castle=12"></script><script src="../js/castle-pipes.js"></script><script src="../js/castle-mechanisms.js?v=20261101h"></script><script src="../js/bomb-dome.js?v=20261101h"></script><script src="../js/floors-mechanics.js?v=1"></script><script src="../js/adventure.js?v=20261101i"></script><script src="../js/worldselect.js?v=20261101h"></script><script src="../js/hub.js?v=20261101h"></script><script src="../js/editor.js?v=20261101i"></script><script src="../js/match.js?v=20261101h"></script><script src="../js/duels.js?v=20261101h"></script><script src="../js/fantasy-enemies.js?v=2"></script><script src="../js/candy-world.js?v=1"></script><script src="../js/challenges.js?v=2"></script><script src="../js/challenges-plus.js"></script>
+<script>
+// Les 20 tuiles à mécanique en rangées de 5 ; héros dans l'herbe haute, sur le miroir, dans les lianes et les sables, bombes, rondins en feu.
+// #nuit : la même scène la nuit (mycélium, linoléum), avec un nuage de spores.
+window.addEventListener('load',()=>{
+ const F=BK.FLOOR_ID_CH,ids=['volcanic','coral','vines','tallgrass','slate','bronze','redbrick','linoleum','emerald','logs','steel','toxic','speedmark','mirror','conveyor','mycelium','candy','electric','magictile','quicksand'];
+ const map=['.'.repeat(17)],props={},spot={};
+ for(let row=0;row<4;row++){let line='.';for(let k=0;k<5;k++){const id=ids[row*5+k],c=1+k*3,r=1+row*2;spot[id]={c,r};const ch=BK.FLOOR_OVERLAYS.includes(id)?',':F[id];line+=ch+ch+'.';if(BK.FLOOR_OVERLAYS.includes(id)){props[c+','+r]={overlay:id};props[(c+1)+','+r]={overlay:id};}}map.push(line+'.');map.push('.'.repeat(17));}
+ props[spot.conveyor.c+','+spot.conveyor.r]={beltDir:3};props[(spot.conveyor.c+1)+','+spot.conveyor.r]={beltDir:3};
+ const night=location.hash.includes('nuit'),W=new BK.World({map,props,theme:'garden',mode:'adventure',hearts:true,explore:true,itemChance:0,dayCycle:night});
+ if(night)W.time=BK.DAY_CYCLE*.7;else W.time=3.4;   // le sol électrifié est allumé
+ const put=(id,who,dx=.5)=>{const s=spot[id],p=W.addPlayer(BK.charById(who),s.c,s.r,{hp:40});p.x=s.c+dx;p.y=s.r+.5;return p;};
+ put('tallgrass','adam',.6);put('mirror','alexie',.5);const v=put('vines','eliott',.6);v.vineT=.8;const q=put('quicksand','zachary',.6);q.sinkT=1.3;const e=put('electric','milo',.6);e.shockT=.4;
+ put('linoleum','josee',.6).squeakGlow=1;
+ const bomb=(id,dx=1.5)=>{const s=spot[id];W.bombs.push({cx:s.c+Math.floor(dx),cy:s.r,x:s.c+dx,y:s.r+.5,z:0,t:3,fire:1,level:1,state:'idle',born:0,passers:new Set(),dir:0});};
+ bomb('candy');bomb('emerald');bomb('conveyor',1.2);bomb('mirror',1.5);
+ W.logFires.set(W.idx(spot.logs.c,spot.logs.r),{c:spot.logs.c,r:spot.logs.r,t:3});
+ if(night)W.spores.push({x:spot.mycelium.c+1,y:spot.mycelium.r+.5,z:0,t:1,dur:4});
+ const cam=new BK.Camera(1280,900);cam.fit(W.cols,W.rows,{top:30,bottom:20,left:20,right:20});
+ const ctx=document.getElementById('v').getContext('2d');W.frozen=true;
+ const draw=()=>{W.time+=1/60;ctx.fillStyle='#211936';ctx.fillRect(0,0,1280,900);W.render(ctx,cam,{});W.renderNight(ctx,cam);
+  ctx.font='bold 13px system-ui';ctx.textAlign='center';for(const id of ids){const s=spot[id],pr=cam.project(s.c+1,s.r+1.15,0),f=BK.EXTRA_FLOORS.find(x=>x.id===id);ctx.lineWidth=3;ctx.strokeStyle='#000';ctx.strokeText(f.name,pr.x,pr.y+14);ctx.fillStyle='#fff';ctx.fillText(f.name,pr.x,pr.y+14);}
+  requestAnimationFrame(draw);};draw();
+});
+</script>

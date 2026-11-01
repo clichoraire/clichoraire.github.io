@@ -32,12 +32,14 @@
   // Debug : tous les tableaux (et mondes) s'ouvrent sans modifier la sauvegarde ; le choix reste mémorisé sur cet appareil.
   try { BK.debugStages = localStorage.getItem('bk.debugStages') === '1'; } catch (e) { BK.debugStages = false; }
   class WorldSelect {
+    // Le mode debug (tout ouvert) ne sert qu'au personnage de Matthieu.
+    get debug() { return BK.debugStages && BK.isCheater(this.charId); }
     constructor(charId, o) {
       o = o || {};
       this.charId = charId; this.def = BK.charById(charId); this.save = BK.loadAdventure(charId); this.t = 0; if (BK.music) BK.music.play('worlds');
       this.worlds = [{ id: 'maison', name: 'Chez les grands-parents', theme: 'garden', hub: true, stages: [] }].concat(BK.WORLDS, [{ id: 'volcan', name: 'Le Volcan', theme: 'lava', stages: [], soon: true }, { id: 'perso', name: 'Mes tableaux', theme: 'garden', stages: BK.loadMaps().map(m => ({ id: m.id, name: m.name })), custom: true }]);
       const list = BK.stageList(); this.firstIndex = this.worlds.map(w => list.findIndex(s => s.world === w));
-      this.unlocked = this.worlds.map((w, i) => w.custom || w.hub || (!w.soon && (BK.debugStages || this.firstIndex[i] === 0 || this.save.unlocked > this.firstIndex[i])));
+      this.unlocked = this.worlds.map((w, i) => w.custom || w.hub || (!w.soon && (this.debug || this.firstIndex[i] === 0 || this.save.unlocked > this.firstIndex[i])));
       this.index = 0; for (let i = this.worlds.length - 1; i >= 0; i--) { const w = this.worlds[i]; if (!w.hub && !w.custom && this.unlocked[i] && this.save.unlocked > this.firstIndex[i] + 1) { this.index = i; break; } }
       this.pos = this.index; this.flash = 0; this.enterT = 0;
       this.islands = this.worlds.map(w => { const W = new BK.World({ map: MAPS[w.id] || MAPS.foret, theme: w.theme, mode: 'adventure', hearts: true, explore: true, itemChance: 0 }); W.frozen = true; return W; });
@@ -76,7 +78,7 @@
         if(s.id==='2-1')W.addEnemy('bombtower',4,2);
         if(s.id==='1-5'){W.addEnemy('crapaud',2,4);W.addEnemy('crapaud',4,4);W.enemies[0].phase=2;}
         for (const e of W.enemies) e.dir = 0;
-        return { stage: s, W, gi, locked: !BK.debugStages && gi + 1 > save.unlocked, done: !!save.best[s.id], pop: instant ? 1 : 0 };
+        return { stage: s, W, gi, locked: !this.debug && gi + 1 > save.unlocked, done: !!save.best[s.id], pop: instant ? 1 : 0 };
       });
       let si = 0; this.stageIslands.forEach((s, k) => { if (!s.locked) si = k; }); const undone = this.stageIslands.findIndex(s => !s.locked && !s.done); if (undone >= 0) si = undone; this.stageIndex = si;
       this.mode = instant ? 'stages' : 'zoomIn'; this.zt = instant ? 1 : 0; this.placePlayer();
@@ -113,13 +115,13 @@
     resetProgress() { BK.confirmDialog({ title: '🗑️ Effacer la progression ?', text: 'La progression de ' + this.def.name + ' dans l’aventure (tableaux réussis, meilleurs scores) sera effacée. L’or de la famille et les défis sont conservés.', confirmLabel: 'Effacer', onConfirm: () => this.doResetProgress() }); }
     doResetProgress() {
       BK.saveAdventure(this.charId, { unlocked: 1, best: {}, score: 0 }); this.save = BK.loadAdventure(this.charId);
-      this.unlocked = this.worlds.map((w, i) => w.custom || w.hub || (!w.soon && (BK.debugStages || this.firstIndex[i] === 0 || this.save.unlocked > this.firstIndex[i])));
+      this.unlocked = this.worlds.map((w, i) => w.custom || w.hub || (!w.soon && (this.debug || this.firstIndex[i] === 0 || this.save.unlocked > this.firstIndex[i])));
 if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.index = this.pos = 1; this.openWorld(1, true); }
     }
     toggleDebug() {
       BK.debugStages = !BK.debugStages; try { localStorage.setItem('bk.debugStages', BK.debugStages ? '1' : '0'); } catch (e) { }
       BK.audio.click(); const keep = this.stageIndex;
-      this.unlocked = this.worlds.map((w, i) => w.custom || w.hub || (!w.soon && (BK.debugStages || this.firstIndex[i] === 0 || this.save.unlocked > this.firstIndex[i])));
+      this.unlocked = this.worlds.map((w, i) => w.custom || w.hub || (!w.soon && (this.debug || this.firstIndex[i] === 0 || this.save.unlocked > this.firstIndex[i])));
       if (this.mode === 'stages') { this.openWorld(this.index, true); this.stageIndex = Math.min(keep, this.stageIslands.length - 1); this.placePlayer(); }
     }
     update(dt) {
@@ -201,7 +203,7 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
         this.panel(ctx, 24, 24, 250, 80); ctx.textAlign = 'left'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.fillText('Temps de jeu', 44, 50); ctx.font = '900 30px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.gold; ctx.fillText(hh + ' h ' + mm + ' min', 44, 84);
         this.panel(ctx, 1006, 24, 250, 80); ctx.textAlign = 'right'; ctx.font = 'bold 18px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.muted; ctx.fillText(this.def.name, 1236, 50); ctx.font = '900 26px Nunito, sans-serif'; ctx.fillStyle = BK.sprites.UI.gold; BK.sprites.textWithCoin(ctx, 'Niveau ' + BK.levelFromXp(this.save.xp || 0).level + ' · 🪙 ' + (this.save.gold || 0), 1236, 84);
         ctx.font = 'bold 17px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText('← → choisir   ·   Entrée ou clic : entrer   ·   Échap : retour', 640, 712);
-        if (this.mode === 'worlds') this.button(ctx, BK.debugStages ? '🐞 Debug : tout ouvert' : '🐞 Debug', 1046, 116, 210, 50, () => this.toggleDebug(), BK.debugStages);
+        if (this.mode === 'worlds' && BK.isCheater(this.charId)) this.button(ctx, this.debug ? '🐞 Debug : tout ouvert' : '🐞 Debug', 1046, 116, 210, 50, () => this.toggleDebug(), this.debug);
         ctx.restore();
       }
       if (this.stageIslands.length && z > 0) this.renderStages(ctx, z);
@@ -235,11 +237,11 @@ if (this.unlocked[this.index]) this.openWorld(this.index, true); else { this.ind
         this.panel(ctx, 300, 596, 680, 100);
         this.title(ctx, s.id + ' · ' + s.name, 640, 628, 34, this.flash > 0 ? BK.sprites.UI.bad : st.locked ? '#9fb0c8' : BK.sprites.UI.text);
         ctx.font = 'bold 19px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = BK.sprites.UI.muted;
-        ctx.fillText(st.locked ? 'Réussis le tableau précédent pour le débloquer' : BK.debugStages && st.gi + 1 > this.save.unlocked ? '🐞 Ouvert en mode debug (pas encore débloqué)' : obj + (this.save.best[s.id] ? '   ·   Meilleur : ' + this.save.best[s.id] + ' pts' : '   ·   Pas encore réussi'), 640, 668);
+        ctx.fillText(st.locked ? 'Réussis le tableau précédent pour le débloquer' : this.debug && st.gi + 1 > this.save.unlocked ? '🐞 Ouvert en mode debug (pas encore débloqué)' : obj + (this.save.best[s.id] ? '   ·   Meilleur : ' + this.save.best[s.id] + ' pts' : '   ·   Pas encore réussi'), 640, 668);
       }
       this.button(ctx, '← Retour', 40, 640, 170, 50, () => this.back());
       this.button(ctx, 'Effacer la progression', 1040, 24, 210, 50, () => this.resetProgress());
-      this.button(ctx, BK.debugStages ? '🐞 Debug : tout ouvert' : '🐞 Debug', 1040, 84, 210, 50, () => this.toggleDebug(), BK.debugStages);
+      if (BK.isCheater(this.charId)) this.button(ctx, this.debug ? '🐞 Debug : tout ouvert' : '🐞 Debug', 1040, 84, 210, 50, () => this.toggleDebug(), this.debug);
       ctx.font = 'bold 17px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText('← → choisir   ·   Entrée ou clic : jouer   ·   Échap : retour aux mondes', 640, 712);
     }
   }

@@ -19,15 +19,16 @@
       {ch:'{',opts:'autoLift',name:'Ascenseur',icon:'🛗',hint:'Automatique : monte et redescend tout seul. Avec une bombe : botte une bombe sous le plateau, son explosion le soulève puis il redescend. Choisis la hauteur.'},{ch:'(',opts:'movingPlatform',name:'Plateforme mobile',icon:'🟨',hint:'Clique où tu veux la plateforme, puis glisse sans relâcher pour tracer son trajet (elle s’arrête devant chaque quai). Deux trajets peuvent se croiser.'},
       { ch: '{', name: 'Ascenseur', icon: '🛗', hint: 'Plateau surélevé sur un poteau. Botte une bombe depuis le sol voisin pour la glisser sous le plateau. Son explosion soulève le plateau de deux étages, puis il redescend. Une bombe posée dessus reste dessus.' }, { ch: '(', name: 'Rail de plateforme', icon: '🛤️', hint: 'Peins une ligne de rails (droite, en L ou en serpent) au fond d’une fosse : une plateforme y glisse à l’étage 1 et fait l’aller-retour. On monte dessus depuis une case d’étage 1 à côté ; si on en descend au-dessus de la fosse, on tombe en bas.' }, { ch: '}', name: 'Bloc-piston', icon: '⏫', hint: 'Une bombe qui explose dessus le fait monter d’un étage, pour de bon (jusqu’à 4).' } ] },
     { id: 'blocs', name: 'Blocs', items: [
-      { ch: 'r', name: 'Roc', icon: '🪨' }, { ch: '#', name: 'Bloc de ciment', icon: '⬛' }, { ch: 'W', opts: 'brick', name: 'Mur de brique', icon: '🧱', hint: 'Se casse avec une bombe. Choisis sa couleur (rouge brique par défaut).' }, { ch: 'x', name: 'Buisson', icon: '🌿' }, { ch: 'X', name: 'Buisson haut', icon: '🌳' },
-      { ch: '"', deco: 'melon', name: 'Melon d’eau', icon: '🍉', hint: 'Bloc cubique aux coins ronds : se casse avec une bombe' }, { ch: '"', deco: 'cheese', name: 'Bloc de fromage', icon: '🧀', hint: 'Bloc cubique : se casse avec une bombe' }, { ch: '"', deco: 'gift', name: 'Cadeau', icon: '🎁', hint: 'Bloc cubique : se casse avec une bombe' }, { ch: '"', deco: 'dirtblock', name: 'Bloc de terre', icon: '🟫', hint: 'Bloc cubique à dessus de gazon : se casse avec une bombe' },
+      { ch: 'r', name: 'Roc', icon: '🪨' }, { ch: '#', name: 'Bloc de ciment', icon: '<i class="ic-cement"></i>' }, { ch: 'W', opts: 'brick', name: 'Mur de brique', icon: '🧱', hint: 'Se casse avec une bombe. Choisis sa couleur (rouge brique par défaut).' }, { ch: 'x', name: 'Buisson', icon: '🌿', hint: 'Se casse avec une bombe. Il se pose tout seul à la hauteur du sol (étage compris).' },
+      { ch: '"', deco: 'melon', name: 'Melon d’eau', icon: '🍉', hint: 'Un vrai bloc qui remplit la case : se casse avec une bombe' }, { ch: '"', deco: 'cheese', name: 'Bloc de fromage', icon: '🧀', hint: 'Bloc cubique : se casse avec une bombe' }, { ch: '"', deco: 'marshmallow', opts: 'blockColor', name: 'Bloc de guimauve', icon: '🍥', hint: 'Un vrai bloc tout doux : une bombe le casse et laisse une guimauve à manger (+5 de vie). Choisis sa couleur.' }, { ch: '"', deco: 'cloudblock', opts: 'blockColor', name: 'Nuage', icon: '☁️', hint: 'Un petit nuage posé au sol : une bombe le fait disparaître dans un « pouf ». Choisis sa couleur.' }, { ch: '"', deco: 'gift', name: 'Cadeau', icon: '🎁', hint: 'Bloc cubique : se casse avec une bombe' }, { ch: '"', deco: 'dirtblock', name: 'Bloc de terre', icon: '🟫', hint: 'Bloc cubique à dessus de gazon : se casse avec une bombe' },
       { ch: 'T', name: 'Arbre', icon: '🌲', opts: 'tree' }, { ch: '*', name: 'Fleurs', icon: '🌼', opts: 'flowers', hint: 'Décoration : on marche dessus' },
       { ch: 'P', name: 'Baril dormant', icon: '🛢️', hint: 'Une flamme l’allume : l’étincelle suit la traînée de poudre et détone au bout' }, { ch: 'p', name: 'Traînée de poudre', icon: '✨', hint: 'Relie le baril à la porte scellée, case par case' }, { ch: 'Q', name: 'Porte scellée', icon: '🔮', hint: 'Seule la détonation magique l’ouvre' },
-      { ch: 'v', name: 'Métal, bois devant', icon: '🔩', hint: 'Indestructible sauf par sa face en bois (au sud, vers la caméra)' }, { ch: '^', name: 'Métal, bois derrière', icon: '🔩', hint: 'Face en bois au nord' }, { ch: '<', name: 'Métal, bois à gauche', icon: '🔩', hint: 'Face en bois à l’ouest' }, { ch: '>', name: 'Métal, bois à droite', icon: '🔩', hint: 'Face en bois à l’est' } ] },
+      { ch: 'v', opts: 'metal', name: 'Bloc de métal', icon: '🔩', hint: 'Indestructible sauf par sa face en bois : choisis de quel côté elle se trouve.' } ] },
     { id: 'objets', name: 'Objets', items: [
+      { ch: '1', name: 'Départ', icon: '🚩' }, { ch: 'G', name: 'Portail de sortie', icon: '🌀', hint: 'Fin du tableau : on est téléporté vers la suite' }, { ch: '|', name: 'Diamant', icon: '💎', hint: 'Fin du tableau : grande célébration quand on l’attrape (+1000 points)' },
       ...['antidote', 'wood', 'bombdiarrhea', 'shortfuse', ...BK.BOMB_POWERS].map(id => ({ch:'"',pickup:id,name:BK.ITEMS[id].name,icon:BK.ITEMS[id].icon,hint:BK.ITEMS[id].desc})),
       { ch: '"', pickup: 'axe', name: 'Hache', icon: '🪓', hint: 'À ramasser dans le sac. Utiliser face à un arbre pour l’abattre ; la hache se garde.' },
-      { ch: '1', name: 'Départ', icon: '🚩' }, { ch: 'G', name: 'Portail de sortie', icon: '🌀', hint: 'Fin du tableau : on est téléporté vers la suite' }, { ch: '|', name: 'Diamant', icon: '💎', hint: 'Fin du tableau : grande célébration quand on l’attrape (+1000 points)' }, { ch: 'h', name: 'Cœur', icon: '❤️' }, { ch: 'k', name: 'Carte d’or', icon: '🃏' }, { ch: '$', name: 'Pièce d’or', icon: '<i class="goldcoin"></i>' },
+      { ch: '"', deco: 'trampoline', name: 'Trampoline', icon: '🤸', hint: 'Marche dessus : tu bondis 2 cases plus loin. En courant : 3 cases !' }, { ch: 'h', name: 'Cœur', icon: '❤️' }, { ch: 'k', name: 'Carte d’or', icon: '🃏' }, { ch: '$', name: 'Pièce d’or', icon: '<i class="goldcoin"></i>' },
       { ch: 'A', name: 'Cible', icon: '🎯', opts: 'target', hint: 'Choisis sa couleur (huit) : elle ouvre les portes de la même couleur' }, { ch: 'a', name: 'Porte', icon: '🚧', opts: 'gate', hint: 'Grille, ou pont-levis sur l’eau ; s’ouvre avec la cible de la même couleur' } ] },
     { id:'piece', name:'Pièce', roomOnly:true, items:[
       {ch:'y',name:'Plancher de bois',icon:'🪵',hint:'Le même plancher que dans la maison. Clique ou glisse pour agrandir la pièce.'},
@@ -53,7 +54,7 @@
       { ch: 'n', name: 'Banc', icon: '🪑' }, { ch: 'u', name: 'Puits', icon: '⛲' }, { ch: 'w', name: 'Barrière', icon: '🚧', hint: 'Se relie aux barrières voisines' }, { ch: 's', name: 'Statue', icon: '🗿', opts:'statue' }, { ch: 'I', name: 'Pilier', icon: '🏛️' },
       { ch: 'o', name: 'Pierre tombale', icon: '🪦' }, { ch: 'j', name: 'Citrouille', icon: '🎃', hint: 'Une bombe la casse en trois morceaux comestibles : +5 points de vie chacun (Q ou W).' }, { ch: 'O', name: 'Coffre', icon: '🧰' }, { ch: 'L', name: 'Bûche', icon: '🪵' }, { ch: 'K', name: 'Caisse de bois', icon: '📦', hint: 'Se casse avec une bombe' },
       { ch: 'm', name: 'Champignons', icon: '🍄', hint: 'On marche dessus' }, { ch: 'g', name: 'Hautes herbes', icon: '🌾', hint: 'On marche dessus' }, { ch: '"', deco: 'carrot', name: 'Carotte à cueillir', icon: '🥕', hint: 'Le héros marche dessus pour la cueillir. Q ou W : il la lance ; un lapin maléfique court la manger et devient gentil.' },
-      { ch: '2', name: 'Pancarte', icon: '🪧' }, { ch: '3', name: 'Tonneau', icon: '🛢️' }, { ch: '4', name: 'Botte de foin', icon: '🌾' }, { ch: '5', name: 'Épouvantail', icon: '🧑‍🌾' }, { ch: '6', name: 'Pot de fleurs', icon: '🌷' }, { ch: '7', name: 'Boîte aux lettres', icon: '📫' }, { ch: '8', name: 'Souche', icon: '🪵' }, { ch: '9', name: 'Cactus', icon: '🌵' }, { ch: '0', name: 'Charrette', icon: '🛒' }, { ch: 'J', name: 'Fontaine', icon: '⛲' },
+      { ch: '2', name: 'Pancarte', icon: '🪧' }, { ch: '3', name: 'Tonneau', icon: '🛢️' }, { ch: '4', name: 'Botte de foin', icon: '🌾' }, { ch: '5', name: 'Épouvantail', icon: '🧑‍🌾' }, { ch: '6', name: 'Pot de fleurs', icon: '🌷', hint: 'Se casse avec une bombe.' }, { ch: '7', name: 'Boîte aux lettres', icon: '📫' }, { ch: '8', name: 'Souche', icon: '🪵' }, { ch: '9', name: 'Cactus', icon: '🌵' }, { ch: '0', name: 'Charrette', icon: '🛒' }, { ch: 'J', name: 'Fontaine', icon: '⛲' },
       { ch: '"', deco: 'wheel', name: 'Roue de charrette', icon: '🛞' }, { ch: '"', deco: 'trough', name: 'Abreuvoir', icon: '🪣' }, { ch: '"', deco: 'banner', name: 'Bannière', icon: '🚩' }, { ch: '"', deco: 'market', name: 'Étal de marché', icon: '🏪' }, { ch: '"', deco: 'beehive', name: 'Ruche', icon: '🍯', hint: 'Une abeille (petite guêpe) en sort dès que le héros est sur une case collée à la ruche' },
       { ch: '"', deco: 'volcano', name: 'Volcan', icon: '🌋', hint: '3 × 3 cases autour de la case cliquée : il fume, la lave coule, et il crache des blocs de lave toutes les 6 à 10 s' }, { ch: '"', deco: 'mountain', name: 'Montagne', icon: '⛰️', opts: 'mountain', hint: 'Choisis largeur, profondeur, hauteur et type ; la case cliquée est au milieu de sa rangée du bas' }, { ch: '"', deco: 'rock', name: 'Roche', icon: '🪨', hint: 'Avec les gants de force (au magasin), le héros la soulève (Espace devant) et la lance comme une bombe : 2 points de dégâts aux monstres, et elle rebondit une case de plus. Elle casse après deux lancers.' }, { ch: '"', deco: 'mossrock', name: 'Rocher moussu', icon: '🪨' }, { ch: '"', deco: 'logpile', name: 'Tas de bûches', icon: '🪵' }, { ch: '"', deco: 'bigmushroom', name: 'Gros champignon', icon: '🍄', hint: 'Trampoline : saute dessus depuis une bombe, il te renvoie 3 cases plus loin' }, { ch: '"', deco: 'bones', name: 'Ossements', icon: '🦴', hint: 'On marche dessus' }, { ch: '"', deco: 'skullpile', name: 'Pile de crânes', icon: '💀' },
       { ch: '"', deco: 'snowman', name: 'Bonhomme de neige', icon: '⛄' }, { ch: '"', deco: 'snowpine', name: 'Sapin enneigé', icon: '🌲' }, { ch: '"', deco: 'baretree', name: 'Arbre nu', icon: '🌳' }, { ch: '"', deco: 'icerock', name: 'Rocher de glace', icon: '🧊' }, { ch: '"', deco: 'icecrystal', name: 'Cristaux de glace', icon: '💎' }, { ch: '"', deco: 'igloo', name: 'Igloo', icon: '🏔️' }, { ch: '"', deco: 'sled', name: 'Traîneau', icon: '🛷' }, { ch: '"', deco: 'skis', name: 'Skis', icon: '🎿' }, { ch: '"', deco: 'snowpile', name: 'Tas de neige', icon: '❄️', hint: 'On marche dessus' }, { ch: '"', deco: 'snowballs', name: 'Boules de neige', icon: '⚪' },
@@ -80,8 +81,12 @@
       { shop: true, name: 'Article à vendre', icon: '🏷️', opts: 'shop', hint: 'Pose-le sur le comptoir ou devant. Choisis l’objet, le prix, et s’il se vend une seule fois ou sans limite. Le héros achète avec Shift à côté.' },
     ] },
     { id: 'tableau', name: 'Tableau', form: true, items: [] },
-    { id: 'outils', name: 'Outils', items: [ { tool:'rotate',name:'Tourner ↻',icon:'↻',hint:'Clique un meuble ou une décoration pour tourner d’un quart de tour.' }, { tool: 'erase', name: 'Gomme', icon: '🧽' }, { tool: 'pick', name: 'Copier une tuile', icon: '💧', hint: 'Clique une case : sa tuile, sa hauteur et son objet sont copiés. Ensuite, clique ou glisse pour en placer plein.' }, { tool: 'fill', name: 'Remplir tout', icon: '🪣', hint: 'Avec le décor choisi' }, { tool: 'undo', name: 'Annuler', icon: '↩️' } ] },
+    { id: 'outils', name: 'Outils', items: [ { tool:'rotate',name:'Tourner ↻',icon:'↻',hint:'Clique un meuble ou une décoration pour tourner d’un quart de tour.' }, { tool: 'erase', name: 'Gomme', icon: '🧽' }, { tool: 'pick', name: 'Copier une tuile', icon: '<svg class=\'ic-svg\' viewBox=\'0 0 24 24\' aria-hidden=\'true\'><rect x=\'8\' y=\'8\' width=\'12\' height=\'12\' rx=\'2.5\'/><path d=\'M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8\'/></svg>', hint: 'Clique une case : sa tuile, sa hauteur et son objet sont copiés. Ensuite, clique ou glisse pour en placer plein.' }, { tool: 'fill', name: 'Remplir tout', icon: '🪣', hint: 'Avec le décor choisi' }, { tool: 'undo', name: 'Annuler', icon: '↩️' } ] },
   ];
+  // Arbres : styles (par biome) et cinq grosseurs, du petit arbre en pot au géant.
+  BK.TREE_STYLES = [['feuillu', '🌳 Feuillu'], ['automne', '🍂 Feuilles d’automne'], ['erable', '🍁 Érable à sucre'], ['chene', '🌳 Chêne séculaire'], ['bouleau', '🤍 Bouleau'], ['saule', '🌿 Saule pleureur'], ['cerisier', '🌸 Cerisier en fleurs'], ['pommier', '🍎 Pommier'],
+    ['sapin', '🌲 Sapin'], ['sapinnoel', '🎄 Sapin de Noël'], ['enneige', '❄️ Arbre couvert de neige'], ['palmier', '🌴 Palmier'], ['baobab', '🏜️ Baobab'], ['banian', '✨ Banian mystique'], ['cristal', '💎 Arbre de cristal'], ['braise', '🔥 Arbre de braise'], ['guimauve', '🍥 Arbre à guimauves'], ['mort', '🪵 Sans feuilles']];
+  BK.TREE_SIZES = [[0.32, 'Minuscule (en pot)'], [0.7, 'Petit'], [1, 'Moyen'], [1.4, 'Grand'], [2.1, 'Géant']];
   const CABIN_VARIANTS = {
     light:[['lamp','Lampadaire'],['candelabra','Chandelier'],['fireplace','Âtre'],['campfire','Feu de camp']],
     seat:[['chair','Chaise'],['stool','Tabouret']],
@@ -98,10 +103,10 @@
   {
     const decor=TABS.find(t=>t.id==='decor'),heightTools=decor.items.filter(it=>['raise','lower','raiseHalf','lowerHalf'].includes(it.tool));
     const floors=[...'~ .,=-_%&yzq[])'].map(ch=>decor.items.find(it=>it.ch===ch&&!it.opts&&!it.deco)).filter(Boolean);
-    decor.items=decor.items.filter(it=>!heightTools.includes(it)&&!floors.includes(it)&&![':',';','!'].includes(it.ch)&&!(it.ch==='{'&&!it.opts));
+    decor.items=decor.items.filter(it=>!heightTools.includes(it)&&!floors.includes(it)&&![':',';','!'].includes(it.ch)&&!(it.ch==='{'&&!it.opts)&&!(it.ch==='('&&!it.opts));
     TABS.find(t=>t.id==='outils').items.push(...heightTools);
-    const sols=[...floors,...BK.DESERT_FLOORS.map(({ch,name,icon})=>({ch,name,icon})),...BK.EXTRA_FLOORS.map(({ch,name,icon,hint})=>({ch,name,icon,hint}))];
-    for(const it of sols)if(!'~ '.includes(it.ch)&&it.ch!==BK.DEEP_WATER_CH)it.opts='floorHeight';
+    const sols=[...floors,...BK.DESERT_FLOORS.map(({ch,name,icon})=>({ch,name,icon})),...BK.EXTRA_FLOORS.map(({ch,id,name,icon,hint})=>BK.FLOOR_OVERLAYS.includes(id)?{overlay:id,name,icon,hint:(hint?hint+' ':'')+'Se pose par-dessus la tuile déjà en place (gazon, eau, pierre…). La gomme l’enlève.'}:{ch,name,icon,hint})];
+    for(const it of sols)if(!it.overlay&&!'~ '.includes(it.ch)&&it.ch!==BK.DEEP_WATER_CH)it.opts='floorHeight';
     TABS.unshift({id:'sols',name:'Sols',items:sols});
   }
   // Le bestiaire vit dans l'onglet Ennemis, rangé par familles (les ennemis de base forment la famille « Classiques »).
@@ -130,6 +135,13 @@
   BK.mapToStage = m => ({ id: 'Perso', mapId: m.id, roomExit:!!m.roomExit, music: m.music || '', npcs: m.npcs || [], shop: m.shop || [], houses: m.houses || {}, props: m.props || {}, name: m.name || 'Mon tableau', objective: m.grid.some(l => l.includes('G') || l.includes('|')) ? 'goal' : 'enemies', explore: true, theme: m.theme || 'garden', items: 0.25, map: m.grid, enemies: m.enemies || [],
     hint: m.grid.some(l => l.includes('G') || l.includes('|')) ? 'Un tableau créé dans l’éditeur. Trouve le but !' : 'Un tableau créé dans l’éditeur. Élimine tous les monstres !', world: { name: 'Mes tableaux', theme: m.theme || 'garden' }, custom: true });
 
+  // Debug : un tableau de l'aventure ouvert dans l'éditeur (copie complète ; le fond est le sol le plus fréquent).
+  BK.stageToMap = s => {
+    const count = {}; for (const l of s.map) for (const ch of l) count[ch] = (count[ch] || 0) + 1;
+    const base = BK['STAGE_' + String(s.id).replace('-', '_')]?.base || Object.keys(count).filter(ch => !'#x?'.includes(ch)).sort((a, b) => count[b] - count[a])[0] || '~', copy = v => JSON.parse(JSON.stringify(v || {}));
+    return { id: 'stage-' + s.id, stageId: s.id, name: String(s.id).startsWith('defi-') ? s.name : s.id + ' · ' + s.name, cols: Math.max(...s.map.map(l => l.length)), rows: s.map.length, theme: s.theme || 'garden', base, music: s.music || '', grid: s.map.slice(), enemies: copy(s.enemies || []), npcs: copy(s.npcs || []), shop: copy(s.shop || []), houses: copy(s.houses), props: copy(s.props) };
+  };
+
   // Pièce intérieure par défaut d'une maison : plancher de bois, départ devant la porte du bas (G = sortie).
   BK.defaultInterior = () => ({ cols: 11, rows: 8, theme: 'interior', base: 'y', grid: ['###########', '#yyyyyyyyy#', '#yyyyyyyyy#', '#yyyyyyyyy#', '#yyyyyyyyy#', '#yyyyyyyyy#', '#yyyy1yyyy#', '#####G#####'], enemies: [], props: {} });
   class Editor {
@@ -137,7 +149,7 @@
     constructor(m, o) {
       BK.migrateRemedyData(m);
       this.parent = (o && o.parent) || null;
-      this.map = { id: m.id || ('m' + Date.now().toString(36)), name: m.name || 'Mon tableau', cols: m.cols, rows: m.rows, theme: m.theme || 'garden', base: m.base || '~', music: m.music || '' };
+      this.map = { id: m.id || ('m' + Date.now().toString(36)), name: m.name || 'Mon tableau', cols: m.cols, rows: m.rows, theme: m.theme || 'garden', base: m.base || '~', music: m.music || '', ...(m.stageId ? { stageId: m.stageId } : {}) };
       this.grid = m.grid ? (this.parent && this.parent.kind!=='duel' ? BK.roomMap(m.grid,m.roomExit) : m.grid).map(l => l.split('')) : Array.from({ length: m.rows }, () => Array(m.cols).fill(this.map.base));
       this.map.rows=this.grid.length; this.map.roomExit=!!(this.parent && this.parent.kind!=='duel' || m.roomExit);
       this.enemies = (m.enemies || []).map(e => ({ ...e })); this.npcs = (m.npcs || []).map(e => ({ ...e })); this.shop = (m.shop || []).map(e => ({ ...e })); this.houses = Object.assign({}, m.houses || {}); this.props = Object.assign({}, m.props || {}); this.house = { w: 3, d: 2, roof: '#b5452a' }; this.lightColor='default'; this.opts = { light:'lamp', seat:'chair', table:'table', statue:'statue', fishMount:'fish_trout',antlers:'antlers_moose',trophy:'trophy_cup', ally:{id:'richard',price:50,lives:3}, tree: { style: 'feuillu', size: 1 }, flowers: { colors: ['#ff5fc8', '#ffd54a', '#ffffff'] }, target: { letter: 'A' }, gate: { letter: 'A' }, npc: { id: 'richard', line: 'Bienvenue dans ma boutique !' }, shop: { item: 'bomb', price: 30, once: true }, mountain: { w: 3, d: 2, h: 3, type: 'neige' } };
@@ -207,6 +219,8 @@
       if(it.tool==='erase' && this.props[wallKey]?.wallDeco){delete this.props[wallKey].wallDeco;this.rebuild();return;}
       if (it.tool === 'erase' && this.platformAt(c, r)) { this.removePlatform(this.platformAt(c, r)); this.rebuild(); return; }   // gomme sur un trajet : toute la plateforme part
       if (it.tool === 'erase' && this.props[c + ',' + r]?.raisedBridge && this.props[c + ',' + r].under != null) { const pr = this.props[c + ',' + r]; this.grid[r][c] = pr.under; if (pr.underLv) this.props[c + ',' + r] = { lv: pr.underLv }; else delete this.props[c + ',' + r]; this.rebuild(); return; }   // gomme sur un pont : la tuile dessous revient
+      if (it.tool === 'erase' && this.props[c + ',' + r]?.overlay) { const pr = this.props[c + ',' + r]; delete pr.overlay; if (!Object.keys(pr).length) delete this.props[c + ',' + r]; this.rebuild(); return; }   // gomme : d’abord les feuilles ou la grille
+      if (it.tool === 'erase' && this.props[c + ',' + r]?.trail && this.grid[r][c] !== 'p') { this.grid[r][c] = 'p'; const lv = this.props[c + ',' + r].lv; this.props[c + ',' + r] = lv != null ? { lv } : {}; if (lv == null) delete this.props[c + ',' + r]; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r); this.rebuild(); return; }   // gomme sur un objet posé sur la traînée : la traînée revient
       if (it.tool === 'erase') { this.grid[r][c] = this.map.base; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r); this.npcs = this.npcs.filter(e => e.c !== c || e.r !== r); this.shop = this.shop.filter(e => e.c !== c || e.r !== r); delete this.houses[c + ',' + r]; delete this.props[c + ',' + r]; this.rebuild(); return; }
       if (['raise','lower','raiseHalf','lowerHalf'].includes(it.tool)) {
         const key = c + ',' + r; if (!first && this.lastLevelKey === key) return; this.lastLevelKey = key;
@@ -235,6 +249,7 @@
         }
         this.rebuild();return;
       }
+      if(it.overlay){const key=c+','+r;if(this.grid[r][c]===' '||this.props[key]?.overlay===it.overlay)return;this.props[key]={...(this.props[key]||{}),overlay:it.overlay};this.rebuild();this.markDirty?.();return;}   // posée par-dessus, la tuile reste
       if(it.ally) {if(!first)return;this.npcs=this.npcs.filter(n=>n.c!==c||n.r!==r);this.npcs.push({c,r,ally:true,id:this.opts.ally.id,price:Math.max(0,Math.round(this.opts.ally.price)),lives:Math.max(1,Math.min(9,Math.round(this.opts.ally.lives)))});if('~ '.includes(this.grid[r][c]))this.grid[r][c]=this.map.base;this.rebuild();return;}
       if (it.npc) { if (!first) return; this.npcs = this.npcs.filter(e => e.c !== c || e.r !== r); this.npcs.push({ c, r, id: this.opts.npc.id, lines: [this.opts.npc.line || 'Bienvenue !'] }); if ('~ '.includes(this.grid[r][c])) this.grid[r][c] = this.map.base; this.rebuild(); return; }
       if (it.shop) { if (!first) return; this.shop = this.shop.filter(e => e.c !== c || e.r !== r); this.shop.push({ c, r, item: this.opts.shop.item, price: Math.max(0, Math.round(+this.opts.shop.price || 0)), once: !!this.opts.shop.once }); if ('~ '.includes(this.grid[r][c])) this.grid[r][c] = this.map.base; this.rebuild(); return; }
@@ -250,7 +265,7 @@
       const waterUnder = (it.pickup || '$hk'.includes(it.ch)) && (this.grid[r][c] === '~' || this.props[key]?.floor === '~' && !TERRAIN.includes(this.grid[r][c]));
       // Un objet posé sur un pont sur colonnes garde le pont (et sa colonne) dessous.
       const bridgeKeep = !TERRAIN.includes(it.ch) && this.props[key]?.raisedBridge ? { raisedBridge: this.props[key].raisedBridge, ...(this.props[key].bridgeColumn ? { bridgeColumn: true } : {}) } : null;
-      const prevCh = this.grid[r][c], prevRailFloor = this.props[key]?.platformFloor;
+      const prevCh = this.grid[r][c], prevRailFloor = this.props[key]?.platformFloor, trailUnder = !TERRAIN.includes(it.ch) && it.ch !== 'p' && (prevCh === 'p' || !!this.props[key]?.trail), overlayKeep = it.ch !== ' ' && this.props[key]?.overlay;
       const keepLv = (this.props[key] || {}).lv ?? (':;'.includes(this.grid[r][c])?1:undefined); if (!same) delete this.props[key];
       if (keepLv != null && TERRAIN.includes(it.ch) && !'~ '.includes(it.ch)) this.props[key] = { lv: keepLv };   // l'étage reste quand on change le sol
       if (it.opts === 'tree') this.props[key] = { ...this.opts.tree }; else if (it.opts === 'flowers') this.props[key] = { colors: this.opts.flowers.colors.slice() }; else if (it.opts === 'target') this.props[key] = { letter: this.opts.target.letter }; else if (it.opts === 'gate') this.props[key] = { letter: this.opts.gate.letter.toLowerCase() };
@@ -260,6 +275,7 @@
       if(it.opts==='autoLift')this.props[key]={...(this.props[key]||{}),autoLift:this.liftAuto!==false,liftHeight:this.liftHeight||2,travelTime:this.travelTime||2.6,platformPause:this.platformPause||1.8};
       if(it.opts==='secretWall')this.props[key]={...(this.props[key]||{}),secretGroup:this.secretGroup||'A',secretWidth:this.secretWidth||3,secretDepth:this.secretDepth||3,secretDirection:this.secretDirection??2};
       if(it.opts==='pipe')this.props[key]={...(this.props[key]||{}),pipeLink:this.pipeLink||'A'};
+      if(it.opts==='blockColor')this.props[key]={...(this.props[key]||{}),color:this.blockColors?.[it.deco]||BK.BLOCK_COLORS?.[it.deco]||'#ffffff'};
       if(it.opts==='brick'&&(this.brickColor||BK.BRICK_COLOR)!==BK.BRICK_COLOR)this.props[key]={...(this.props[key]||{}),brickColor:this.brickColor};
       if(it.opts==='mechanism')this.props[key]={...(this.props[key]||{}),trapRest:this.trapRest??2,trapActive:this.trapActive??1,trapDelay:this.trapDelay??0,trapRange:this.trapRange??4,trapBurst:this.trapBurst??1};
       if(it.opts==='firebar')this.props[key]={...(this.props[key]||{}),length:this.firebarLength||3,direction:this.firebarDirection||1,speed:this.firebarSpeed||'normal',arms:this.firebarArms===2?2:1};
@@ -270,10 +286,13 @@
       if (waterUnder) this.props[key] = Object.assign(this.props[key] || {}, { floor: '~' });
       if (bridgeKeep) this.props[key] = Object.assign(this.props[key] || {}, bridgeKeep, { floor: '=' });
       if (it.opts === 'floorHeight' && this.floorLevel != null && this.floorLevel !== 'keep') { if (this.floorLevel > 0) this.props[key] = { ...(this.props[key] || {}), lv: this.floorLevel }; else if (this.props[key]) { delete this.props[key].lv; if (!Object.keys(this.props[key]).length) delete this.props[key]; } }
+      if (it.ch === BK.FLOOR_ID_CH.conveyor) this.props[key] = { ...(this.props[key] || {}), beltDir: this.beltDir ?? 3 };   // tapis roulant : le sens des flèches
       if (it.ch === '(' && !it.opts) this.props[key] = { ...(this.props[key] || {}), platformFloor: prevCh === '(' ? prevRailFloor ?? '.' : TERRAIN_CH.includes(prevCh) ? prevCh : this.map.base || '.' };   // rails posés sur le sol : le sol reste
+      if (overlayKeep) this.props[key] = { ...(this.props[key] || {}), overlay: overlayKeep };
+      if (trailUnder) this.props[key] = { ...(this.props[key] || {}), trail: true };   // objet posé sur la traînée de poudre : elle reste intacte dessous
       if (it.opts === 'ramp') this.props[key] = { ...(this.props[key] || {}), material: this.rampMaterial || 'auto' };
       if (it.ch && TABS[0].items.some(x => x.ch === it.ch)) this.lastTerrain = it.ch;
-      this.grid[r][c] = (it.opts==='statue'||it.opts==='table')&&this.opts[it.opts]!==it.opts?'"':it.ch; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r);
+      this.grid[r][c] = (it.opts==='statue'||it.opts==='table')&&this.opts[it.opts]!==it.opts?'"':it.opts==='metal'?this.metalSide||'v':it.ch; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r);
       if (this.grid[r][c] !== 'H' && this.houses[c + ',' + r]) { delete this.houses[c + ',' + r]; if (typeof document !== 'undefined' && this.tab === 'maisons' && this.showTab) this.showTab('maisons'); }
       if (it.ch === 'H') {   // les murs de la maison selon sa taille, la porte reste libre
         const prevHouse = this.houses[c + ',' + r]; const hp = this.houses[c + ',' + r] = { ...this.house, interior: prevHouse && prevHouse.interior }; const hw = (hp.w - 1) / 2; this.lastHouse = c + ',' + r; if (typeof document !== 'undefined') { this.renderOptions(); if (this.tab === 'maisons' && this.showTab) this.showTab('maisons'); }
@@ -358,13 +377,15 @@
       // bandeau
       ctx.save(); ctx.font = 'bold 18px Nunito, sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; BK.sprites.rr(ctx, 14, 10, 700, 40, 12); ctx.fill(); ctx.fillStyle = '#fff';
-      const it = this.item; ctx.fillText((it ? it.icon + ' ' + it.name : '') + '   ·   ' + this.map.name + ' (' + this.map.cols + '×' + this.map.rows + ')' + (this.dirty ? '  ●  non sauvegardé' : '') + (this.hover ? (this.hover.ghost ? '   ·   clic : créer la case' : '   ·   case ' + this.hover.c + ', ' + this.hover.r + (this.world.hAt(this.hover.c, this.hover.r) > 0.3 ? ' · étage ' + (Math.round(this.world.hAt(this.hover.c, this.hover.r) / 0.3)/2) : '')) : ''), 30, 30);
+      const it = this.item; ctx.fillText((it ? String(it.icon).replace(/<[^>]*>/g, '').trim() + ' ' + it.name : '') + '   ·   ' + this.map.name + ' (' + this.map.cols + '×' + this.map.rows + ')' + (this.dirty ? '  ●  non sauvegardé' : '') + (this.hover ? (this.hover.ghost ? '   ·   clic : créer la case' : '   ·   case ' + this.hover.c + ', ' + this.hover.r + (this.world.hAt(this.hover.c, this.hover.r) > 0.3 ? ' · étage ' + (Math.round(this.world.hAt(this.hover.c, this.hover.r) / 0.3)/2) : '')) : ''), 30, 30);
       if (this.msgT > 0) { ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.55)'; BK.sprites.rr(ctx, 440, BK.H - 60, 400, 40, 12); ctx.fill(); ctx.fillStyle = '#ffd54a'; ctx.fillText(this.msg, 640, BK.H - 40); }
       ctx.restore();
     }
     // ---------------------------------------------------------------- tiroir
     buildPanel() {
       const P = document.getElementById('editor-panel'); P.innerHTML = '';
+      // Après un choix dans une liste (taille d'arbre…), le focus revient au tableau : Ctrl+Z, flèches et WASD remarchent.
+      if (!P.dataset.blurLists) { P.dataset.blurLists = '1'; P.addEventListener('change', e => { if (e.target.tagName === 'SELECT') e.target.blur(); }); }
       const tabs = document.createElement('div'); tabs.className = 'tabs'; P.appendChild(tabs);
       // Barre d'outils toujours visible (tourner, gomme, pipette, étages, annuler…) avec les actions du tableau à droite.
       const bar = document.createElement('div'); bar.className = 'toolbar'; P.appendChild(bar);
@@ -422,7 +443,7 @@
       showTab(this.map.roomExit?'piece':'sols'); this.renderOptions();
       const act = (label, fn, cls, title) => { const b = document.createElement('button'); b.textContent = label; if (title) b.title = title; if (cls) b.className = cls; b.addEventListener('click', () => { BK.audio.click(); fn(); }); acts.appendChild(b); return b; };
       if (this.parent) { act(this.parent.kind==='duel'?'▶ Tester le duel':'▶ Tester la pièce', () => this.test(), 'primary'); this.saveBtn = act(this.parent.kind==='duel'?'⬅ Retour au duelliste':'⬅ Retour à l’extérieur', () => this.returnToParent()); }
-      else { act('▶ Tester', () => this.test(), 'primary'); this.saveBtn = act('💾 Sauver', () => this.save(), '', 'Sauvegarder le tableau'); act('📋', () => this.copyCode(), '', 'Copier le code'); act('📤', () => this.exportJson(), '', 'Enregistrer dans un fichier'); act('📂', () => this.importJson(), '', 'Ouvrir un fichier'); act('← Menu', () => this.quit(), 'ghost'); }
+      else { act('▶ Tester', () => this.test(), 'primary'); this.saveBtn = act('💾 Sauver', () => this.save(), '', 'Sauvegarder le tableau'); act('📋', () => this.copyCode(), '', 'Copier le code'); act(this.map.stageId ? '📤 Exporter' : '📤', () => this.exportJson(), this.map.stageId ? 'attention' : '', 'Enregistrer dans un fichier'); act('📂', () => this.importJson(), '', 'Ouvrir un fichier'); act('← Menu', () => this.quit(), 'ghost'); }
       const help = document.createElement('p'); help.className = 'hint'; help.hidden = true; help.textContent = this.map.roomExit ? 'Pièce : plancher, murs et meubles · Plusieurs sorties possibles · Repeins une sortie avec du plancher pour l’enlever · Clique sur une case en pointillés pour agrandir.' : 'Clique ou glisse sur la carte pour peindre · Flèches ou WASD : déplacer la vue · Molette : zoom · Ctrl+Z : annuler · Le départ, le but et chaque cible sont uniques.'; P.appendChild(help); const cv = document.getElementById('editor-canvas'); if (cv) cv.title = help.textContent;
       // La carte prend toute la hauteur qui reste sous le panneau : plus besoin de défiler.
       if (window.ResizeObserver && !this.panelObserver) { this.panelObserver = new ResizeObserver(() => document.documentElement.style.setProperty('--ed-panel', P.offsetHeight + 'px')); this.panelObserver.observe(P); }
@@ -470,7 +491,7 @@
     renderOptions() {
       const box = this.optBox; if (!box) return; box.innerHTML = ''; box.hidden = true; const it = this.item; if (!it || (!it.opts && !it.deco && !BK.DECO[it.ch])) return; box.hidden = false;
       const sel = (label, opts, val, on) => { const l = document.createElement('label'); l.textContent = label + ' '; const s = document.createElement('select'); for (const [v, n] of opts) { const o = document.createElement('option'); o.value = v; o.textContent = n; if (String(v) === String(val)) o.selected = true; s.appendChild(o); } s.addEventListener('change', () => on(s.value)); l.appendChild(s); box.appendChild(l); };
-      const title = document.createElement('b'); title.textContent = it.icon + ' ' + it.name + ' :'; box.appendChild(title);
+      const title = document.createElement('b'); title.innerHTML = it.icon + ' ' + it.name + ' :'; box.appendChild(title);
       if(it.opts==='supportedBridge'){
         sel('section',['A','B','C','D','E','F','G','H'].map(v=>[v,v]),this.bridgeGroup||'A',v=>this.bridgeGroup=v);
         sel('matériau',Object.entries(BK.MATERIALS).map(([id,m])=>[id,m.name]),this.bridgeMaterial||'bois',v=>this.bridgeMaterial=v);
@@ -491,6 +512,7 @@
         if(this.liftAuto!==false)sel('durée du trajet',[[1.8,'1,8 s'],[2.6,'2,6 s'],[4,'4 s']],this.travelTime||2.6,v=>this.travelTime=+v);
       }
       if(it.opts==='floorHeight')sel('hauteur',[['keep','Garder la hauteur de la case'],...[0,.5,1,1.5,2,2.5,3,3.5,4,4.5,5].map(n=>[n,n?'Étage '+n:'Au sol (0)'])],this.floorLevel??'keep',v=>this.floorLevel=v==='keep'?'keep':+v);
+      if(it.ch===BK.FLOOR_ID_CH.conveyor)sel('sens',[[3,'Vers la droite →'],[1,'Vers la gauche ←'],[2,'Vers le haut ↑'],[0,'Vers le bas ↓']],this.beltDir??3,v=>this.beltDir=+v);
       if(it.opts==='ramp')sel('matériau',[['auto','Classique'],...Object.entries(BK.MATERIALS).map(([id,m])=>[id,m.name])],this.rampMaterial||'auto',v=>this.rampMaterial=v);
       if(it.opts==='movingPlatform'||(it.opts==='autoLift'&&this.liftAuto!==false))sel('pause à chaque bout',[[1,'1 s'],[1.8,'1,8 s'],[3,'3 s']],this.platformPause||1.8,v=>this.platformPause=+v);
       if(it.opts==='secretWall'){
@@ -532,7 +554,9 @@
         sel('vente', [['once', 'Une seule fois (disparaît)'], ['many', 'Autant qu’on veut']], this.opts.shop.once ? 'once' : 'many', v => this.opts.shop.once = v === 'once');
       }
       if (it.opts === 'mountain') { const M = this.opts.mountain; sel('largeur', [1, 2, 3, 4, 5, 6, 7].map(n => [n, n + (n > 1 ? ' cases' : ' case')]), M.w, v => M.w = +v); sel('profondeur', [1, 2, 3, 4, 5].map(n => [n, n + (n > 1 ? ' cases' : ' case')]), M.d, v => M.d = +v); sel('hauteur', [2, 3, 4, 5, 6, 7, 8].map(n => [n, n + ' étages']), M.h, v => M.h = +v); sel('type', [['neige', 'Montagne de neige'], ['terre', 'Montagne de terre'], ['roche', 'Montagne de roche'], ['herbe', 'Montagne d’herbe']], M.type, v => M.type = v); }
-      if (it.opts === 'tree') { sel('style', [['feuillu', 'Feuillu'], ['automne', 'Feuilles d’automne'], ['sapin', 'Sapin'], ['mort', 'Sans feuilles']], this.opts.tree.style, v => this.opts.tree.style = v); sel('taille', [[0.7, 'Petit'], [1, 'Moyen'], [1.4, 'Grand']], this.opts.tree.size, v => this.opts.tree.size = +v); }
+      if (it.opts === 'blockColor') { const l = document.createElement('label'), inp = document.createElement('input'); l.textContent = 'couleur '; inp.type = 'color'; inp.value = this.blockColors?.[it.deco] || BK.BLOCK_COLORS?.[it.deco] || '#ffffff'; inp.oninput = () => { this.blockColors = { ...(this.blockColors || {}), [it.deco]: inp.value }; }; l.appendChild(inp); box.appendChild(l); }
+      if (it.opts === 'metal') sel('face en bois', [['v', '⬇️ Devant (vers la caméra)'], ['^', '⬆️ Derrière'], ['<', '⬅️ À gauche'], ['>', '➡️ À droite']], this.metalSide || 'v', v => this.metalSide = v);
+      if (it.opts === 'tree') { sel('style', BK.TREE_STYLES, this.opts.tree.style, v => this.opts.tree.style = v); sel('taille', BK.TREE_SIZES, this.opts.tree.size, v => this.opts.tree.size = +v); }
       else if (it.opts === 'flowers') { const l = document.createElement('label'); l.textContent = 'couleurs '; box.appendChild(l); this.opts.flowers.colors.forEach((col, i) => { const inp = document.createElement('input'); inp.type = 'color'; inp.value = col; inp.title = 'Couleur ' + (i + 1); inp.addEventListener('input', () => this.opts.flowers.colors[i] = inp.value); l.appendChild(inp); }); const hint = document.createElement('span'); hint.className = 'hint'; hint.textContent = 'Trois couleurs mélangées dans la même touffe.'; box.appendChild(hint); }
       else if (it.opts === 'target' || it.opts === 'gate') {   // pastilles de couleur (huit)
         const cur = (it.opts === 'target' ? this.opts.target.letter : this.opts.gate.letter).toUpperCase(), l = document.createElement('label'); l.textContent = (it.opts === 'target' ? 'couleur' : 'ouverte par la cible') + ' '; const sw = document.createElement('span'); sw.className = 'roofs';
@@ -626,7 +650,7 @@
     exportJson() { const blob = new Blob([JSON.stringify(this.data(), null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (this.map.name || 'tableau').replace(/[^\w\-]+/g, '_') + '.bomberkid.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
     importJson() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json'; inp.addEventListener('change', () => { const f = inp.files[0]; if (!f) return; f.text().then(txt => { const m = JSON.parse(txt); if (!m || !Array.isArray(m.grid)) throw Error('format'); BK.openEditor(m); }).catch(() => alert('Fichier non reconnu.')); }); inp.click(); }
     remove() { BK.confirmDialog({ title: '🗑️ Supprimer le tableau ?', text: '« ' + this.map.name + ' » disparaîtra de « Mes tableaux ».', confirmLabel: 'Supprimer', onConfirm: () => { BK.deleteMap(this.map.id); BK.editor = null; BK.current = null; BK.toMenu(); } }); }
-    quit() { if (this.parent) { this.returnToParent(); return; } const leave = () => { BK.current = null; BK.toMenu(); }; if (this.dirty) BK.confirmDialog({ title: '✏️ Changements non sauvegardés', text: 'Des changements ne sont pas sauvegardés. Quitter quand même ?', cancelLabel: 'Rester', confirmLabel: 'Quitter sans sauvegarder', onConfirm: leave }); else leave(); }
+    quit() { if (this.parent) { this.returnToParent(); return; } const leave = () => { BK.current = null; if (this.map.stageId && BK.Debug) { BK.editor = null; BK.show('debug'); BK.current = new BK.Debug(); } else BK.toMenu(); }; if (this.dirty) BK.confirmDialog({ title: '✏️ Changements non sauvegardés', text: 'Des changements ne sont pas sauvegardés. Quitter quand même ?', cancelLabel: 'Rester', confirmLabel: 'Quitter sans sauvegarder', onConfirm: leave }); else leave(); }
   }
   BK.Editor = Editor; BK.EDITOR_TABS = TABS;
 })(window.BK);

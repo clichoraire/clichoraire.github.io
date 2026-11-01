@@ -6,7 +6,7 @@
   const METAL_WOOD = { 'v': 0, '<': 1, '^': 2, '>': 3 };   // côté en bois : sud, ouest, nord, est
   // Décorations : lettre → [sorte, 0 = on passe dessus, 1 = bloque, 2 = bloc mou (se casse)]
   const DECO = { l: ['lamp', 1], n: ['bench', 1], o: ['tomb', 1], s: ['statue', 1], u: ['well', 1], w: ['fence', 1], m: ['mushrooms', 0], g: ['grass', 0], K: ['crate', 2], i: ['campfire', 1], j: ['pumpkin', 2], O: ['chest', 1], L: ['log', 1], I: ['pillar', 1], N: ['counter', 1], V: ['shelf', 1],
-    2: ['signpost', 1], 3: ['cask', 1], 4: ['hay', 1], 5: ['scarecrow', 1], 6: ['flowerpot', 1], 7: ['mailbox', 1], 8: ['stump', 1], 9: ['cactus', 1], 0: ['cart', 1], J: ['fountain', 1],
+    2: ['signpost', 1], 3: ['cask', 1], 4: ['hay', 1], 5: ['scarecrow', 1], 6: ['flowerpot', 2], 7: ['mailbox', 1], 8: ['stump', 1], 9: ['cactus', 1], 0: ['cart', 1], J: ['fountain', 1],
     M: ['table', 1], R: ['chair', 1], S: ['bed', 1], U: ['bookshelf', 1], Y: ['fireplace', 1], Z: ['cauldron', 1], t: ['plant', 1], '@': ['piano', 1], '+': ['candelabra', 1], '?': ['anvil', 1] };
   // Décorations supplémentaires : caractère " et props["c,r"].deco = genre (0 : on marche dessus, 1 : solide)
   const DECO_PROPS = { waterjet:1, firebar:1, terrarium:1, aquarium:1, fishing_basket:1, fish_trout:1, fish_bass:1, fish_pike:1, antlers_moose:1, antlers_deer:1, fly_frame:1, lumber_saw:1, trophy_cup:1, trophy_star:1, trophy_shield:1, table_round:1, table_dining:1, table_low:1, fireplace:1, chair:1, stool:1, statue_mermaid: 1, statue_thinker: 1, statue_dancer: 1, statue_guardian: 1, wheel: 1, trough: 1, banner: 1, market: 1, beehive: 1, mossrock: 1, logpile: 1, bigmushroom: 1, bones: 0, skullpile: 1,
@@ -22,7 +22,7 @@
   for(const it of BK.BIOME_DECOR){DECO_PROPS[it.deco]=it.solid;if(it.wall)BK.WALL_DECOR.add(it.deco);}
   for(const it of BK.CASTLE_DECOR){DECO_PROPS[it.deco]=it.solid;if(it.wall)BK.WALL_DECOR.add(it.deco);}
   for(const it of BK.TRAP_DECOR)DECO_PROPS[it.deco]=it.solid;
-  BK.DECO = DECO; BK.DECO_PROPS = DECO_PROPS;
+  BK.DECO = DECO; BK.DECO_PROPS = DECO_PROPS; BK.CUBE_BLOCKS = ['melon', 'cheese', 'gift', 'dirtblock', 'crate'];
   BK.hasInstrument = W => W.deco.some(k => k && BK.INSTRUMENTS.includes(k));
   const T_STONE = 0, T_GRASS = 1, T_WATER = 2, T_BRIDGE = 3, T_VOID = 4, T_DIRT = 5, T_ROAD = 6, T_PLAZA = 7, T_SIDEWALK = 8, T_CURB = 9, T_WOOD = 10, T_TILE = 11, T_CARPET = 12, T_LAVA = 13, T_ICE = 14, T_SNOW = 15;
   const FLOORS = { '-': T_DIRT, '_': T_ROAD, '%': T_PLAZA, '&': T_SIDEWALK, '!': T_CURB, 'y': T_WOOD, 'z': T_TILE, 'q': T_CARPET, '[': T_LAVA, ']': T_ICE, ')': T_SNOW, ...Object.fromEntries(BK.DESERT_FLOORS.map(it=>[it.ch,it.terrain])), ...Object.fromEntries(BK.EXTRA_FLOORS.filter(it=>!it.deep).map(it=>[it.ch,it.terrain])) };
@@ -101,7 +101,8 @@
         else if (ch === '"') { const kind = (this.props[c + ',' + r] || {}).deco || 'bones', solid = DECO_PROPS[kind] == null ? 1 : DECO_PROPS[kind]; this.deco[i] = kind; if(kind==='firebar')this.firebars.push({c,r,angle:0}); if(kind==='fireplace'||kind==='campfire')this.campfires.push({c,r}); if (kind === 'volcano') this.volcanoes.push({ c, r, t: 0, cool: 3 + Math.random() * 4, erupt: 0 }); cell = solid === 2 ? SOFT : solid === 1 ? HARD : 0; if (kind === 'beehive') this.hives.push({ c, r, cool: 0 }); }
         else if (DECO[ch]) { const [kind, solid] = DECO[ch]; this.deco[i] = kind; cell = solid === 2 ? SOFT : solid === 1 ? HARD : 0; if (kind === 'mushrooms' || kind === 'grass') t = T_GRASS; if (kind === 'campfire' || kind === 'fireplace') this.campfires.push({ c, r }); }
         else if (ch === 'k') { this.pendingItems.push({ c, r, type: 'card' }); this.cardsTotal++; }
-        const plv = this.props[c + ',' + r]; if (plv && plv.lv != null && t !== T_WATER && t !== T_VOID) h = (plv.lv + (ch==='/'?.5:0)) * LEVEL;   // étage choisi dans l'éditeur (0 à 4)
+        const plv = this.props[c + ',' + r]; if (plv?.trail) this.trail[i] = 1;   // traînée de poudre cachée sous un objet
+        if (plv && plv.lv != null && t !== T_WATER && t !== T_VOID) h = (plv.lv + (ch==='/'?.5:0)) * LEVEL;   // étage choisi dans l'éditeur (0 à 4)
         this.terrain[i] = t; this.height[i] = h; this.cells[i] = cell;
       }
       // Niveau des objets posés sur un plateau : d'après props (éditeur), sinon d'après les voisines.
@@ -261,8 +262,10 @@
         const base = this.baseH.get(this.idx(cells[0].c, cells[0].r)) || 0;
         // hauteur automatique : celle des cases d'embarquement le long du trajet, un étage par défaut
         let top = 0; for (const q of cells) for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const c = q.c + dc, r = q.r + dr; if (!this.inside(c, r) || this.railAt(c, r) || this.cells[this.idx(c, r)] || !this.walkableTerrain(c, r) || this.ramp[this.idx(c, r)]) continue; top = Math.max(top, this.hAt(c, r)); }
-        const M = { cells, pos: 0, dir: 1, speed: 1.3, wait: 0.6, x: cells[0].c + 0.5, y: cells[0].r + 0.5, base, top: top > base + 0.01 ? top : base + LEVEL };
-        M.floors = cells.map(q => { const f = this.props[key(q.c, q.r)]?.platformFloor; return f == null ? T_VOID : floorT(f); }); cells.forEach((q, k) => this.railFloor.set(this.idx(q.c, q.r), M.floors[k]));
+        const floors = cells.map(q => { const f = this.props[key(q.c, q.r)]?.platformFloor; return f == null ? T_VOID : floorT(f); }), onGround = floors.every(f => f !== T_VOID && f !== T_WATER);
+        // sur un vrai sol plat, la plateforme reste au ras du sol : on monte dessus en marchant
+        const M = { cells, pos: 0, dir: 1, speed: 1.3, wait: 0.6, x: cells[0].c + 0.5, y: cells[0].r + 0.5, base, top: top > base + 0.01 ? top : onGround ? base : base + LEVEL };
+        M.floors = floors; cells.forEach((q, k) => this.railFloor.set(this.idx(q.c, q.r), M.floors[k]));
         M.speed=Math.max(.4,Math.min(3,Number(pr.platformSpeed)||1.3));M.pause=Math.max(.5,Number(pr.platformPause)||1.8);if(pr.platformLevel!=null&&pr.platformLevel!=='auto')M.top=Number(pr.platformLevel)*LEVEL;M.pit=!!pr.platformPit;this.movers.push(M);
       };
       // Plateformes tracées dans l'éditeur : chacune suit son propre trajet, même quand deux trajets se croisent.
@@ -784,7 +787,7 @@
     }
     // Morsure de serpent : empoisonné 6 s, 2 points de vie perdus chaque seconde (le bouclier et l'invincibilité n'y font rien).
     autoAntipoison(p) { if(!(p.poison>0))return false;BK.normalizeRemedyBag(p);if( !(p.quickSlots||[]).includes('antidote'))return false;const i=(p.inv||[]).findIndex(s=>s.type==='antidote'&&s.n>0);return i>=0&&this.useItem(p,i); }
-    poisonPlayer(p, e) { if (!p.alive || !this.hearts) return; p.poison = 6; p.poisonTick = 1; if(this.autoAntipoison(p))return; this.burst(p.x, p.y, 0.4, '#7ef05a', 10); this.events.push({ type: 'poisoned', player: p, enemy: e }); }
+    poisonPlayer(p, e) { if (!p.alive || !this.hearts) return; p.poison = 6; p.poisonTick = 1; p.poisonEvery = 1; p.poisonDmg = 2; if(this.autoAntipoison(p))return; this.burst(p.x, p.y, 0.4, '#7ef05a', 10); this.events.push({ type: 'poisoned', player: p, enemy: e }); }
     // Points de vie : les coups enlèvent 5, 10, 15 ou 20 selon la source ; « −10 » flotte au-dessus de la tête.
     damage(p, dmg, source) {
       p.hp = Math.max(0, p.hp - dmg); this.events.push({ type: 'playerHit', player: p, source, dmg });
@@ -983,9 +986,12 @@
       if (b.giga) { this.shake = 0.55; this.explodeGiga(b,c,r); return; }
       if (b.dome) { this.explodeDome(b,c,r); return; }
       this.addFlame(c, r, 'center', 0, b);
-      for (let d = 0; d < 4; d++) {
+      for (let d = 0; d < 4; d++) this.blastRay(c, r, d, b.fire, b);
+    }
+    // Une branche de l'explosion : part de (c, r) dans la direction d sur « range » cases (un sol en bronze peut la dévier).
+    blastRay(c, r, d, range, b) {
         const D = DIRS[d];
-        for (let k = 1; k <= b.fire; k++) {
+        for (let k = 1; k <= range; k++) {
           const cc = c + D.dx * k, rr = r + D.dy * k;
           if (!this.inside(cc, rr)) break;
           if(this.hitBridgeColumn?.(cc,rr,b)) break;
@@ -1000,14 +1006,14 @@
           if (v === TARGET) { this.addFlame(cc, rr, 'end', d, b); break; }
           if (v === SOFT) { this.destroyBlock(cc, rr, b.owner); this.addFlame(cc, rr, 'end', d, b); break; }
           const ob = this.bombAt(cc, rr);
-          this.addFlame(cc, rr, k === b.fire ? 'end' : 'mid', d, b);
+          this.addFlame(cc, rr, k === range ? 'end' : 'mid', d, b);
           if (ob) { this.explodeBomb(ob); break; }
+          if (k < range && this.deflectBlast?.(cc, rr, d, range - k, b)) break;
         }
-      }
     }
     addFlame(c, r, kind, dir, bomb) {
       const key = this.idx(c, r), old = this.flameAt.get(key);
-      const f = { cx: c, cy: r, t: 0, level:bomb.level||1, duration:BK.FLAME_TIME*(bomb.level>=2?2:1), kind: old && old.kind === 'center' ? 'center' : kind, dir, seed: Math.random() * 10, owner: bomb.owner, bomb };
+      const f = { cx: c, cy: r, t: 0, level:bomb.level||1, duration:BK.flameLife(bomb.level||1), kind: old && old.kind === 'center' ? 'center' : kind, dir, seed: Math.random() * 10, owner: bomb.owner, bomb };
       if (old) { const remaining=(old.duration||BK.FLAME_TIME)-old.t;old.duration=Math.max(remaining,f.duration);old.t=0;if(f.level>=(old.level||1)){old.level=f.level;old.owner=bomb.owner;old.bomb=bomb;}return old; }
       this.flames.push(f); this.flameAt.set(key, f);
       const it = this.itemAt(c, r); if (it && !(bomb.safeItems || bomb.owner && bomb.owner.safeitems) && this.time - it.born > 0.3) { this.items.splice(this.items.indexOf(it), 1); this.burst(c + 0.5, r + 0.5, 0.3, BK.ITEMS[it.type].color, 6); }
@@ -1021,13 +1027,15 @@
       this.cells[this.idx(c, r)] = 0; const kind = this.deco[this.idx(c, r)]; this.deco[this.idx(c, r)] = null;
       const sp0 = this.special.get(c + ',' + r); if (sp0 && sp0.type === 'brick') this.special.delete(c + ',' + r);
       if (by) by.score += BK.BLOCK_SCORE;
-      const SOFT_COLORS = { crate: '#a0703a', melon: '#ff5a5a', cheese: '#f4c430', gift: '#ffd54a', dirtblock: '#7d5428', pumpkin: '#ff8a1f' };
+      const SOFT_COLORS = { crate: '#a0703a', melon: '#ff5a5a', cheese: '#f4c430', gift: '#ffd54a', dirtblock: '#7d5428', pumpkin: '#ff8a1f', flowerpot: '#c8693a', marshmallow: this.props[c + ',' + r]?.color || '#ffd1e3' };
       this.burst(c + 0.5, r + 0.5, 0.5, SOFT_COLORS[kind] || (sp0 && sp0.type === 'brick' ? this.brickColors(c, r).front : this.theme.soft), 10, 1);
       if (kind === 'melon') this.burst(c + 0.5, r + 0.5, 0.4, '#2e7d32', 6, 1);
+      if (kind === 'flowerpot') { this.burst(c + 0.5, r + 0.5, 0.35, '#5a3b1c', 6, 1); this.burst(c + 0.5, r + 0.5, 0.45, '#ff6fae', 5, 1); }   // pot cassé : terre et pétales
       this.events.push({ type: 'blockDestroyed', c, r, player: by });
       const sp = this.special.get(c + ',' + r);
       if (sp && sp.type === 'exit') { this.exit.hidden = false; return; }
       if (kind === 'pumpkin') { for (let n = 0; n < 3; n++) this.spawnItem(c, r, 'pumpkinpiece'); return; }
+      if (kind === 'marshmallow') { this.spawnItem(c, r, 'marshmallow'); return; }   // bloc de guimauve : une guimauve à manger
       if (this.coins && Math.random() < 0.22) { this.spawnItem(c, r, 'coin'); return; }
       if (Math.random() < this.itemChance) this.spawnItem(c, r);
     }
@@ -1107,7 +1115,7 @@
       if (s.type === 'carrot') { if (!this.throwFish(p, 'carrot')) return false; spend(); return true; }
       if (s.type === 'meatraw'||s.type==='poultryraw') return this.cookFish(p, null, s.type);
       if (s.type === 'meatcooked'||s.type==='poultrycooked') { if(p.hp>=p.maxHp)return false; this.heal(p,s.type==='poultrycooked'?15:10);this.setPose(p,'drink',0.6);spend();return true; }
-      if (s.type === 'pumpkinpiece') { if (p.hp >= p.maxHp) return false; this.heal(p, 5); this.setPose(p, 'drink', 0.6); spend(); return true; }
+      if (s.type === 'pumpkinpiece' || s.type === 'marshmallow') { if (p.hp >= p.maxHp) return false; this.heal(p, 5); this.setPose(p, 'drink', 0.6); spend(); return true; }
       if (s.type === 'fishcooked') { this.eatFish(p); spend(); return true; }
       if (s.type === 'spore') { if (!this.growMushroom(p)) return false; spend(); return true; }
       if (s.type === 'honey') {
@@ -1343,7 +1351,7 @@
       e.hp -= dmg || 1; e.hurt = e.boss ? 1.0 : 0.7;   // plus long que la flamme : une bombe = un coup
       if(e.swallowed&&helper&&helper.leader===e.swallowed){const captive=e.swallowed;captive.swallowT=Math.max(0,captive.swallowT-.8*(dmg||1));this.addFloater(e.x,e.y,'À la rescousse !',{color:'#a5f3ca',size:.3,life:1});if(captive.swallowT<=0)this.releaseSwallowed(captive);}
       this.events.push({ type: 'enemyHurt', enemy: e, player: by });
-      if(e.hp<=0&&e.arenaBoss&&e.phase===1){e.phase=2;e.hp=e.maxHp=12;e.name='Golem de braise';e.state='transform';e.stateT=0;e.hurt=2;e.attack=null;this.events.push({type:'arenaTransform'});this.burst(e.x,e.y,1,'#ff793c',40);return true;}
+      if(e.hp<=0&&e.arenaBoss&&e.phase===1){e.phase=2;e.hp=e.maxHp=24;e.name='Golem de braise';e.state='transform';e.stateT=0;e.hurt=2;e.attack=null;e.stomp=0;e.z=0;this.events.push({type:'arenaTransform'});this.burst(e.x,e.y,1,'#ff793c',40);return true;}
       if (e.hp <= 0) {
         if(e.swallowed)this.releaseSwallowed(e.swallowed);
         e.dead = true; e.deadT = 0; if (by) { by.score += e.def.score; if (!e.def.peaceful) by.kills++; }
@@ -1415,7 +1423,7 @@
       if (p.poison > 0) {   // empoisonné : bulles vertes, 2 points de vie par seconde
         p.poison -= dt; p.poisonTick -= dt; const zg = this.explore ? this.groundZ(p.x, p.y) : 0;
         if (Math.random() < 8 * dt) this.particles.push({ x: p.x + (Math.random() - 0.5) * 0.5, y: p.y, z: zg + 0.3 + Math.random() * 0.5, gz: zg, vx: (Math.random() - 0.5) * 0.2, vy: 0, vz: 0.7, life: 0.9, t: 0, color: Math.random() < 0.5 ? 'rgba(126,240,90,0.85)' : 'rgba(60,170,40,0.8)', size: 0.07 + Math.random() * 0.06, float: true });
-        if (p.poisonTick <= 0) { p.poisonTick = 1; this.damage(p, 2, { kind: 'poison' }); if (p.hp <= 0) { this.killPlayer(p, { kind: 'poison' }); return; } }
+        if (p.poisonTick <= 0) { p.poisonTick = p.poisonEvery || 1; this.damage(p, p.poisonDmg || 2, { kind: 'poison' }); if (p.hp <= 0) { this.killPlayer(p, { kind: 'poison' }); return; } }
         if (p.poison <= 0) { p.poison = 0; this.events.push({ type: 'poisonEnd', player: p }); }
       }
       if(p.swallowedBy){this.updateSwallowed(p,dt);return;}
@@ -1605,8 +1613,9 @@
     }
     flameTouches(x, y, rad) {
       const c = Math.floor(x), r = Math.floor(y);
-      if (this.flameAt.has(this.idx(c, r))) return this.flameAt.get(this.idx(c, r));
-      if (rad > 0.4) for (let d = 0; d < 4; d++) { const D = DIRS[d], f = this.flameAt.get(this.idx(c + D.dx, r + D.dy)); if (f && Math.abs(D.dx ? x - (c + D.dx + 0.5) : y - (r + D.dy + 0.5)) < rad + 0.5) return f; }
+      const live = f => f && BK.flameBurst(f.t, f.duration || BK.FLAME_TIME) != null;   // entre les deux boums d'une bombe niveau 2 : rien ne brûle
+      if (live(this.flameAt.get(this.idx(c, r)))) return this.flameAt.get(this.idx(c, r));
+      if (rad > 0.4) for (let d = 0; d < 4; d++) { const D = DIRS[d], f = this.flameAt.get(this.idx(c + D.dx, r + D.dy)); if (live(f) && Math.abs(D.dx ? x - (c + D.dx + 0.5) : y - (r + D.dy + 0.5)) < rad + 0.5) return f; }
       return null;
     }
     firebarPoints(bar) {
@@ -1664,7 +1673,7 @@
     updateEnemy(e, dt) {
       e.t += dt; e.stateT += dt; if (e.hurt > 0) e.hurt -= dt;
       if (e.dead) { e.deadT += dt; return; }
-      if (e.stunT > 0) { e.stunT = Math.max(0, e.stunT - dt); return; }   // étourdi par une bombe bottée : des étoiles, et il ne fait rien
+      if (e.stunT > 0 && !e.leap) { e.stunT = Math.max(0, e.stunT - dt); return; }   // étourdi par une bombe bottée : des étoiles, et il ne fait rien
       if(e.arenaBoss)return this.updateFirstBoss(e,dt);
       if(e.def.bestiary)return this.updateBestiary(e,dt);
       const bh = e.def.behavior;
@@ -1887,7 +1896,7 @@
     updateRabbit(e, dt) {
       const p = this.nearestPlayer(e.x, e.y);
       if (e.tame) { if (Math.random() < 0.5 * dt) this.particles.push({ x: e.x, y: e.y, z: (this.explore ? this.groundZ(e.x, e.y) : 0) + 0.8, gz: 0, vx: (Math.random() - 0.5) * 0.2, vy: 0, vz: 0.5, life: 1.2, t: 0, color: '#ff8fab', size: 0.14, heart: true, float: true }); return this.hopWander(e, dt, 0.6); }
-      if (e.state === 'eat') { e.z = 0; if (e.stateT > 1.8) { e.tame = true; e.state = 'hop'; e.stateT = 0; e.target = null; this.burst(e.x, e.y, 0.5, '#ff8fab', 12); this.events.push({ type: 'rabbitTamed', enemy: e }); } return; }
+      if (e.state === 'eat') { e.z = 0; if (e.stateT > 1.8) { e.tame = true; e.state = 'hop'; e.stateT = 0; e.target = null; this.burst(e.x, e.y, 0.5, '#ff8fab', 12); const gz0 = this.explore ? this.groundZ(e.x, e.y) : 0; for (let k = 0; k < 8; k++) this.particles.push({ x: e.x + (Math.random() - 0.5) * 0.8, y: e.y + (Math.random() - 0.5) * 0.3, z: gz0 + 0.4 + Math.random() * 0.4, gz: gz0, vx: (Math.random() - 0.5) * 0.4, vy: 0, vz: 0.6 + Math.random() * 0.4, life: 1.5, t: 0, color: k % 2 ? '#ff8fab' : '#ff4d7d', size: 0.18, heart: true, float: true }); this.events.push({ type: 'rabbitTamed', enemy: e }); } return; }
       let best = null, bd = 7; for (const it of this.items) { if (it.type !== 'carrot') continue; const d = Math.hypot(it.cx + 0.5 - e.x, it.cy + 0.5 - e.y); if (d < bd) { bd = d; best = it; } }
       if (best) {   // une carotte ! il court dessus
         if (e.state !== 'carrot') { e.state = 'carrot'; e.stateT = 0; e.target = null; this.events.push({ type: 'rabbitSawCarrot', enemy: e }); }
@@ -1896,10 +1905,11 @@
         return;
       }
       if (e.state === 'carrot') { e.state = 'hop'; e.stateT = 0; }
-      if (e.state === 'tired') { e.z = 0; if (e.stateT > 7.5) { e.state = 'hop'; e.stateT = 0; } return; }
+      if (e.state === 'tired') { e.z = 0; if (e.stateT > (e.squashed ? 3 : 7.5)) { e.state = 'hop'; e.stateT = 0; e.squashed = false; } return; }   // écrasé sur le héros : 3 s seulement
       if (e.state === 'charge') {
         const sp = 7.5, moved = this.moveFree(e, e.x + Math.cos(e.ca) * 2, e.y + Math.sin(e.ca) * 2, sp, dt); e.run = (e.run || 0) + sp * dt; e.z = Math.abs(Math.sin(e.t * 22)) * 0.1;
-        if (!moved || e.run > 7 || (p && Math.hypot(p.x - e.x, p.y - e.y) < 0.5)) { e.state = 'tired'; e.stateT = 0; e.z = 0; e.run = 0; this.burst(e.x, e.y, 0.3, 'rgba(230,230,230,0.8)', 6, 1); this.events.push({ type: 'rabbitTired', enemy: e }); }
+        const bumped = !!(p && Math.hypot(p.x - e.x, p.y - e.y) < 0.65);
+        if (!moved || e.run > 7 || bumped) { e.state = 'tired'; e.stateT = 0; e.z = 0; e.run = 0; e.squashed = bumped; this.burst(e.x, e.y, 0.3, 'rgba(230,230,230,0.8)', 6, 1); this.events.push({ type: 'rabbitTired', enemy: e }); }
         return;
       }
       if (p && e.stateT > 0.6 && this.canSee(e, p, 7)) { e.state = 'charge'; e.stateT = 0; e.run = 0; e.ca = Math.atan2(p.y - e.y, p.x - e.x); e.flip = p.x < e.x; e.target = null; e.z = 0; this.events.push({ type: 'rabbitCharge', enemy: e }); return; }
@@ -2012,7 +2022,8 @@
     // Trois modèles : noir (2 coups), rouge (4 coups, boulets de feu), bleu (4 coups, tire 2 × plus souvent, boulets 2 × plus lents).
     updateCannon(e, dt) {
       const def = e.def; e.cool = (e.cool == null ? 1.2 + Math.random() : e.cool) - dt; e.recoil = Math.max(0, (e.recoil || 0) - dt * 2.5);
-      const p = this.nearestPlayer(e.x, e.y); if (!p) return;
+      const p = this.nearestPlayer(e.x, e.y);
+      if (!p) { e.puff = 0; e.swell = Math.max(0, (e.swell || 0) - dt * 6); return; }   // il ne voit plus le héros : il annule son tir et se dégonfle vite
       const dist = Math.hypot(p.x - e.x, p.y - e.y), want = Math.atan2(p.y - e.y, p.x - e.x);
       if (e.aim == null) e.aim = want; let d = want - e.aim; d = Math.atan2(Math.sin(d), Math.cos(d)); e.aim += Math.max(-3 * dt, Math.min(3 * dt, d)) * (e.puff > 0 ? 0.3 : 1);
       if (e.puff > 0) {   // il se gonfle… puis tire
@@ -2024,7 +2035,7 @@
         }
         return;
       }
-      e.swell = 0;
+      e.swell = Math.max(0, (e.swell || 0) - dt * 6);
       if (e.cool <= 0 && dist < 9 && dist > 1 && Math.abs(d) < 0.2) { e.puff = 0.6; e.cool = (def.cool || 2.4) + Math.random() * 0.4 + 0.6; this.events.push({ type: 'cannonCharge', enemy: e }); }
     }
     // Monstre marin : immobile (dans l'eau ou sur terre), tourne la tête vers le héros, ouvre la gueule et y fait grossir
@@ -2359,7 +2370,7 @@
         const bu = ((time * 0.8 + c * 0.37 + r * 0.61) % 1); if (bu < 0.5) { const o = D3.onQuad(p, 0.3 + ((c * 5 + r) % 4) / 8, 0.3 + ((r * 3 + c) % 4) / 8); ctx.strokeStyle = 'rgba(255,230,150,' + (0.8 * (1 - bu * 2)) + ')'; ctx.beginPath(); ctx.arc(o.x, o.y, 2 + bu * 10, 0, Math.PI * 2); ctx.stroke(); }
       };
       const floorPattern = (p, c, r, t) => {
-        if (BK.EXTRA_FLOOR_BY_T[t]) { BK.drawExtraFloor(ctx, p, c, r, t, time); return; }
+        if (BK.EXTRA_FLOOR_BY_T[t]) { BK.drawExtraFloor(ctx, p, c, r, t, time, this); return; }
         if (this.lifts.length && this.liftAt(c, r)) { drawLift(p, c, r); return; }
         if (t === T_ICE) { const a = D3.onQuad(p, 0.12, 0.75), b = D3.onQuad(p, 0.45, 0.2), d = D3.onQuad(p, 0.55, 0.85), e = D3.onQuad(p, 0.88, 0.35); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(e.x, e.y); ctx.stroke(); if ((c * 7 + r * 3) % 4 === 0) { const f1 = D3.onQuad(p, 0.3, 0.5), f2 = D3.onQuad(p, 0.5, 0.6), f3 = D3.onQuad(p, 0.62, 0.42); ctx.strokeStyle = 'rgba(120,170,210,0.6)'; ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y); ctx.lineTo(f3.x, f3.y); ctx.stroke(); } return; }
         if (t === T_SNOW) { ctx.fillStyle = 'rgba(255,255,255,0.9)'; for (let k = 0; k < 3; k++) { const q = D3.onQuad(p, 0.15 + ((c * 5 + r * 7 + k * 11) % 7) / 10, 0.15 + ((c * 3 + r * 11 + k * 5) % 7) / 10); ctx.beginPath(); ctx.arc(q.x, q.y, 1.2, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = 'rgba(160,190,230,0.35)'; const q2 = D3.onQuad(p, 0.3 + ((c * 7 + r) % 5) / 10, 0.55 + ((c + r * 3) % 4) / 10); ctx.beginPath(); ctx.ellipse(q2.x, q2.y, 3.5, 1.6, 0, 0, Math.PI * 2); ctx.fill(); return; }
@@ -2386,6 +2397,8 @@
         const i = this.idx(c, r);
         if (!this.explore) { drawSpecial(D3.tile(ctx, cam, c, r, floorColor(c, r, T_STONE)), c, r); continue; }
         const t = this.terrain[i], h = this.height[i];
+        const over = this.props[c + ',' + r]?.overlay;   // feuilles mortes, grille… posées sur la tuile du dessous
+        if (over && t !== T_VOID && !this.ramp[i]) push(r + 0.021, c + 0.5, () => { const z = this.hAt(c, r) + 0.004, q = [[c, r], [c + 1, r], [c + 1, r + 1], [c, r + 1]].map(([x, y]) => cam.project(x, y, z)); q.wet = t === T_WATER; BK.drawFloorPattern(ctx, q, c, r, over, time, this); });
         if(this.hiddenSecretAt?.(c,r)){D3.tile(ctx,cam,c,r,'#242131');continue;}
         if(this.props[c+','+r]?.raisedBridge && !this.collapsedBridge?.has(i) && this.terrain[i]!==T_VOID){push(r+.02,c+.5,()=>this.drawSupportedBridge(ctx,cam,c,r,h,time));continue;}
         if (this.elevators.length) { const E = this.elevAt(c, r); if (E) { push(r + 0.02, c + 0.5, () => drawElevator(E, c, r)); continue; } }
@@ -2457,6 +2470,8 @@
           if (dk0 === 'mountainpart' || dk0 === 'volcanopart') return;
           if (dk0 === 'mountain') { this.drawMountain(ctx, cam, c, r, z, time); return; }
           if (dk0 === 'volcano') { this.drawVolcano(ctx, cam, c, r, z, time); return; }
+          if (this.explore && this.deco[this.idx(c, r)] === 'crackedstone') { BK.sprites.drawSecretWall(ctx, cam, c, r, z, { top: T.rockTop || T.hardTop, front: T.rock || T.hard, side: T.rockDark || T.hardDark }); return; }   // mur secret : un bloc de ciment… à peine fissuré
+          if (this.explore && BK.CUBE_BLOCKS.includes(this.deco[this.idx(c, r)])) { BK.sprites.drawCubeBlock(ctx, cam, c, r, z, this.deco[this.idx(c, r)], this.props[c + ',' + r]); return; }   // vrais blocs pleine case
           if (this.explore && this.deco[this.idx(c, r)]) { const kind = this.deco[this.idx(c, r)], pr = cam.project(c + 0.5, r + 0.5, z); const same = (cc, rr) => this.inside(cc, rr) && this.deco[this.idx(cc, rr)] === kind; const gt = this.growT.get(this.idx(c, r)); let bt = this.bounceT.get(this.idx(c, r)); if (gt != null) { const u = Math.min(1, gt / 0.6), e2 = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2), sc = Math.max(0.02, e2); ctx.save(); ctx.translate(pr.x, pr.y); ctx.scale(sc * (1 + 0.15 * Math.sin(u * Math.PI)), sc); ctx.translate(-pr.x, -pr.y); bt = 0; } else if (bt) { const q = Math.sin(Math.PI * bt / 0.45) * 0.28; ctx.save(); ctx.translate(pr.x, pr.y); ctx.scale(1 + q, 1 - q); ctx.translate(-pr.x, -pr.y); } BK.sprites.drawDeco(ctx, kind, pr.x, pr.y, pr.k, time, { n: same(c, r - 1), s: same(c, r + 1), e: same(c + 1, r), w: same(c - 1, r) }, c * 17 + r * 5, this.props[c+','+r]?.orientation||0, this.props[c+','+r]?.lightColor, this.props[c+','+r]); if (bt || gt != null) ctx.restore(); return; }
           if (v === METAL) { BK.sprites.drawMetal(ctx, cam, c, r, z, this.metal[this.idx(c, r)]); return; }
           if (v === BARREL) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawBarrel(ctx, pr.x, pr.y, pr.k, time); return; }
@@ -2497,7 +2512,7 @@
         const z = gz(ix, iy), pr = cam.project(ix, iy, z + (it.from ? Math.sin(Math.PI * fu) * 0.9 : 0)); D3.shadow(ctx, cam, ix, iy, 0.22 * (it.from ? 0.6 + 0.4 * fu : 1), 0.2, z); ctx.save(); ctx.translate(pr.x, pr.y); if (it.from && fu < 1) ctx.rotate(Math.sin(fu * Math.PI * 2) * 0.5); BK.sprites.drawItem(ctx, it.type, pr.k, it.t, it.value); ctx.restore();
       });
       for(const bar of this.firebars)for(const q of this.firebarPoints(bar))push(q.y,q.x,()=>BK.sprites.drawFlame(ctx,cam,q.x-.5,q.y-.5,.45+Math.sin(time*9+q.x)*.1,'center',0,time+q.y,q.z,false));
-      for (const f of this.flames) if(!f.domeHeight || !f.bomb?.dome || f.bomb.giga) push(f.cy + 0.5, f.cx + 0.5, () => BK.sprites.drawFlame(ctx, cam, f.cx, f.cy, f.t / (f.duration||BK.FLAME_TIME), f.kind, f.dir, f.seed, gz(f.cx + 0.5, f.cy + 0.5), f.magic, f.level, f.domeHeight));
+      for (const f of this.flames) if(!f.domeHeight || !f.bomb?.dome || f.bomb.giga) push(f.cy + 0.5, f.cx + 0.5, () => BK.flameBurst(f.t, f.duration||BK.FLAME_TIME) != null && BK.sprites.drawFlame(ctx, cam, f.cx, f.cy, BK.flameBurst(f.t, f.duration||BK.FLAME_TIME), f.kind, f.dir, f.seed, gz(f.cx + 0.5, f.cy + 0.5), f.magic, f.level, f.domeHeight));
       for (const sp of this.sparks) push(sp.r + 0.5, sp.c + 0.5, () => { const pr = cam.project(sp.c + 0.5, sp.r + 0.5, gz(sp.c + 0.5, sp.r + 0.5)); ctx.fillStyle = '#fff6c0'; ctx.beginPath(); ctx.arc(pr.x, pr.y - pr.k * 0.1, pr.k * (0.1 + 0.04 * Math.sin(time * 40)), 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#ffb03a'; ctx.lineWidth = 2; for (let k = 0; k < 5; k++) { const a = time * 30 + k * 1.3, l = pr.k * (0.15 + 0.1 * Math.sin(time * 25 + k)); ctx.beginPath(); ctx.moveTo(pr.x, pr.y - pr.k * 0.1); ctx.lineTo(pr.x + Math.cos(a) * l, pr.y - pr.k * 0.1 + Math.sin(a) * l * 0.6); ctx.stroke(); } });
       for (const b of this.bombs) if (b.state !== 'carried') push(b.y + (b.state === 'flying' ? Math.max(0, b.z) * 0.9 : 0) + (this.elevAt(Math.floor(b.x),Math.floor(b.y))&&!b.underElevator ? .015 : 0), b.x, () => {
         const Eb = this.elevators.length && b.state !== 'flying' ? this.elevAt(Math.floor(b.x), Math.floor(b.y)) : null, z0 = b.underElevator ? b.underElevator.base : gz(b.x, b.y), zb = b.state === 'flying' ? b.z : z0 + b.z, pr = cam.project(b.x, b.y, z0), top = cam.project(b.x, b.y, zb);
@@ -2513,7 +2528,7 @@
         const g0 = cam.project(M.x, M.y, M.base), rg = ctx.createRadialGradient(g0.x, g0.y, 0, g0.x, g0.y, g0.k * 0.6); rg.addColorStop(0, 'rgba(140,200,255,0.35)'); rg.addColorStop(1, 'rgba(140,200,255,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(g0.x, g0.y, g0.k * 0.6, g0.k * 0.3, 0, 0, Math.PI * 2); ctx.fill();
       });
       for (const e of this.enemies) push(e.y, e.x, () => {
-        if(e.carrier) return;
+        if(e.carrier||e.sky) return;
         const z0 = gz(e.x, e.y), pr = cam.project(e.x, e.y, z0), top = cam.project(e.x, e.y, z0 + (e.z || 0));
         if (!e.dead) D3.shadow(ctx, cam, e.x, e.y, (e.def.hitR || e.r) * 0.95 * Math.max(0.5, 1 - (e.z || 0) / 3), 0.3, z0);
         ctx.save(); ctx.translate(top.x, top.y);
@@ -2521,7 +2536,7 @@
         BK.sprites.drawEnemy(ctx, e.type, { creature:e, charged:e.charged, warning:!!e.warning, swallowed:!!e.swallowed,bellyFill:e.bellyFill,bellyKick:e.bellyKick,bellySide:e.bellySide,toadAttack:e.toadAttack?.kind,inferno:e.arenaBoss&&e.phase===2, s: pr.k * (e.def.hitR ? e.def.hitR / e.r : 1), t: e.t, hurt: e.hurt, flip: e.flip || e.dir === 1, charging: e.state === 'charge', squash: e.squash, stomp: e.stomp, aim: e.aim, recoil: e.recoil, swell: e.swell, state: e.state, shell: e.shell, shellColor:e.shellColor, baby:e.baby,growth:e.growth, mouth: e.mouth, charge: e.charge, water: this.explore && this.tAt(Math.floor(e.x), Math.floor(e.y)) === T_WATER, wind: e.wind, cast: e.cast, up: e.up, bone: !!e.bone, throwT: e.throwT, swing: e.swing, tame: e.tame, heal: e.heal, run: e.run, chasing: e.state === 'chase' || e.state === 'return' });
         ctx.restore();
         if(e.stunT>0&&!e.dead){ctx.save();ctx.font='bold '+Math.round(pr.k*.3)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=0;i<4;i++){const a=time*5+i*Math.PI/2,sx=top.x+Math.cos(a)*pr.k*.55,sy=top.y-pr.k*1.15+Math.sin(a)*pr.k*.16;ctx.fillStyle=i%2?'#ffe36b':'#fff6c2';ctx.strokeStyle='#5b3d1a';ctx.lineWidth=2;ctx.strokeText('★',sx,sy);ctx.fillText('★',sx,sy);}ctx.restore();}
-        if(e.arenaBoss&&!e.dead){ctx.save();ctx.textAlign='center';ctx.font='bold 15px Nunito';ctx.fillStyle='#fff3aa';ctx.strokeStyle='#302236';ctx.lineWidth=4;const label=e.state==='sealed'?'🔒 Bats les deux crapauds':e.state==='transform'?'🔥 Transformation !':e.attack?({fire:'🔥 Souffle de feu !',anvils:'⚠ Enclumes !',bomb:'💣 Bombe !',wave:'⚠ Onde de choc !'}[e.attack.kind]):'';ctx.strokeText(label,top.x,top.y-pr.k*3.5);ctx.fillText(label,top.x,top.y-pr.k*3.5);ctx.restore();}
+        if(e.arenaBoss&&!e.dead){ctx.save();ctx.textAlign='center';ctx.font='bold 15px Nunito';ctx.fillStyle='#fff3aa';ctx.strokeStyle='#302236';ctx.lineWidth=4;const label=e.state==='sealed'?'🔒 Bats les deux crapauds':e.state==='transform'?'🔥 Transformation !':e.attack?({fire:'🔥 Souffle de feu !',anvils:'⚠ Enclumes !',bomb:'💣 Bombe !',wave:'⚠ Onde de choc !',slam:'💥 Séisme ! Éloigne-toi !',rocks:'🪨 Lancer de roches !',leap:'⬆ Grand saut !'}[e.attack.kind]):e.leap?'⬇ Il va retomber sur son ombre !':'';ctx.strokeText(label,top.x,top.y-pr.k*3.5);ctx.fillText(label,top.x,top.y-pr.k*3.5);ctx.restore();}
         if (e.boss && !e.dead && !e.arenaBoss) { // petites barres des gardiens et autres monstres
           const w = e.arenaGuard?Math.max(38,Math.min(70,pr.k*1.3)):pr.k * 1.6, x = top.x - w / 2, y = top.y - pr.k * (e.type === 'golem' ? 3.3 : 2.4);
           ctx.fillStyle = 'rgba(0,0,0,0.5)'; BK.sprites.rr(ctx, x - 2, y - 2, w + 4, 10, 4); ctx.fill();

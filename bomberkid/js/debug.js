@@ -27,8 +27,39 @@
       const sp = document.createElement('input'); sp.type = 'range'; sp.min = 0; sp.max = 200; sp.value = 100; sp.addEventListener('input', () => this.speed = sp.value / 100); row('Vitesse', sp);
       const chk = (label, val, on) => { const c = document.createElement('input'); c.type = 'checkbox'; c.checked = val; c.addEventListener('change', () => on(c.checked)); row(label, c); };
       chk('Toute la famille', this.all, v => this.all = v); chk('Scène à l’échelle du jeu', this.scene, v => this.scene = v); chk('Repères', this.grid, v => this.grid = v);
+      const maps = document.createElement('button'); maps.textContent = '🗺️ Ouvrir un tableau'; maps.addEventListener('click', () => this.pickStage()); P.appendChild(maps);
       const b = document.createElement('button'); b.textContent = 'Retour au menu'; b.addEventListener('click', () => BK.toMenu()); P.appendChild(b);
       const help = document.createElement('p'); help.className = 'hint'; help.textContent = '← → personnage · ↑ ↓ animation · Espace : rejoue'; P.appendChild(help);
+    }
+    // Choisir un tableau (aventure ou défi) dans un tableau filtrable, le voir et l'arranger dans l'éditeur ; 📤 Exporter crée le fichier à partager.
+    pickStage() {
+      const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const KINDS = { arena: 'Monstres', match: 'Duels', curling: 'Curling', timing: 'Bon timing' };
+      const rows = [
+        ...BK.stageList().filter(s => Array.isArray(s.map)).map(s => ({ stage: s, group: 'aventure', sub: s.world?.name || '', label: s.id + ' · ' + s.name })),
+        // Défis : arènes à monstres et bon timing (leur tableau généré), duels (l'arène du match) et curling (la patinoire).
+        ...(BK.CHALLENGES || []).map(ch => { const s = ch.kind === 'match' ? { map: BK.MATCH_ARENA, theme: !ch.theme || ch.theme === 'random' ? 'arena' : ch.theme } : ch.kind === 'curling' ? { map: BK.curlingMap(), theme: 'winter' } : BK.challengeStage(ch); return s && Array.isArray(s.map) ? { stage: { ...s, id: 'defi-' + ch.id, name: (ch.icon ? ch.icon + ' ' : '') + ch.name }, group: 'defis', sub: KINDS[ch.kind] || 'Monstres', label: (ch.icon ? ch.icon + ' ' : '') + ch.name } : null; }).filter(Boolean)
+      ];
+      const worlds = [...new Set(rows.filter(r => r.group === 'aventure').map(r => r.sub))], kinds = [...new Set(rows.filter(r => r.group === 'defis').map(r => r.sub))];
+      const f = this.stageFilter = this.stageFilter || { group: 'aventure', sub: '', text: '' };
+      BK.overlay.show({ title: '🗺️ Ouvrir un tableau', html: '<p>La carte s’ouvre dans l’éditeur : arrange-la, 💾 Sauver garde tes changements, et <b>📤 Exporter</b> crée le fichier à partager.</p>' +
+        '<div class="stage-filters"><label>Montrer <select id="sf-group"><option value="aventure">🗺️ Aventure</option><option value="defis">🏅 Défis</option><option value="">Tout</option></select></label><label><span id="sf-sub-label">Monde</span> <select id="sf-sub"></select></label><input id="sf-text" type="search" placeholder="🔍 Chercher un nom"></div>' +
+        '<div class="stage-table-wrap"><table class="stage-table"><thead><tr><th>Tableau</th><th id="sf-col">Monde</th><th>Taille</th><th></th></tr></thead><tbody id="sf-rows"></tbody></table></div>', buttons: [{ label: 'Fermer', onClick: () => BK.overlay.hide() }] });
+      const $ = id => document.getElementById(id), open = m => { BK.overlay.hide(); BK.openEditor(m); };
+      const fillSub = () => { const list = f.group === 'aventure' ? worlds : f.group === 'defis' ? kinds : []; $('sf-sub-label').textContent = f.group === 'defis' ? 'Sorte' : 'Monde'; $('sf-sub').innerHTML = '<option value="">' + (f.group === 'defis' ? 'Toutes' : 'Tous') + '</option>' + list.map(v => '<option' + (v === f.sub ? ' selected' : '') + '>' + esc(v) + '</option>').join(''); $('sf-sub').disabled = !list.length; if (!list.includes(f.sub)) f.sub = ''; };
+      const render = () => {
+        const saved = BK.loadMaps(), text = f.text.trim().toLowerCase();
+        const shown = rows.filter(r => (!f.group || r.group === f.group) && (!f.sub || r.sub === f.sub) && (!text || r.label.toLowerCase().includes(text)));
+        $('sf-col').textContent = f.group === 'defis' ? 'Défi' : f.group === 'aventure' ? 'Monde' : 'Monde / défi';
+        $('sf-rows').innerHTML = shown.map(r => { const i = rows.indexOf(r), s = r.stage, mine = saved.some(m => m.id === 'stage-' + s.id); return '<tr><td><b>' + esc(r.label) + '</b></td><td>' + esc(r.sub) + '</td><td>' + Math.max(...s.map.map(l => l.length)) + ' × ' + s.map.length + '</td><td class="acts"><button data-stage="' + i + '">Ouvrir</button>' + (mine ? '<button data-mine="' + i + '" title="Reprendre mes changements">✏️ Ma version</button>' : '') + '</td></tr>'; }).join('') || '<tr><td colspan="4" class="empty">Aucun tableau avec ces filtres.</td></tr>';
+        $('sf-rows').querySelectorAll('button[data-stage]').forEach(b => b.onclick = () => open(BK.stageToMap(rows[+b.dataset.stage].stage)));
+        $('sf-rows').querySelectorAll('button[data-mine]').forEach(b => b.onclick = () => open(BK.loadMaps().find(m => m.id === 'stage-' + rows[+b.dataset.mine].stage.id)));
+      };
+      $('sf-group').value = f.group; fillSub(); $('sf-text').value = f.text;
+      $('sf-group').onchange = e => { f.group = e.target.value; f.sub = ''; fillSub(); render(); e.target.blur(); };
+      $('sf-sub').onchange = e => { f.sub = e.target.value; render(); e.target.blur(); };
+      $('sf-text').oninput = e => { f.text = e.target.value; render(); };
+      render();
     }
     setChar(i) { this.charIndex = (i + BK.ORDER.length) % BK.ORDER.length; this.selChar.value = BK.ORDER[this.charIndex]; this.player.def = BK.charById(BK.ORDER[this.charIndex]); this.t = 0; }
     update(dt) {

@@ -12,9 +12,9 @@ const byMonster={cracheurs:'lava',glaceurs:'winter',fantomes:'castle',serpents:'
 for(const ch of arenas){
  const s=BK.challengeStage(ch);
  assert.equal(s.map.length,ch.rows);assert(s.map.every(l=>l.length===ch.cols),'largeur '+ch.id);
- if(byMonster[ch.id])assert.equal(s.theme,byMonster[ch.id],'thème assorti pour '+ch.id);
+ if(byMonster[ch.id]&&!ch.handmade)assert.equal(s.theme,byMonster[ch.id],'thème assorti pour '+ch.id);
  const expected=ch.enemies.reduce((a,[,n])=>a+n,0);
- assert.equal(s.enemies.length,expected,'tous les monstres placés dans '+ch.id);
+ if(!ch.handmade)assert.equal(s.enemies.length,expected,'tous les monstres placés dans '+ch.id);   // fait à la main : les animaux gentils s'ajoutent aux monstres
  const a=new BK.Adventure('adam',0,{custom:s,challenge:ch});a.state='play';a.world.frozen=false;
  assert.equal(a.world.livingEnemies().length,expected,'monstres vivants dans '+ch.id);
  for(let i=0;i<180;i++)a.update(1/60);   // trois secondes sans plantage

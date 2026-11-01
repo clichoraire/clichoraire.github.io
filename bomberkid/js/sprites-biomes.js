@@ -15,10 +15,18 @@ const basket=(x,y,c=gold)=>{poly([[x-.3,y-.25],[x+.3,y-.25],[x+.24,y],[x-.24,y]]
 const arch=(c)=>{rect(-.42,-.7,.16,.7,c);rect(.26,-.7,.16,.7,c);line([[-.34,-.7],[-.23,-.94],[0,-1.03],[.23,-.94],[.34,-.7]],c,.2);};
 const rug=(c)=>{oval(0,-.04,.45,.17,c);oval(0,-.05,.35,.11,gold);oval(0,-.05,.26,.075,c);};
 const skull=(x,y,s)=>{oval(x,y,s,s*.8,'#e0d9be');rect(x-s*.6,y,s*1.2,s*.6,'#e0d9be');oval(x-s*.4,y,.028,.04,ink);oval(x+s*.4,y,.028,.04,ink);};
-if(!mounted)oval(0,.015,.4,.10,'rgba(25,20,45,.18)');
+if(!mounted)oval(0,.015,kind==='enchanted_14'?.17:.4,kind==='enchanted_14'?.05:.10,'rgba(25,20,45,.18)');
 if(g==='enchanted')switch(n){
 case 0:line([[0,0],[0,-.95]],wood,.16);for(const [x,y] of [[-.22,-.7],[.23,-.8],[0,-1.1]])gem(x,y,.23,blue);break;
-case 1:rect(-.25,-.6,.5,.6,'#f5deb1');oval(0,-.62,.47,.22,'#be63c6');for(const x of [-.25,0,.25])oval(x,-.66,.06,.04,'#fff1cc');rect(-.08,-.32,.16,.32,wood);oval(.15,-.42,.07,.07,blue);break;
+case 1:{// maison champignon : pied crème, porte ronde, fenêtre, et un chapeau rouge à pois blancs comme le gros champignon
+ rect(-.24,-.56,.48,.56,'#f4e8d0');rect(-.24,-.56,.09,.56,'#ddd0b4');
+ rect(-.085,-.27,.17,.27,wood);oval(0,-.27,.085,.07,wood);oval(.045,-.13,.016,.016,gold);
+ oval(.14,-.4,.065,.065,'#8a5a39');oval(.14,-.4,.047,.047,'#ffe7a3');line([[.14,-.447],[.14,-.353]],'#8a5a39',.012);line([[.093,-.4],[.187,-.4]],'#8a5a39',.012);
+ ctx.fillStyle='#cf3030';ctx.beginPath();ctx.ellipse(0,-.6,.47,.38,0,Math.PI,Math.PI*2);ctx.lineTo(.47,-.55);ctx.ellipse(0,-.55,.47,.09,0,0,Math.PI);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#f25a5a';ctx.beginPath();ctx.ellipse(-.07,-.66,.34,.27,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();oval(-.18,-.82,.12,.06,'rgba(255,190,190,.55)');
+ oval(0,-.555,.4,.05,'rgba(120,25,25,.35)');
+ for(const [x,y,r] of [[-.24,-.8,.075],[.08,-.89,.06],[.3,-.7,.05],[-.04,-.68,.045],[-.36,-.62,.035]])oval(x,y,r,r*.9,'#fff');
+ break;}
 case 2:oval(0,-.45,.3,.48,wood);oval(0,-.43,.23,.39,'#a879d4');oval(.12,-.35,.03,.03,gold);for(const x of [-.3,.3])flower(x,-.35,pink);break;
 case 3:for(let i=0;i<7;i++)flower((i%3-1)*.22,-.15-Math.floor(i/3)*.13, i%2?blue:pink);break;
 case 4:poly([[-.4,0],[-.3,-.45],[0,-.65],[.35,-.4],[.42,0]],stone);line([[-.12,-.38],[0,-.52],[.13,-.38],[0,-.25],[0,-.1]],blue,.04);break;
@@ -31,7 +39,7 @@ case 10:for(let i=0;i<4;i++){let x=-.3+i*.2;line([[x,-.95],[x+.05,-.6],[x-.04,-.
 case 11:oval(0,-.28,.4,.3,'#497888');for(let i=0;i<5;i++)gem((i-2)*.13,-.25-(i%2)*.2,.05,gold);break;
 case 12:for(let i=0;i<9;i++)leaf(0,0,(i-4)*.24,.6+Math.sin(i)*.15);break;
 case 13:oval(0,-.25,.38,.27,green);for(let i=0;i<9;i++)oval(Math.sin(i*4)*.27,-.12-i*.04,.045,.04,'#8b4cb0');break;
-case 14:oval(0,-.35,.25,.33,gold);oval(0,-.59,.29,.12,wood);line([[0,-.67],[.06,-.8]],wood,.06);gem(0,-.3,.08,blue);break;
+case 14:ctx.save();ctx.scale(.45,.45);oval(0,-.35,.25,.33,gold);oval(-.08,-.42,.06,.12,'rgba(255,255,255,.35)');oval(0,-.59,.29,.12,wood);line([[0,-.67],[.06,-.8]],wood,.06);ctx.restore();break;   // petit gland
 case 15:line([[-.35,-.15],[.32,-.2]],wood,.25);oval(.33,-.2,.1,.13,gold);for(let i=0;i<4;i++)flower(-.25+i*.15,-.3,blue);break;
 case 16:for(let i=0;i<8;i++){let a=i*Math.PI/4;line([[0,-.5],[Math.cos(a)*.42,-.5+Math.sin(a)*.42]],'#d1e8f5',.012);}for(let r=.12;r<.5;r+=.12){let p=[];for(let i=0;i<=8;i++){let a=i*Math.PI/4;p.push([Math.cos(a)*r,-.5+Math.sin(a)*r]);}line(p,'#d1e8f5',.012);}break;
 case 17:rect(-.1,-.75,.2,.75,'#785ca1');oval(0,-.85,.24,.24,gold);oval(.1,-.9,.2,.2,'#785ca1');gem(0,-.35,.09,blue);break;

@@ -2,25 +2,25 @@
 (function(BK){
 'use strict';
 const W=BK.World.prototype;
-// Le souffle couvre un carré (distance de « fire » cases de chaque côté) et se propage de case en case, comme un feu en 2D :
-// il traverse et casse les blocs destructibles, contourne les murs, et ne passe que par les cases reliées au centre.
+// Le souffle couvre un carré (distance de « fire » cases de chaque côté) et part en ligne droite du centre : il traverse et
+// casse les blocs destructibles, mais un mur arrête tout ce qui est derrière lui (on peut s'y cacher).
 W.domeCells=function(b,c,r){
- const radius=Math.max(1,Math.min(12,Number(b.fire)||1)),z=this.hAt(c,r),cells=[],seen=new Set([c+','+r]),queue=[{c,r}];
+ const radius=Math.max(1,Math.min(12,Number(b.fire)||1)),z=this.hAt(c,r),cells=[];
  const wall=(x,y)=>!this.inside(x,y)||[BK.HARD,BK.GATE,BK.SEALED,BK.METAL].includes(this.cell(x,y))||this.solidEnemyAt(x,y)||this.blastDrawbridges?.some(q=>q.state!=='open'&&q.c===x&&q.r===y)||(this.explore&&Math.abs(this.hAt(x,y)-z)>.01&&!this.ramp[this.idx(x,y)]&&!this.props[x+','+y]?.bridgeColumn);
- for(let i=0;i<queue.length;i++){
-  const q=queue[i];cells.push({c:q.c,r:q.r,distance:Math.hypot(q.c-c,q.r-r)});
-  BK.DIRS.forEach((d,di)=>{
-   const x=q.c+d.dx,y=q.r+d.dy,k=x+','+y;if(seen.has(k)||Math.max(Math.abs(x-c),Math.abs(y-r))>radius)return;seen.add(k);
-   // Bloc de métal : seule sa face en bois cède, quand le feu arrive dessus (face opposée à sa direction) ; il ne traverse pas.
-   if(this.inside(x,y)&&this.cell(x,y)===BK.METAL){if((this.metal[this.idx(x,y)]+2)%4===di)cells.push({c:x,r:y,distance:Math.hypot(x-c,y-r),wood:true});return;}
-   if(wall(x,y)){if(this.inside(x,y)&&['chest','mailbox','beehive'].includes(this.deco[this.idx(x,y)]))cells.push({c:x,r:y,distance:Math.hypot(x-c,y-r)});return;}   // un coffre au bord du souffle éclate quand même
-   queue.push({c:x,r:y});
-  });
+ // Ligne de vue du centre de la bombe au centre de la case : aucune case-mur entre les deux (les coins effleurés passent).
+ const clear=(x,y)=>{const dx=x-c,dy=y-r,n=Math.ceil(Math.hypot(dx,dy)*12);for(let i=1;i<n;i++){const t=i/n,px=c+.5+dx*t,py=r+.5+dy*t,cx=Math.floor(px),cy=Math.floor(py);if(cx===c&&cy===r||cx===x&&cy===y)continue;const fx=px-cx,fy=py-cy;if(Math.min(fx,1-fx)<.02&&Math.min(fy,1-fy)<.02)continue;if(wall(cx,cy))return false;}return true;};
+ for(let y=r-radius;y<=r+radius;y++)for(let x=c-radius;x<=c+radius;x++){
+  if(!this.inside(x,y))continue;const distance=Math.hypot(x-c,y-r);if(x===c&&y===r){cells.push({c:x,r:y,distance:0});continue;}
+  if(!clear(x,y))continue;
+  // Bloc de métal : seule sa face en bois cède, quand le feu arrive dessus (face opposée à sa direction) ; il ne traverse pas.
+  if(this.cell(x,y)===BK.METAL){const di=Math.abs(x-c)>=Math.abs(y-r)?(x>c?3:1):(y>r?0:2);if((this.metal[this.idx(x,y)]+2)%4===di)cells.push({c:x,r:y,distance,wood:true});continue;}
+  if(wall(x,y)){if(['chest','mailbox','beehive'].includes(this.deco[this.idx(x,y)]))cells.push({c:x,r:y,distance});continue;}   // un coffre au bord du souffle éclate quand même
+  cells.push({c:x,r:y,distance});
  }
  return cells;
 };
 W.explodeDome=function(b,c,r){
- const cells=this.domeCells(b,c,r),chains=[];this.domeBursts=this.domeBursts||[];this.domeBursts.push({c,r,radius:b.fire,z:this.hAt(c,r),level:b.level||1,t:0,duration:BK.FLAME_TIME*(b.level>=2?2:1),cells:new Set(cells.filter(q=>![BK.HARD,BK.GATE,BK.SEALED,BK.METAL].includes(this.cell(q.c,q.r))).map(q=>q.c+','+q.r))});
+ const cells=this.domeCells(b,c,r),chains=[];this.domeBursts=this.domeBursts||[];this.domeBursts.push({c,r,radius:b.fire,z:this.hAt(c,r),level:b.level||1,t:0,duration:BK.flameLife(b.level||1),cells:new Set(cells.filter(q=>![BK.HARD,BK.GATE,BK.SEALED,BK.METAL].includes(this.cell(q.c,q.r))).map(q=>q.c+','+q.r))});
  for(const q of cells){const x=q.c,y=q.r,v=this.cell(x,y),kind=this.deco[this.idx(x,y)];
   if(this.hitBridgeColumn?.(x,y,b))continue;
   if(this.hitBlastDrawbridge?.(x,y,b))continue;
@@ -48,7 +48,8 @@ const render=W.renderArenaEffects;
 W.renderArenaEffects=function(ctx,cam,time,push){
  render.call(this,ctx,cam,time,push);
  for(const d of this.domeBursts||[]){
-  const anim=BK.domeAnimation(d.t,d.duration),radius=(d.radius+.42)*anim.scale;
+  const burst=BK.flameBurst(d.t,d.duration);if(burst==null)continue;   // pause entre les deux boums
+  const anim=BK.domeAnimation(burst*BK.FLAME_TIME,BK.FLAME_TIME),radius=(d.radius+.42)*anim.scale;
   // Le bord suit le souffle réellement accessible : pas de bulle à travers les murs.
   const limits=Array.from({length:65},(_,n)=>{const a=n*Math.PI/32;let limit=0;for(let q=0;q<=radius;q+=.08){const c=Math.floor(d.c+.5+Math.cos(a)*q),r=Math.floor(d.r+.5+Math.sin(a)*q);if(!this.inside(c,r)||Math.hypot(c-d.c,r-d.r)<=d.radius&&!d.cells.has(c+','+r))break;limit=q;}return Math.min(radius,limit+.04);});
   const point=(n,band)=>{const a=n*Math.PI/32,p=band*Math.PI/24,R=limits[n];return cam.project(d.c+.5+Math.cos(a)*Math.cos(p)*R,d.r+.5+Math.sin(a)*Math.cos(p)*R,d.z+Math.sin(p)*R*.78*anim.height);};
