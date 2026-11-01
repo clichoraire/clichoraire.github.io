@@ -70,8 +70,8 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   (pause, vitesse ¼× à 4×, objectif, visuel, monstres aléatoires, arrivées planifiées en paquets, boss, PV/vitesse ×),
   « 🆕 Créer un tableau » part d'un tableau vide. « 💾 Sauvegarder JSON » télécharge le tableau ; voir `tableaux/README.md`
   pour le relier à une case de la carte via `js/custom-waves.js` (`CB.CUSTOM_WAVES`).
-- **Progression des mondes** : il faut réussir `CB.WORLD_NEED` = 3 tableaux (une étoile ou plus) d'un monde pour ouvrir le
-  suivant, pas forcément les cinq ; le canon d'un monde s'achète une fois son boss battu. Le bouton 🌍 Mondes de la carte
+- **Progression des mondes** : depuis le 2026-10-31, il faut battre le boss d'un monde (`S.worldDone` = tableau 5 réussi) pour ouvrir le
+  suivant (avant : `CB.WORLD_NEED` = 3 tableaux suffisaient) ; le canon d'un monde s'achète une fois son boss battu. Le bouton 🌍 Mondes de la carte
   montre les six mondes (décor, étoiles, tableaux réussis, verrous).
 - **Tableau 1-1 depuis le 2026-10-30** : le tableau relié `tableaux/tableau-foret-1.json` (« Niveau 1-1 », 100 à abattre, séquence de
   chauves-souris et hiboux) remplace la nuit sans fin ; ses secrets sont réglés dans le JSON (`chestAt` / `chestEvery` / `portalAt`),
@@ -229,11 +229,45 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   lancé le pouvoir ; `specialBusy` ignore un effet lancé par un allié. Effets légers : `Render.lite` (shadowBlur et filter en no-op via
   `Render.applyLite`, dpr 1 dans `fitWave` / `fitCanvas`), réglage `settings.fx` auto / rich / lite (dialogue Réglages, bouton
   `#btn-fx`) ; en auto, `waveFrame` passe en léger pour la session si la moyenne tombe sous 38 images/s (`app.liteAuto`).
+- **Liste de Matthieu (2026-10-31)** :
+  - *Murs magiques* : 20 coups chacun (`CB.WALL.hits`), quelle que soit la force du boulet (`applyDamage` : `e.wall` → 1 dégât).
+  - *KABOOM de Zachary* : rayon 32 au lieu de 16, la profondeur compte deux fois moins (`(e.z - z) * .5`), dégâts au bord 70 % au lieu de 50 %.
+  - *Prix ×15* : sièges / coéquipiers (`CB.SEATS`, `CB.HELPER`, objet `trio`) et canons (`CB.CANNONS[k].price`, 2 250 à 90 000).
+  - *Cartes* : 2 s de présentation (`CB.CARD_LOCK`) ; le Cadeau surprise ne sort plus du tirage normal (seulement par `CB.SURPRISE.chance`) : plus de doublon.
+  - *Boss* : `CB.BOSS_HP` = 3 multiplie les PV de tous les boss et mini-boss (`spawnBoss`, `spawnMiniBoss`).
+  - *Touché* : armure ou vie touchée → `wave.hitFx` (gros écran rouge en vignette, `R.scene`) et `wave.shake`.
+  - *Puzzle* : pas de ricochet (`s.bounces`) pendant `wave.puzzle`.
+  - *Éditeur* : nouveau départ « Quand il reste N ennemis du groupe d'avant » (`left` dans le JSON du groupe ; les ennemis pas encore arrivés comptent).
+  - *Monde suivant* : il faut battre le boss (`S.worldDone`), le bouton ▶ Ruche n'apparaît plus avant.
+  - *La Foire* : estrades foraines sous les coéquipiers (`R.fairStands`, ils ne sont plus assis dans le vide) ; six ballons (`ballonBleu` et
+    `ballonVert` rapides, `ballonJaune` très rapide, `ballonPlomb` lent et dur, `ballonZebre`, `ballonGeant`) ; `def.pop { into, count }` :
+    en éclatant, le ballon revient en ballon plus faible (vert → bleu → rouge, zébré → 2 rouges, géant → 3 verts) ; `def.roster` par
+    tableau. **Clown canonnier** (`clownCanon`, `def.riser`, `def.riders { first, every, max }` aux tableaux 1 à 4, de plus en plus souvent) :
+    suspendu à une grappe de ballons, il monte du bas de l'écran jusqu'en haut en 10 s (`Wave.spawnRider`, `riseStep`) en lançant des
+    tartes à la crème (`tarteClown`, un tir qu'on peut abattre ou esquiver), puis file hors de l'écran sans rien faire.
+    Le boss devient **le Clown Farceur** : un vrai clown (collerette, costume à pois, chapeau pointu) qui tient deux ballons méchants.
+- **Liste de Matthieu (2026-10-31, troisième)** :
+  - *Licorne d'Alexie* : l'arc-en-ciel se base sur la durée de la licorne (`wave.licorneTotal`) ; avant, lancée par un coéquipier ou le 2e pouvoir, il n'apparaissait qu'à la fin.
+  - *Page titre* : seulement Jouer et Réglages.
+  - *Niveaux du personnage* : plus de points de stats (la force, la cadence… restent au hangar ; les talents déjà placés s'appliquent encore). Chaque niveau donne une récompense (`CB.LEVEL_REWARDS`, 2 à 50) : or, +1 carte par choix (max 5), « Rebrasser » (bouton dans le choix de cartes), −2 % au hangar (`S.disc`), cartes débloquées (Tir double, Horloge, Tête chercheuse, Renfort, Cadeau surprise), objets (sphère niveau 10, tours niveau 17) et cartes de pouvoir à acheter au hangar (onglet Pouvoirs, `S.buyCardPower`). La fiche montre les récompenses gagnées et les prochaines.
+  - *Cartes de pouvoir* (3 niveaux sauf Double chance) : Attaque de glace, Attaque de feu, Bille gluante, Tir perforant, Cuirasse, Attaque de poison (contagieuse), Pluie de météores, Forgeron, Bourrasque, Double chance 🎲. Réglages dans `CB.CARD_FX`.
+  - *Tête chercheuse* : une carte à 3 niveaux (les niveaux achetés au hangar sont remboursés).
+  - *Cartes adoucies* : Gâchette rapide +20 %, Gros bras +30 %, Trèfle +10 %, Longue vue +20 %, Boulets géants plafonnés à 3. Renfort : il lance son pouvoir dès son arrivée et repart après 1 minute.
+  - *Boucliers* : parfois un monstre arrive avec un bouclier transparent à casser d'abord (`e.guard`, jamais aux 1-1 et 1-2, de plus en plus souvent).
+  - *Puzzles* (`startPuzzle`) : ordre (jusqu'à 6 orbes, à l'envers, qui bougent), couleur (tirer seulement une couleur, −3 s si on se trompe), simon (répéter une séquence), bonneteau (coffres mélangés, le mauvais explose au visage). Plus durs et plus variés selon `puzzleLevel()`.
+- **Liste de Matthieu (2026-10-31, deuxième)** :
+  - *HUD* : plus de cadre blanc « Vague X · nom » ; la barre et la ligne jaune disent l'objectif, aussi dans la nuée du 1-2 (« Tiens bon : 45 / 300 s »).
+  - *Bateau volant du 1-2* : 10 cœurs au lieu de 3 (deux rangées de 5), et plus lent (4,5 au lieu de 6,5) pour qu'on ait le temps de le toucher 10 fois.
+  - *XP* : `CB.xpForLevel` + 150 par niveau jusqu'au 10. Il faut 7 600 XP pour le niveau 8 (avant 3 400) ; le 1-2 seul rapportait ~1 000 XP.
+  - *Tableau 1-3* : départ calme (5 chauves-souris une à une, `warmup` : arrivées ×2,4 plus lentes au départ, normales après 50 s, densité 1,1).
+  - *Coffre mystère* : un gros « +22 » avec la pièce d'or (texte `coin`), plus de bandeau « COFFRE MYSTÈRE ».
+  - *Tableau 1-1* : nouvelle version de Matthieu (`tableau-foret-1.json`, 6 groupes avec fantômes), coffre doré du portail à 45 s.
+  - *Debug* : un tableau sans JSON relié (ex. 1-2) s'ouvre tel quel (`official`) ; « Appliquer » le passe en tableau de l'éditeur. Nouveau type « Nuée ».
 - **Suite v1.5 (2026-10-31)** : les pouvoirs des autres membres (case vierge) se débloquent en terminant le monde 1 avec ce membre
   (`S.powerUnlockedBy(data, id)`, `S.buyPower2(p, id, data)`) ; barre de vie toujours rouge, qui pulse sous 25 % ; tableaux à temps : chrono
   dans la carte d'objectif en haut à gauche (`#wave-obj-timer`, en gros et jaune sous 10 s), survie : 3… 2… 1… GAGNÉ !!! au centre
   (`wave.countdown`, avancé par main.js) ; première victoire d'un tableau = un seul bouton « Continuer » ; bouton « ▶ Monde suivant »
-  sur la carte dès que 3 tableaux sont réussis (`#btn-world-go`, plus besoin d'atteindre le boss) ; 1-3 adouci au départ (8 chauves-souris,
+  sur la carte (`#btn-world-go`, depuis le 2026-10-31 seulement une fois le boss battu) ; 1-3 adouci au départ (8 chauves-souris,
   densité 1,2, +25 % PV / 45 s) ; mondes 2 à 6 plus longs et plus denses (`waveDef` : 150 à abattre au 2-1, survies 115 / 145 s…).
 - **Objets uniques du hangar** (`CB.ITEMS`, `profile.items`, `S.buyItem`, tuile dorée dans l'onglet Améliorations) : achetés
   une fois, permanents. Premier objet « Jauge pleine » (450 pièces) : `stats.fullCharge` fait démarrer chaque tableau avec

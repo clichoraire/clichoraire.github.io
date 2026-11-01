@@ -17,6 +17,7 @@ BK.validateDuelRing=function(ring,theme){
  const seen=new Set([spawn.c+','+spawn.r]),queue=[spawn];for(let i=0;i<queue.length;i++)for(const d of BK.DIRS){const x=queue[i].c+d.dx,y=queue[i].r+d.dy,k=x+','+y;if(w.inside(x,y)&&!seen.has(k)&&[0,BK.SOFT].includes(w.cell(x,y))&&w.walkableTerrain(x,y)&&w.canStep(queue[i].c,queue[i].r,x,y)){seen.add(k);queue.push({c:x,r:y});}}
  return seen.has(c+','+r);
 };
+BK.duelRewardKey=(adv,key)=>adv.stage?.id+':'+(adv.outer?.door?.c??'outside')+':'+(adv.outer?.door?.r??'')+':'+key;
 class Duel{
  constructor(parent,key,trainer,previewEditor){
   this.parent=parent;this.key=key;this.trainer=trainer;this.previewEditor=previewEditor;this.level=Math.max(1,Math.min(4,trainer.duelistLevel||1));
@@ -27,7 +28,7 @@ class Duel{
   this.player=W.addPlayer(source.def,st.c,st.r,{hp:40,bombs:source.bombsMax,fire:source.fire});this.rival=W.addPlayer(BK.duelistDef(trainer.duelistStyle),op[0],op[1],{hp:[20,30,40,50][this.level-1],bombs:source.bombsMax,fire:source.fire,bot:{level:this.level===1?'facile':this.level===2?'moyen':'difficile'}});
   for(const p of [this.player,this.rival]){for(const k of BK.BOMB_POWERS)p[k]=!!source[k];p.kick=true;p.gloves=source.gloves;p.speed=source.speed*(p===this.rival?[.65,.8,1,1.1][this.level-1]:1);}
   this.rival.bombsMax=Math.min(source.bombsMax,this.level);this.state='intro';this.t=0;this.timer=120;W.frozen=true;this.cam=new BK.Camera(BK.W,BK.H);this.cam.fit(W.cols,W.rows,{top:95,bottom:65,left:35,right:35});
-  this.rewardKey=parent.stage?.id+':'+(parent.outer?.door?.c??'outside')+':'+(parent.outer?.door?.r??'')+':'+key;
+  this.rewardKey=BK.duelRewardKey(parent,key);
  }
  update(dt){
   this.t+=dt;if(this.state==='intro'){this.world.update(dt);if(this.t>3){this.state='play';this.world.frozen=false;BK.audio.go();}return;}if(this.state!=='play')return;
@@ -59,12 +60,14 @@ BK.Adventure.prototype.update=function(dt){
  for(const [key,t]of Object.entries(W.props))if(t.deco==='duelist'){
   const [c,r]=key.split(',').map(Number),d=BK.DIRS[t.orientation||0],dx=p.x-c-.5,dy=p.y-r-.5,along=dx*d.dx+dy*d.dy,side=Math.abs(dx*d.dy-dy*d.dx);
   const sees=along>.4&&along<4.5&&side<.65&&Math.abs(W.groundZ(p.x,p.y)-W.hAt(c,r))<.1&&W.canSee({x:c+.5+d.dx*.55,y:r+.5+d.dy*.55},p,5);
+  // Un duelliste déjà battu baisse la tête et ne défie plus le héros.
+  t.duelBeaten=!!this.save?.duels?.[BK.duelRewardKey(this,key)];if(t.duelBeaten)continue;
   if(this.duelMustLeave===key){if(!sees)this.duelMustLeave=null;continue;}
   if(sees){BK.current=new Duel(this,key,t);return;}
  }
 };
 const draw=BK.sprites.drawDeco;
-BK.sprites.drawDeco=function(ctx,kind,x,y,k,t,nb,seed,orientation,lightColor,props){if(kind!=='duelist')return draw.apply(this,arguments);ctx.save();ctx.translate(x,y);BK.sprites.drawCharacter(ctx,BK.duelistDef(props?.duelistStyle),{s:k,pose:'idle',t,view:orientation===2?'back':orientation===1||orientation===3?'side':'front',flip:orientation===1});ctx.fillStyle='#ffdc56';ctx.font='bold '+k*.4+'px sans-serif';ctx.textAlign='center';ctx.fillText('⚔',0,-k*1.3);ctx.restore();};
+BK.sprites.drawDeco=function(ctx,kind,x,y,k,t,nb,seed,orientation,lightColor,props){if(kind!=='duelist')return draw.apply(this,arguments);ctx.save();ctx.translate(x,y);const beaten=props?.duelBeaten;BK.sprites.drawCharacter(ctx,BK.duelistDef(props?.duelistStyle),{s:k,pose:beaten?'lose':'idle',t,view:orientation===2?'back':orientation===1||orientation===3?'side':'front',flip:orientation===1});ctx.fillStyle='#ffdc56';ctx.font='bold '+k*.4+'px sans-serif';ctx.textAlign='center';ctx.fillText(beaten?'🏳️':'⚔',0,-k*1.3);ctx.restore();};
 })(window.BK);
 (function(BK){
 'use strict';

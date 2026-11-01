@@ -618,3 +618,19 @@ body.debug .run-level { left: calc((100% - var(--dbg-w)) / 2); }
   .card b { font-size: 15px; } .card em { font-size: 11px; } .card small { font-size: 11px; line-height: 1.2; }
   .card kbd { font-size: 11px; padding: 0 6px; } .card .ribbon { font-size: 9px; }
 }
+
+/* 2026-10-31 : 4 ou 5 cartes (récompenses de niveau), bouton « Rebrasser », récompenses sur la fiche */
+.cards.n4 .card { width: min(21vw, 290px); }
+.cards.n5 .card { width: min(17vw, 240px); }
+.cards.n4 .card small, .cards.n5 .card small { font-size: 13px; }
+.cards-box .reroll { margin: 14px auto 0; display: block; }
+.reward-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; }
+.reward-tile { display: grid; grid-template-columns: 54px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(11,36,82,.8); border: 2px solid rgba(159,220,255,.35); }
+.reward-tile .ico { grid-row: span 2; width: 54px; height: 54px; display: grid; place-items: center; font-size: 30px; border-radius: 12px; background: radial-gradient(circle at 35% 30%, #2f74c9, #0b2452 75%); }
+.reward-tile .ico .coin { width: 30px; height: 30px; }
+.reward-tile b { color: var(--yellow); font-size: 13px; letter-spacing: .04em; }
+.reward-tile .txt { color: #fff; font-weight: 800; font-size: 15px; line-height: 1.2; }
+.reward-tile.new { border-color: var(--yellow); box-shadow: 0 0 18px rgba(255,210,63,.45); animation: bump .5s; }
+.reward-tile.next { opacity: .55; filter: saturate(.5); }
+.reward-tile.next .ico { background: #26344f; }
+@media (max-width: 640px) { .reward-grid { grid-template-columns: 1fr; } }

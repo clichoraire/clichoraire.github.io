@@ -43,7 +43,7 @@
       ally2: profile.ally2Bought && profile.ally2 && profile.ally2 !== profile.id && profile.ally2 !== profile.ally && CB.playerById(profile.ally2) ? profile.ally2 : null,
       ally3: profile.ally2Bought && profile.items && profile.items.trio && profile.ally3 && ![profile.id, profile.ally, profile.ally2].includes(profile.ally3) && CB.playerById(profile.ally3) ? profile.ally3 : null,   // réserve (objet « Trio de choc »)
       god: !!(profile.cheats && profile.cheats.god),
-      towers: Math.min(CB.TOWER.max, profile.towers || 0), homing: Math.min(CB.HOMING.max, profile.homing || 0), sphere: !!(profile.items && profile.items.sphere), specialLevel: Math.max(1, Math.min(CB.SPECIAL_LEVELS.length, profile.specialLevel || 1)),
+      towers: Math.min(CB.TOWER.max, profile.towers || 0), homing: 0,   /* 2026-10-31 : la tête chercheuse est une carte */ sphere: !!(profile.items && profile.items.sphere), specialLevel: Math.max(1, Math.min(CB.SPECIAL_LEVELS.length, profile.specialLevel || 1)),
       regen: up('reparation') * 1 + uq('entretien'),
       // spécialités du canon (CB.CANNON_UNIQUES)
       armor: .1 * uq('blindage'), fleet: uq('flotte'), gifts: uq('cadeaux'), burst: uq('surchauffe') ? [5, 4, 3][uq('surchauffe') - 1] : 0, burn: uq('brulure'), fonte: .12 * uq('fonte'), pierceLeft: uq('percant'), triple: .12 * uq('triple'),
@@ -54,6 +54,7 @@
       // combos secrets
       fan: false, siphon: 0, knock: .4 * uq('abordage'), frostBounce: 0, cometCap: 0, odin: 0, midas: 0, blackhole: 0, anesthesie: 0, harvest: 0, rafale: 0,
       slow: pm.slow || 0, dodge: pm.dodge || 0, shield: pm.shield || 0,
+      meteor: 0, glue: 0, chill: 0, ignite: 0, venom: 0, armorFix: 0, gust: 0, luckyCard: 0,   // cartes de pouvoir (2026-10-31)
       effects: Object.assign({}, profile.effects || {}),
       cannon: profile.cannon || 'classique', ball: profile.ball || 'fer',
     };
@@ -65,7 +66,7 @@
   CB.Wave = class {
     // custom (optionnel) : tableau personnalisé (voir CB.Custom dans debug.js et CB.CUSTOM_WAVES dans custom-waves.js).
     constructor({ worldIndex = 0, waveIndex = 0, profile, player, random = Math.random, custom = null, carry = null }) {
-      this.random = random; this.wi = worldIndex; this.vi = waveIndex; this.world = CB.WORLDS[worldIndex]; this.player = player || null;
+      this.random = random; this.profile = profile || null; this.wi = worldIndex; this.vi = waveIndex; this.world = CB.WORLDS[worldIndex]; this.player = player || null;
       this.special = player && CB.SPECIALS[player.id] ? Object.assign({ id: player.id, name: player.perk.name, icon: player.perk.icon }, CB.SPECIALS[player.id]) : null;
       { const up = player && profile ? CB.Save.usedPower(profile) : null; if (up && CB.SPECIALS[up] && CB.POWERS[up]) this.special = Object.assign({ id: up, name: CB.POWERS[up].name, icon: CB.POWERS[up].icon, unique: true }, CB.SPECIALS[up]); }   // pouvoir unique (pirate, torpilles…) choisi au hangar à la place du sien
       const sid2 = profile && profile.slot2 && profile.special2, m2 = sid2 && CB.playerById(sid2); this.special2 = player && m2 && sid2 !== player.id && CB.SPECIALS[sid2] ? Object.assign({ id: sid2, name: m2.perk.name, icon: m2.perk.icon }, CB.SPECIALS[sid2]) : null; this.charge2 = 0;   // case vierge : un deuxième pouvoir, sa propre jauge
@@ -76,13 +77,13 @@
       if (custom) {
         this.custom = custom; const base = CB.worldById(custom.world) || this.world;
         this.world = Object.assign({}, base, { scene: custom.scene || base.id, sky: custom.sky || base.sky, ground: custom.ground || base.ground, space: !!custom.space, enemies: (custom.random && custom.random.enemies || []).filter(k => CB.ENEMIES[k]), boss: custom.boss || null });
-        this.def = { world: worldIndex, index: waveIndex, type: custom.type || 'kill', goal: custom.goal || 10, seconds: custom.seconds || 40, density: custom.density || 1, name: custom.name || 'Tableau', text: custom.text || '', cibles: custom.cibles || null, brigands: custom.brigands || null };
+        this.def = { world: worldIndex, index: waveIndex, type: custom.type || 'kill', goal: custom.goal || 10, seconds: custom.seconds || 40, density: custom.density || 1, name: custom.name || 'Tableau', text: custom.text || '', cibles: custom.cibles || null, brigands: custom.brigands || null, swarm: custom.type === 'swarm' ? (custom.swarm || CB.waveDef(0, 1).swarm) : null };   // nuée de l'éditeur : décompte, étoiles, bombes et bateau du 1-2 ; les monstres viennent de la liste
         this.schedule = (custom.spawns || []).filter(s => CB.ENEMIES[s.type]).map(s => ({ type: s.type, elite: !!s.elite, every: Math.max(.05, +s.every || .5), interval: Math.max(.1, +s.interval || 5), count: Math.max(1, Math.round(+s.count || 1)), next: Math.max(0, +s.at || 0), left: Math.max(1, Math.round(+s.count || 1)), packsLeft: Math.max(1, Math.round(+s.packs || 1)) - 1 }));
         // séquence de l'éditeur : groupes ordonnés ; un groupe mélange ses sortes de monstres, et part quand le groupe d'avant est éliminé (ou à « at » s si précisé)
       }
       const seqSrc = this.custom ? (custom.sequence || []) : (this.def.sequence || null);   // séquence de groupes : éditeur, ou tableau officiel (ex. 1-3 : première vague de chauves-souris)
       if (seqSrc) {
-        this.sequence = seqSrc.map((g, idx) => ({ idx, launched: false, spawned: [], kinds: (g.kinds || []).filter(k => k && (CB.ENEMIES[k.type] || (String(k.type).startsWith('boss:') && CB.BOSSES[k.type.slice(5)]))).map(k => ({ type: k.type, count: Math.max(1, Math.round(+k.count || 1)), elite: !!k.elite || !!g.elite })), every: g.every == null || g.every === '' || isNaN(+g.every) ? .6 : Math.max(0, +g.every), at: g.at == null || g.at === '' ? null : Math.max(0, +g.at), rel: g.rel == null || g.rel === '' || isNaN(+g.rel) ? null : +g.rel, elite: !!g.elite })).filter(g => g.kinds.length);
+        this.sequence = seqSrc.map((g, idx) => ({ idx, launched: false, spawned: [], kinds: (g.kinds || []).filter(k => k && (CB.ENEMIES[k.type] || (String(k.type).startsWith('boss:') && CB.BOSSES[k.type.slice(5)]))).map(k => ({ type: k.type, count: Math.max(1, Math.round(+k.count || 1)), elite: !!k.elite || !!g.elite })), every: g.every == null || g.every === '' || isNaN(+g.every) ? .6 : Math.max(0, +g.every), at: g.at == null || g.at === '' ? null : Math.max(0, +g.at), rel: g.rel == null || g.rel === '' || isNaN(+g.rel) ? null : +g.rel, left: g.left == null || g.left === '' || isNaN(+g.left) ? null : Math.max(0, Math.round(+g.left)), elite: !!g.elite })).filter(g => g.kinds.length);
         this.seq = { i: 0, active: [], alive: [], clearAt: null, lastEnd: null, gap: CB.SEQUENCE_GAP };   // at : temps absolu ; rel : ± s par rapport à la fin des arrivées du groupe d'avant ; sinon après son élimination
       }
       this.stats = CB.stats(profile || CB.Save.blank('x'), player); if (this.stats.fullCharge && this.special) this.charge = 1; if (this.stats.fullCharge && this.special2) this.charge2 = 1;   // objet unique « Jauge pleine »
@@ -104,7 +105,7 @@
       if (this.familyBuff) { this.stats.rate *= 1 + CB.FAMILY_BUFF.rate; this.texts.push({ text: '🛡️ BONUS FAMILLE : +' + Math.round(CB.FAMILY_BUFF.rate * 100) + ' % DE CADENCE !', x: 0, y: 13, z: 18, age: -2.4, color: (CB.FAMILIES[player.family] || {}).color || '#ffd23f', big: true }); }
       // nuit sans fin
       this.seenBy = {}; this.killsBy = {}; this.boost = 0; this.boostTimer = 0;
-      this.runXp = 0; this.runLevel = 1; this.pendingLevels = 0; // niveaux gagnés pendant la vague : chacun offre trois cartes
+      this.runXp = 0; this.runLevel = 1; this.pendingLevels = 0; { const Sv = CB.Save; this.cardCount = 3 + (Sv && profile ? Math.min(2, Sv.extraChoices(profile)) : 0); this.rerolls = Sv && profile ? Sv.rerolls(profile) : 0; this.rerollsUsed = 0; }   /* récompenses de niveau : cartes en plus, « rebrasser » */ this.meteorCard = 0; this.gustTimer = 6; this.armorFixT = 0; this.cardFxHits = 0; // niveaux gagnés pendant la vague : chacun offre trois cartes
       this.E = this.def.endless === 'dinos' ? CB.ENDLESS_DINOS : CB.ENDLESS; // réglages du mode sans fin selon le tableau
       this.scenery = this.def.scene && CB.SCENERY[this.def.scene] ? Object.assign({}, this.world, CB.SCENERY[this.def.scene]) : null;
       this.miniBossDone = false; this.nextGift = Infinity; this.gifts = 0; this.crystalsBroken = 0;
@@ -139,7 +140,7 @@
     }
     get timeLeft() { return this.def.seconds != null && !this.swarm && (this.def.type === 'survive' || this.def.type === 'killTimed') ? Math.max(0, this.def.seconds - this.time) : null; }   // le compte à rebours seulement quand le temps compte
     get openEnded() { return this.endless || !!this.swarm; } // on peut arrêter quand on veut, les étoiles dépendent du temps
-    get progress() { const d = this.def; if (d.type === 'boss') { const b = this.boss; return b ? Math.min(1, 1 - b.hp / b.maxHp) : this.bossSpawned ? 1 : 0; } if (d.type === 'sink') return Math.min(1, this.shipsSunk / d.goal); if (this.cibles) return Math.min(1, this.targetsHit / this.cibles.count); if (this.brigands) return Math.min(1, this.round / this.brigands.rounds); if (this.endless) { const E = this.E.chest; if (!E) return 0; const prev = this.chestsSeen ? E.firstAt + (this.chestsSeen - 1) * E.every : 0; return Math.min(1, (this.time - prev) / (this.nextChest - prev)); } if (d.type === 'kill' || d.type === 'killTimed') return Math.min(1, this.kills / d.goal); if (d.type === 'survive') return Math.min(1, this.time / d.seconds); if (this.boss) return 1 - this.boss.hp / this.boss.maxHp; return 0; }
+    get progress() { const d = this.def; if (d.type === 'boss') { const b = this.boss; return b ? Math.min(1, 1 - b.hp / b.maxHp) : this.bossSpawned ? 1 : 0; } if (d.type === 'sink') return Math.min(1, this.shipsSunk / d.goal); if (this.cibles) return Math.min(1, this.targetsHit / this.cibles.count); if (this.brigands) return Math.min(1, this.round / this.brigands.rounds); if (this.endless) { const E = this.E.chest; if (!E) return 0; const prev = this.chestsSeen ? E.firstAt + (this.chestsSeen - 1) * E.every : 0; return Math.min(1, (this.time - prev) / (this.nextChest - prev)); } if (d.type === 'kill' || d.type === 'killTimed') return Math.min(1, this.kills / d.goal); if (d.type === 'survive' || this.swarm) return Math.min(1, this.time / d.seconds); if (this.boss) return 1 - this.boss.hp / this.boss.maxHp; return 0; }
     radiusOf(e) { return (e.boss ? e.size * 1.25 * CB.BOSS_SCALE : 2 + (e.size - 1) * 1.3) * (this._ballSize || 1); }
     // Profondeur visée : l'ennemi sous le réticule, sinon une distance moyenne.
     target() {
@@ -206,7 +207,7 @@
       if (this.puzzle) return;   /* puzzle 1-2-3 : les monstres attendent, les aides aussi (et ne tirent jamais sur les orbes) */
       let best = null; for (const e of this.enemies) if (!e.dead && !e.escaped && e.z > 4 && !e.def.orb && !e.def.panel && (!best || e.z < best.z)) best = e;
       if (!best) return;
-      if (a.special && this.time >= a.nextSpecial && this.time >= this.intro) { a.nextSpecial = this.time + CB.HELPER.specialEvery; a.specials++; this.lastAllySpecial = a.id; this.castSpecial(a.special, ox, true); }
+      if (a.special && this.time >= a.nextSpecial && this.time >= this.intro) { a.nextSpecial = a.guest ? Infinity : this.time + CB.HELPER.specialEvery; a.specials++; this.lastAllySpecial = a.id; this.castSpecial(a.special, ox, true); }
       const p = CB.project(best); a.aim.x += (p.x - a.aim.x) * Math.min(1, dt * 6); a.aim.y += (p.y - a.aim.y) * Math.min(1, dt * 6);
       if (a.cooldown > 0 || this.time < this.intro) return;
       const depth = best.boss ? best.z : best.z * 65 / (65 + best.speed), t = depth / (CB.BASE_SPEED * s.range);
@@ -241,6 +242,7 @@
       if (def.box) { e.speed = 0; if (!at) { e.z = 40; e.y = e.baseY = 7; } }
       const decor = def.chest || def.shot || def.gift || def.crystal || def.hazard || def.target || def.box; // pas des monstres : ni bestiaire, ni annonce
       if (!decor) this.seenBy[type] = (this.seenBy[type] || 0) + 1;
+      { const gc = this.guardChance(); if (gc > 0 && !decor && !this.isDecor(e) && !def.ship && !def.riser && !def.swim && !(e.shield > 0) && !e.boss && r() < gc) { e.guard = true; e.shield = e.shieldMax = Math.max(3, Math.round(e.hp * .8)); this.guards = (this.guards || 0) + 1; } }   // parfois, un bouclier transparent devant lui : on le casse d'abord
       if (this.endless && !decor && !this.seen.includes(type)) { this.seen.push(type); if (!(this.seenBefore[type] > 0)) this.news.push({ kind: 'monster', text: 'NOUVEAU MONSTRE : ' + def.name.toUpperCase(), time: this.time }); }
       this.enemies.push(e); return e;
     }
@@ -257,9 +259,8 @@
       const gold = (CB.goldBase(this.wi) + e.def.gold) * s.gold * 2; this.gold += gold; this.xp += 10; this.gainXp(10);
       this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ffd23f', size: 2 });
       const left = this.E.maxDiscoveries - Math.min(this.E.maxDiscoveries, (this.discoveredBefore || 0) + this.discoveries);
-      this.texts.push({ text: 'DÉCOUVERTE !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#ffd23f' });
+      this.texts.push({ text: '+' + Math.round(gold), coin: true, big: true, life: 1.7, x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#ffd23f' });   // un gros « +22 🪙 » (2026-10-31) : plus de bandeau « COFFRE MYSTÈRE »
       const reveals = left >= 0 && (this.discoveredBefore || 0) + this.discoveries <= this.E.maxDiscoveries;
-      this.news.push({ kind: 'discovery', text: 'COFFRE MYSTÈRE : +' + Math.round(gold) + ' PIÈCES', time: this.time });   // rien n'annonce les nouveaux tableaux (sauf le portail vers le passé) : on les découvre sur la carte
     }
     // Le coffre doré touché : un portail bleu s'ouvre, les monstres disparaissent, puis on est transporté dans le passé (finish 'portail').
     openPortal(e) {
@@ -271,10 +272,10 @@
     }
     // KABOOM : la fusée de Zachary explose en malade. Gros dégâts dans un grand rayon, boule de feu, onde de choc, secousse.
     kaboom(ball) {
-      if (ball.hit) return; ball.hit = true; const s = this.stats, R0 = 16, x = ball.x, y = ball.y, z = ball.z;
-      let touched = 0; for (const e of this.enemies) { if (e.dead || e.escaped) continue; const d = Math.hypot(e.x - x, e.y - y, e.z - z); if (d < R0) { touched++; this.hits++; this.applyDamage(e, ball.dmg * (1 - .5 * d / R0), true, 'fusee'); if (!e.dead && !e.boss) e.z += 6; } }
+      if (ball.hit) return; ball.hit = true; const s = this.stats, R0 = 32, x = ball.x, y = ball.y, z = ball.z;   // gros KABOOM : rayon doublé, et la profondeur compte deux fois moins (ça pogne aussi devant et derrière)
+      let touched = 0; for (const e of this.enemies.slice()) { if (e.dead || e.escaped || e.wall) continue; const d = Math.hypot(e.x - x, e.y - y, (e.z - z) * .5); if (d < R0) { touched++; this.hits++; this.applyDamage(e, ball.dmg * (1 - .3 * d / R0), true, 'fusee'); if (!e.dead && !e.boss) e.z += 6; } }
       this.kabooms = (this.kabooms || 0) + 1; this.shake = 1.2;
-      this.bursts.push({ x, y, z, age: 0, kind: 'kaboom', color: '#ff8c2a', size: R0, life: 1.4 });
+      this.bursts.push({ x, y, z, age: 0, kind: 'kaboom', color: '#ff8c2a', size: R0 * .75, life: 1.4 });
       for (let i = 0; i < 6; i++) this.bursts.push({ x: x + (this.random() - .5) * 10, y: y + (this.random() - .5) * 6, z: z + (this.random() - .5) * 10, age: -i * .08, kind: 'boom', color: i % 2 ? '#ffd23f' : '#ff5a1a', size: 2.5 + this.random() * 2 });
       this.texts.push({ text: 'KABOOOOM !!!', x, y: y + 6, z, age: 0, color: '#ffd23f', big: true });
       if (touched) this.texts.push({ text: touched + ' TOUCHÉS', x, y: y + 2, z, age: -.3, color: '#fff' });
@@ -324,24 +325,80 @@
     }
     // Monstres d'un monde : les trois premiers de la liste tout le temps ; les spéciaux (cracheurs, soigneurs, contact) seulement
     // à partir du deuxième tableau du monde, après 25 s et une fois sur quatre, pour que ça reste un jeu d'enfant.
-    pickWorldEnemy() { if (this.def.roster) return this.def.roster[Math.floor(this.random() * this.def.roster.length)]; const list = this.world.enemies, base = list.slice(0, 3), extra = list.slice(3), r = this.random; if (extra.length && this.vi >= 1 && this.time > 25 && r() < .25) return extra[Math.floor(r() * extra.length)]; return base[Math.floor(r() * base.length)]; }
+    pickWorldEnemy() { if (this.def.roster) return this.def.roster[Math.floor(this.random() * this.def.roster.length)]; const list = this.world.enemies, base = list.slice(0, 3), extra = list.slice(3), r = this.random; if (extra.length && this.vi >= 1 && this.time > (this.def.warmup && !this.custom ? this.def.warmup.seconds : 25) && r() < .25) return extra[Math.floor(r() * extra.length)]; return base[Math.floor(r() * base.length)]; }
     isDecor(e) { const d = e.def; return !!(e.target === true || d.crystal || d.gift || d.chest || d.portal || d.hazard || d.shot || d.target || d.shieldAll || d.orb || d.panel || d.secretBoat || d.box); }
     // ---------- Événements loufoques ----------
-    triggerEvent(kind) {
+    triggerEvent(kind, arg) {
       const r = this.random; this.eventsSeen++; this.lastEvent = kind;
-      if (kind === 'boucliers') { const n = 2 + (r() < .5 ? 1 : 0), V = CB.VIEW; for (let i = 0; i < n; i++) { const u = CB.unproject((i + .5) * V.w / n, V.horizon * .55, CB.WALL.z), e = this.spawnEnemy('bouclier', { x: u.x, y: u.y, z: CB.WALL.z }); e.hp = e.maxHp = 3 + this.wi * 2; e.wall = { i, n }; } this.news.push({ kind: 'discovery', text: 'MURS MAGIQUES ! TES BOULETS S’Y ÉCRASENT : CASSE-LES (OU VISE À CÔTÉ)', time: this.time }); this.texts.push({ text: '🛡️ MURS MAGIQUES !', x: 0, y: 13, z: 20, age: 0, color: '#4fc3ff', big: true }); }   // chaque mur couvre une bande de l'écran (moitié, tiers…) ; les monstres derrière ne sont pas protégés, seuls les tirs qui passent dans la bande s'y écrasent
+      if (kind === 'boucliers') { const n = 2 + (r() < .5 ? 1 : 0), V = CB.VIEW; for (let i = 0; i < n; i++) { const u = CB.unproject((i + .5) * V.w / n, V.horizon * .55, CB.WALL.z), e = this.spawnEnemy('bouclier', { x: u.x, y: u.y, z: CB.WALL.z }); e.hp = e.maxHp = CB.WALL.hits; e.wall = { i, n }; } this.news.push({ kind: 'discovery', text: 'MURS MAGIQUES ! TES BOULETS S’Y ÉCRASENT : CASSE-LES (OU VISE À CÔTÉ)', time: this.time }); this.texts.push({ text: '🛡️ MURS MAGIQUES !', x: 0, y: 13, z: 20, age: 0, color: '#4fc3ff', big: true }); }   // chaque mur couvre une bande de l'écran (moitié, tiers…) ; les monstres derrière ne sont pas protégés, seuls les tirs qui passent dans la bande s'y écrasent
       else if (kind === 'bombeSurprise') { const e = this.spawnEnemy('bombeMagique', { x: (r() - .5) * 8, y: 4.5, z: 9 }); e.fuse = 2.5; this.shake = Math.max(this.shake || 0, .4); this.texts.push({ text: '💣 BOMBE SURPRISE !', x: 0, y: 10, z: 12, age: 0, color: '#b14fff', big: true }); }
-      else if (kind === 'puzzle') { const order = [1, 2, 3].sort(() => r() - .5); const orbs = order.map((num, i) => { const e = this.spawnEnemy('orbe', { x: (i - 1) * 11, y: 9 + (r() - .5) * 3, z: 28 }); e.num = num; e.done = false; return e; }); this.puzzle = { orbs, next: 1, time: 14 }; this.news.push({ kind: 'discovery', text: 'PUZZLE ! TIRE SUR 1, 2 PUIS 3 AVANT LA FIN DU TEMPS', time: this.time }); this.texts.push({ text: '🧩 TIRE 1, 2, 3 DANS L’ORDRE !', x: 0, y: 14, z: 28, age: 0, color: '#ffd23f', big: true }); }
+      else if (kind === 'puzzle') this.startPuzzle(arg);
+    }
+    // ---------- Puzzles (2026-10-31) : quatre sortes, de plus en plus durs en avançant dans le jeu ----------
+    // ordre : tirer les orbes 1, 2, 3… (jusqu'à 6, parfois à l'envers, qui bougent plus loin) ; couleur : tirer seulement les ballons d'une couleur ;
+    // simon : des orbes s'allument dans un ordre, on le répète ; bonneteau : des coffres (un vide, les autres piégés) se mélangent, on tire sur le vide.
+    puzzleLevel() { return CB.tierOf(this.wi) + this.vi * .3; }
+    puzzleKinds() { const d = this.puzzleLevel(), k = ['ordre']; if (d >= .5) k.push('couleur'); if (d >= .8) k.push('bonneteau'); if (d >= 1.2) k.push('simon'); return k; }
+    startPuzzle(kind) {
+      const r = this.random, d = this.puzzleLevel(), kinds = this.puzzleKinds(); if (!kind || !CB.PUZZLES[kind]) { const pool = kinds.length > 1 ? kinds.filter(k => k !== this.lastPuzzle) : kinds; kind = pool[Math.floor(r() * pool.length)]; }
+      this.lastPuzzle = kind; const P = CB.PUZZLES[kind], orb = (x, y, z, o) => Object.assign(this.spawnEnemy(kind === 'bonneteau' ? 'coffrePuzzle' : 'orbe', { x, y, z }), { done: false, baseX: x, baseY: y }, o);
+      let p;
+      if (kind === 'ordre') { const n = Math.min(6, 3 + Math.floor(d / 1.2)), rev = d >= 1.5 && r() < .4, move = d >= 2, nums = Array.from({ length: n }, (_, i) => i + 1).sort(() => r() - .5), gap = n > 4 ? 7.5 : 10;
+        const orbs = nums.map((num, i) => orb((i - (n - 1) / 2) * gap, 9 + (r() - .5) * 4, 28, { num }));
+        p = { kind, orbs, seq: (rev ? nums.slice().sort((a, b) => b - a) : nums.slice().sort((a, b) => a - b)).map(nm => orbs.find(o => o.num === nm)), step: 0, rev, move, time: 9 + 2 * n }; p.next = p.seq[0].num;
+        this.texts.push({ text: rev ? '🧩 À L’ENVERS : ' + n + ' → 1 !' : '🧩 TIRE ' + nums.slice().sort((a, b) => a - b).join(', ') + ' DANS L’ORDRE !', x: 0, y: 14, z: 28, age: 0, color: '#ffd23f', big: true }); }
+      else if (kind === 'couleur') { const C = P.colors, want = C[Math.floor(r() * C.length)], need = Math.min(6, 3 + Math.floor(d / 1.5)), others = Math.min(7, 3 + Math.floor(d)), n = need + others, list = [];
+        for (let i = 0; i < need; i++) list.push(want); for (let i = 0; i < others; i++) { const o = C.filter(c => c !== want); list.push(o[i % o.length]); } list.sort(() => r() - .5);
+        const cols = Math.min(5, Math.ceil(n / 2)), orbs = list.map((c, i) => orb(((i % cols) - (cols - 1) / 2) * 8.5, 6 + Math.floor(i / cols) * 6 + (r() - .5) * 1.5, 30 + (r() - .5) * 4, { color: c.hex, colorKey: c.key, bob: r() * 6 }));
+        p = { kind, orbs, want, need, got: 0, move: true, speed: .8 + d * .25, time: 10 + need * 1.6 };
+        this.texts.push({ text: '🎈 TIRE SEULEMENT LES ' + want.name + ' !', x: 0, y: 14, z: 28, age: 0, color: want.hex, big: true }); }
+      else if (kind === 'simon') { const C = P.colors.slice(0, 4), len = Math.min(7, 3 + Math.floor((d - 1) / 1.2)), orbs = C.map((c, i) => orb((i - 1.5) * 9, 9 + (i % 2 ? 2.5 : 0), 28, { color: c.hex, colorKey: c.key, simon: true }));
+        const seq = []; for (let i = 0; i < len; i++) { let o; do o = orbs[Math.floor(r() * orbs.length)]; while (seq.length && o === seq[seq.length - 1] && r() < .7); seq.push(o); }
+        const on = Math.max(.35, .65 - d * .04), off = .2; p = { kind, orbs, seq, step: 0, phase: 'show', showT: 0, on, off, time: len * (on + off) + 7 + len * 1.5 };
+        this.texts.push({ text: '🧠 REGARDE BIEN… PUIS RÉPÈTE !', x: 0, y: 14, z: 28, age: 0, color: '#ffd23f', big: true }); }
+      else { const n = d >= 2.5 ? 4 : 3, gap = n === 4 ? 9 : 11, slots = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * gap), empty = Math.floor(r() * n);
+        const orbs = slots.map((x, i) => orb(x, 6.5, 24, { slot: i, bomb: i !== empty, open: 1 }));
+        p = { kind, orbs, slots, phase: 'show', phaseT: 2.4, swaps: 0, swap: null, swapDur: Math.max(.2, .5 - d * .05), shuffleT: 3 + Math.min(2, d * .3), time: 99 };
+        this.texts.push({ text: '💣 REGARDE OÙ EST LE COFFRE VIDE !', x: 0, y: 14, z: 26, age: 0, color: '#ffd23f', big: true }); }
+      this.puzzle = p; this.puzzlesSeen = (this.puzzlesSeen || 0) + 1;   // pas de bandeau : il cacherait les coffres qu'il faut regarder
+      return p;
+    }
+    // le bon orbe / coffre à tirer maintenant (pour l'aide de visée des tests ; null pendant les phases où il faut regarder)
+    puzzleTarget() { const p = this.puzzle; if (!p) return null; if (p.kind === 'ordre') return p.seq[p.step]; if (p.kind === 'simon') return p.phase === 'play' ? p.seq[p.step] : null; if (p.kind === 'couleur') return p.orbs.find(o => !o.done && o.colorKey === p.want.key) || null; return p.phase === 'choose' ? p.orbs.find(o => !o.bomb) : null; }
+    updatePuzzle(dt) {
+      const p = this.puzzle, r = this.random;
+      if (p.kind === 'ordre' && p.move) for (const o of p.orbs) { o.x = o.baseX + Math.sin(this.time * 1.3 + o.num * 1.7) * 3; }
+      if (p.kind === 'couleur') for (const o of p.orbs) if (!o.done) { o.x = o.baseX + Math.sin(this.time * p.speed + o.bob) * 2.5; o.y = o.baseY + Math.cos(this.time * p.speed * 1.3 + o.bob) * 1.2; }
+      if (p.kind === 'simon' && p.phase === 'show') { p.showT += dt; const per = p.on + p.off, i = Math.floor(p.showT / per), inOn = p.showT - i * per < p.on; for (const o of p.orbs) o.lit = 0; if (i < p.seq.length) { if (inOn) p.seq[i].lit = 1; } else { p.phase = 'play'; p.step = 0; this.texts.push({ text: 'À TOI !', x: 0, y: 13, z: 26, age: 0, color: '#7dff9a', big: true }); } return; }
+      if (p.kind === 'simon') for (const o of p.orbs) o.lit = Math.max(0, (o.lit || 0) - dt * 3);
+      if (p.kind === 'bonneteau') {
+        if (p.phase === 'show') { p.phaseT -= dt; if (p.phaseT <= 0) { p.phase = 'shuffle'; p.phaseT = p.shuffleT; this.texts.push({ text: 'ÇA MÉLANGE !', x: 0, y: 13, z: 24, age: 0, color: '#ffd23f', big: true }); } return; }
+        if (p.phase === 'shuffle') { for (const o of p.orbs) o.open = Math.max(0, o.open - dt * 4);
+          if (!p.swap) { if (p.phaseT <= 0) { p.phase = 'choose'; p.time = Math.max(4, 7 - this.puzzleLevel() * .4); this.texts.push({ text: 'TIRE SUR LE COFFRE VIDE !', x: 0, y: 13, z: 24, age: 0, color: '#7dff9a', big: true }); return; }
+            const n = p.orbs.length, a = Math.floor(r() * n); let b = Math.floor(r() * (n - 1)); if (b >= a) b++; const A = p.orbs.find(o => o.slot === a), B = p.orbs.find(o => o.slot === b); p.swap = { A, B, t: 0, from: [A.x, B.x], up: r() < .5 ? 1 : -1 }; p.swaps++; }
+          const sw = p.swap; sw.t += dt / p.swapDur; const k = Math.min(1, sw.t), e2 = k * k * (3 - 2 * k);
+          sw.A.x = sw.A.baseX = sw.from[0] + (sw.from[1] - sw.from[0]) * e2; sw.B.x = sw.B.baseX = sw.from[1] + (sw.from[0] - sw.from[1]) * e2; sw.A.y = 6.5 + Math.sin(k * Math.PI) * 2.2 * sw.up; sw.B.y = 6.5 - Math.sin(k * Math.PI) * 2.2 * sw.up;
+          if (k >= 1) { const sa = sw.A.slot; sw.A.slot = sw.B.slot; sw.B.slot = sa; sw.A.y = sw.B.y = 6.5; p.swap = null; } p.phaseT -= dt; return; }
+      }
+      p.time -= dt; if (p.time <= 0) this.endPuzzle(false);
     }
     puzzleHit(e) {
-      const p = this.puzzle; if (!p || e.done) return;
-      if (e.num === p.next) { e.done = true; e.flash = .2; p.next++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'crit', color: '#ffd23f' }); this.texts.push({ text: e.num + ' ✔', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#7dff9a' }); if (p.next > 3) this.endPuzzle(true); }
-      else { this.puzzleFails++; for (const o of p.orbs) { o.done = false; o.flash = .3; } p.next = 1; this.texts.push({ text: 'OUPS ! RECOMMENCE : 1, 2, 3', x: 0, y: 13, z: 28, age: 0, color: '#ff6b6b' }); }
+      const p = this.puzzle; if (!p || e.done) return; e.flash = .2;
+      const good = () => { e.done = true; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'crit', color: '#ffd23f' }); this.texts.push({ text: (e.num || '') + ' ✔', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#7dff9a' }); };
+      if (p.kind === 'ordre') { if (e === p.seq[p.step]) { good(); p.step++; p.next = p.step < p.seq.length ? p.seq[p.step].num : null; if (p.step >= p.seq.length) this.endPuzzle(true); }
+        else { this.puzzleFails++; for (const o of p.orbs) { o.done = false; o.flash = .3; } p.step = 0; p.next = p.seq[0].num; this.texts.push({ text: 'OUPS ! RECOMMENCE À ' + p.seq[0].num, x: 0, y: 13, z: 28, age: 0, color: '#ff6b6b' }); } return; }
+      if (p.kind === 'couleur') { if (e.colorKey === p.want.key) { good(); e.dead = true; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'pop', color: e.color, size: 1.5 }); p.got++; if (p.got >= p.need) this.endPuzzle(true); }
+        else { this.puzzleFails++; p.time = Math.max(.5, p.time - 3); this.texts.push({ text: 'PAS CETTE COULEUR ! −3 s', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#ff6b6b' }); } return; }
+      if (p.kind === 'simon') { if (p.phase !== 'play') return; e.lit = 1; if (e === p.seq[p.step]) { p.step++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'crit', color: e.color }); if (p.step >= p.seq.length) this.endPuzzle(true); }
+        else { this.puzzleFails++; p.phase = 'show'; p.showT = -.6; p.step = 0; this.texts.push({ text: 'OUPS ! REGARDE ENCORE…', x: 0, y: 13, z: 28, age: 0, color: '#ff6b6b' }); } return; }
+      if (p.phase !== 'choose') return; for (const o of p.orbs) o.open = 1; if (!e.bomb) { e.done = true; this.endPuzzle(true); } else this.endPuzzle(false, e);
     }
-    endPuzzle(ok) {
+    endPuzzle(ok, bomb) {
       const p = this.puzzle; this.puzzle = null; for (const o of p.orbs) { o.dead = true; this.bursts.push({ x: o.x, y: o.y, z: o.z, age: 0, kind: ok ? 'boom' : 'pop', color: '#ffd23f', size: 2 }); }
-      if (ok) { const g = 15 * (this.wi + 1); this.gold += g; this.gainXp(8 * (this.wi + 1)); this.puzzlesSolved++; this.texts.push({ text: '🧩 PUZZLE RÉUSSI ! +' + g, x: 0, y: 12, z: 24, age: 0, color: '#ffd23f', big: true }); }
-      else { const loss = Math.round(this.maxHp * CB.PUZZLE_FAIL); this.puzzleLoss = loss; if (!this.god) { this.hp = Math.max(0, this.hp - loss); this.hurt = .8; this.shake = Math.max(this.shake || 0, .7); this.combo = 0; } this.texts.push({ text: 'TROP TARD ! −' + loss + ' PV', x: 0, y: 12, z: 24, age: 0, color: '#ff6b6b', big: true }); if (this.hp <= 0) this.finish(false, 'detruit'); }   // raté : un quart de la vie, directement (l'armure ne protège pas)
+      const mult = 1 + this.puzzleLevel() * .5;
+      if (ok) { const g = Math.round(15 * (this.wi + 1) * mult); this.gold += g; this.gainXp(Math.round(8 * (this.wi + 1) * mult)); this.puzzlesSolved++; this.texts.push({ text: '🧩 PUZZLE RÉUSSI ! +' + g, x: 0, y: 12, z: 24, age: 0, color: '#ffd23f', big: true }); }
+      else { const loss = Math.round(this.maxHp * CB.PUZZLE_FAIL), face = p.kind === 'bonneteau'; this.puzzleLoss = loss; if (face) { const b = bomb || p.orbs.find(o => o.bomb); this.bursts.push({ x: b ? b.x * .3 : 0, y: 4, z: 6, age: 0, kind: 'kaboom', color: '#ff8c2a', size: 14, life: 1 }); this.flash = Math.max(this.flash || 0, .8); this.hitFx = 1; }
+        if (!this.god) { this.hp = Math.max(0, this.hp - loss); this.hurt = .8; this.shake = Math.max(this.shake || 0, face ? 1.2 : .7); this.combo = 0; } this.texts.push({ text: (face ? '💥 BOUM ! ' : 'TROP TARD ! ') + '−' + loss + ' PV', x: 0, y: 12, z: 24, age: 0, color: '#ff6b6b', big: true }); if (this.hp <= 0) this.finish(false, 'detruit'); }   // raté : un quart de la vie, directement (l'armure ne protège pas)
     }
     // ---------- Étourdissements et états ----------
     stunBy(kind, from) {
@@ -434,7 +491,7 @@
         case 'josue': for (const e of live()) if (!e.boss) e.frozen = Math.max(e.frozen, 1.5); this.fx.rally = sp.seconds || 30; this.texts.push({ text: '📣 À L’ATTAQUE !', x: 0, y: 9, z: 12, age: -.3, color: '#ff6b6b', big: true }); break;
         case 'emily': this.fx.blizzard = sp.seconds || 12; this.blizzTick = .5; this.flash = .5; this.freezeAll(3); for (const e of live()) this.applyDamage(e, s.damage * 1.5 * this.spPower, false, 'neige'); this.texts.push({ text: '❄️ BLIZZARD !', x: 0, y: 16, z: 30, age: -.4, color: '#a9e9ff', big: true }); break;
         case 'eliott': this.fx.ghost = sp.seconds || 8; this.flash = .3; this.spirits = [0, 1, 2].map(i => ({ x: (i - 1) * 12, y: 6 + i * 2, z: 10, age: i * .4, target: null, cooldown: .6 + i * .4 })); this.texts.push({ text: '👻 BOUH !', x: 0, y: 10, z: 12, age: -.3, color: '#dfe9ff', big: true }); break;
-        case 'alexie': this.fx.licorne = sp.seconds || 15; this.unicorn = { x: -26, y: 16, z: 38, dir: 1, cooldown: .9, shots: 0, age: 0 }; this.hp = Math.min(this.maxHp, this.hp + 15); break;
+        case 'alexie': this.fx.licorne = this.licorneTotal = sp.seconds || 15; this.unicorn = { x: -26, y: 16, z: 38, dir: 1, cooldown: .9, shots: 0, age: 0 }; this.hp = Math.min(this.maxHp, this.hp + 15); break;
         case 'zachary': { const t = this.target(), n = this.balls.length; this.launch(origin, t, 8 * this.spPower); for (const b of this.balls.slice(n)) { b.size *= 2.5; b.splash = 0; b.special = 'fusee'; b.rocket = true; b.fuseZ = Math.max(12, t.t * CB.BASE_SPEED * s.range); b.vy = (t.y - 1.8) / t.t; b.pierce = false; } break; }
       }
     }
@@ -478,6 +535,11 @@
     // État d'un groupe de la séquence pour le panneau Debug : pending (pas encore parti), active (en train de sortir ou encore vivant), done
     seqStatus(i) { const g = (this.sequence || []).find(x => x.idx === i); if (!g || !g.launched) return 'pending'; return this.seq.active.some(a => a.g === g) || g.spawned.some(e => !e.dead && !e.escaped) ? 'active' : 'done'; }
     // Boss demandé par l'éditeur (séquence « boss:clé ») : le Mégaoiseau garde ses deux stades, les autres font un seul grand combat
+    // Clown canonnier : il part du bas de l'écran (à gauche ou à droite), monte en 10 s jusqu'en haut en lançant des tartes, puis sort de l'écran.
+    spawnRider(type = 'clownCanon') { const d = CB.ENEMIES[type], V = CB.VIEW, side = this.random() < .5 ? -1 : 1, sx = V.cx + side * V.w * (.24 + this.random() * .1), e = this.spawnEnemy(type, { x: 0, y: 0, z: d.riser.z }, false); if (!e) return null; e.rise = { t: 0, sx, side, cd: d.riser.first }; this.riders = (this.riders || 0) + 1; this.riseStep(e, 0); this.texts.push({ text: '🤡 CLOWN CANONNIER !', x: e.x, y: Math.max(4, e.y + 8), z: e.z, age: 0, color: '#ff4f6b', big: true }); return e; }
+    riseStep(e, dt) { const R = e.def.riser, V = CB.VIEW, Rs = e.rise, top = V.horizon * .12, bot = V.h + 40, pps = (bot - top) / R.seconds; Rs.t += dt; const sy = bot - Math.min(Rs.t, R.seconds) * pps - Math.max(0, Rs.t - R.seconds) * pps * 4,   /* en haut après 10 s, puis il file hors de l'écran */ sx = Rs.sx + Math.sin(Rs.t * .9 + e.phase) * 20, u = CB.unproject(sx, sy, e.z); e.x = e.baseX = u.x; e.y = e.baseY = u.y;
+      if (sy < V.h * .9 && sy > top) { Rs.cd -= dt; if (Rs.cd <= 0) { Rs.cd = R.every; this.spawnEnemy(R.shot, { x: e.x, y: e.y + .4, z: e.z - 2 }); e.spitFlash = .35; } } if (e.spitFlash > 0) e.spitFlash -= dt;
+      if (sy < -170) e.escaped = true; }   // parti par le haut : il disparaît, sans rien nous faire
     spawnBossOf(key) { const d = CB.BOSSES[key]; if (!d) return null; return d.angry ? this.spawnMiniBoss(key) : this.spawnBoss(key); }
     // Les bateaux pirates volants : ils traversent le ciel (demi-tour aux bords) et canonnent les monstres un boulet à la fois, canon après canon.
     updatePirates(dt) {
@@ -526,7 +588,7 @@
     // Le Mégaoiseau du temps : mini-boss de la vallée, deux stades (le second rouge, fumant, deux attaques de plus).
     spawnMiniBoss(key = this.E.miniBoss) {
       const def = CB.BOSSES[key]; if (!def) return null;
-      const b = { id: nextId++, type: 'boss', boss: true, mini: true, def, name: def.name, color: def.color, size: def.size, hp: def.hp * this.hpMult() * .6, speed: 6, damage: 20, x: 0, y: 12, z: 100, baseX: 0, baseY: 12, phase: 0, age: 0, frozen: 0, minionTimer: Infinity, boltTimer: def.boltEvery * 1.5, hover: 38, stage: 1, act: null, powers: def.powers[0], powerIndex: 0 };
+      const b = { id: nextId++, type: 'boss', boss: true, mini: true, def, name: def.name, color: def.color, size: def.size, hp: def.hp * this.hpMult() * .6 * CB.BOSS_HP, speed: 6, damage: 20, x: 0, y: 12, z: 100, baseX: 0, baseY: 12, phase: 0, age: 0, frozen: 0, minionTimer: Infinity, boltTimer: def.boltEvery * 1.5, hover: 38, stage: 1, act: null, powers: def.powers[0], powerIndex: 0 };
       b.maxHp = b.hp; this.boss = b; this.bossSpawned = true; this.enemies.push(b);
       this.news.push({ kind: 'boss', text: 'MINI-BOSS : ' + def.name.toUpperCase() + ' ! CASSE SES CRISTAUX, FAIS EXPLOSER SES ROCHERS', time: this.time });
       return b;
@@ -562,7 +624,7 @@
     beamStep(dt) { const B = this.beam; if (!B) return; B.t += dt; if (!B.hit && B.t >= B.charge) { B.hit = true; this.shake = Math.max(this.shake || 0, .9); this.flash = Math.max(this.flash || 0, .25); if (Math.abs(this.px - B.x) < 3.4) { this.beamHits = (this.beamHits || 0) + 1; this.texts.push({ text: B.color ? 'FAISCEAU !' : 'RAYON !', x: this.px, y: 7, z: 6, age: 0, color: B.color || '#7fe9ff', big: true }); this.damage(B.dmg || 32, null); } else { this.dodged++; this.texts.push({ text: 'ESQUIVÉ !', x: this.px, y: 6, z: 6, age: 0, color: '#7fd4ff' }); } } if (B.t >= B.charge + B.fire) this.beam = null; }
     spawnBoss(key = this.world.boss) {   // un seul combat jusqu'au bout, en trois phases (le boss ne s'enfuit plus) ; aussi pour « boss:clé » de l'éditeur
       const def = CB.BOSSES[key]; if (!def) return null; const cs = this.custom || {};
-      const b = { id: nextId++, type: 'boss', boss: true, def, name: def.name, color: def.color, size: def.size, hp: def.hp * CB.hpScale(this.wi) * (cs.hpScale || 1), speed: 9, damage: 20, x: 0, y: 29, z: 125, baseX: 0, baseY: 9, phase: 0, age: 0, frozen: 0, minionTimer: def.every, boltTimer: def.boltEvery * 1.5, hover: 34, intro: { t: 0 }, sideOff: 0, dodgeCd: 2, attacks: 0 };
+      const b = { id: nextId++, type: 'boss', boss: true, def, name: def.name, color: def.color, size: def.size, hp: def.hp * CB.hpScale(this.wi) * (cs.hpScale || 1) * CB.BOSS_HP, speed: 9, damage: 20, x: 0, y: 29, z: 125, baseX: 0, baseY: 9, phase: 0, age: 0, frozen: 0, minionTimer: def.every, boltTimer: def.boltEvery * 1.5, hover: 34, intro: { t: 0 }, sideOff: 0, dodgeCd: 2, attacks: 0 };
       b.maxHp = b.hp; b.act = 0; b.full = true; b.target = -1; const lists = def.powers && !def.mini ? def.powers : CB.BOSS_POWERS; b.powers = lists[0]; b.powerIndex = 0; if (def.hover) b.hover = def.hover; b.hover0 = b.hover; if (def.sea) { b.y = b.baseY = .4; }   // phase 0 : premiers pouvoirs ; bossPhase() passe aux suivants à 2/3 et 1/3 des PV
       this.boss = b; this.bossSpawned = true; this.enemies.push(b);
       this.news.push({ kind: 'boss', text: (def.tag || 'BOSS') + ' : ' + def.name.toUpperCase() + ' !' + (def.intro ? ' ' + def.intro : ''), time: this.time }); return b;
@@ -577,7 +639,7 @@
       const pool = CB.PLAYERS.filter(m => !taken.has(m.id)); if (!pool.length) return null; const m = (this.guestPick && pool.find(p => p.id === this.guestPick)) || pool[Math.floor(this.random() * pool.length)]; this.guestPick = null;
       this.portrait = { id: m.id, age: 0, side: -1, text: 'RENFORT !' };
       const side = !this.ally ? 1 : !this.ally2 ? -1 : 1, far = !!(this.ally && this.ally2);   // à gauche si libre, sinon à droite, sinon plus loin à gauche
-      this.guest = Object.assign(this.makeAlly(m.id, side), { left: secs, far, guest: true }); this.guest.nextSpecial = Math.min(this.guest.nextSpecial, secs * .6);
+      this.guest = Object.assign(this.makeAlly(m.id, side), { left: secs, far, guest: true }); this.guest.nextSpecial = this.time + 1.2;   /* renfort : il lance son pouvoir dès son arrivée (une seule fois), puis reste jusqu'à la fin de sa minute */
       this.texts.push({ text: '🤝 RENFORT : ' + m.name.toUpperCase() + ' !', x: 0, y: 13, z: 18, age: 0, color: '#9fdcff', big: true }); this.bursts.push({ x: side * (far ? 26 : 16), y: 3, z: 6, age: 0, kind: 'pop', color: '#9fdcff', size: 3 }); return this.guest;
     }
     blastAll() {
@@ -613,7 +675,7 @@
     }
     // Nuée : palier de couleur (rouge, doré) de plus en plus probable avec le temps
     swarmTier() { const R = this.swarm && this.swarm.ramp; if (!R || !R.tiers) return 0; for (let i = R.tiers.length - 1; i >= 0; i--) { const [from, max] = R.tiers[i]; if (this.time >= from && this.random() < max * Math.min(1, (this.time - from) / Math.max(1, this.def.seconds - from))) return i + 1; } return 0; }
-    spawnInterval() { if (this.boss && this.boss.mini) return 2.2 / this.def.density; if (this.swarm) return Math.max(.17, .95 - this.time * .0029) / this.def.density; if (this.endless) return Math.max(.3, 1.25 - this.time * .0025) / this.def.density; return Math.max(.32, (1.3 - this.time * .006) / this.def.density / (1 + CB.tierOf(this.wi) * .12)); }
+    spawnInterval() { if (this.boss && this.boss.mini) return 2.2 / this.def.density; if (this.swarm) return Math.max(.17, .95 - this.time * .0029) / this.def.density; if (this.endless) return Math.max(.3, 1.25 - this.time * .0025) / this.def.density; const wu = !this.custom && this.def.warmup ? 1 + (this.def.warmup.slow - 1) * Math.max(0, 1 - this.time / this.def.warmup.seconds) : 1; return wu * Math.max(.32, (1.3 - this.time * .006) / this.def.density / (1 + CB.tierOf(this.wi) * .12)); }   // def.warmup : début en douceur (1-3)
     update(dt) {
       if (this.over || this.choice) return;
       dt = clamp(dt, 0, .05); this.time += dt; const s = this.stats, r = this.random;
@@ -630,7 +692,7 @@
       if (this.dark > 0) this.dark = Math.max(0, this.dark - dt);
       // événements loufoques
       if (this.time >= this.nextEvent && !this.boss && !this.puzzle) { const kinds = CB.EVENTS.kinds; this.triggerEvent(kinds[Math.floor(r() * kinds.length)]); const [a, b] = CB.EVENTS.every; this.nextEvent = this.time + a + r() * (b - a); }
-      if (this.puzzle) { this.puzzle.time -= dt; if (this.puzzle.time <= 0) this.endPuzzle(false); }
+      if (this.puzzle) this.updatePuzzle(dt);
       if (this.unicorn) this.updateUnicorn(dt);
       if (this.outro) this.updateOutro(dt);
       if (this.angels) this.updateAngels(dt);
@@ -645,10 +707,11 @@
       if (this.spirits) this.updateSpirits(dt);
       if (this.tornadoes) this.updateTornadoes(dt);
       if (this.vortex) { this.vortex.age += dt; if (this.vortex.age >= (this.vortex.life || 6) || !(this.fx.teleport > 0)) this.vortex = null; }
-      if (this.portal) { this.portal.t += dt; this.enemies = this.enemies.filter(e => !e.dead); for (const b of this.bursts) b.age += dt; this.bursts = this.bursts.filter(b => b.age < 1); for (const tx of this.texts) tx.age += dt; this.texts = this.texts.filter(tx => tx.age < 1.4); if (this.portal.t >= CB.PORTAL_TIME) this.finish(true, 'portail'); return; }
+      if (this.portal) { this.portal.t += dt; this.enemies = this.enemies.filter(e => !e.dead); for (const b of this.bursts) b.age += dt; this.bursts = this.bursts.filter(b => b.age < 1); for (const tx of this.texts) tx.age += dt / (tx.life || 1); this.texts = this.texts.filter(tx => tx.age < 1.4); if (this.portal.t >= CB.PORTAL_TIME) this.finish(true, 'portail'); return; }
       this.cooldown = Math.max(0, this.cooldown - dt); this.recoil = Math.max(0, this.recoil - dt * 4); this.hurt = Math.max(0, this.hurt - dt);
       this.comboTimer -= dt; if (this.comboTimer <= 0) this.combo = 0;
       if (this.ally) this.updateAlly(dt, this.ally); if (this.ally2) this.updateAlly(dt, this.ally2); if (this.guest) { this.updateAlly(dt, this.guest); this.guest.left -= dt; if (this.guest.left <= 0) { this.texts.push({ text: 'MERCI ' + CB.playerById(this.guest.id).name.toUpperCase() + ' !', x: this.guest.side * 10, y: 8, z: 10, age: 0, color: '#9fdcff' }); this.guest = null; } } if (this.towers.length) this.updateTowers(dt); if (this.sphere) this.updateSphere(dt); if (this.confetti) this.updateConfetti(dt);
+      this.updateCardPowers(dt);
       if (s.regen > 0) { this.regenTimer += dt; if (this.regenTimer >= 5) { this.regenTimer -= 5; if (this.armor < this.maxArmor) this.armor = Math.min(this.maxArmor, this.armor + s.regen); else this.hp = Math.min(this.maxHp, this.hp + s.regen); } }   // la réparation remet d'abord l'armure, puis la vie
       // apparitions
       if (this.time >= this.intro && !this.outro) {   // plus rien n'apparaît pendant le passage du dragon
@@ -667,13 +730,14 @@
         if (this.swarm && this.time >= this.nextBomb) { this.spawnEnemy('bombeMagique'); this.bombs++; const [a, b] = this.swarm.bombEvery; this.nextBomb = this.time + a + (b - a) * Math.min(1, this.time / this.def.seconds); }
         // le bateau volant secret de la nuée : passe de gauche à droite tant qu'on ne l'a pas brisé (3 coups) ; jamais revu une fois le secret trouvé
         if (this.swarm && this.swarm.boatAt && !this.boatSecret && !this.boatSecretBefore && !this.outro && !this.enemies.some(e => e.def.secretBoat && !e.dead && !e.escaped) && this.time >= (this.nextBoat == null ? this.swarm.boatAt : this.nextBoat)) {
-          const b = this.spawnEnemy('bateauVolant', { x: -CB.VIEW.spread - 12, y: 13, z: 46 }); b.vx = 6.5; b.baseY = 13; b.hp = b.maxHp = b.def.hits; this.nextBoat = this.time + this.swarm.boatEvery;
+          const b = this.spawnEnemy('bateauVolant', { x: -CB.VIEW.spread - 12, y: 13, z: 46 }); b.vx = 4.5; b.baseY = 13; b.hp = b.maxHp = b.def.hits; this.nextBoat = this.time + this.swarm.boatEvery;
           this.texts.push({ text: '⛵ UN BATEAU VOLANT ! TIRE DESSUS 3 FOIS !', x: 0, y: 16, z: 30, age: 0, color: '#ffd23f', big: true }); }
         // coffres mystères (une fois le tableau 2 mérité), puis le coffre doré, unique, après portalAt secondes
         if (this.time >= this.nextChest && (this.custom ? +this.custom.chestEvery > 0 : this.endless && this.E.chest && this.nightKillsBefore + this.kills >= this.E.unlockKills)) { this.spawnEnemy('coffre'); this.chestsSeen++; this.nextChest = this.time + (this.custom ? +this.custom.chestEvery : this.E.chest.every); }   // éditeur : chestAt / chestEvery (0 = jamais)   // depuis maintenant, pas depuis le début : sinon les coffres manqués arrivent tous d'un coup
         { const portalAt = this.custom ? +this.custom.portalAt || 0 : this.endless ? this.E.portalAt : (this.def.portalAt || 0), dbg = !!(window.CB.app && window.CB.app.debug);   // éditeur : portalAt (0 = jamais) ; en Debug, le coffre doré passe même si le portail est déjà trouvé
           if (portalAt > 0 && (!this.portalSeen || dbg) && (this.boardDone || dbg) && !this.portalSpawned && this.time >= portalAt) { this.spawnEnemy('coffreOr'); this.portalSpawned = true; } }   // le coffre doré n'apparaît qu'une fois le tableau déjà réussi
         // bateaux pirates (monde caché) : de plus en plus souvent, jamais plus de « max » à la fois
+        if (this.def.riders && !this.custom && !this.outro) { const Rd = this.def.riders; if (this.nextRider == null) this.nextRider = Rd.first; if (this.time >= this.nextRider) { if (this.enemies.filter(e => !e.dead && !e.escaped && e.def.riser).length < (Rd.max || 1)) this.spawnRider(); const k = Math.min(1, this.time / (this.def.seconds || 150)); this.nextRider = this.time + Rd.every[0] + (Rd.every[1] - Rd.every[0]) * k; } }   // clowns canonniers de la Foire, de plus en plus souvent
         if (this.def.ships && !this.custom && !this.outro) { const Sh = this.def.ships; if (this.nextShip == null) this.nextShip = Sh.first; if (this.time >= this.nextShip) { if (this.enemies.filter(e => !e.dead && !e.escaped && e.def.ship).length < Sh.max) { this.spawnEnemy(Sh.kinds[Math.floor(r() * Sh.kinds.length)]); this.ships++; } const k = Math.min(1, this.time / (this.def.seconds || 150)); this.nextShip = this.time + Sh.every[0] + (Sh.every[1] - Sh.every[0]) * k; } }
         // le boss sort tout de suite (une seconde après l'intro), seul : un seul grand combat en trois phases
         if (this.def.type === 'boss' && !this.boss && !this.bossSpawned && this.world.boss && this.time >= this.intro + 1 && !this.choice && !this.pendingLevels) { for (const o of this.enemies) if (!o.boss && !o.def.ship && !o.def.box) { o.dead = true; this.bursts.push({ x: o.x, y: o.y, z: o.z, age: 0, kind: 'pop', color: o.color }); } this.spawnBoss(this.world.boss); }
@@ -691,6 +755,7 @@
           const g = this.sequence[q.i]; let go = false;
           if (g.at != null) go = this.time >= g.at;
           else if (g.rel != null) go = q.lastEnd == null ? this.time >= 1 : this.time >= q.lastEnd + g.rel;
+          else if (g.left != null && q.i > 0) { const prev = this.sequence[q.i - 1], a = q.active.find(x => x.g === prev); go = prev.launched && (a ? a.queue.length : 0) + prev.spawned.filter(e => !e.dead && !e.escaped).length <= g.left; }   // quand il ne reste que N ennemis du groupe d'avant (pas encore arrivés compris)
           else if (q.i === 0) go = this.time >= 1;
           else if (!q.active.length && !q.alive.length) { if (q.clearAt == null) q.clearAt = this.time; go = this.time >= q.clearAt + q.gap; }
           if (!go) break;
@@ -704,7 +769,9 @@
       for (const e of this.enemies) {
         e.previous = { x: e.x, y: e.y, z: e.z }; e.frozen = Math.max(0, e.frozen - dt); if (!(e.frozen > 0)) e.age += dt;
         if (e.burn && !e.dead) { e.burn.t -= dt; e.burn.tick += dt; if (e.burn.tick >= .5) { e.burn.tick -= .5; this.applyDamage(e, e.burn.dps * .5, false, 'feu'); } if (e.burn.t <= 0) e.burn = null; }   // figé : plus d'animation non plus
-        const speed = e.speed * slowAll;
+        if (e.glue > 0) e.glue -= dt; if (e.chill > 0) e.chill -= dt;
+        if (e.venom && !e.dead) { const V = e.venom, F = CB.CARD_FX.venom; V.t -= dt; V.tick += dt; if (V.tick >= 1) { V.tick -= 1; this.applyDamage(e, V.dps, false, 'poison'); const lvl = this.stats.venom || 1; if (!e.dead && this.random() < F.spread[lvl - 1]) { const n = this.enemies.find(o => o !== e && !o.dead && !o.escaped && !o.venom && !this.isDecor(o) && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < F.radius); if (n) { n.venom = { t: F.secs, dps: V.dps, tick: 0 }; this.venomSpread = (this.venomSpread || 0) + 1; this.bursts.push({ x: n.x, y: n.y, z: n.z, age: 0, kind: 'pop', color: '#c47dff', size: 1.2 }); } } } if (V.t <= 0) e.venom = null; }   // le poison peut sauter au voisin
+        const speed = e.speed * slowAll * (e.glue > 0 ? 1 - CB.CARD_FX.glue.slow : 1) * (e.chill > 0 ? 1 - CB.CARD_FX.chill.slow : 1);
         if (e.boss) {
           if (e.leaving) { e.z += (speed + 18) * dt; e.y += dt * 3; if (e.z > 130) e.dead = true; continue; }
           if (e.diving) { e.diveT += dt; e.y -= dt * 7; e.alpha = Math.max(0, 1 - e.diveT / 1.3); if (Math.floor(e.diveT * 6) !== Math.floor((e.diveT - dt) * 6)) { this.bursts.push({ x: e.x + (this.random() - .5) * 10, y: 0, z: e.z, age: 0, kind: 'splash', size: 2.5, life: .9 }); this.splashes++; } if (e.diveT >= 1.4) { e.dead = true; e.quiet = true; this.boss = null; this.bossSpawned = false; this.spawnBoss(e.def.next, true); } continue; }   // le Léviathan plonge : le vrai boss arrive
@@ -745,7 +812,8 @@
         if (d.box) e.y = e.baseY + Math.sin(e.age * 2.4 + e.phase) * .6;   // la boîte bonus flotte sur place
         if (d.life != null) { e.life = (e.life == null ? d.life : e.life) - dt; if (e.life < 1.2) e.alpha = Math.max(0, e.life / 1.2); if (e.life <= 0) { e.escaped = true; this.texts.push({ text: d.box ? 'POUF…' : 'ENVOLÉ…', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#ffe36b' }); continue; } }   // coffre doré, boîte bonus : ils disparaissent si on tarde
         if (d.hazard) { e.fuse -= dt; if (e.fuse <= 0) { e.dead = true; this.bombsExploded++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'kaboom', color: '#b14fff', size: 7, life: .9 }); this.shake = Math.max(this.shake || 0, .6); this.texts.push({ text: 'BOUM !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#b14fff', big: true }); this.damage(e.damage, e); } continue; }
-        if (e.frozen > 0 && !e.boss) continue;   // figé (Pikachu, Josué, blizzard, boulet de neige, Horloge…) : il ne bouge plus du tout, ne crache ni ne soigne
+        if (e.frozen > 0 && !e.boss) continue;   // (le clown canonnier aussi)
+        if (d.riser) { this.riseStep(e, dt * slowAll); continue; }   // figé (Pikachu, Josué, blizzard, boulet de neige, Horloge…) : il ne bouge plus du tout, ne crache ni ne soigne
         // cracheurs (feu, poison, magie noire) et soigneurs
         if (d.spit && !e.flyer && e.z > 14 && e.z < 90) { e.spitTimer = (e.spitTimer == null ? d.spit.first : e.spitTimer) - dt; if (e.spitTimer <= 0) { e.spitTimer = d.spit.every; const n = d.spit.salvo || 1; for (let i = 0; i < n; i++) { const sh = this.spawnEnemy(d.spit.type, { x: e.x + (i - (n - 1) / 2) * 2.2, y: e.y - .5 + (d.ship ? 1.6 : 0), z: e.z - 2 }); if (sh && n > 1) sh.tx = this.px + (i - (n - 1) / 2) * 2.6; } e.spitFlash = .35; } } if (e.spitFlash > 0) e.spitFlash -= dt;
         if (d.heal) { e.healTimer = (e.healTimer == null ? d.heal.every : e.healTimer) - dt; if (e.healTimer <= 0) { e.healTimer = d.heal.every; for (const o of this.enemies) if (o !== e && !o.dead && !o.escaped && !this.isDecor(o) && o.hp < o.maxHp && Math.hypot(o.x - e.x, o.z - e.z) < d.heal.radius) { o.hp = Math.min(o.maxHp, o.hp + d.heal.amount * CB.hpScale(this.wi)); this.bursts.push({ x: o.x, y: o.y, z: o.z, age: 0, kind: 'heal', size: 2, life: .7 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, to: { x: o.x, y: o.y, z: o.z }, age: 0, kind: 'bolt', life: .35, color: '#7dff9a', width: 4 }); } } }
@@ -785,7 +853,7 @@
             ball.hitIds.add(e.id); this.hitEnemy(e, ball); if (ball.mega) { this.shake = Math.max(this.shake || 0, .7); if (!e.dead && !e.boss) e.z += 4; }
             if (ball.pierce) continue;
             if (ball.pierceLeft > 0) { ball.pierceLeft--; continue; }   // rayon perçant (canon laser)
-            if (s.bounces > (ball.bounces || 0)) { const next = this.nearest(e, 40, ball.hitIds); if (next) { ball.bounces = (ball.bounces || 0) + 1; ball.bounced = true; if (s.frostBounce) this.freezeAround(e, 8, s.frostBounce); const t = Math.max(.15, Math.hypot(next.x - ball.x, next.z - ball.z) / ball.vz); ball.vx = (next.x - ball.x) / t; ball.vz = (next.z - ball.z) / t || ball.vz; ball.vy = (next.y - ball.y + 9 * t * t) / t; continue; } }
+            if (s.bounces > (ball.bounces || 0) && !this.puzzle) {   /* pendant le puzzle, pas de ricochet vers le mauvais orbe */ const next = this.nearest(e, 40, ball.hitIds); if (next) { ball.bounces = (ball.bounces || 0) + 1; ball.bounced = true; if (s.frostBounce) this.freezeAround(e, 8, s.frostBounce); const t = Math.max(.15, Math.hypot(next.x - ball.x, next.z - ball.z) / ball.vz); ball.vx = (next.x - ball.x) / t; ball.vz = (next.z - ball.z) / t || ball.vz; ball.vy = (next.y - ball.y + 9 * t * t) / t; continue; } }
             ball.hit = true; break;
           }
         }
@@ -795,8 +863,8 @@
       // ennemis qui nous atteignent
       for (const e of this.enemies) if (!e.dead && !e.boss && e.z < 3) { e.escaped = true; if (e.def.shot && this.canDodge && Math.abs(e.x - this.px) > 2.4) { this.dodged++; this.texts.push({ text: 'RATÉ !', x: e.x, y: 3, z: 5, age: 0, color: '#7fd4ff' }); if (this.sea) { this.bursts.push({ x: e.x, y: 0, z: 4, age: 0, kind: 'splash', size: 1, life: .8 }); this.splashes++; } } else if (e.def.portal) this.openPortal(e); else if (e.def.chest) this.discover(e); else if (e.def.gift || e.def.target || e.target === true) { } else if (e.def.touch) this.stunBy(e.def.touch, e); else if (e.def.status) this.afflict(e.def.status, e); else this.damage(e.damage, e); }
       this.enemies = this.enemies.filter(e => !e.dead && !e.escaped);
-      for (const b of this.bursts) b.age += dt; this.bursts = this.bursts.filter(b => b.age < (b.life || .7)); this.shake = Math.max(0, (this.shake || 0) - dt * 1.4);
-      for (const t of this.texts) t.age += dt; this.texts = this.texts.filter(t => t.age < 1.1);
+      for (const b of this.bursts) b.age += dt; this.bursts = this.bursts.filter(b => b.age < (b.life || .7)); this.shake = Math.max(0, (this.shake || 0) - dt * 1.4); this.hitFx = Math.max(0, (this.hitFx || 0) - dt * 1.8);
+      for (const t of this.texts) t.age += dt / (t.life || 1); this.texts = this.texts.filter(t => t.age < 1.1);
       // objectifs
       const d = this.def;
       if (this.over) return;
@@ -818,17 +886,36 @@
       if (e.boss && s.fonte) dmg *= 1 + s.fonte;   // fonte (canon de lave) : les boss fondent
       if (s.burn && !e.boss && !ball.ally && !this.isDecor(e)) e.burn = { t: 3, dps: s.burn, tick: 0 };   // brûlure : des dégâts pendant 3 s
       if (!ball.ally) this.hits++; this.applyDamage(e, dmg, crit, ball.mega ? 'mega' : ball.effect);
+      if (!ball.ally && !ball.pirate && !this.isDecor(e)) this.cardEffects(e);   // glu, glace, feu, poison (cartes de pouvoir)
       if (!ball.ally && !ball.pirate && ball.variant != null) { const bd = CB.BALLS[s.ball]; if (bd && bd.premium) { this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'impact', skin: s.ball, variant: CB.ballVariant(s.ball, ball.variant), size: Math.max(1, ball.size), life: .85 }); this.impacts++; this.lastImpact = bd.sfx || null; } }   // Fête, Espace, Bijoux : chaque variante éclate à sa façon
       if (ball.splash > 0) { let touched = 1; for (const o of this.enemies) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < ball.splash) { touched++; this.applyDamage(o, dmg * .6, false, 'feu'); } if (s.siphon) this.hp = Math.min(this.maxHp, this.hp + touched * s.siphon); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'fire', size: ball.splash }); }
       if (ball.chain) { let from = e; for (let i = 0; i < 2; i++) { const n = this.nearest(from, 16); if (!n) break; this.bursts.push({ x: from.x, y: from.y, z: from.z, to: { x: n.x, y: n.y, z: n.z }, age: 0, kind: 'bolt' }); this.applyDamage(n, dmg * .8, false, 'eclair'); from = n; } }
       if (ball.freeze) { for (const o of this.enemies) if (!o.boss && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < 8) o.frozen = 3; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 8 }); }
     }
+    // Cartes de pouvoir au toucher (2026-10-31) : chacune a sa chance ; feu, poison et glu peuvent toucher des voisins
+    cardEffects(e) {
+      const s = this.stats, F = CB.CARD_FX, r = this.random, around = (n, radius) => this.enemies.filter(o => o !== e && !o.dead && !o.escaped && !this.isDecor(o) && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < radius).sort((a, b) => Math.hypot(a.x - e.x, a.z - e.z) - Math.hypot(b.x - e.x, b.z - e.z)).slice(0, n);
+      if (s.glue && r() < F.glue.chance[s.glue - 1]) { for (const o of [e, ...around(F.glue.spread[s.glue - 1], F.glue.radius)]) { o.glue = F.glue.secs; this.bursts.push({ x: o.x, y: o.y, z: o.z, age: 0, kind: 'pop', color: '#7dff4f', size: 1.4 }); } this.texts.push({ text: 'GLU !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#7dff4f' }); this.cardFxHits++; }
+      if (s.chill && r() < s.chill) { e.chill = F.chill.secs; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 2 }); this.cardFxHits++; }
+      if (s.ignite && r() < F.ignite.chance[s.ignite - 1]) { const dps = Math.max(1, s.damage * F.ignite.dps); for (const o of [e, ...around(F.ignite.count[s.ignite - 1] - 1, F.ignite.radius)]) if (!o.boss || o === e) o.burn = { t: F.ignite.secs, dps, tick: 0, fire: true }; this.texts.push({ text: '🔥 EN FEU !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#ff8c2a' }); this.cardFxHits++; }
+      if (s.venom && r() < F.venom.chance[s.venom - 1]) { const dps = Math.max(1, s.damage * F.venom.dps); for (const o of [e, ...around(F.venom.count[s.venom - 1] - 1, F.venom.radius)]) o.venom = { t: F.venom.secs, dps, tick: 0 }; this.texts.push({ text: '☠️ POISON !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#c47dff' }); this.cardFxHits++; }
+    }
+    // Météores, forgeron, bourrasque (cartes de pouvoir à minuterie)
+    updateCardPowers(dt) {
+      const s = this.stats, F = CB.CARD_FX, r = this.random, live = () => this.enemies.filter(e => !e.dead && !e.escaped && !this.isDecor(e));
+      if (s.meteor) { this.meteorCard += dt; if (this.meteorCard >= F.meteor.every[s.meteor - 1]) { this.meteorCard = 0; const L = live(); for (let i = 0; i < F.meteor.count[s.meteor - 1] && L.length; i++) { const e = L.splice(Math.floor(r() * L.length), 1)[0]; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'meteore', life: .5, size: 3 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: -.3, kind: 'kaboom', color: '#ff8c2a', size: 4, life: .7 }); for (const o of live()) if (Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < F.meteor.radius) this.applyDamage(o, s.damage * F.meteor.dmg[s.meteor - 1] * (o === e ? 1 : .5), o === e, 'meteorCard'); this.meteorCardHits = (this.meteorCardHits || 0) + 1; } this.shake = Math.max(this.shake || 0, .25); } }
+      if (s.armorFix && this.armor < this.maxArmor) { this.armorFixT += dt; if (this.armorFixT >= F.armorFix.every) { this.armorFixT = 0; this.armor = Math.min(this.maxArmor, this.armor + s.armorFix); this.texts.push({ text: '🔨 +' + s.armorFix, x: 0, y: 5, z: 6, age: 0, color: '#9fdcff' }); } }
+      if (s.gust) { this.gustTimer -= dt; if (this.gustTimer <= 0) { const [a, b] = F.gust.every; this.gustTimer = a + r() * (b - a); const push = F.gust.push[s.gust - 1]; for (const e of live()) if (!e.boss && !e.def.ship && !e.def.riser) e.z = Math.min(e.z + push * (e.z < 30 ? 1 : .5), 100); this.gusts = (this.gusts || 0) + 1; this.gustFx = 1; this.texts.push({ text: '🌬️ BOURRASQUE !', x: 0, y: 11, z: 20, age: 0, color: '#dff6ff', big: true }); } }
+      if (this.gustFx > 0) this.gustFx = Math.max(0, this.gustFx - dt * 1.2);
+    }
+    guardChance() { if (this.cibles || this.brigands || this.puzzle || (this.custom && !this.custom.guards)) return 0; const k = CB.tierOf(this.wi) + this.vi * .25; return this.wi === 0 && this.vi < 2 ? 0 : Math.min(.14, .04 + .02 * k); }   // jamais aux tableaux 1-1 et 1-2 ; de plus en plus souvent ensuite
     applyDamage(e, dmg, crit, effect) {
       if (e.dead || e.leaving || e.retreat) return;   // parti se cacher entre deux phases : intouchable
+      if (e.wall) { dmg = 1; crit = false; }   // mur magique : chaque coup compte pour un, quelle que soit la force du boulet
       if (e.def.hits) { dmg = 1; crit = false; this.boatHits = (this.boatHits || 0) + 1; if (e.hp > 1) this.texts.push({ text: '💥 ' + (e.def.hits - e.hp + 1) + ' / ' + e.def.hits, x: e.x, y: e.y + 3.5, z: e.z, age: 0, color: '#ffd23f', big: true }); }   // bateau volant : chaque boulet compte pour un coup, peu importe les dégâts
       if (e.boss && e.mini && this.enemies.some(o => !o.dead && o.def.crystal)) { e.flash = .1; if (!this.shieldHint || this.time - this.shieldHint > 1.2) { this.shieldHint = this.time; this.texts.push({ text: 'CASSE LES CRISTAUX !', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#7fd4ff' }); } this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 3 }); return; }
       if (e.boss && effect && CB.BOSS_SPECIAL.sources.includes(effect)) { const B = CB.BOSS_SPECIAL, cap = e.maxHp * B.budget - (this.spBossDealt || 0); if (B.flat && B.flat[effect]) dmg = e.maxHp * B.flat[effect]; else { dmg = Math.min(dmg * B.resist, Math.max(0, cap)); this.spBossDealt = (this.spBossDealt || 0) + dmg; } if (dmg <= 0) { e.flash = .1; if (!this.bossHint || this.time - this.bossHint > 1.5) { this.bossHint = this.time; this.texts.push({ text: 'IL RÉSISTE !', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#ffd23f' }); } return; } }
-      if (e.shield > 0) { e.shield -= dmg; e.flash = .15; if (e.shield <= 0) { e.shield = 0; e.speed *= 1.3; this.shipsBroken = (this.shipsBroken || 0) + 1; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#9fdcff', size: 2 }); this.texts.push({ text: 'VAISSEAU DÉTRUIT !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#7fd4ff' }); } else this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'hit', color: '#9fdcff' }); return; }   // le vaisseau de l'alien casse en premier ; l'alien à nu est plus vif
+      if (e.shield > 0) { e.shield -= dmg; e.flash = .15; if (e.shield <= 0) { e.shield = 0; if (e.guard) { e.guard = false; this.guardsBroken = (this.guardsBroken || 0) + 1; this.bursts.push({ x: e.x, y: e.y, z: e.z - 1, age: 0, kind: 'ice', size: 3 }); this.texts.push({ text: 'BOUCLIER BRISÉ !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#9fdcff' }); } else { e.speed *= 1.3; this.shipsBroken = (this.shipsBroken || 0) + 1; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#9fdcff', size: 2 }); this.texts.push({ text: 'VAISSEAU DÉTRUIT !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#7fd4ff' }); } } else this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'hit', color: '#9fdcff' }); return; }   // le vaisseau de l'alien casse en premier ; l'alien à nu est plus vif
       e.hp -= dmg; e.flash = .15; e.killedBy = effect;
       if (e.boss && this.def.type === 'boss' && !(effect && CB.BOSS_SPECIAL.sources.includes(effect))) { const add = Math.min(.5, dmg / e.maxHp * CB.BOSS_CHARGE), full = v => v > 1 - 1e-6 ? 1 : v; if (this.special && !this.specialBusy) this.charge = full(Math.min(1, this.charge + add)); if (this.special2 && !this.special2Busy) this.charge2 = full(Math.min(1, this.charge2 + add)); }   // pas de monstres à abattre : c'est en frappant le boss que la jauge se remplit
       if (e.boss && e.mini && e.stage === 1 && e.hp <= e.maxHp * .5) { e.stage = 2; e.color = e.def.angry; e.powers = e.def.powers[1]; e.powerIndex = 0; this.shake = 1; this.news.push({ kind: 'boss', text: 'IL EST FÂCHÉ ! NOUVEAU : PLUIE DE ROCHERS, RUGISSEMENT', time: this.time }); this.texts.push({ text: 'GRRRR !', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#ff3a3a', big: true }); }
@@ -843,6 +930,7 @@
       if (e.def.shot) { this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: e.type === 'bolt' ? 'pop' : 'boom', color: e.color, size: e.size });
         if (e.def.explode) { let n = 0; for (const o of this.enemies) if (o !== e && !o.dead && !o.escaped && !this.isDecor(o) && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < e.def.explode) { n++; this.applyDamage(o, this.stats.damage * 2.5, true, 'feu'); } this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'kaboom', color: '#ff8c2a', size: 5, life: .8 }); this.shake = Math.max(this.shake || 0, .4); this.texts.push({ text: n ? 'BOUM ! ' + n + ' BRÛLÉS' : 'BOUM !', x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#ff8c2a', big: true }); }
         else if (e.type !== 'bolt') this.texts.push({ text: 'DÉSAMORCÉ !', x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#7fd4ff' }); return; }
+      if (e.def.pop && !e.swept && !e.vanish) { const Pp = e.def.pop, n = Pp.count || 1; for (let i = 0; i < n; i++) { const o = this.spawnEnemy(Pp.into, { x: e.x + (i - (n - 1) / 2) * 1.8, y: e.y + (this.random() - .5) * .8, z: e.z + .5 + i * .4 }, false); if (o) { o.frozen = .2; o.popped = true; } } this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'pop', color: e.color, size: e.size * 1.4 }); this.texts.push({ text: 'POP !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: CB.ENEMIES[Pp.into].color }); }   // ballon de la Foire : il revient en ballon plus faible
       if (e.def.secretBoat) { this.boatSecret = true; this.shake = Math.max(this.shake || 0, .7); this.flash = Math.max(this.flash || 0, .4); for (let i = 0; i < 10; i++) this.bursts.push({ x: e.x + (this.random() - .5) * 5, y: e.y + (this.random() - .5) * 3, z: e.z, age: i * .04, kind: 'pop', color: i % 2 ? '#8a5a2b' : '#f1e7d0', size: 1.3 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ffd23f', size: 4 });
         this.texts.push({ text: '⛵ LE BATEAU SE BRISE !', x: e.x, y: e.y + 4, z: e.z, age: 0, color: '#ffd23f', big: true }); this.news.push({ kind: 'discovery', text: 'UN NOUVEAU SECRET S’EST OUVERT SUR LA CARTE !', time: this.time }); return; }
       if (e.def.shieldAll) { this.shieldsBroken++; this.gold += e.def.gold; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 9 }); this.shake = Math.max(this.shake || 0, .35); const left = this.enemies.some(o => o !== e && !o.dead && o.def.shieldAll); this.texts.push({ text: left ? 'MUR BRISÉ !' : 'PLUS DE MURS !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#4fc3ff', big: !left }); return; }
@@ -883,14 +971,17 @@
     freezeAround(e, radius, sec) { for (const o of this.enemies) if (!o.boss && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < radius) o.frozen = Math.max(o.frozen, sec); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: radius }); }
     // Cartes proposables : niveau < max, et pour un combo secret ses deux ingrédients au niveau 3. Les combos disponibles sont toujours dans le tirage.
     offerCards() {
-      const ok = k => { const c = CB.CARDS[k]; if (this.cardLevel(k) >= c.max) return false; if (c.skip && c.skip(this.stats)) return false; if (c.combo) return c.needs.every(n => this.cardLevel(n) >= CB.comboNeed(n)); return true; };
-      const combos = Object.keys(CB.CARDS).filter(k => CB.CARDS[k].combo && ok(k)), keys = Object.keys(CB.CARDS).filter(k => !CB.CARDS[k].combo && ok(k)), pick = [];
-      while (pick.length < 3 && combos.length) pick.push(combos.splice(Math.floor(this.random() * combos.length), 1)[0]);
-      while (pick.length < 3 && keys.length) pick.push(keys.splice(Math.floor(this.random() * keys.length), 1)[0]);
-      if (pick.length === 3 && !CB.CARDS[pick[2]].combo && this.random() < CB.SURPRISE.chance) pick[2] = 'surprise';   // parfois un cadeau surprise
+      const ok = k => { const c = CB.CARDS[k]; if (this.cardLevel(k) >= c.max) return false; if (!this.cardAllowed(k)) return false; if (c.skip && c.skip(this.stats)) return false; if (c.combo) return c.needs.every(n => this.cardLevel(n) >= CB.comboNeed(n)); return true; };
+      const combos = Object.keys(CB.CARDS).filter(k => CB.CARDS[k].combo && ok(k)), keys = Object.keys(CB.CARDS).filter(k => !CB.CARDS[k].combo && !CB.CARDS[k].surprise && ok(k)), pick = [];   // le cadeau surprise n'arrive que par la chance ci-dessous : jamais deux fois
+      const N = this.cardCount || 3; while (pick.length < N && combos.length) pick.push(combos.splice(Math.floor(this.random() * combos.length), 1)[0]);
+      while (pick.length < N && keys.length) pick.push(keys.splice(Math.floor(this.random() * keys.length), 1)[0]);
+      if (pick.length === N && !CB.CARDS[pick[N - 1]].combo && this.cardAllowed('surprise') && this.random() < CB.SURPRISE.chance) pick[N - 1] = 'surprise';   // le cadeau surprise se débloque au niveau 20   // parfois un cadeau surprise
       if (pick.includes('renfort')) { const taken = new Set([(this.player || {}).id, this.ally && this.ally.id, this.ally2 && this.ally2.id, this.guest && this.guest.id].filter(Boolean)), pool = CB.PLAYERS.filter(m => !taken.has(m.id)); this.guestPick = pool.length ? pool[Math.floor(this.random() * pool.length)].id : null; }   // qui viendra : son visage est sur la carte
       if (pick.length) this.choice = pick; else this.pendingLevels = 0;
     }
+    cardAllowed(k) { const Sv = CB.Save; return !Sv || !Sv.cardAllowed || Sv.cardAllowed(this.profile, k); }   // cartes verrouillées au départ (débloquées en montant de niveau)
+    // Rebrasser (récompense de niveau) : un nouveau tirage, autant de fois qu'on a de « rebrasser » dans ce tableau
+    reroll() { if (!this.choice || this.rerollsUsed >= this.rerolls) return false; this.rerollsUsed++; const before = this.choice.slice(); this.choice = null; this.offerCards(); if (!this.choice) this.choice = before; return true; }
     // Cadeau surprise : un effet au hasard, toujours chouette
     openSurprise() {
       const s = this.stats, r = this.random, kinds = ['or', 'cartes', 'soin', 'boum', 'gel', 'jauge', 'mystere', 'enormes'], k = kinds[Math.floor(r() * kinds.length)]; let text = '';
@@ -900,11 +991,11 @@
       else if (k === 'boum') { this.blastAll(); text = '💥 GROSSE BOMBE !'; }
       else if (k === 'gel') { this.freezeAll(6); text = '🧊 TOUT LE MONDE EST FIGÉ !'; }
       else if (k === 'jauge') { this.fillCharge(); text = '⚡ JAUGE PLEINE !'; }
-      else if (k === 'mystere') { const keys = Object.keys(CB.CARDS).filter(c => { const d = CB.CARDS[c]; return !d.combo && !d.instant && !d.surprise && this.cardLevel(c) < d.max; }); if (keys.length) { const c = keys[Math.floor(r() * keys.length)]; this.cards.push(c); CB.CARDS[c].apply(s, this, this.cardLevel(c)); text = '🎴 CARTE MYSTÈRE : ' + CB.CARDS[c].name.toUpperCase(); } else { this.gold += 50; text = '💰 +50 OR'; } }
+      else if (k === 'mystere') { const keys = Object.keys(CB.CARDS).filter(c => { const d = CB.CARDS[c]; return !d.combo && !d.instant && !d.surprise && this.cardLevel(c) < d.max && this.cardAllowed(c); }); if (keys.length) { const c = keys[Math.floor(r() * keys.length)]; this.cards.push(c); CB.CARDS[c].apply(s, this, this.cardLevel(c)); text = '🎴 CARTE MYSTÈRE : ' + CB.CARDS[c].name.toUpperCase(); } else { this.gold += 50; text = '💰 +50 OR'; } }
       else { s.size *= 1.5; s.damage *= 1.2; text = '🟣 BOULETS ÉNORMES !'; }
       this.surprises++; this.surpriseLast = k; this.flash = Math.max(this.flash || 0, .3); this.texts.push({ text: '🎁 CADEAU SURPRISE !', x: 0, y: 13, z: 16, age: 0, color: '#ff8ac6', big: true }); this.texts.push({ text, x: 0, y: 9, z: 12, age: -.6, color: '#ffd23f', big: true }); this.news.push({ kind: 'discovery', text: 'CADEAU SURPRISE : ' + text, time: this.time }); return k;
     }
-    pickCard(i) { if (!this.choice) return null; const key = this.choice[i] || this.choice[0]; this.cards.push(key); CB.CARDS[key].apply(this.stats, this, this.cardLevel(key)); this.choice = null; this.pendingLevels = Math.max(0, this.pendingLevels - 1); if (this.pendingLevels > 0 && !this.over) this.offerCards(); return key; }
+    pickCard(i) { if (!this.choice) return null; const key = this.choice[i] || this.choice[0]; this.cards.push(key); CB.CARDS[key].apply(this.stats, this, this.cardLevel(key)); { const c = CB.CARDS[key]; if (this.stats.luckyCard && key !== 'deChance' && !c.instant && !c.surprise && this.cardLevel(key) < c.max && this.random() < this.stats.luckyCard) { this.cards.push(key); c.apply(this.stats, this, this.cardLevel(key)); this.luckyHits = (this.luckyHits || 0) + 1; this.texts.push({ text: '🎲 DOUBLE CHANCE : ' + c.name.toUpperCase() + ' +1 !', x: 0, y: 12, z: 16, age: -.3, color: '#ffd23f', big: true }); } }   /* Double chance : un niveau bonus */ this.choice = null; this.pendingLevels = Math.max(0, this.pendingLevels - 1); if (this.pendingLevels > 0 && !this.over) this.offerCards(); return key; }
     damage(n, from) {
       if (this.god) { if (!this.godHint || this.time - this.godHint > 1.5) { this.godHint = this.time; this.texts.push({ text: '🛡️ INVINCIBLE', x: 0, y: 6, z: 6, age: 0, color: '#ffd23f' }); } return false; }   // cheat
       if (this.fx.priere > 0) { if (!this.protectHint || this.time - this.protectHint > 1) { this.protectHint = this.time; this.texts.push({ text: '✝ PROTÉGÉ !', x: 0, y: 6, z: 6, age: 0, color: '#fff3a0' }); } this.bursts.push({ x: 0, y: 4, z: 6, age: 0, kind: 'ice', size: 6 }); return false; }
@@ -913,8 +1004,8 @@
         if (this.shield === 0 && this.stats.odin >= 2) { for (const e of this.enemies.slice()) if (!e.dead) this.applyDamage(e, 6 * this.stats.damage * this.stats.odin, true, 'odin'); this.bursts.push({ x: 0, y: 6, z: 12, age: 0, kind: 'boom', color: '#7fd4ff', size: 3 }); this.texts.push({ text: 'ONDE D’ODIN !', x: 0, y: 10, z: 12, age: 0, color: '#7fd4ff' }); }
         return false; }
       n *= 1 - Math.min(.6, this.stats.armor || 0);   // blindage (canon classique)
-      if (this.armor > 0) { const a = Math.min(this.armor, n); this.armor -= a; n -= a; this.armorHit = .6; this.hurt = Math.max(this.hurt, .25); this.combo = 0; if (this.armor <= 0) this.texts.push({ text: '🛡️ ARMURE BRISÉE !', x: 0, y: 7, z: 7, age: 0, color: '#9fdcff', big: true }); if (n <= 0) return true; }   // l'armure du canon prend le coup ; ce qui dépasse touche la vie
-      this.hp = Math.max(0, this.hp - n); this.hurt = .6; this.combo = 0;
+      if (this.armor > 0) { const a = Math.min(this.armor, n); this.armor -= a; n -= a; this.armorHit = .6; this.hurt = Math.max(this.hurt, .25); this.hitFx = 1; this.shake = Math.max(this.shake || 0, .55); this.combo = 0; if (this.armor <= 0) this.texts.push({ text: '🛡️ ARMURE BRISÉE !', x: 0, y: 7, z: 7, age: 0, color: '#9fdcff', big: true }); if (n <= 0) return true; }   // l'armure du canon prend le coup ; ce qui dépasse touche la vie
+      this.hp = Math.max(0, this.hp - n); this.hurt = .6; this.combo = 0; this.hitFx = 1; this.shake = Math.max(this.shake || 0, .65);   // touché : secousse et gros écran rouge
       if (this.hp <= 0) this.finish(false, 'detruit');
       return true;
     }

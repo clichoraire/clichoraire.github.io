@@ -17,7 +17,6 @@
       <div class="title-buttons">
         <button id="btn-continue" class="lego primary hidden"></button>
         <button id="btn-play" class="lego primary">▶ Jouer</button>
-        <button id="btn-help" class="lego">? Comment jouer</button>
         <button id="btn-settings" class="lego small">⚙️ Réglages</button>
       </div>
       <span id="version"></span>
@@ -101,7 +100,7 @@
           <div class="objective-card">
             <canvas class="obj-icon" id="wave-obj-icon" width="72" height="72" aria-hidden="true"></canvas>
             <div class="obj-body">
-              <div class="objective-tag"><span class="bang">!</span><span id="wave-tag">Vague 1</span></div>
+              <div class="objective-tag hidden"><span class="bang">!</span><span id="wave-tag">Vague 1</span></div>
               <div class="objective-bar"><i id="wave-bar"></i></div>
               <div class="objective-sub" id="wave-sub"></div>
             </div>
@@ -144,6 +143,7 @@
           <p>Son pouvoir dure jusqu’à la fin de ce tableau.</p>
           <div class="cards-lock" id="cards-lock"><i></i><span class="wait">Regarde bien…</span><span class="go">Choisis une carte !</span></div>
           <div class="cards" id="card-list"></div>
+          <button id="btn-reroll" class="lego small reroll hidden" type="button">🔄 Rebrasser</button>
         </div>
       </div>
       <div id="overlay-result" class="overlay hidden"><div class="result-panel" id="result-panel"></div></div>
@@ -211,7 +211,7 @@
     <form method="dialog"><button class="dialog-close" aria-label="Fermer">✕</button></form>
     <div class="kicker">LA GRANDE CARTE</div>
     <h2 id="worlds-title">LES MONDES</h2>
-    <p class="level-intro">Réussis <b>3 tableaux</b> d’un monde pour ouvrir le suivant.</p>
+    <p class="level-intro">Bats le <b>boss</b> d’un monde pour ouvrir le suivant.</p>
     <div id="worlds-list" class="worlds-grid"></div>
   </dialog>
 

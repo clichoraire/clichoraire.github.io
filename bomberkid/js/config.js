@@ -1,7 +1,7 @@
 // Bomberkid — constantes, personnages, objets, ennemis et thèmes.
 // Tout est dans l'espace de noms BK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BK = window.BK || {};
-window.BK.VERSION = '0.32';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BK.VERSION = '0.33';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BK) {
   'use strict';
   BK.MAX_ALLIES = 2;
@@ -65,6 +65,7 @@ window.BK.VERSION = '0.32';   // à augmenter à chaque mise en ligne (affichée
   // Objets ramassés dans les blocs. chance : poids relatif. match/adventure : disponible dans ce mode.
   BK.ALLY_FOOD_HEAL = {pumpkinpiece:5,meatcooked:10,fishcooked:20,poultrycooked:15};
   BK.COOKABLE = {fish:'fishcooked',meatraw:'meatcooked',poultryraw:'poultrycooked'};
+  BK.BRICK_COLOR = '#b34a2a';   // couleur par défaut des murs de briques, dans tous les thèmes
   BK.PET_FOODS = {chat:['fish','fishcooked'],chien:['meatraw','meatcooked','poultryraw','poultrycooked']};
   BK.ITEMS = {
     poultryraw:{name:'Volaille crue',icon:'🥩',color:'#e99da4',weight:0,adventureOnly:true,usable:true,desc:'À faire cuire au feu de camp. Peut aussi nourrir un chien.'},

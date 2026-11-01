@@ -1,7 +1,7 @@
 // Canon Big Boom — constantes, famille, mondes, ennemis, canons, boutique, cartes.
 // Tout vit dans l'espace de noms CB. Fonctionne dans le navigateur et dans Node (tools/test-*.cjs).
 window.CB = window.CB || {};
-window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.CB.VERSION = '1.6';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (CB) {
   'use strict';
   CB.W = 960; CB.H = 640;
@@ -138,6 +138,16 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
     archeopteryx: { name: 'Archéoptéryx', hp: 2, speed: 8, size: .9, damage: 7, gold: 1, color: '#4a6aa0', zigzag: true, variant: { name: 'Archéoptéryx d’or', color: '#e0b030' } },
     quetzalcoatlus: { name: 'Quetzalcoatlus', hp: 15, speed: 6, size: 2.2, damage: 20, gold: 5, color: '#b09a7a', strafe: true, variant: { name: 'Quetzalcoatlus royal', color: '#7a4ab0' } },
     balloon:   { name: 'Ballon méchant', hp: 2, speed: 7.5, size: 1.3, damage: 7, gold: 0, color: '#ff4f6b', zigzag: true, variant: { name: 'Ballon doré', color: '#ffd23f' } },
+    // Ballons de la Foire (2026-10-31) : des couleurs qui vont plus ou moins vite ; pop = en éclatant, il revient en ballon plus faible.
+    ballonBleu:  { name: 'Ballon bleu', hp: 2, speed: 10.5, size: 1.3, damage: 7, gold: 0, color: '#3d8bff', zigzag: true, pop: { into: 'balloon', count: 1 }, variant: { name: 'Ballon bleu nuit', color: '#2b3fd6' } },
+    ballonVert:  { name: 'Ballon vert', hp: 2, speed: 12.5, size: 1.3, damage: 8, gold: 1, color: '#3fcf5a', zigzag: true, pop: { into: 'ballonBleu', count: 1 }, variant: { name: 'Ballon émeraude', color: '#0f9a5a' } },
+    ballonJaune: { name: 'Ballon éclair', hp: 1, speed: 16, size: 1.15, damage: 6, gold: 1, color: '#ffe23f', zigzag: true, variant: { name: 'Ballon foudre', color: '#fff7b0' } },
+    ballonPlomb: { name: 'Ballon de plomb', hp: 16, speed: 3.6, size: 1.7, damage: 14, gold: 3, color: '#8a94a6', variant: { name: 'Ballon d’acier', color: '#c9d3e3' } },
+    ballonZebre: { name: 'Ballon zébré', hp: 5, speed: 7, size: 1.45, damage: 10, gold: 2, color: '#f4f4f4', zigzag: true, pop: { into: 'balloon', count: 2 }, variant: { name: 'Ballon arc-en-ciel', color: '#ff8ac6' } },
+    ballonGeant: { name: 'Ballon géant', hp: 26, speed: 2.8, size: 2.5, damage: 22, gold: 6, color: '#b14fff', pop: { into: 'ballonVert', count: 3 }, variant: { name: 'Ballon colosse', color: '#ff3a6b' } },
+    // Clown canonnier : suspendu à une grappe de ballons, il monte du bas de l'écran vers le haut en 10 s en lançant des tartes, puis s'envole hors de l'écran.
+    clownCanon:  { name: 'Clown canonnier', hp: 9, speed: 0, size: 2.2, damage: 0, gold: 8, color: '#ff4f6b', noElite: true, riser: { seconds: 10, z: 30, shot: 'tarteClown', first: 1.2, every: 2.2 } },
+    tarteClown:  { name: 'Tarte à la crème', hp: 1, speed: 12, size: 1.1, damage: 8, gold: 0, color: '#fff3e0', straight: true, noElite: true, shot: true },
     pinata:    { name: 'Piñata', hp: 7, speed: 4, size: 1.6, damage: 12, gold: 4, color: '#38c7e6', variant: { name: 'Piñata royale', color: '#c54fff' } },
     bee:       { name: 'Abeille', hp: 2, speed: 9, size: .9, damage: 6, gold: 0, color: '#ffc531', variant: { name: 'Abeille bleue', color: '#53b7ff' } },
     wasp:      { name: 'Guêpe', hp: 4, speed: 8, size: 1.1, damage: 11, gold: 1, color: '#f08a1d', zigzag: true, variant: { name: 'Frelon noir', color: '#333' } },
@@ -159,6 +169,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
     // Événements loufoques et nouveaux monstres : boucliers à casser, orbes du puzzle, tirs élémentaires (feu explosif,
     // poison, magie noire), soigneurs à abattre en premier, monstres qui électrocutent ou gèlent au contact (touch).
     bouclier:  { name: 'Bouclier magique', hp: 4, speed: 0, size: 1.7, damage: 0, gold: 2, color: '#4fc3ff', straight: true, noElite: true, shieldAll: true },
+    coffrePuzzle: { name: 'Coffre du bonneteau', hp: 1, speed: 0, size: 1.9, damage: 0, gold: 0, color: '#a0662a', straight: true, noElite: true, orb: true },
     orbe:      { name: 'Orbe du puzzle', hp: 1, speed: 0, size: 1.5, damage: 0, gold: 0, color: '#ffd23f', straight: true, noElite: true, orb: true },
     // Monstres marins (tableau 1-9 : ils nagent, le bas du corps dans l'eau) et le bateau volant secret de la nuée (3 coups pour le briser)
     requin:     { name: 'Requin', hp: 7, speed: 5, size: 1.6, damage: 14, gold: 2, color: '#6d8aa8', swim: true, variant: { name: 'Requin blanc', color: '#dfe9f2' } },
@@ -178,7 +189,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
     bouletFantome: { name: 'Boulet fantôme', hp: 1, speed: 14, size: 1.1, damage: 10, gold: 0, color: '#9fe0ff', straight: true, noElite: true, shot: true },
     bombeNoire: { name: 'Bombe noire', hp: 6, speed: 7, size: 1.9, damage: 30, gold: 0, color: '#111', straight: true, noElite: true, shot: true },
     serpentMer: { name: 'Serpent de mer', hp: 12, speed: 4.5, size: 2, damage: 18, gold: 4, color: '#3fae5a', swim: true, variant: { name: 'Serpent d’or', color: '#ffd23f' } },
-    bateauVolant: { name: 'Bateau volant', hp: 3, speed: 0, size: 2.6, damage: 0, gold: 0, color: '#8a5a2b', straight: true, noElite: true, cross: true, hits: 3, secretBoat: true },
+    bateauVolant: { name: 'Bateau volant', hp: 10, speed: 0, size: 2.6, damage: 0, gold: 0, color: '#8a5a2b', straight: true, noElite: true, cross: true, hits: 10, secretBoat: true },   // 10 cœurs (2026-10-31, avant 3)
     feu:       { name: 'Boule de feu', hp: 2, speed: 12, size: 1.1, damage: 12, gold: 0, color: '#ff6a1a', straight: true, noElite: true, shot: true, explode: 9 },
     poison:    { name: 'Crachat de poison', hp: 2, speed: 10, size: 1, damage: 0, gold: 0, color: '#7dff3a', straight: true, noElite: true, shot: true, status: 'poison' },
     magieNoire:{ name: 'Magie noire', hp: 3, speed: 9, size: 1.2, damage: 0, gold: 0, color: '#4a1f6e', straight: true, noElite: true, shot: true, status: 'dark' },
@@ -257,7 +268,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   CB.SCENERY = { prehistoire: { id: 'prehistoire', scene: 'prehistoire', sky: ['#1d6fb8', '#7fc4ee', '#f3e6b0'], ground: '#2f6b2a', accent: '#9be36a' }, mer: { id: 'mer', scene: 'mer', sky: ['#1a63b5', '#67b6ea', '#ffe9b8'], ground: '#1b4f8a', accent: '#7fd4ff' },
     abysses: { id: 'abysses', scene: 'abysses', sky: ['#021a3a', '#063a6e', '#0a5a8a'], ground: '#0b2a4a', accent: '#5fd3ff' }, cirque: { id: 'cirque', scene: 'cirque', sky: ['#7a1030', '#c0203a', '#ffd23f'], ground: '#b3261e', accent: '#ffe36a' },
     grotte: { id: 'grotte', scene: 'grotte', sky: ['#0a0608', '#1a1012', '#2a1a1a'], ground: '#3a2a26', accent: '#ff8c2a' }, galaxie: { id: 'galaxie', scene: 'galaxie', sky: ['#03020f', '#120a3a', '#2a1a5a'], ground: '#3b4a60', accent: '#c47dff', space: true } };
-  // Il faut réussir WORLD_NEED tableaux d'un monde (une étoile ou plus) pour ouvrir le suivant, pas forcément tous.
+  // Ancienne règle (3 tableaux réussis ouvraient le monde suivant) : depuis le 2026-10-31, il faut battre le boss (S.worldDone).
   CB.WORLD_NEED = 3;
   CB.PORTAL_TIME = 3.4; // secondes d'animation du portail avant le voyage
   // Boss : un par monde, dernière vague. Ils s'arrêtent à distance, tirent des boulets (qu'on peut détruire) et appellent des sbires.
@@ -266,7 +277,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
     // weak : point faible (en unités du dessin : le rubis de la couronne) → dégâts ×1,6 ; agile : il se tasse parfois pour éviter nos boulets
     batking:  { name: 'Le Roi des chauves-souris', hp: 600, size: 3.6, color: '#3b2a63', minion: 'bat', every: 3.2, boltEvery: 2.3, agile: true, weak: { x: 0, y: -1.96, r: .75 }, powers: [['bolt', 'boulet'], ['bolt', 'nuee', 'salve', 'bombe', 'boulet'], ['faisceau', 'nuee', 'salve', 'mur', 'bombe', 'bolt', 'pluie']] },
     bigghost: { name: 'Le Grand Spectre', hp: 650, size: 4, color: '#c9d8ff', minion: 'ghost', every: 3, boltEvery: 2.4, powers: [['bolt', 'magieNoire'], ['salve', 'bombe', 'bolt', 'magieNoire'], ['faisceau', 'pluie', 'mur', 'bolt', 'salve', 'magieNoire']] },
-    clown:    { name: 'Le Clown gonflable', hp: 700, size: 4.2, color: '#ff4f6b', minion: 'balloon', every: 2.6, boltEvery: 2.2, powers: [['bolt', 'feu'], ['eventail', 'bombe', 'feu', 'salve'], ['mur', 'faisceau', 'pluie', 'eventail', 'bombe', 'feu']] },
+    clown:    { name: 'Le Clown Farceur', hp: 700, size: 4.2, color: '#ff4f6b', minion: 'balloon', every: 2.6, boltEvery: 2.2, powers: [['bolt', 'feu'], ['eventail', 'bombe', 'feu', 'salve'], ['mur', 'faisceau', 'pluie', 'eventail', 'bombe', 'feu']] },
     queen:    { name: 'La Reine des guêpes', hp: 750, size: 3.8, color: '#f08a1d', minion: 'bee', every: 2.2, boltEvery: 2, powers: [['bolt', 'poison'], ['salve', 'poison', 'eventail', 'boulet'], ['mur', 'faisceau', 'salve', 'pluie', 'poison', 'boulet']] },
     dragon:   { name: 'Le Dragon de lave', hp: 800, size: 4.6, color: '#c8321e', minion: 'firebird', every: 2.4, boltEvery: 1.8, powers: [['feu', 'boulet'], ['feu', 'eventail', 'bombe', 'pluie'], ['faisceau', 'mur', 'feu', 'pluie', 'bombe', 'rayon']] },
     destroyer:{ name: 'Le Destructeur stellaire', hp: 900, size: 5.2, color: '#5b6b80', minion: 'tie', every: 2, boltEvery: 1.6, powers: [['bolt', 'rayon'], ['salve', 'rayon', 'bombe', 'mur'], ['faisceau', 'mur', 'pluie', 'salve', 'rayon', 'bombe']] },
@@ -287,9 +298,12 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   // et disparaissent au hasard : +1 niveau (trois cartes) et un bout de jauge spéciale. On peut se tasser avec ◀ ▶ pour esquiver.
   CB.BOSS_PHASES = [2 / 3, 1 / 3];
   CB.BOXES = { first: 4, every: [7, 12], life: 5.5, y: [4, 12], z: [26, 60], charge: .3, normal: { first: [18, 34], every: [32, 58] } };   // normal : dans tous les autres tableaux, au hasard (pas dans les mini-jeux)
-  CB.CARD_LOCK = 3;        // secondes pendant lesquelles les trois cartes se présentent sans qu'on puisse cliquer ni tirer
+  CB.CARD_LOCK = 2;        // secondes pendant lesquelles les trois cartes se présentent sans qu'on puisse cliquer ni tirer
+  CB.PUZZLES = { ordre: { news: 'PUZZLE ! TIRE LES ORBES DANS L’ORDRE AVANT LA FIN DU TEMPS' }, couleur: { news: 'PUZZLE ! TIRE SEULEMENT LES BALLONS DE LA BONNE COULEUR' }, simon: { news: 'PUZZLE ! RETIENS L’ORDRE DES COULEURS, PUIS RÉPÈTE-LE' }, bonneteau: { news: 'PUZZLE ! SUIS LE COFFRE VIDE… LES AUTRES SONT PIÉGÉS' } };
+  CB.PUZZLES.couleur.colors = CB.PUZZLES.simon.colors = [{ key: 'rouge', name: 'ROUGES', hex: '#ff4f6b' }, { key: 'bleu', name: 'BLEUS', hex: '#4fc3ff' }, { key: 'vert', name: 'VERTS', hex: '#7dff4f' }, { key: 'jaune', name: 'JAUNES', hex: '#ffd23f' }, { key: 'violet', name: 'VIOLETS', hex: '#c47dff' }];
   CB.PUZZLE_FAIL = .25;    // puzzle 1-2-3 raté : on perd ce quart de sa vie (directement, sans passer par l'armure)
-  CB.WALL = { z: 20, alpha: .32 };   // murs magiques (événement « boucliers ») : des bandes qui coupent l'écran à cette profondeur ; les boulets qui passent dedans s'y écrasent
+  CB.WALL = { z: 20, alpha: .32, hits: 20 };   // hits : nombre de boulets pour casser un mur, peu importe la force du boulet
+    // murs magiques (événement « boucliers ») : des bandes qui coupent l'écran à cette profondeur ; les boulets qui passent dedans s'y écrasent
   CB.PLANE = { seconds: 4.4 };       // phase suivante d'un boss : un membre de la famille traverse le ciel en petit avion avec la bannière « PHASE 2 »
   CB.CONFETTI = { every: 5, z: 12, dmg: 1, levels: { every: [4, 3, 2], dmg: [1.5, 2, 2.5], z: [14, 16, 18] } };   // canon confetti : tous les N s, les monstres trop proches reçoivent une volée de confettis (dégâts × dmg, recul)
   CB.BOSS_CHARGE = 2.5;   // frapper le boss remplit la jauge spéciale : dégâts / PV max × 2,5 (pleine en 40 % du boss)
@@ -301,6 +315,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   CB.SURPRISE = { chance: .15 };   // parfois, une des trois cartes est un « Cadeau surprise » au contenu mystère
   CB.SLOT2 = { price: 2500, powerPrice: 3000, name: 'Case vierge', icon: '🧿', desc: 'Une deuxième case pour un deuxième pouvoir : n’importe lequel de la famille, avec sa propre jauge.' };   // deuxième attaque spéciale (boutique « Pouvoirs »)
   CB.BOSS_SCALE = 2.6;                             // les boss sont gigantesques : dessin et zone de collision multipliés
+  CB.BOSS_HP = 3;   // tous les boss (et mini-boss) ont 3 fois plus de vie (2026-10-31 : trop faciles avec des coéquipiers)
   CB.BOSS_SPECIAL = { resist: .35, budget: .12, flat: { triche: .15 }, sources: ['laser', 'licorne', 'priere', 'fusee', 'eclair', 'tornade', 'neige', 'triche', 'mega', 'cerbere', 'meteores'] };   // les boss résistent aux attaques spéciales : dégâts ×0,35 et au plus 12 % de leurs PV par lancer ; flat : le claquement de Matthieu enlève toujours 15 % du boss
   CB.BOSS_XP = 6;                                   // l'XP par monstre est multipliée dans les tableaux de boss pour monter vite
   CB.BOSS_POWERS = [['bolt', 'boulet'], ['bolt', 'salve', 'bombe', 'boulet'], ['faisceau', 'salve', 'mur', 'bombe', 'bolt', 'pluie']];   // par défaut, selon la phase
@@ -310,7 +325,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   CB.WORLDS = [
     { id: 'foret',  name: 'La Forêt des chauves-souris', short: 'Forêt', enemies: ['bat', 'owl', 'ghost', 'pumpkin', 'skull', 'spider', 'crow', 'wisp', 'vampire', 'witch', 'eyeball', 'blackcat', 'mummy', 'candy', 'imp', 'zombie', 'scarecrow', 'frankie', 'cauldron', 'reaper'], boss: 'batking', cannon: 'pirate', sky: ['#0b1437', '#243a6b', '#5d7a9c'], ground: '#1a3b2a', accent: '#8fd3a8', icon: '🦇', secret: { vi: 5, from: 0 }, extra: { vi: 6, from: 2 }, extra2: { vi: 7, from: 3 }, extra3: { vi: 8, from: 1 }, gate: 8 },
     { id: 'manoir', name: 'Le Manoir hanté', short: 'Manoir', enemies: ['ghost', 'ghost', 'skull', 'sorcier', 'soigneur', 'spectreGlace'], boss: 'bigghost', cannon: 'confetti', sky: ['#120a2a', '#3a2061', '#6a3a8a'], ground: '#241838', accent: '#c9a4ff', icon: '👻', secret: { vi: 5, from: 2 }, gate: 5 },
-    { id: 'foire',  name: 'La Foire aux ballons', short: 'Foire', enemies: ['balloon', 'balloon', 'pinata', 'jongleur', 'clownChoc', 'crapaud'], boss: 'clown', cannon: 'turbo', sky: ['#1b6fd6', '#59b0ff', '#bfe8ff'], ground: '#4caf50', accent: '#ffd23f', icon: '🎈', secret: { vi: 5, from: 2 }, gate: 5 },
+    { id: 'foire',  name: 'La Foire aux ballons', short: 'Foire', enemies: ['balloon', 'ballonBleu', 'ballonVert', 'pinata', 'ballonJaune', 'ballonZebre', 'ballonPlomb', 'jongleur', 'clownChoc', 'crapaud'], boss: 'clown', cannon: 'turbo', sky: ['#1b6fd6', '#59b0ff', '#bfe8ff'], ground: '#4caf50', accent: '#ffd23f', icon: '🎈', secret: { vi: 5, from: 2 }, gate: 5 },
     { id: 'ruche',  name: 'Le Ciel des abeilles', short: 'Ruche', enemies: ['bee', 'bee', 'wasp', 'crapaud', 'soigneur', 'clownChoc'], boss: 'queen', cannon: 'lave', sky: ['#f6a23a', '#ffd27a', '#fff2c2'], ground: '#b57b2a', accent: '#ffd23f', icon: '🐝' },
     { id: 'volcan', name: 'Le Volcan', short: 'Volcan', enemies: ['firebird', 'firebird', 'meteor', 'dragonnet', 'sorcier', 'soigneur'], boss: 'dragon', cannon: 'laser', sky: ['#1a0606', '#5a1410', '#b8401e'], ground: '#2b1a16', accent: '#ff8c2a', icon: '🌋', secret: { vi: 5, from: 2 }, gate: 5 },
     { id: 'espace', name: 'L’Espace', short: 'Espace', enemies: ['tie', 'tie', 'ufo', 'robotGlace', 'sorcier', 'soigneur'], boss: 'destroyer', cannon: 'jumeau', sky: ['#02030c', '#0a1130', '#1b2a5a'], ground: '#3b4a60', accent: '#7fd4ff', icon: '🚀', space: true, secret: { vi: 5, from: 2 }, gate: 5 },
@@ -363,7 +378,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
     if (wi === 0) { const NIGHT = [null, null, { speed: 1.1, timeScale: 4 }, { speed: 1.35, timeScale: 8 }, { speed: 1.15, timeScale: 7 }]; if (NIGHT[vi]) defs[vi].night = NIGHT[vi]; }
     // tableau 1-3 : plus dur (monstres plus rapides, plus nombreux) et trois cibles 🎯 passent pendant le tableau ; les trois
     // détruites (cumulées d'une partie à l'autre, profile.targetsHit) ouvrent le mini-jeu 1-7.
-    if (wi === 0 && vi === 2) defs[2] = { type: 'kill', goal: 200, density: 1.2, name: 'Les deux cents', text: () => 'Abats 200 ennemis, de plus en plus forts ! Et vise les cibles 🎯 qui passent…', targets: { at: [12, 30, 48] }, ramp: { every: 45, hp: .25, speed: .04 }, sequence: [{ kinds: [{ type: 'bat', count: 8 }], every: .5 }] };   // première vague : 8 chauves-souris, puis les monstres de la nuit, moins denses qu'avant (le début était trop dur), +25 % de PV toutes les 45 s
+    if (wi === 0 && vi === 2) defs[2] = { type: 'kill', goal: 200, density: 1.2, name: 'Les deux cents', text: () => 'Abats 200 ennemis, de plus en plus forts ! Et vise les cibles 🎯 qui passent…', targets: { at: [12, 30, 48] }, ramp: { every: 45, hp: .25, speed: .04 }, warmup: { seconds: 50, slow: 2.4 }, sequence: [{ kinds: [{ type: 'bat', count: 5 }], every: 1.1 }], density: 1.1 };   // 2026-10-31 : début beaucoup plus calme (Matthieu : trop de monstres d'entrée) : 5 chauves-souris une à une, et les arrivées au hasard ×2,4 plus lentes au départ qui reviennent à la normale en 50 s ; +25 % de PV toutes les 45 s
     if (wi === 0 && vi === 3) defs[3] = { type: 'survive', seconds: 100, density: 1.9, name: 'Cent secondes', text: () => 'Survis 100 secondes ! Ça va chauffer…', ramp: { every: 25, hp: .25, speed: .05 } };   // dur : ça arrive vite et ça durcit toutes les 25 s
     // tableau 1-2 : la nuée. Que des chauves-souris pendant 5 minutes, de plus en plus éparpillées, et des bombes magiques
     // à désamorcer. On tient le plus longtemps possible (étoiles au temps) et on peut arrêter quand on veut.
@@ -393,6 +408,17 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
       defs[2] = Object.assign({ type: 'killTimed', goal: 110, seconds: 120, density: 1.5, name: 'La fosse', text: () => 'Abats 110 monstres avant la fin du chrono, au fond de la fosse !', roster: ['piranha', 'poissonLanterne', 'anguille', 'pieuvre', 'crabe', 'murene', 'raieManta'], ramp: { every: 40, hp: .2, speed: .03 } }, P);
       defs[3] = Object.assign({ type: 'survive', seconds: 130, density: 1.6, name: 'Le gouffre noir', text: () => 'Survis 130 s dans le noir : tout arrive de partout !', roster: ['requin', 'anguille', 'raieManta', 'serpentMer', 'tortueGeante', 'poissonLanterne', 'pieuvre'], ramp: { every: 30, hp: .25, speed: .05 } }, P);
       defs[4] = Object.assign({ type: 'boss', density: 1.3, name: 'Le Kraken', text: () => 'Le Kraken ! Esquive ses tentacules avec ◀ ▶, tire sur les boîtes bonus… et coule-le !', reward: 'power:torpilles' }, P); }
+    // La Foire (2026-10-31) : beaucoup plus de ballons de toutes les couleurs, et des clowns canonniers (riders) de plus en plus souvent.
+    if (w.id === 'foire') {
+      const R = [
+        ['balloon', 'balloon', 'ballonBleu', 'ballonBleu', 'ballonVert', 'ballonJaune', 'pinata', 'ballonZebre'],
+        ['balloon', 'ballonBleu', 'ballonVert', 'ballonJaune', 'ballonZebre', 'ballonPlomb', 'pinata', 'jongleur', 'clownChoc'],
+        ['balloon', 'ballonBleu', 'ballonVert', 'ballonJaune', 'ballonZebre', 'ballonPlomb', 'ballonGeant', 'pinata', 'jongleur', 'clownChoc', 'crapaud'],
+        ['ballonBleu', 'ballonVert', 'ballonJaune', 'ballonZebre', 'ballonPlomb', 'ballonPlomb', 'ballonGeant', 'ballonGeant', 'pinata', 'jongleur', 'clownChoc', 'crapaud'],
+      ];
+      const RIDERS = [{ first: 30, every: [45, 32], max: 1 }, { first: 22, every: [34, 22], max: 1 }, { first: 16, every: [26, 15], max: 2 }, { first: 12, every: [18, 9], max: 2 }];
+      for (let i = 0; i < 4; i++) { defs[i].roster = R[i]; defs[i].riders = RIDERS[i]; }
+    }
     if (w.id === 'cirque') { const P = { scene: 'cirque' };
       defs[0] = Object.assign({ type: 'kill', goal: 70, density: 1.25, name: 'Le défilé', text: () => 'Abats 70 animaux en ballons ! Pop pop pop !', roster: ['chienBallon', 'lapinBallon', 'balloon', 'singeBallon'], sequence: [{ kinds: [{ type: 'chienBallon', count: 10 }], every: .35 }] }, P);
       defs[1] = Object.assign({ type: 'survive', seconds: 100, density: 1.4, name: 'Sous le chapiteau', text: () => 'Survis 100 s : girafes, cygnes et clowns électriques !', roster: ['chienBallon', 'girafeBallon', 'cygneBallon', 'clownChoc', 'lapinBallon', 'balloon'], ramp: { every: 30, hp: .2, speed: .04 } }, P);
@@ -427,7 +453,7 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   CB.goldBase = wi => 1 + Math.round(CB.tierOf(wi));                       // 1 pièce par ennemi au premier monde, 6 au dernier
   CB.xpPerKill = wi => 2 + Math.round(CB.tierOf(wi));
   CB.runXpFor = l => Math.round(16 * Math.pow(l, 1.25));   // XP pour passer le niveau l pendant une vague (façon Vampire Survivors)
-  CB.xpForLevel = level => Math.round(60 * Math.pow(level, 1.45));   // XP nécessaire pour passer du niveau `level` au suivant
+  CB.xpForLevel = level => Math.round(60 * Math.pow(level, 1.45) + 150 * Math.min(level, 10));   // XP nécessaire pour passer du niveau `level` au suivant ; +150 par niveau jusqu'au 10 (2026-10-31 : on montait au niveau 8 après les tableaux 1-1 et 1-2)
   CB.MAX_LEVEL = 50;
 
   // Améliorations permanentes (achetées avec l'or, niveau 0 à max).
@@ -463,8 +489,8 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   // Objets uniques du hangar : achetés une fois, permanents (profile.items[key] = true).
   CB.ITEMS = {
     jaugePleine: { name: 'Jauge pleine', icon: '🔋', price: 450, desc: 'Tu commences chaque tableau avec ton attaque spéciale déjà prête !', per: 'attaque spéciale prête dès le départ' },
-    trio: { name: 'Trio de choc', icon: '🔁', price: 1500, desc: 'Un troisième coéquipier en réserve ! En pause, échange-le avec celui de gauche ou de droite, à n’importe quel moment.', per: 'troisième coéquipier · échange en plein tableau', needsAlly2: true, hint: 'Recrute deux coéquipiers' },
-    sphere: { name: 'Sphère protectrice', icon: '🔮', price: 600, unlockWorld: 0, desc: 'Une sphère magique t’entoure : les monstres qui s’approchent trop s’y brûlent et reculent.', per: 'blesse et repousse les monstres trop proches', hint: 'Réussis le monde 1' },
+    trio: { name: 'Trio de choc', icon: '🔁', price: 22500, desc: 'Un troisième coéquipier en réserve ! En pause, échange-le avec celui de gauche ou de droite, à n’importe quel moment.', per: 'troisième coéquipier · échange en plein tableau', needsAlly2: true, hint: 'Recrute deux coéquipiers' },
+    sphere: { name: 'Sphère protectrice', icon: '🔮', price: 600, unlockLevel: 10, desc: 'Une sphère magique t’entoure : les monstres qui s’approchent trop s’y brûlent et reculent.', per: 'blesse et repousse les monstres trop proches', hint: 'Atteins le niveau 10' },
   };
   // Cheats de Matthieu (bouton 🧪 sur la carte et en pause, pour lui seulement) : or, invincibilité, tout débloquer, inviter qui il veut
   CB.CHEATS = [
@@ -479,17 +505,17 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   // Tête chercheuse (après le monde 3) : les boulets se tournent vers le monstre le plus proche, mais seulement s'il est à moins de « range » unités
   // et avec un virage limité (« turn », radians par seconde) : un monstre loin ou très de côté est raté, même au dernier niveau.
   CB.HOMING = { name: 'Tête chercheuse', icon: '🛰️', prices: [500, 900, 1400, 2000, 2800], max: 5, turn: [1.4, 2, 2.6, 3.2, 3.8], range: [12, 15, 18, 21, 24], unlockWorld: 2, hint: 'Réussis le monde 3', desc: 'Tes boulets se tournent vers le monstre le plus proche. Pas parfait : trop loin ou trop de côté, ils le ratent.', per: 'boulets guidés · portée et virage limités' };
-  CB.TOWER = { name: 'Tour de défense', icon: '🏰', prices: [700, 1200], max: 2, damage: .45, cooldown: 1.4, unlockWorld: 1, hint: 'Réussis le monde 2', desc: 'Une tour qui tire toute seule à côté de toi. La deuxième se place de l’autre côté.', per: 'tire toute seule · dégâts ÷ 2' };
+  CB.TOWER = { name: 'Tour de défense', icon: '🏰', prices: [700, 1200], max: 2, damage: .45, cooldown: 1.4, unlockLevel: 17, hint: 'Atteins le niveau 17', desc: 'Une tour qui tire toute seule à côté de toi. La deuxième se place de l’autre côté.', per: 'tire toute seule · dégâts ÷ 2' };
   // Niveaux de l'attaque spéciale (hangar) : niv. 2 dès le niveau 9 du personnage, niv. 3 dès le niveau 20. Plus longue, plus forte, jauge plus courte.
   CB.SPECIAL_LEVELS = [{ dur: 1, power: 1, kills: 1 }, { minLevel: 9, price: 300, dur: 1.25, power: 1.3, kills: .85 }, { minLevel: 20, price: 800, dur: 1.5, power: 1.6, kills: .7 }];
   // Fiche du personnage : le bonus permanent en trois mots, et le pouvoir en une phrase rigolote (la description complète reste au hangar)
   CB.PERK_SHORT = { matthieu: '+6 % coup critique', josee: '+15 points de vie', richard: '+12 % dégâts · boulets 2× plus gros', mickael: '+12 % portée', marie: 'Un bouclier à chaque vague', adam: '+10 % cadence', milo: '+12 % d’or', jeremie: '10 % d’esquive', jessica: '+18 % d’or', edison: '+8 % cadence · +5 % portée', josue: '+10 % dégâts', emily: 'Ennemis 8 % plus lents', eliott: '15 % d’esquive', alexie: '+10 PV · +6 % d’or', zachary: '+15 % portée' };
   CB.SPECIAL_FUN = { matthieu: 'Clac ! Et tout le monde disparaît.', josee: 'Deux anges descendent du ciel !', richard: 'Des boulets ÉNORMES, trois fois plus forts !', mickael: 'Le laser de Superman !', marie: 'Maman veille : personne ne passe !', adam: 'Un éclair géant qui fige tout le monde !', milo: 'Tout le monde au ralenti… sauf Milo !', jeremie: 'Un vortex avale tous les monstres !', jessica: 'JACKPOT ! Il pleut des pièces d’or !', edison: 'Trois tornades géantes : bye bye !', josue: 'Un cri qui donne des super muscles !', emily: 'Une tempête de neige qui gèle tout !', eliott: 'BOUH ! Un fantôme qui traverse tout !', alexie: 'Une licorne volante et des boules disco !', zachary: 'KABOOM ! Une fusée en malade !' };
-  CB.SEATS = [{ name: 'Siège de gauche', price: 350, side: '← à gauche du canon' }, { name: 'Siège de droite', price: 700, side: 'à droite du canon →' }, { name: 'Siège de réserve', price: 1500, side: 'en réserve : on l’échange en pause' }];   // onglet Équipe : on achète un siège, puis on choisit qui s'y assoit
+  CB.SEATS = [{ name: 'Siège de gauche', price: 5250, side: '← à gauche du canon' }, { name: 'Siège de droite', price: 10500, side: 'à droite du canon →' }, { name: 'Siège de réserve', price: 22500, side: 'en réserve : on l’échange en pause' }];   // onglet Équipe : on achète un siège, puis on choisit qui s'y assoit
   CB.FAMILY_BUFF = { rate: .1 };                     // héros + ses deux coéquipiers de la même famille : +10 % de cadence pour les trois (aura de la famille en jeu)
   CB.SPECIAL_RAMP = 1.35;                           // chaque lancer dans un même tableau rend le suivant 35 % plus long à charger (plafond ×4) : fini le pouvoir en continu quand il y a foule
   CB.SPECIAL_FX = { richard: 'veteran', alexie: 'licorne', josee: 'priere', mickael: 'laser', adam: 'pika', milo: 'slowmo', emily: 'blizzard', josue: 'rally', edison: 'tornado', jessica: 'magnet', jeremie: 'teleport', marie: 'protect', eliott: 'ghost', pirate: 'pirate', ballons: 'ballons', cerbere: 'cerbere', meteores: 'meteores' };   // attaques spéciales à durée : la jauge reste bloquée tant qu'elles sont actives
-  CB.HELPER = { name: 'Coéquipier', price: 350, price2: 700, damage: .5, x: -5, specialFirst: 25, specialEvery: 45, desc: 'Un deuxième membre de la famille t’accompagne dans toutes les vagues. Il vise et tire tout seul (boulets deux fois moins forts) et lance son attaque spéciale de temps en temps.' };
+  CB.HELPER = { name: 'Coéquipier', price: 5250, price2: 10500, damage: .5, x: -5, specialFirst: 25, specialEvery: 45, desc: 'Un deuxième membre de la famille t’accompagne dans toutes les vagues. Il vise et tire tout seul (boulets deux fois moins forts) et lance son attaque spéciale de temps en temps.' };
   // Chaque canon a son palier (tier) : ses améliorations sont plus fortes (+25 % par palier) mais coûtent plus cher (+40 % par palier).
   // Les niveaux d'amélioration appartiennent au canon (profile.cannonUpgrades[canon]) : changer de canon, c'est repartir des niveaux de celui-là.
   CB.BASE_ARMOR = 20;   // armure de base du canon classique ; chaque canon a la sienne (CB.CANNONS[k].armor), l'amélioration « Armure » en ajoute 10 par niveau (× palier)
@@ -537,12 +563,12 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   // world = le monde à terminer avant de pouvoir l'acheter (null = disponible dès le départ).
   CB.CANNONS = {
     classique: { tier: 0, armor: 20, name: 'Canon classique', price: 0, world: null, desc: 'Le bon vieux canon du village.', mods: {}, body: '#2d5a86', trim: '#9bd3ea', base: '#9b633e' },
-    pirate:    { tier: 1, armor: 35, name: 'Canon de pirate', price: 150, world: 'foret', desc: 'Lourd, noir et puissant. Arrr !', mods: { damage: .2 }, body: '#2b2b2b', trim: '#d9b25a', base: '#5c3a21', flag: true, look: 'pirate' },
-    confetti:  { tier: 2, armor: 40, name: 'Canon confetti', price: 400, world: 'manoir', desc: 'Il tire vite, fait pleuvoir l’or, et envoie une volée de confettis aux monstres qui s’approchent trop.', passive: 'Volée de confettis : tous les 5 s, les monstres trop proches en prennent plein la figure et reculent.', mods: { rate: .15, gold: .15 }, body: '#ff4f9a', trim: '#ffe36a', base: '#4fc3ff', stripes: true, look: 'confetti' },
-    turbo:     { tier: 3, armor: 45, name: 'Mitraille turbo', price: 900, world: 'foire', desc: 'Une cadence folle, un peu moins de dégâts.', mods: { rate: .45, damage: -.1 }, body: '#1f9d4a', trim: '#d4ff8a', base: '#2f3a2b', twin: true },
-    lave:      { tier: 4, armor: 60, name: 'Canon de lave', price: 1800, world: 'ruche', desc: 'Chauffé à blanc : gros dégâts et portée.', mods: { damage: .35, range: .15 }, body: '#7a1d10', trim: '#ff8c2a', base: '#3a1a16', glow: '#ff5a1a' },
-    laser:     { tier: 5, armor: 70, name: 'Canon laser', price: 3500, world: 'volcan', desc: 'Technologie spatiale : rapide et précis.', mods: { range: .4, rate: .25, crit: .05 }, body: '#dfe9ff', trim: '#53b7ff', base: '#2a3a55', glow: '#7fd4ff' },
-    jumeau:    { tier: 6, armor: 90, name: 'Canon jumeau', price: 6000, world: 'espace', desc: 'Deux fûts : deux boulets à chaque tir !', mods: { damage: .2 }, shots: 1, body: '#ffd23f', trim: '#1e5bd8', base: '#2a3a55', twin: true },
+    pirate:    { tier: 1, armor: 35, name: 'Canon de pirate', price: 2250, world: 'foret', desc: 'Lourd, noir et puissant. Arrr !', mods: { damage: .2 }, body: '#2b2b2b', trim: '#d9b25a', base: '#5c3a21', flag: true, look: 'pirate' },
+    confetti:  { tier: 2, armor: 40, name: 'Canon confetti', price: 6000, world: 'manoir', desc: 'Il tire vite, fait pleuvoir l’or, et envoie une volée de confettis aux monstres qui s’approchent trop.', passive: 'Volée de confettis : tous les 5 s, les monstres trop proches en prennent plein la figure et reculent.', mods: { rate: .15, gold: .15 }, body: '#ff4f9a', trim: '#ffe36a', base: '#4fc3ff', stripes: true, look: 'confetti' },
+    turbo:     { tier: 3, armor: 45, name: 'Mitraille turbo', price: 13500, world: 'foire', desc: 'Une cadence folle, un peu moins de dégâts.', mods: { rate: .45, damage: -.1 }, body: '#1f9d4a', trim: '#d4ff8a', base: '#2f3a2b', twin: true },
+    lave:      { tier: 4, armor: 60, name: 'Canon de lave', price: 27000, world: 'ruche', desc: 'Chauffé à blanc : gros dégâts et portée.', mods: { damage: .35, range: .15 }, body: '#7a1d10', trim: '#ff8c2a', base: '#3a1a16', glow: '#ff5a1a' },
+    laser:     { tier: 5, armor: 70, name: 'Canon laser', price: 52500, world: 'volcan', desc: 'Technologie spatiale : rapide et précis.', mods: { range: .4, rate: .25, crit: .05 }, body: '#dfe9ff', trim: '#53b7ff', base: '#2a3a55', glow: '#7fd4ff' },
+    jumeau:    { tier: 6, armor: 90, name: 'Canon jumeau', price: 90000, world: 'espace', desc: 'Deux fûts : deux boulets à chaque tir !', mods: { damage: .2 }, shots: 1, body: '#ffd23f', trim: '#1e5bd8', base: '#2a3a55', twin: true },
   };
 
   // Apparence du boulet (cosmétique) : trail = traînée dessinée derrière.
@@ -592,29 +618,41 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
   // Cartes : bonus temporaires offerts (3 au choix) quand on abat un ennemi spécial. Perdus à la fin de la vague.
   // Cartes : chaque prise monte le pouvoir d'un niveau (max 3, sauf les boulets géants). apply(stats, vague, niveau atteint).
   CB.CARDS = {
-    double:   { name: 'Tir double', icon: '🔫', desc: '+1 boulet à chaque tir.', apply: s => { s.shots += 1; } },
-    rapide:   { name: 'Gâchette rapide', icon: '⚡', desc: 'Cadence de tir +35 %.', apply: s => { s.rate *= 1.35; } },
+    double:   { name: 'Tir double', icon: '🔫', lock: true, desc: '+1 boulet à chaque tir.', apply: s => { s.shots += 1; } },
+    rapide:   { name: 'Gâchette rapide', icon: '⚡', desc: 'Cadence de tir +20 %.', apply: s => { s.rate *= 1.2; } },   // 2026-10-31 : +35 % → +20 %
     rafale:   { name: 'Gâchette folle', icon: '🔁', desc: 'Cadence de tir doublée.', max: 1, apply: s => { s.rate *= 2; s.rafale = 1; } },
-    costaud:  { name: 'Gros bras', icon: '💪', desc: 'Dégâts +50 %.', apply: s => { s.damage *= 1.5; } },
+    costaud:  { name: 'Gros bras', icon: '💪', desc: 'Dégâts +30 %.', apply: s => { s.damage *= 1.3; } },   // +50 % → +30 %
     bouclier: { name: 'Bouclier', icon: '🛡️', desc: 'Absorbe les 3 prochains coups.', apply: (s, g) => { g.shield += 3; } },
     vampire:  { name: 'Vampire', icon: '🧛', desc: '+2 PV par ennemi abattu.', apply: s => { s.lifesteal += 2; } },
     tresor:   { name: 'Trésor', icon: '💰', desc: 'Or doublé, puis triplé, puis quadruplé.', apply: (s, g, lvl) => { s.gold *= (lvl + 1) / lvl; } },
-    geant:    { name: 'Boulets géants', icon: '🟣', desc: 'Tes billes grossissent de 30 % (se cumule à l’infini !).', max: Infinity, apply: s => { s.size *= 1.3; } },
+    geant:    { name: 'Boulets géants', icon: '🟣', desc: 'Tes billes grossissent de 30 %.', apply: s => { s.size *= 1.3; } },
     rebond:   { name: 'Ricochet', icon: '🏓', desc: 'Le boulet rebondit vers un ennemi de plus.', apply: s => { s.bounces += 1; } },
     glace:    { name: 'Gel', icon: '🧊', desc: 'Les ennemis sont 25 % plus lents.', apply: s => { s.slow += .25; } },
     soin:     { name: 'Trousse de soins', icon: '🩹', desc: 'Récupère 40 points de vie tout de suite.', apply: (s, g) => { g.hp = Math.min(g.maxHp, g.hp + 40); if (s.anesthesie) g.freezeAll(4 + 1.5 * (s.anesthesie - 1)); } },
     explosif: { name: 'Explosif', icon: '💣', desc: 'Chaque boulet explose à l’impact (plus large à chaque niveau).', apply: (s, g, lvl) => { s.splash = Math.max(s.splash, 5 + 1.5 * (lvl - 1)); } },
-    chance:   { name: 'Trèfle', icon: '🍀', desc: '+20 % de chance de coup critique.', apply: s => { s.crit += .2; } },
+    chance:   { name: 'Trèfle', icon: '🍀', desc: '+10 % de chance de coup critique.', apply: s => { s.crit += .1; } },   // +20 % → +10 %
     aimant:   { name: 'Aimant', icon: '🧲', desc: '+2 pièces d’or par ennemi.', apply: s => { s.goldFlat += 2; } },
-    portee:   { name: 'Longue vue', icon: '🔭', desc: 'Portée +40 %.', apply: s => { s.range *= 1.4; } },
+    portee:   { name: 'Longue vue', icon: '🔭', desc: 'Portée +20 %.', apply: s => { s.range *= 1.2; } },   // +40 % → +20 %
     vitalite: { name: 'Cœur solide', icon: '❤️', desc: 'Vie maximale +10 %.', apply: (s, g) => { const add = Math.max(1, Math.round(s.maxHp * .1)); s.maxHp += add; g.maxHp = s.maxHp; g.hp = Math.min(g.maxHp, g.hp + add); } },
     // ----- Cadeau surprise : parfois dans le tirage, contenu mystère (or, deux cartes de plus, vie pleine, grosse bombe, gel, jauge, carte mystère, boulets énormes) -----
-    surprise: { name: 'Cadeau surprise', icon: '🎁', max: Infinity, instant: true, surprise: true, desc: 'Qui sait ce qu’il y a dedans ?', apply: (s, g) => { g.openSurprise(); } },
+    surprise: { name: 'Cadeau surprise', icon: '🎁', max: Infinity, instant: true, surprise: true, lock: true, desc: 'Qui sait ce qu’il y a dedans ?', apply: (s, g) => { g.openSurprise(); } },
     // ----- Cartes uniques : une seule fois par partie, effet immédiat, sans niveau (instant : pas rejouées quand on passe le portail) -----
-    renfort:  { name: 'Renfort', icon: '🤝', max: 1, instant: true, desc: 'Un membre de la famille vient t’aider.', apply: (s, g) => { g.callGuest(30); } },
+    renfort:  { name: 'Renfort', icon: '🤝', max: 1, instant: true, lock: true, desc: 'Un membre de la famille arrive, lance son pouvoir et t’aide pendant 1 minute.', apply: (s, g) => { g.callGuest(60); } },   // 2026-10-31 : il fait son pouvoir tout de suite, puis repart après 1 minute
     bombe:    { name: 'Grosse bombe', icon: '💥', max: 1, instant: true, desc: 'Tous les monstres à l’écran explosent (sauf le boss).', apply: (s, g) => { g.blastAll(); } },
     jauge:    { name: 'Coup spécial', icon: '⚡', max: 1, instant: true, desc: 'Ta jauge d’attaque spéciale se remplit tout de suite.', apply: (s, g) => { g.fillCharge(); } },
-    horloge:  { name: 'Horloge', icon: '⏱️', max: 1, instant: true, desc: 'Tout le monde est figé pendant 8 s.', apply: (s, g) => { g.freezeAll(8); } },
+    horloge:  { name: 'Horloge', icon: '⏱️', max: 1, instant: true, lock: true, desc: 'Tout le monde est figé pendant 8 s.', apply: (s, g) => { g.freezeAll(8); } },
+    // ----- 2026-10-31 : cartes débloquées en montant de niveau (lock : gratuites une fois débloquées ; power : débloquées, puis achetées au hangar) -----
+    chercheuse: { name: 'Tête chercheuse', icon: '🛰️', lock: true, desc: 'Tes boulets se tournent vers le monstre le plus proche. Niveaux : plus loin et virage plus serré.', apply: (s, g, lvl) => { s.homing = [1, 3, 5][lvl - 1]; } },   // avant : une amélioration permanente du hangar
+    meteore:    { name: 'Pluie de météores', icon: '☄️', power: true, desc: 'Toutes les 8 s, un météore enflammé s’écrase sur un monstre. Niveaux : plus de météores, plus forts.', apply: (s, g, lvl) => { s.meteor = lvl; } },
+    glu:        { name: 'Bille gluante', icon: '🟢', power: true, desc: '10 % de chance de coller de la glu verte : le monstre est 2× plus lent pendant 6 s. Niv. 2 : 15 %, gicle sur 2 voisins. Niv. 3 : 20 %, jusqu’à 6 voisins.', apply: (s, g, lvl) => { s.glue = lvl; } },
+    perforant:  { name: 'Tir perforant', icon: '🗡️', power: true, desc: 'Ton boulet traverse un monstre et frappe celui derrière. Niveaux : traverse 2, puis 4 monstres.', apply: (s, g, lvl) => { s.pierceLeft += lvl === 3 ? 2 : 1; } },
+    deChance:   { name: 'Double chance', icon: '🎲', power: true, max: 1, desc: '15 % de chance qu’une carte choisie gagne un niveau bonus.', apply: s => { s.luckyCard = .15; } },
+    froid:      { name: 'Attaque de glace', icon: '❄️', power: true, desc: '10 % de chance que ton boulet ralentisse le monstre. Niveaux : 15 %, puis 20 %.', apply: (s, g, lvl) => { s.chill = [.1, .15, .2][lvl - 1]; } },
+    braise:     { name: 'Attaque de feu', icon: '🔥', power: true, desc: '10 % de chance d’enflammer 1 monstre pendant 5 s. Niveaux : 15 % et 3 monstres, puis 20 % et 8 monstres.', apply: (s, g, lvl) => { s.ignite = lvl; } },
+    venin:      { name: 'Attaque de poison', icon: '☠️', power: true, desc: '10 % de chance d’empoisonner 1 monstre pendant 5 s ; le poison peut infecter ses voisins. Niveaux : plus de chance, plus de monstres, plus contagieux.', apply: (s, g, lvl) => { s.venom = lvl; } },
+    cuirasse:   { name: 'Cuirasse', icon: '🦺', power: true, desc: '+15 points d’armure (et l’armure se remplit d’autant).', apply: (s, g) => { g.maxArmor += 15; g.armor = Math.min(g.maxArmor, g.armor + 15); } },
+    forgeron:   { name: 'Forgeron', icon: '🔨', power: true, desc: 'Répare l’armure perdue : +1 point toutes les 3 s. Niveaux : +2, puis +3.', apply: (s, g, lvl) => { s.armorFix = lvl; } },
+    bourrasque: { name: 'Bourrasque', icon: '🌬️', power: true, desc: 'Toutes les 5 à 10 s, une bourrasque pousse les monstres vers le fond. Niveaux : plus fort.', apply: (s, g, lvl) => { s.gust = lvl; } },
     // ----- Combos secrets : apparaissent quand les deux ingrédients sont au niveau 3, montent jusqu'au niveau 3 -----
     deluge:       { combo: true, needs: ['double', 'rapide'], name: 'Déluge de plomb', desc: 'Tir en éventail et boulets 25 % plus rapides. Niveaux : +1 boulet et +15 % de cadence.', apply: (s, g, lvl) => { if (lvl === 1) { s.fan = true; s.range *= 1.25; } else { s.shots += 1; s.rate *= 1.15; } } },
     siphon:       { combo: true, needs: ['vampire', 'explosif'], name: 'Siphon de sang', desc: 'Chaque explosion te soigne de 1 PV par ennemi touché. Niveaux : +1 PV et explosion +20 %.', apply: (s, g, lvl) => { s.siphon = lvl; if (lvl > 1) s.splash *= 1.2; } },
@@ -628,6 +666,22 @@ window.CB.VERSION = '1.5';   // à augmenter à chaque mise en ligne (affichée 
     moissonneuse: { combo: true, needs: ['aimant', 'tresor'], name: 'Moissonneuse royale', desc: 'L’or ramassé donne +1 % de dégâts par pièce pendant 5 s. Niveaux : +1 % par pièce et plus longtemps.', apply: (s, g, lvl) => { s.harvest = lvl; } },
   };
   for (const c of Object.values(CB.CARDS)) if (c.max == null) c.max = 3;
+  // Prix au hangar des cartes de pouvoir (power : true), une fois débloquées par le niveau du personnage
+  CB.POWER_CARD_PRICES = { froid: 900, braise: 1200, glu: 1500, perforant: 1800, cuirasse: 2000, venin: 2400, meteore: 3000, forgeron: 3000, bourrasque: 3500, deChance: 4000 };
+  CB.CARD_FX = { meteor: { every: [8, 7, 6], count: [1, 2, 3], dmg: [4, 6, 8], radius: 5 }, glue: { chance: [.1, .15, .2], spread: [0, 2, 6], secs: 6, slow: .5, radius: 9 }, chill: { secs: 4, slow: .4 },
+    ignite: { chance: [.1, .15, .2], count: [1, 3, 8], secs: 5, dps: .6, radius: 10 }, venom: { chance: [.1, .15, .2], count: [1, 3, 8], secs: 5, dps: .5, spread: [.05, .1, .15], radius: 8 }, armorFix: { every: 3 }, gust: { every: [5, 10], push: [4, 7, 10] } };
+  // Montée de niveau du personnage (2026-10-31) : plus de points de stats (la force, la cadence… c'est au hangar). Chaque niveau donne une récompense :
+  // gold = des pièces, choice = une carte de plus à chaque tirage, reroll = un « rebrasser » par tableau, discount = −2 % au hangar,
+  // card = une carte du tirage débloquée, power = une carte de pouvoir à acheter au hangar, item = un objet du hangar débloqué.
+  CB.LEVEL_REWARDS = { 2: { card: 'double' }, 3: { gold: 150 }, 4: { power: 'froid' }, 5: { card: 'horloge' }, 6: { reroll: 1 }, 7: { power: 'braise' }, 8: { gold: 300 }, 9: { discount: 1 }, 10: { item: 'sphere' },
+    11: { card: 'chercheuse' }, 12: { choice: 1 }, 13: { power: 'glu' }, 14: { card: 'renfort' }, 15: { power: 'perforant' }, 16: { discount: 1 }, 17: { item: 'tower' }, 18: { power: 'cuirasse' }, 19: { reroll: 1 }, 20: { card: 'surprise' },
+    21: { power: 'venin' }, 22: { gold: 800 }, 23: { power: 'meteore' }, 24: { discount: 1 }, 25: { power: 'forgeron' }, 26: { gold: 1000 }, 27: { power: 'bourrasque' }, 28: { choice: 1 }, 29: { power: 'deChance' }, 30: { gold: 1500 },
+    33: { discount: 1 }, 36: { reroll: 1 }, 40: { discount: 1 }, 44: { reroll: 1 }, 47: { discount: 1 } };
+  for (let l = 31; l <= 50; l++) if (!CB.LEVEL_REWARDS[l]) CB.LEVEL_REWARDS[l] = { gold: 1500 + (l - 30) * 150 };
+  CB.DISCOUNT_STEP = .02;
+  CB.rewardLevel = (kind, key) => { for (const [l, r] of Object.entries(CB.LEVEL_REWARDS)) if (r[kind] === key) return +l; return null; };   // à quel niveau s'ouvre telle carte / tel objet
+  CB.rewardText = r => r.gold ? r.gold + ' pièces d’or' : r.choice ? '+1 carte à chaque choix' : r.reroll ? '+1 « rebrasser » les cartes' : r.discount ? '−2 % au hangar' : r.card ? 'Carte : ' + CB.CARDS[r.card].name : r.power ? 'Pouvoir : ' + CB.CARDS[r.power].name + ' (à acheter)' : r.item === 'tower' ? 'Tour de défense (hangar)' : r.item ? (CB.ITEMS[r.item] || {}).name + ' (hangar)' : '';
+  CB.rewardIcon = r => r.gold ? 'coin' : r.choice ? '🃏' : r.reroll ? '🔄' : r.discount ? '🏷️' : r.card ? CB.CARDS[r.card].icon : r.power ? CB.CARDS[r.power].icon : r.item === 'tower' ? CB.TOWER.icon : r.item ? (CB.ITEMS[r.item] || {}).icon : '🎁';
   CB.COMBOS = Object.keys(CB.CARDS).filter(k => CB.CARDS[k].combo);
   CB.UNIQUE_CARDS = Object.keys(CB.CARDS).filter(k => CB.CARDS[k].instant && !CB.CARDS[k].surprise);   // cartes à effet immédiat, une seule fois par partie
   // Niveau d'ingrédient exigé par un combo : 3, ou le maximum de la carte s'il est plus bas (Gâchette folle = 1).

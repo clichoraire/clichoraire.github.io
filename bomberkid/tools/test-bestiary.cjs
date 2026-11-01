@@ -12,7 +12,7 @@ for(const b of BK.BESTIARY){
  for(const shot of W.shots)ok([shot.x,shot.y,shot.z].every(Number.isFinite),b.name+' projectile');
  for(const state of ['walk','hidden'])BK.sprites.drawEnemy(ctx,b.id,{s:60,t:2,state,hurt:1,warning:true});
  if(!e.dead){e.state='walk';e.hurt=0;e.z=.4;W.hurtEnemy(e,p,999,'bomb');ok(e.dead,b.name+' bomb vulnerability');}
- const E=new BK.Editor({name:'Test',cols:13,rows:11,theme:'garden',base:'.'});E.item=BK.EDITOR_TABS.find(t=>t.id==='bestiary').items.find(i=>i.enemy===b.id);E.paint(4,5,true);const json=JSON.parse(E.code());ok(json.enemies.some(e=>e.type===b.id),b.name+' exported');
+ const E=new BK.Editor({name:'Test',cols:13,rows:11,theme:'garden',base:'.'});E.item=BK.EDITOR_TABS.find(t=>t.id==='ennemis').items.find(i=>i.enemy===b.id);E.paint(4,5,true);const json=JSON.parse(E.code());ok(json.enemies.some(e=>e.type===b.id),b.name+' exported');
 }
 {const{W,p}=make(),e=W.addEnemy('alt_creeper',6,5);tick(W,.7);ok(e.fuse>0,'creeper warns');p.x=10.5;tick(W,.05);ok(e.fuse===0&&!e.dead,'creeper cancels when escaped');p.x=e.x+.5;p.y=e.y;tick(W,1.6);ok(e.dead&&W.flames.length>0,'creeper explosion');}
 {const{W,p}=make(),e=W.addEnemy('alt_bomb_soldier',4,5);tick(W,3);ok(W.bombs.some(b=>b.owner===e),'soldier throws real bomb');}

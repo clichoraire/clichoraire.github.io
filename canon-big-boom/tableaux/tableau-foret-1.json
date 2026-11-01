@@ -2,7 +2,7 @@
   "slot": "foret-1",
   "world": "foret",
   "name": "Niveau 1-1",
-  "text": "Abats 100 ennemis !",
+  "text": "",
   "type": "kill",
   "goal": 100,
   "seconds": 300,
@@ -28,10 +28,10 @@
       "kinds": [
         {
           "type": "bat",
-          "count": 3
+          "count": 8
         }
       ],
-      "every": 2,
+      "every": 1.1,
       "at": null,
       "elite": false
     },
@@ -39,21 +39,28 @@
       "kinds": [
         {
           "type": "bat",
-          "count": 12
+          "count": 20
+        }
+      ],
+      "every": 1,
+      "at": null,
+      "elite": false,
+      "rel": null,
+      "left": null
+    },
+    {
+      "kinds": [
+        {
+          "type": "bat",
+          "count": 18
+        },
+        {
+          "type": "owl",
+          "count": 3,
+          "elite": false
         }
       ],
       "every": 0.8,
-      "at": null,
-      "elite": false
-    },
-    {
-      "kinds": [
-        {
-          "type": "bat",
-          "count": 15
-        }
-      ],
-      "every": 0.5,
       "at": null,
       "elite": false
     },
@@ -66,22 +73,31 @@
       ],
       "every": 0,
       "at": null,
-      "elite": false
+      "elite": false,
+      "rel": -2,
+      "left": null
     },
     {
       "kinds": [
         {
           "type": "bat",
-          "count": 15
+          "count": 20
         },
         {
           "type": "owl",
-          "count": 3
+          "count": 6
+        },
+        {
+          "type": "ghost",
+          "count": 5,
+          "elite": false
         }
       ],
       "every": 0.5,
       "at": null,
-      "elite": false
+      "elite": false,
+      "rel": -2,
+      "left": null
     },
     {
       "kinds": [
@@ -92,17 +108,6 @@
         {
           "type": "owl",
           "count": 10
-        }
-      ],
-      "every": 0.5,
-      "at": null,
-      "elite": false
-    },
-    {
-      "kinds": [
-        {
-          "type": "bat",
-          "count": 120
         }
       ],
       "every": 0.3,

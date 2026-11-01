@@ -5,21 +5,24 @@
   const D = CB.Debug = {};
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const TYPES = { endless: 'Nuit sans fin (infini)', kill: 'Abattre N ennemis', survive: 'Survivre X secondes', killTimed: 'Abattre N avant la fin du chrono', boss: 'Boss', sink: 'Couler N bateaux (monde des pirates)', cibles: '🎯 Mini-jeu : tir aux cibles', brigands: '🤠 Mini-jeu : brigand et civils' };
+  const TYPES = { endless: 'Nuit sans fin (infini)', swarm: 'Nuée : tenir X secondes (étoiles au temps, bombes, bateau volant)', kill: 'Abattre N ennemis', survive: 'Survivre X secondes', killTimed: 'Abattre N avant la fin du chrono', boss: 'Boss', sink: 'Couler N bateaux (monde des pirates)', cibles: '🎯 Mini-jeu : tir aux cibles', brigands: '🤠 Mini-jeu : brigand et civils' };
   const SPEEDS = [.25, .5, 1, 2, 4];
 
   D.fromSlot = (wi, vi) => {
     const w = CB.WORLDS[wi], d = CB.waveDef(wi, vi), cw = (CB.CUSTOM_WAVES || {})[w.id + '-' + (vi + 1)]; if (cw) return JSON.parse(JSON.stringify(cw));   // tableau déjà relié : on repart de son JSON
-    return { slot: w.id + '-' + (vi + 1), world: w.id, name: d.name, text: d.text, type: d.type, goal: d.goal || 10, seconds: d.seconds || 40, density: d.density || 1,
-      scene: w.scene || w.id, sky: w.sky.slice(), ground: w.ground, space: !!w.space, random: { enabled: true, enemies: [...new Set(w.enemies)] }, spawns: [], sequence: d.sequence ? JSON.parse(JSON.stringify(d.sequence)) : [], boss: d.type === 'boss' ? w.boss : null, hpScale: 1, speedScale: 1, maxAlive: d.maxAlive || 0, chestAt: 0, chestEvery: 0, portalAt: 0, cibles: d.cibles ? JSON.parse(JSON.stringify(CB.minigame('cibles', d.cibles))) : undefined, brigands: d.brigands ? JSON.parse(JSON.stringify(CB.minigame('brigands', d.brigands))) : undefined };
+    return { official: true, slot: w.id + '-' + (vi + 1), world: w.id, name: d.name, text: d.text, type: d.type, goal: d.goal || 10, seconds: d.seconds || 40, density: d.density || 1,
+      scene: w.scene || w.id, sky: w.sky.slice(), ground: w.ground, space: !!w.space, random: { enabled: true, enemies: [...new Set(w.enemies)] }, spawns: [], sequence: d.sequence ? JSON.parse(JSON.stringify(d.sequence)) : [], boss: d.type === 'boss' ? w.boss : null, hpScale: 1, speedScale: 1, maxAlive: d.maxAlive || 0, swarm: d.swarm ? JSON.parse(JSON.stringify(d.swarm)) : undefined, chestAt: 0, chestEvery: 0, portalAt: 0, cibles: d.cibles ? JSON.parse(JSON.stringify(CB.minigame('cibles', d.cibles))) : undefined, brigands: d.brigands ? JSON.parse(JSON.stringify(CB.minigame('brigands', d.brigands))) : undefined };
   };
-  D.blank = (wi, vi) => Object.assign(D.fromSlot(wi, vi), { name: 'Nouveau tableau', text: 'Abats 10 ennemis !', type: 'kill', goal: 10, random: { enabled: false, enemies: [] },
+  D.blank = (wi, vi) => Object.assign(D.fromSlot(wi, vi), { official: false, name: 'Nouveau tableau', text: 'Abats 10 ennemis !', type: 'kill', goal: 10, random: { enabled: false, enemies: [] },
     spawns: [], sequence: [{ kinds: [{ type: 'bat', count: 3, elite: false }], every: .6, at: null, rel: null }], boss: null, spread: 1 });
   // Anciens JSON (spawns = paquets répétés) : convertis en séquence de groupes, une seule façon de faire dans l'éditeur.
-  D.normalize = c => { for (const t of ['cibles', 'brigands']) if (c[t] || c.type === t) { c[t] = CB.minigame(t, c[t]); while (c[t].medals.length < 4) c[t].medals.push(1); } if (!Array.isArray(c.sequence)) c.sequence = []; if (Array.isArray(c.spawns) && c.spawns.length) { for (const s of c.spawns) for (let p = 0; p < Math.max(1, Math.round(+s.packs || 1)); p++) c.sequence.push({ kinds: [{ type: s.type, count: Math.max(1, Math.round(+s.count || 1)) }], every: +s.every || .6, at: Math.max(0, +s.at || 0) + p * (+s.interval || 5), elite: !!s.elite }); c.spawns = []; } for (const g of c.sequence) { if (g.at != null && g.rel != null) g.rel = null; if (g.elite) { for (const k of g.kinds || []) k.elite = true; g.elite = false; } g.kinds = (g.kinds || []).filter(k => k && (CB.ENEMIES[k.type] || (String(k.type).startsWith('boss:') && CB.BOSSES[k.type.slice(5)]))); if (g.every == null) g.every = .6; } return c; };
-  D.open = def => { const app = CB.app; app.debug = true; app.custom = D.normalize(def); app.startWave(app.custom); };
+  D.normalize = c => { for (const t of ['cibles', 'brigands']) if (c[t] || c.type === t) { c[t] = CB.minigame(t, c[t]); while (c[t].medals.length < 4) c[t].medals.push(1); } if (!Array.isArray(c.sequence)) c.sequence = []; if (Array.isArray(c.spawns) && c.spawns.length) { for (const s of c.spawns) for (let p = 0; p < Math.max(1, Math.round(+s.packs || 1)); p++) c.sequence.push({ kinds: [{ type: s.type, count: Math.max(1, Math.round(+s.count || 1)) }], every: +s.every || .6, at: Math.max(0, +s.at || 0) + p * (+s.interval || 5), elite: !!s.elite }); c.spawns = []; } for (const g of c.sequence) { if (g.at != null && g.rel != null) g.rel = null; if ((g.at != null || g.rel != null) && g.left != null) g.left = null; if (g.elite) { for (const k of g.kinds || []) k.elite = true; g.elite = false; } g.kinds = (g.kinds || []).filter(k => k && (CB.ENEMIES[k.type] || (String(k.type).startsWith('boss:') && CB.BOSSES[k.type.slice(5)]))); if (g.every == null) g.every = .6; } return c; };
+  // official : tableau sans JSON relié (ex. 1-2, la nuée) : le Debug lance le vrai tableau (null = la définition du jeu) ;
+  // « Appliquer » le transforme en tableau de l'éditeur avec tes changements (avant, il ouvrait tout de suite une copie approximative).
+  const run = c => CB.app.startWave(c && c.official ? null : c);
+  D.open = def => { const app = CB.app; app.debug = true; app.custom = D.normalize(def); run(app.custom); };
   D.close = () => { const app = CB.app; D.hide(false); app.debug = false; app.custom = null; app.show('map'); };
-  D.restart = () => CB.app.startWave(CB.app.custom);
+  D.restart = () => run(CB.app.custom);
 
   // Les champs visuels s'appliquent tout de suite à la vague en cours ; le reste demande « Appliquer ».
   const live = () => { const w = CB.app.wave, c = CB.app.custom; if (!w || !c) return; Object.assign(w.world, { scene: c.scene, sky: c.sky, ground: c.ground, space: !!c.space }); Object.assign(w.def, { goal: +c.goal || 10, seconds: +c.seconds || 40, name: c.name, text: c.text }); if (CB.app.refreshWaveTag) CB.app.refreshWaveTag(); };
@@ -89,14 +92,14 @@
       const menuHtml = i => '<div class="menu"><div class="dbg-bar"><input class="search" id="dbg-mfilter" placeholder="🔍 Filtrer…" value="' + esc(D.filter) + '"><button data-act="closemenu">✕</button></div><div class="mlist">'
         + groups().map(([id, title, list]) => { const shown = list.filter(k => !f || nameOf(k).toLowerCase().includes(f) || k.includes(f)); if (!shown.length) return ''; return '<div class="mhead">' + title + '</div>' + shown.map(k => '<button type="button" class="mrow" data-pick="' + k + '" data-g="' + i + '"><canvas width="28" height="28" data-icon="' + k + '"></canvas><span class="nm">' + esc(nameOf(k)) + '</span><span class="stars">' + D.power(k) + '</span></button>').join(''); }).join('') + '</div></div>';
       body = '<div class="dbg-bar"><b>Ordre des arrivées</b><span class="count">' + seq.length + ' groupe' + (seq.length > 1 ? 's' : '') + '</span></div><div class="seq">'
-        + (seq.length ? seq.map((g, i) => { const mode = g.at != null ? 'at' : g.rel != null ? 'rel' : 'auto', when = mode === 'at' ? g.at : mode === 'rel' ? g.rel : '';
+        + (seq.length ? seq.map((g, i) => { const mode = g.at != null ? 'at' : g.rel != null ? 'rel' : g.left != null ? 'left' : 'auto', when = mode === 'at' ? g.at : mode === 'rel' ? g.rel : mode === 'left' ? g.left : '';
           return '<div class="seq-card" draggable="true" data-seq="' + i + '"><div class="sp-head"><span class="drag" title="Glisser pour déplacer">≡</span><b>#' + (i + 1) + '</b>'
           + '<span class="mini"><button data-move="' + i + ':-1" title="Monter"' + (i ? '' : ' disabled') + '>▲</button><button data-move="' + i + ':1" title="Descendre"' + (i < seq.length - 1 ? '' : ' disabled') + '>▼</button></span>'
           + '<span class="status"></span><button class="sp-del" data-gdel="' + i + '" title="Supprimer">✕</button></div>'
           + '<div class="kinds">' + g.kinds.map((k, j) => '<span class="kind"><canvas width="28" height="28" data-icon="' + k.type + '"></canvas>' + esc(nameOf(k.type)) + ' ×<input type="number" data-g="' + i + '" data-kind="' + j + '" value="' + k.count + '" min="1">' + (k.type.startsWith('boss:') ? '' : '<button class="kelite' + (k.elite ? ' on' : '') + '" data-kelite="' + i + ':' + j + '" title="' + (k.elite ? 'Élites (clique : normaux)' : 'Normaux (clique : élites)') + '">' + (k.elite ? '⭐ élite' : '☆') + '</button>') + '<button data-kdel="' + i + ':' + j + '" title="Enlever">×</button></span>').join('')
           + '<button class="add' + (menu === i ? ' on' : '') + '" data-add="' + i + '">➕ Ajouter un monstre</button></div>' + (menu === i ? menuHtml(i) : '')
-          + '<div class="row timing">' + fld('Départ', '<select data-g="' + i + '" data-f="mode"><option value="auto"' + (mode === 'auto' ? ' selected' : '') + '>Après l’élimination du groupe d’avant</option><option value="at"' + (mode === 'at' ? ' selected' : '') + '>À (s) · temps absolu</option><option value="rel"' + (mode === 'rel' ? ' selected' : '') + '>Relatif au groupe d’avant (± s)</option></select>')
-          + (mode === 'auto' ? '' : fld(mode === 'at' ? 'À (s)' : '± s après la fin de ses arrivées', '<input type="number" data-g="' + i + '" data-f="when" value="' + when + '" step=".5"' + (mode === 'at' ? ' min="0"' : '') + '>'))
+          + '<div class="row timing">' + fld('Départ', '<select data-g="' + i + '" data-f="mode"><option value="auto"' + (mode === 'auto' ? ' selected' : '') + '>Après l’élimination du groupe d’avant</option><option value="at"' + (mode === 'at' ? ' selected' : '') + '>À (s) · temps absolu</option><option value="rel"' + (mode === 'rel' ? ' selected' : '') + '>Relatif au groupe d’avant (± s)</option><option value="left"' + (mode === 'left' ? ' selected' : '') + '>Quand il reste N ennemis du groupe d’avant</option></select>')
+          + (mode === 'auto' ? '' : fld(mode === 'at' ? 'À (s)' : mode === 'left' ? 'Il en reste (ennemis)' : '± s après la fin de ses arrivées', '<input type="number" data-g="' + i + '" data-f="when" value="' + when + '" step="' + (mode === 'left' ? '1' : '.5') + '"' + (mode === 'rel' ? '' : ' min="0"') + '>'))
           + fld('Écart (s)', '<input type="number" data-g="' + i + '" data-f="every" value="' + g.every + '" step=".1" min="0">') + '</div></div>'; }).join('')
           : '<p class="dbg-help">Aucun groupe : clique « Nouveau groupe ».</p>') + '</div>'
         + '<div class="dbg-bar"><button class="primary" data-act="newgroup">＋ Nouveau groupe</button></div>'; }
@@ -104,6 +107,7 @@
       + '<p class="dbg-help">Le JSON se télécharge dans ton dossier de téléchargements (et se copie dans le presse-papier) : dépose-le dans <b>CanonBigBoom/tableaux/</b>. Pour le relier à la carte, voir tableaux/README.md.</p>';
     el.innerHTML = '<div class="dbg-top"><div class="dbg-head"><b>🐞 DEBUG · ' + esc(c.slot || 'nouveau') + '</b><span class="hd-btns"><button data-act="hide" title="Cacher le panneau pendant le test">⟩ Cacher</button><button class="dbg-x" data-act="close" title="Quitter">✕</button></span></div>'
       + '<div class="dbg-bar"><button data-act="freeze" class="' + (app.W.freeze ? 'on' : '') + '">' + (app.W.freeze ? '▶ Reprendre' : '⏸ Pause') + '</button><button data-act="restart">↻ Recommencer</button><span class="seg">' + SPEEDS.map(s => '<button data-speed="' + s + '" class="' + ((app.W.speed || 1) === s ? 'on' : '') + '">' + s + '×</button>').join('') + '</span></div>'
+      + (c.official ? '<p class="dbg-help">▶ C’est le vrai tableau du jeu. « Appliquer » le relance avec tes changements, en tableau de l’éditeur.</p>' : '')
       + '<div class="dbg-stats" id="dbg-status"></div><div class="dbg-seq" id="dbg-seq"></div>'
       + '<nav class="dbg-tabs">' + TABS.map(([id, ico, label]) => '<button data-tab="' + id + '" class="' + (D.tab === id ? 'on' : '') + '">' + ico + '<small>' + label + '</small></button>').join('') + '</nav></div>'
       + '<div class="dbg-body">' + body + '</div>'
@@ -124,8 +128,8 @@
     const flt = el.querySelector('#dbg-filter'); if (flt) { flt.oninput = () => { D.filter = flt.value; const pos = flt.selectionStart; D.render(); const f2 = el.querySelector('#dbg-filter'); if (f2) { f2.focus(); f2.setSelectionRange(pos, pos); } }; }
     const seq = c.sequence || (c.sequence = []);
     el.querySelectorAll('[data-g]').forEach(inp => inp.onchange = () => { const g = seq[+inp.dataset.g]; if (!g) return; if (inp.dataset.kind != null) { const k = g.kinds[+inp.dataset.kind]; if (k) k.count = Math.max(1, Math.round(+inp.value || 1)); return; } const f = inp.dataset.f;
-      if (f === 'mode') { const v = g.at != null ? g.at : g.rel != null ? g.rel : 0; g.at = inp.value === 'at' ? Math.max(0, v) : null; g.rel = inp.value === 'rel' ? v : null; D.render(); return; }
-      if (f === 'when') { const v = inp.value === '' || isNaN(+inp.value) ? 0 : +inp.value; if (g.at != null) g.at = Math.max(0, v); else if (g.rel != null) g.rel = v; return; }
+      if (f === 'mode') { const v = g.at != null ? g.at : g.rel != null ? g.rel : g.left != null ? g.left : 0; g.at = inp.value === 'at' ? Math.max(0, v) : null; g.rel = inp.value === 'rel' ? v : null; g.left = inp.value === 'left' ? Math.max(0, Math.round(v)) : null; D.render(); return; }   // left : le groupe part quand il ne reste que N ennemis du groupe d'avant
+      if (f === 'when') { const v = inp.value === '' || isNaN(+inp.value) ? 0 : +inp.value; if (g.at != null) g.at = Math.max(0, v); else if (g.rel != null) g.rel = v; else if (g.left != null) g.left = Math.max(0, Math.round(v)); return; }
       g[f] = f === 'elite' ? inp.checked : (inp.value === '' || isNaN(+inp.value) ? .6 : Math.max(0, +inp.value)); });   // écart 0 : tout le groupe d'un coup
     el.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => { seq.splice(+b.dataset.gdel, 1); D.menu = null; D.render(); });
     el.querySelectorAll('[data-kelite]').forEach(b => b.onclick = () => { const [gi, ki] = b.dataset.kelite.split(':').map(Number), k = (seq[gi] || { kinds: [] }).kinds[ki]; if (k) { k.elite = !k.elite; D.render(); } });   // élite par sorte, pas par groupe
@@ -145,7 +149,8 @@
     el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
       const a = b.dataset.act;
       if (a === 'freeze') { app.W.freeze = !app.W.freeze; D.render(); }
-      else if (a === 'restart' || a === 'apply') D.restart();
+      else if (a === 'restart') D.restart();
+      else if (a === 'apply') { if (c.official) { c.official = false; D.render(); } D.restart(); }
       else if (a === 'newgroup') { seq.push({ kinds: [], every: .6, at: null, rel: null }); D.menu = seq.length - 1; D.filter = ''; D.render(); const cards = el.querySelectorAll('.seq-card'); const last = cards[cards.length - 1]; if (last) last.scrollIntoView({ block: 'nearest' }); const m = el.querySelector('#dbg-mfilter'); if (m) m.focus(); }
       else if (a === 'closemenu') { D.menu = null; D.filter = ''; D.render(); }
       else if (a === 'hide') D.hide(true);
@@ -167,7 +172,7 @@
     st.innerHTML = chip('⏱', w.time.toFixed(1) + ' s', 'temps') + chip('👾', w.enemies.length, 'à l’écran') + chip('💥', w.kills, 'abattus') + chip('❤️', Math.ceil(w.hp), 'PV', w.hp < w.maxHp * .3 ? 'low' : '') + (w.over ? chip(w.won ? '✔' : '✖', w.won ? 'GAGNÉ' : 'PERDU', w.won ? '' : w.reason, w.won ? 'win' : 'lose') : '');
   };
   D.save = () => {
-    const c = CB.app.custom, json = JSON.stringify(c, null, 2), name = 'tableau-' + (c.slot || 'nouveau') + '.json';
+    const c = CB.app.custom, json = JSON.stringify(Object.assign({}, c, { official: undefined }), null, 2), name = 'tableau-' + (c.slot || 'nouveau') + '.json';
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     try { navigator.clipboard && navigator.clipboard.writeText(json); } catch (e) { }
   };

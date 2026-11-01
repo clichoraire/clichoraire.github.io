@@ -1,15 +1,18 @@
-// Silhouettes dessinées en canvas, contours doux et couleurs du jeu.
+// Silhouettes dessinées en canvas, sans contour, modelées par la lumière comme les monstres de base.
 (function(BK){
 const S=BK.sprites,TAU=Math.PI*2;
+const tint=(hex,k)=>{let h=hex.slice(1);if(h.length===3)h=h.split('').map(x=>x+x).join('');const n=parseInt(h,16),f=v=>Math.max(0,Math.min(255,Math.round(v*k)));return 'rgb('+f(n>>16)+','+f(n>>8&255)+','+f(n&255)+')';};
 S.drawBestiary=function(ctx,type,o={}){
  const E=BK.ENEMIES[type],b=E.bestiary,t=o.t||0,c=o.hurt>0&&Math.floor(t*20)%2?'#fff':b.color,dark='#343348',light='#fff0c8';
  ctx.save();const scale=(o.s||60)/100*(E.boss?1.65:b.id==='alt_gargantuan_ball'?1.5:1);ctx.scale(o.flip?-scale:scale,scale);ctx.lineWidth=3;ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle=dark;
  if(o.state==='hidden'){ctx.globalAlpha*=.5;oval(0,-3,24,6,'#ad8356');ctx.restore();return;}
  if(b.action==='creeper'&&o.charging)ctx.globalAlpha=.65+.35*Math.sin(t*35);
  const bob=Math.sin(t*4)*2;ctx.translate(0,bob);
- function oval(x,y,rx,ry,col){ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,TAU);ctx.fill();ctx.stroke();}
- function box(x,y,w,h,col,r=5){ctx.fillStyle=col;S.rr(ctx,x,y,w,h,r);ctx.fill();ctx.stroke();}
- function poly(pts,col){ctx.fillStyle=col;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();ctx.stroke();}
+ // Comme Ballounet et Gluant : pas de contour, un dégradé doux (clair en haut, plus foncé en bas) et un reflet sur les rondeurs.
+ function paint(col,y0,y1){if(typeof col!=='string'||col[0]!=='#'||col===dark)return col;const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,tint(col,1.16));g.addColorStop(1,tint(col,.8));return g;}
+ function oval(x,y,rx,ry,col){ctx.fillStyle=paint(col,y-ry,y+ry);ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,TAU);ctx.fill();if(rx>=12&&ry>=10&&col!=='#fff'&&col!==dark){ctx.fillStyle='rgba(255,255,255,.32)';ctx.beginPath();ctx.ellipse(x-rx*.35,y-ry*.45,rx*.28,ry*.18,-.5,0,TAU);ctx.fill();}}
+ function box(x,y,w,h,col,r=5){ctx.fillStyle=paint(col,y,y+h);S.rr(ctx,x,y,w,h,r);ctx.fill();}
+ function poly(pts,col){const ys=pts.map(q=>q[1]);ctx.fillStyle=paint(col,Math.min(...ys),Math.max(...ys));ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();}
  function line(pts,col=dark,w=3){ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();ctx.lineWidth=3;ctx.strokeStyle=dark;}
  function eye(x,y,r=7){oval(x,y,r,r*1.12,'#fff');oval(x+1,y+1,r*.4,r*.6,dark);}
  function eyes(y=-42){eye(-10,y,6);eye(10,y,6);line([[-16,y-9],[-5,y-6]]);line([[5,y-6],[16,y-9]]);}

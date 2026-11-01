@@ -250,6 +250,7 @@
           if (e.type === 'shamanHeal') this.toast('Le shaman soigne son orque. Occupe-toi du shaman !', 2.5);
           if(e.type==='snailGrown')this.toast('🐌 Ton escargot est devenu adulte !',4);
           if(e.type==='snailBorn')this.toast('🐌 Un tout petit bébé escargot est né dans le terrarium !',4);
+          if (e.type === 'petFed' && e.player === p) { this.syncInv(); BK.saveAdventure(this.charId, this.save); this.toast('Miam ! ' + e.animal.def.name + ' a mangé : ' + BK.ITEMS[e.food].name.toLowerCase() + '.', 2); }
           if (e.type === 'carrotPicked' && e.player === p) this.toast('Une carotte ! Q ou W pour la lancer devant un lapin.', 3);
         }
         BK.playTime = (BK.playTime || 0) + dt; this.saveT = (this.saveT || 0) + dt; if (this.saveT > 5) { this.saveT = 0; try { localStorage.setItem('bk.playtime', String(Math.round(BK.playTime))); } catch (err) { } if (this.goldDirty) { this.goldDirty = false; BK.saveAdventure(this.charId, this.save); } }

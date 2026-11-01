@@ -96,8 +96,8 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
 {
   const E = new BK.Editor({ name: 'Test', cols: 12, rows: 9, theme: 'garden', base: '~' });
   const pick = (tab, key, val) => { E.item = BK.EDITOR_TABS.find(t => t.id === tab).items.find(i => i[key] === val); };
-  pick('decor', 'ch', '.'); for (let r = 1; r < 8; r++) for (let c = 1; c < 11; c++) E.paint(c, r, c === 1 && r === 1);
-  pick('decor', 'ch', '~'); E.paint(6, 4, true); pick('objets', 'ch', 'A'); E.paint(8, 4, true); pick('objets', 'ch', 'a'); E.paint(9, 2, true);
+  pick('sols', 'ch', '.'); for (let r = 1; r < 8; r++) for (let c = 1; c < 11; c++) E.paint(c, r, c === 1 && r === 1);
+  pick('sols', 'ch', '~'); E.paint(6, 4, true); pick('objets', 'ch', 'A'); E.paint(8, 4, true); pick('objets', 'ch', 'a'); E.paint(9, 2, true);
   pick('objets', 'ch', '1'); E.paint(2, 7, true); pick('objets', 'ch', '1'); E.paint(2, 6, true); pick('objets', 'ch', 'G'); E.paint(10, 1, true);
   pick('ennemis', 'enemy', 'ballon'); E.paint(5, 2, true); pick('outils', 'tool', 'erase'); E.paint(5, 2, true); pick('ennemis', 'enemy', 'gluant'); E.paint(4, 6, true);
   const rows = E.rows(); ok(rows[6][2] === '1' && rows[7][2] === '.', 'le départ est unique'); ok(rows[4][6] === '~' && rows[4][8] === 'A' && rows[2][9] === 'a' && rows[1][10] === 'G', 'décor, cible, porte et but placés');
@@ -173,7 +173,7 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
 {
   const E = new BK.Editor({ name: 'niv', cols: 10, rows: 8, theme: 'garden', base: '~' });
   const pick = (tab, key, val) => { E.item = BK.EDITOR_TABS.find(t => t.id === tab).items.find(i => i[key] === val); };
-  pick('decor', 'ch', ';'); for (let r = 2; r < 6; r++) for (let c = 2; c < 8; c++) E.paint(c, r, c === 2 && r === 2);
+  pick('sols', 'ch', ','); E.floorLevel = 1; for (let r = 2; r < 6; r++) for (let c = 2; c < 8; c++) E.paint(c, r, c === 2 && r === 2); E.floorLevel = 'keep';
   pick('objets', 'ch', 'k'); E.paint(4, 3, true); pick('blocs', 'ch', 'x'); E.paint(6, 4, true);
   ok(E.props['4,3'].lv === 1 && E.world.hAt(4, 3) > 0.5 && E.world.terrain[E.world.idx(4, 3)] === 1 && E.world.hAt(6, 4) > 0.5, 'carte et buisson posés sur le plateau restent en haut');
   const W2 = new BK.World({ map: ['~~~~~~', '~;;;;~', '~;k;;~', '~;;;;~', '~~~~~~'], theme: 'garden', mode: 'adventure', hearts: true, explore: true, itemChance: 0 });
@@ -409,7 +409,7 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
 // 29. un objet posé sur un pont garde le pont sous lui
 {
   const E = new BK.Editor({ name: 'p', cols: 6, rows: 3, theme: 'forest', base: '~' }); const pick = (tab, key, val) => { E.item = BK.EDITOR_TABS.find(t => t.id === tab).items.find(it => it[key] === val); };
-  pick('decor', 'ch', '='); for (let c = 0; c < 6; c++) E.paint(c, 1, c === 0); pick('objets', 'ch', '$'); E.paint(3, 1, true);
+  pick('sols', 'ch', '='); for (let c = 0; c < 6; c++) E.paint(c, 1, c === 0); pick('objets', 'ch', '$'); E.paint(3, 1, true);
   ok(E.props['3,1'].floor === '=' && E.world.terrain[E.world.idx(3, 1)] === 3, 'la pièce posée sur le pont laisse le pont dessous (terrain ' + E.world.terrain[E.world.idx(3, 1)] + ')');
 }
 
@@ -1093,7 +1093,7 @@ for(const safe of [true,false]) {
 
 // Navigation en barque, embarquement et débarquement.
 {
- const E=new BK.Editor({cols:9,rows:7,theme:'garden',base:'~'});E.item=BK.EDITOR_TABS[0].items.find(i=>i.boat);E.paint(3,3,true);const data=JSON.parse(JSON.stringify(E.data()));data.grid[3]='..1~~~~~~';
+ const E=new BK.Editor({cols:9,rows:7,theme:'garden',base:'~'});E.item=BK.EDITOR_TABS.find(t=>t.id==='decor').items.find(i=>i.boat);E.paint(3,3,true);const data=JSON.parse(JSON.stringify(E.data()));data.grid[3]='..1~~~~~~';
  const W=new BK.World({map:data.grid,props:data.props,theme:'garden',mode:'adventure',explore:true,hearts:true});const p=W.addPlayer(BK.charById('adam'),2,3),b=W.boats[0];
  ok(b&&W.tAt(3,3)===E.world.tAt(3,3),'barque placée sur l’eau conservée après export');
  ok(W.nearbyBoat(p)===b&&W.useBoat(p)&&p.boat===b&&b.rider===p,'embarquer depuis la rive');
@@ -1974,3 +1974,38 @@ for(const source of ['bomb','projectile']){
  const before=p.inv.length;ok(!W.feedPet(p,e,'fish')&&p.inv.length===before,'sac vide : aucun repas gratuit');
 }
 console.log('✔ ' + n + ' vérifications réussies');
+
+// Faon : après deux caresses, Entrée/Shift donne la carotte ; Q/W près de lui la donne au lieu de la lancer.
+{
+ const E=new BK.Editor({cols:11,rows:9,theme:'garden',base:',',enemies:[{type:'wild_faon',c:4,r:4}]}),W=E.world,p=W.addPlayer(BK.charById('adam'),3,4),e=W.enemies[0];
+ p.inv=[{type:'carrot',n:2,perm:2}];W.petAnimal(p);W.time+=1.3;W.petAnimal(p);W.time+=1.3;
+ ok(W.petAnimal(p)&&e.bond.meals===1&&p.inv[0].n===1,'troisième interaction : le faon mange la carotte');
+ ok(W.useItem(p,0)&&!p.inv.length&&!W.fishes.length,'carotte du sac donnée au faon au lieu d’être lancée');
+}
+// Mur de briques rouge brique par défaut, même au château ; couleur choisie dans l’éditeur.
+{
+ const W=new BK.World({map:['W.W'],props:{'2,0':{brickColor:'#3366cc'}},theme:'castle',mode:'adventure',explore:true,itemChance:0});
+ ok(W.brickColors(0,0).front===BK.BRICK_COLOR&&W.brickColors(2,0).front==='#3366cc','couleur des briques');
+ const Ed=new BK.Editor({cols:5,rows:5,theme:'castle',base:'.'});Ed.item=BK.EDITOR_TABS.flatMap(t=>t.items).find(i=>i.ch==='W');Ed.brickColor='#22aa55';Ed.paint(1,1,true);ok(Ed.props['1,1'].brickColor==='#22aa55','éditeur : couleur des briques');
+ Ed.brickColor=BK.BRICK_COLOR;Ed.paint(2,2,true);ok(!Ed.props['2,2']?.brickColor,'rouge brique par défaut sans propriété');
+}
+console.log('Faon nourri et couleur des briques : ok');
+
+// Pièce posée sur l'eau : l'eau reste, et on la ramasse en bateau. Pipette : copie tuile + hauteur, puis collage en glissant.
+{
+ const items=BK.EDITOR_TABS.flatMap(t=>t.items),E=new BK.Editor({name:'eau',theme:'garden',cols:9,rows:5,grid:Array(5).fill(',,~~~~~,,'),props:{'3,2':{boat:true},'1,1':{lv:1}}});
+ E.item=items.find(i=>i.ch==='$');E.paint(5,2,true);ok(E.grid[2][5]==='$'&&E.world.tAt(5,2)===2,'pièce sur l’eau : l’eau reste');
+ const W=E.world,p=W.addPlayer(BK.charById('adam'),3,2);const b=W.boats[0];p.boat=b;b.rider=p;p.input={dx:1,dy:0};const gold=p.coins||0;
+ for(let i=0;i<90&&W.items.length;i++)W.updateBoat(p,1/60);ok(!W.items.length,'pièce ramassée en bateau');
+ E.item={tool:'pick'};E.paint(1,1,true);ok(E.item.tool==='paste','pipette → collage');E.paint(7,3,true);E.paint(8,3,false);ok(E.props['7,3']?.lv===1&&E.props['8,3']?.lv===1&&E.grid[3][8]===',','tuile et hauteur collées');
+ E.item={tool:'pick'};E.paint(0,0,true);E.paint(0,0,true);ok(E.item.tool==='paste','pipette sur une case simple');
+}
+console.log('Pièces sur l’eau et pipette : ok');
+
+// Orque bloqué par un coin de mur : son coup d'épée blesse quand même à portée.
+{
+ const W=new BK.World({map:['.......','...#...','.......'],theme:'garden',mode:'adventure',hearts:true,explore:true,itemChance:0}),p=W.addPlayer(BK.charById('adam'),4,0,{hp:40});
+ const o=W.addEnemy('orque',2,1);o.x=2.55;o.y=1.5;p.x=3.5;p.y=0.6;o.state='chase';o.leash=9;o.stateT=1;const hp=p.hp;
+ for(let i=0;i<60;i++){W.updateEnemy(o,1/60);p.x=3.5;p.y=0.6;}ok(p.hp<hp,'l’orque frappe avec son épée sans coller au héros');
+}
+console.log('Orque : coup d’épée à portée ok');

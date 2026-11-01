@@ -2,23 +2,24 @@
 // un tiroir d'outils par onglets, test dans l'Aventure, sauvegarde dans le navigateur, export / import JSON.
 (function (BK) {
   'use strict';
+  const TERRAIN_CH = '~ .,:;=-_%&!yzq[])' + BK.DESERT_FLOORS.map(f => f.ch).join('') + BK.EXTRA_FLOOR_CHARS;
   const TABS = [
     { id: 'decor', name: 'Décor', items: [
-      {opts:'supportedBridge',name:'Pont sur colonnes',icon:'🪵',hint:'Peins les cases du pont surélevé avec une même lettre, puis ajoute ses colonnes.'},{opts:'bridgeColumn',name:'Grosse colonne du pont',icon:'🏛️',hint:'À poser sur une case du pont : la colonne apparaît dessous. Seule une bombe bien gonflée la casse. Quand la dernière colonne tombe, cette section du pont s’écroule.'},
+      {opts:'supportedBridge',name:'Pont',icon:'🌉',hint:'Choisis le matériau et la hauteur (0 à 4). La tuile dessous est gardée. Une même lettre forme une section ; ajoute-lui des colonnes.'},{opts:'bridgeColumn',name:'Grosse colonne du pont',icon:'🏛️',hint:'À poser sur une case du pont : la colonne apparaît dessous. Seule une bombe bien gonflée la casse. Quand la dernière colonne tombe, cette section du pont s’écroule.'},
       {opts:'blastDrawbridge',name:'Pont-levis à bombe',icon:'🌉',hint:'Clique au bord du fossé : le pont commence relevé. Une explosion contre sa base le fait tomber pour traverser. Choisis sa direction et sa longueur.'},
       {boat:true,name:'Barque',icon:'🛶',hint:'À poser sur l’eau près d’une rive. Embarquer avec Entrée ou la pancarte, puis ramer avec les directions.'},
-      {ch:'"',deco:'crackedstone',opts:'secretWall',name:'Mur fissuré · pièce secrète',icon:'🪨',hint:'Une bombe le brise. Construis la pièce derrière, puis choisis la direction, la largeur et la profondeur à cacher. Une même lettre relie plusieurs entrées.'},
+      {ch:'"',deco:'crackedstone',opts:'secretWall',name:'Mur secret',icon:'🧱',hint:'Une bombe le brise. Construis la pièce derrière, puis choisis la direction, la largeur et la profondeur à cacher. Une même lettre relie plusieurs entrées.'},
       { ch: '~', name: 'Eau', icon: '🌊' }, { ch: ' ', name: 'Vide (ciel)', icon: '☁️' }, { ch: '.', name: 'Pierre', icon: '⬜' }, { ch: ',', name: 'Gazon', icon: '🟩' },
-      { ch: ':', name: 'Pierre haute', icon: '🔼' }, { ch: ';', name: 'Gazon haut', icon: '🟢' }, { ch: '/', name: 'Rampe', icon: '📐' }, { ch: '=', name: 'Pont de bois', icon: '🪵' },
+      { ch: ':', name: 'Pierre haute', icon: '🔼' }, { ch: ';', name: 'Gazon haut', icon: '🟢' }, { ch: '/', opts: 'ramp', name: 'Rampe', icon: '📐', hint: 'Relie deux hauteurs voisines. Choisis son matériau.' }, { ch: '=', name: 'Pont de bois', icon: '🪵' },
       { ch: '-', name: 'Chemin de terre', icon: '🟫' }, { ch: '_', name: 'Rue', icon: '🛣️' }, { ch: '%', name: 'Place pavée', icon: '🧩' }, { ch: '&', name: 'Trottoir', icon: '⬜' }, { ch: '!', name: 'Bordure', icon: '🧱' },
       { ch: 'y', name: 'Plancher de bois', icon: '🪵' }, { ch: 'z', name: 'Carrelage', icon: '🏁' }, { ch: 'q', name: 'Tapis', icon: '🟥' },
       {tool:'raiseHalf',name:'Demi-étage +½',icon:'↗️',hint:'Monte le sol d’un demi-étage. Relie les hauteurs avec une rampe ou un ascenseur.'},{tool:'lowerHalf',name:'Demi-étage −½',icon:'↘️'},
       { tool: 'raise', name: 'Étage +1', icon: '⬆️', hint: 'Monte la case d’un étage (jusqu’à 4). Une rampe relie deux étages voisins ; le héros peut sauter en bas d’un rebord, pas y remonter.' }, { tool: 'lower', name: 'Étage −1', icon: '⬇️', hint: 'Descend la case d’un étage' },
       { ch: '[', name: 'Lave', icon: '🌋', hint: 'Ça brûle : 5 points de vie à chaque fois qu’on y met le pied. Les monstres n’y vont pas, une bombe lancée dedans explose.' }, { ch: ']', name: 'Glace', icon: '🧊', hint: 'On glisse : les commandes répondent lentement et on continue sur sa lancée' }, { ch: ')', name: 'Neige', icon: '❄️', hint: 'Sol tout blanc ; les pas du héros y crissent doucement' },
-      {ch:'{',opts:'autoLift',name:'Ascenseur automatique',icon:'↕️',hint:'Monte et redescend tout seul. Choisis la hauteur, la durée du trajet et la pause aux deux paliers.'},{ch:'(',opts:'movingPlatform',name:'Plateforme mobile',icon:'🟨',hint:'Un clic trace un trajet horizontal ou vertical au-dessus du vide. Prévois un quai au même étage à chaque extrémité.'},
+      {ch:'{',opts:'autoLift',name:'Ascenseur',icon:'🛗',hint:'Automatique : monte et redescend tout seul. Avec une bombe : botte une bombe sous le plateau, son explosion le soulève puis il redescend. Choisis la hauteur.'},{ch:'(',opts:'movingPlatform',name:'Plateforme mobile',icon:'🟨',hint:'Clique où tu veux la plateforme, puis glisse sans relâcher pour tracer son trajet (elle s’arrête devant chaque quai). Deux trajets peuvent se croiser.'},
       { ch: '{', name: 'Ascenseur', icon: '🛗', hint: 'Plateau surélevé sur un poteau. Botte une bombe depuis le sol voisin pour la glisser sous le plateau. Son explosion soulève le plateau de deux étages, puis il redescend. Une bombe posée dessus reste dessus.' }, { ch: '(', name: 'Rail de plateforme', icon: '🛤️', hint: 'Peins une ligne de rails (droite, en L ou en serpent) au fond d’une fosse : une plateforme y glisse à l’étage 1 et fait l’aller-retour. On monte dessus depuis une case d’étage 1 à côté ; si on en descend au-dessus de la fosse, on tombe en bas.' }, { ch: '}', name: 'Bloc-piston', icon: '⏫', hint: 'Une bombe qui explose dessus le fait monter d’un étage, pour de bon (jusqu’à 4).' } ] },
     { id: 'blocs', name: 'Blocs', items: [
-      { ch: 'r', name: 'Roc', icon: '🪨' }, { ch: '#', name: 'Bloc de ciment', icon: '⬛' }, { ch: 'W', name: 'Mur de brique', icon: '🧱', hint: 'Se casse avec une bombe' }, { ch: 'x', name: 'Buisson', icon: '🌿' }, { ch: 'X', name: 'Buisson haut', icon: '🌳' },
+      { ch: 'r', name: 'Roc', icon: '🪨' }, { ch: '#', name: 'Bloc de ciment', icon: '⬛' }, { ch: 'W', opts: 'brick', name: 'Mur de brique', icon: '🧱', hint: 'Se casse avec une bombe. Choisis sa couleur (rouge brique par défaut).' }, { ch: 'x', name: 'Buisson', icon: '🌿' }, { ch: 'X', name: 'Buisson haut', icon: '🌳' },
       { ch: '"', deco: 'melon', name: 'Melon d’eau', icon: '🍉', hint: 'Bloc cubique aux coins ronds : se casse avec une bombe' }, { ch: '"', deco: 'cheese', name: 'Bloc de fromage', icon: '🧀', hint: 'Bloc cubique : se casse avec une bombe' }, { ch: '"', deco: 'gift', name: 'Cadeau', icon: '🎁', hint: 'Bloc cubique : se casse avec une bombe' }, { ch: '"', deco: 'dirtblock', name: 'Bloc de terre', icon: '🟫', hint: 'Bloc cubique à dessus de gazon : se casse avec une bombe' },
       { ch: 'T', name: 'Arbre', icon: '🌲', opts: 'tree' }, { ch: '*', name: 'Fleurs', icon: '🌼', opts: 'flowers', hint: 'Décoration : on marche dessus' },
       { ch: 'P', name: 'Baril dormant', icon: '🛢️', hint: 'Une flamme l’allume : l’étincelle suit la traînée de poudre et détone au bout' }, { ch: 'p', name: 'Traînée de poudre', icon: '✨', hint: 'Relie le baril à la porte scellée, case par case' }, { ch: 'Q', name: 'Porte scellée', icon: '🔮', hint: 'Seule la détonation magique l’ouvre' },
@@ -79,7 +80,7 @@
       { shop: true, name: 'Article à vendre', icon: '🏷️', opts: 'shop', hint: 'Pose-le sur le comptoir ou devant. Choisis l’objet, le prix, et s’il se vend une seule fois ou sans limite. Le héros achète avec Shift à côté.' },
     ] },
     { id: 'tableau', name: 'Tableau', form: true, items: [] },
-    { id: 'outils', name: 'Outils', items: [ { tool:'rotate',name:'Tourner ↻',icon:'↻',hint:'Clique un meuble ou une décoration pour tourner d’un quart de tour.' }, { tool: 'erase', name: 'Gomme', icon: '🧽' }, { tool: 'fill', name: 'Remplir tout', icon: '🪣', hint: 'Avec le décor choisi' }, { tool: 'undo', name: 'Annuler', icon: '↩️' } ] },
+    { id: 'outils', name: 'Outils', items: [ { tool:'rotate',name:'Tourner ↻',icon:'↻',hint:'Clique un meuble ou une décoration pour tourner d’un quart de tour.' }, { tool: 'erase', name: 'Gomme', icon: '🧽' }, { tool: 'pick', name: 'Copier une tuile', icon: '💧', hint: 'Clique une case : sa tuile, sa hauteur et son objet sont copiés. Ensuite, clique ou glisse pour en placer plein.' }, { tool: 'fill', name: 'Remplir tout', icon: '🪣', hint: 'Avec le décor choisi' }, { tool: 'undo', name: 'Annuler', icon: '↩️' } ] },
   ];
   const CABIN_VARIANTS = {
     light:[['lamp','Lampadaire'],['candelabra','Chandelier'],['fireplace','Âtre'],['campfire','Feu de camp']],
@@ -93,8 +94,18 @@
   TABS.find(t=>t.id==='deco').items.push(...BK.CASTLE_DECOR.map(it=>({ch:'"',deco:it.deco,name:it.name,icon:it.icon})));
   TABS.find(t=>t.id==='deco').items.push(...BK.TRAP_DECOR.map(it=>({ch:'"',...it,opts:'mechanism'})));
   TABS.find(t=>t.id==='deco').items.push(...BK.BIOME_DECOR.map(it=>({ch:'\"',deco:it.deco,name:it.name,icon:it.icon})));
-  TABS.find(t=>t.id==='decor').items.push(...BK.DESERT_FLOORS.map(({ch,name,icon})=>({ch,name,icon})));
-  TABS.push({id:'bestiary',name:'Bestiaire',items:BK.BESTIARY.map(b=>({enemy:b.id,name:b.name,icon:'👾',category:b.group,hint:b.hint}))});
+  // Onglet Sols : toutes les tuiles de sol (avec leur hauteur au choix) ; les outils d'étage vivent dans la barre d'outils.
+  {
+    const decor=TABS.find(t=>t.id==='decor'),heightTools=decor.items.filter(it=>['raise','lower','raiseHalf','lowerHalf'].includes(it.tool));
+    const floors=[...'~ .,=-_%&yzq[])'].map(ch=>decor.items.find(it=>it.ch===ch&&!it.opts&&!it.deco)).filter(Boolean);
+    decor.items=decor.items.filter(it=>!heightTools.includes(it)&&!floors.includes(it)&&![':',';','!'].includes(it.ch)&&!(it.ch==='{'&&!it.opts));
+    TABS.find(t=>t.id==='outils').items.push(...heightTools);
+    const sols=[...floors,...BK.DESERT_FLOORS.map(({ch,name,icon})=>({ch,name,icon})),...BK.EXTRA_FLOORS.map(({ch,name,icon,hint})=>({ch,name,icon,hint}))];
+    for(const it of sols)if(!'~ '.includes(it.ch)&&it.ch!==BK.DEEP_WATER_CH)it.opts='floorHeight';
+    TABS.unshift({id:'sols',name:'Sols',items:sols});
+  }
+  // Le bestiaire vit dans l'onglet Ennemis, rangé par familles (les ennemis de base forment la famille « Classiques »).
+  TABS.find(t=>t.id==='ennemis').items.push(...BK.BESTIARY.map(b=>({enemy:b.id,name:b.name,icon:'👾',category:b.group,hint:b.hint})));
   for(const a of BK.WILDLIFE){TABS.find(t=>t.id==='animaux').items.push({enemy:a.id,name:a.name,icon:a.icon,hint:'Pacifique : caresse-le deux fois et nourris-le pour qu’il devienne ton ami et aide à combattre. Nourriture dans le sac ou la bulle au-dessus de lui.'});if(a.evil)TABS.find(t=>t.id==='ennemis').items.push({enemy:a.id+'_evil',name:a.name+' maléfique',icon:a.icon,hint:'Hostile : poursuit les héros et attaque au contact.'});}
   const objectItems=TABS.find(t=>t.id==='objets').items;
   for(const [id,def] of Object.entries(BK.ITEMS))if(!def.snailColor&&!objectItems.some(it=>it.pickup===id||({h:'heart',k:'card','$':'coin'})[it.ch]===id))objectItems.push({ch:'\"',pickup:id,name:def.name,icon:def.icon,hint:def.desc});
@@ -130,7 +141,7 @@
       this.grid = m.grid ? (this.parent && this.parent.kind!=='duel' ? BK.roomMap(m.grid,m.roomExit) : m.grid).map(l => l.split('')) : Array.from({ length: m.rows }, () => Array(m.cols).fill(this.map.base));
       this.map.rows=this.grid.length; this.map.roomExit=!!(this.parent && this.parent.kind!=='duel' || m.roomExit);
       this.enemies = (m.enemies || []).map(e => ({ ...e })); this.npcs = (m.npcs || []).map(e => ({ ...e })); this.shop = (m.shop || []).map(e => ({ ...e })); this.houses = Object.assign({}, m.houses || {}); this.props = Object.assign({}, m.props || {}); this.house = { w: 3, d: 2, roof: '#b5452a' }; this.lightColor='default'; this.opts = { light:'lamp', seat:'chair', table:'table', statue:'statue', fishMount:'fish_trout',antlers:'antlers_moose',trophy:'trophy_cup', ally:{id:'richard',price:50,lives:3}, tree: { style: 'feuillu', size: 1 }, flowers: { colors: ['#ff5fc8', '#ffd54a', '#ffffff'] }, target: { letter: 'A' }, gate: { letter: 'A' }, npc: { id: 'richard', line: 'Bienvenue dans ma boutique !' }, shop: { item: 'bomb', price: 30, once: true }, mountain: { w: 3, d: 2, h: 3, type: 'neige' } };
-      this.orientation=0; this.undoStack = []; this.tab = 'decor'; this.item = this.map.roomExit ? TABS.find(t=>t.id==='piece').items[0] : TABS[0].items.find(it=>it.ch==='.'); this.hover = null; this.painting = false; this.t = 0; this.msg = ''; this.msgT = 0;
+      this.orientation=0; this.undoStack = []; this.tab = 'sols'; this.item = this.map.roomExit ? TABS.find(t=>t.id==='piece').items[0] : TABS[0].items.find(it=>it.ch==='.'); this.hover = null; this.painting = false; this.t = 0; this.msg = ''; this.msgT = 0;
       this.cam = new BK.Camera(BK.W, BK.H); this.cam.fit(17, 14, { top: 60, bottom: 24, left: 24, right: 24 });
       this.view = { x: m.cols / 2, y: m.rows / 2 }; this.updateCamera();
       this.rebuild(); if (typeof document !== 'undefined') this.buildPanel();
@@ -155,7 +166,8 @@
       if (first) this.snapshot();
       if (it.tool === 'fill') { if (!first) return; const ch = this.lastTerrain || '.'; for (const row of this.grid) row.fill(ch); this.enemies = []; this.rebuild(); return; }
       if(it.opts==='supportedBridge'){
-        const key=c+','+r;this.grid[r][c]='=';this.props[key]={raisedBridge:this.bridgeGroup||'A',lv:this.bridgeLevel||2};this.enemies=this.enemies.filter(e=>e.c!==c||e.r!==r);this.rebuild();return;
+        const key=c+','+r,old=this.props[key]||{},cur=this.grid[r][c],under=old.raisedBridge?old.under:cur==='('||cur==='='&&!old.under?(cur==='='?'=':this.map.base||'.'):TERRAIN_CH.includes(cur)?cur:this.map.base||'.',underLv=old.raisedBridge?old.underLv:old.lv;
+        this.grid[r][c]='=';this.props[key]={raisedBridge:this.bridgeGroup||'A',lv:this.bridgeLevel??2,material:this.bridgeMaterial||'bois',under,...(underLv?{underLv}:{}),...(old.bridgeColumn?{bridgeColumn:true}:{})};this.enemies=this.enemies.filter(e=>e.c!==c||e.r!==r);this.rebuild();return;
       }
       if(it.opts==='bridgeColumn'){
         const key=c+','+r;if(!this.props[key]?.raisedBridge){this.toast('Place d’abord une case de pont sur colonnes.');return;}this.props[key].bridgeColumn=true;this.rebuild();return;
@@ -178,47 +190,88 @@
       if(this.map.roomExit && ['#','W'].includes(this.grid[r][c]) && BK.WALL_DECOR.has(wallKind)) {
         this.props[wallKey]={...(this.props[wallKey]||{}),wallDeco:wallKind,orientation:this.orientation};this.rebuild();return;
       }
+      if (it.tool === 'pick') {
+        const ch = this.grid[r][c], pr = this.props[c + ',' + r];
+        if ('1G|H('.includes(ch) || 'ABCDEF'.includes(ch) || pr?.movingPlatform || this.houses[c + ',' + r]) { this.toast('Cette case est unique : elle ne se copie pas.'); return; }
+        const name = (TABS.flatMap(t => t.items || []).find(x => x.ch === ch && (!x.deco || x.deco === pr?.deco)) || {}).name || 'tuile';
+        this.copied = { ch, props: pr ? JSON.parse(JSON.stringify(pr)) : null };
+        this.item = { tool: 'paste', name: 'Copie : ' + name + (pr?.lv ? ' · étage ' + pr.lv : ''), icon: '📋', hint: 'Clique ou glisse pour placer la tuile copiée.' };
+        this.painting = false; this.refreshToolbar?.(); this.renderOptions(); this.toast('Tuile copiée : clique ou glisse pour la placer.'); return;
+      }
+      if (it.tool === 'paste') {
+        const cp = this.copied, key = c + ',' + r; if (!cp || (this.grid[r][c] === cp.ch && JSON.stringify(this.props[key] || null) === JSON.stringify(cp.props))) return;
+        if (this.platformAt(c, r)) this.removePlatform(this.platformAt(c, r));
+        this.grid[r][c] = cp.ch; if (cp.props) { this.props[key] = JSON.parse(JSON.stringify(cp.props)); if (this.props[key].treasureSeed != null) this.props[key].treasureSeed = Math.floor(Math.random() * 2147483647); } else delete this.props[key];
+        this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r); this.rebuild(); return;
+      }
       if(it.tool==='erase' && this.props[wallKey]?.wallDeco){delete this.props[wallKey].wallDeco;this.rebuild();return;}
+      if (it.tool === 'erase' && this.platformAt(c, r)) { this.removePlatform(this.platformAt(c, r)); this.rebuild(); return; }   // gomme sur un trajet : toute la plateforme part
+      if (it.tool === 'erase' && this.props[c + ',' + r]?.raisedBridge && this.props[c + ',' + r].under != null) { const pr = this.props[c + ',' + r]; this.grid[r][c] = pr.under; if (pr.underLv) this.props[c + ',' + r] = { lv: pr.underLv }; else delete this.props[c + ',' + r]; this.rebuild(); return; }   // gomme sur un pont : la tuile dessous revient
       if (it.tool === 'erase') { this.grid[r][c] = this.map.base; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r); this.npcs = this.npcs.filter(e => e.c !== c || e.r !== r); this.shop = this.shop.filter(e => e.c !== c || e.r !== r); delete this.houses[c + ',' + r]; delete this.props[c + ',' + r]; this.rebuild(); return; }
       if (['raise','lower','raiseHalf','lowerHalf'].includes(it.tool)) {
         const key = c + ',' + r; if (!first && this.lastLevelKey === key) return; this.lastLevelKey = key;
         const pr = this.props[key] || {}, cur = this.grid[r][c]; let lv = pr.lv != null ? pr.lv : pr.h ? 1 : ':;X'.includes(cur) ? 1 : 0;
-        lv = Math.max(0, Math.min(4, lv + ({raise:1,lower:-1,raiseHalf:.5,lowerHalf:-.5}[it.tool])));
+        lv = Math.max(0, Math.min(5, lv + ({raise:1,lower:-1,raiseHalf:.5,lowerHalf:-.5}[it.tool])));
         if (cur === '~' || cur === ' ') this.grid[r][c] = '.'; else if (cur === ':') this.grid[r][c] = '.'; else if (cur === ';') this.grid[r][c] = ','; else if (cur === 'X') this.grid[r][c] = 'x';
         this.props[key] = Object.assign({}, pr, { lv }); delete this.props[key].h; this.rebuild(); this.toast('Étage ' + lv); return;
       }
       if(it.opts==='movingPlatform'){
-        if(!first)return;const axis=this.platformAxis||'horizontal',length=this.platformLength||4,dc=axis==='horizontal'?1:0,dr=axis==='vertical'?1:0;
-        if(!this.inside(c+dc*(length-1),r+dr*(length-1))){this.toast('Le trajet dépasse la carte.');return;}
-        for(let k=0;k<length;k++){const cc=c+dc*k,rr=r+dr*k;this.grid[rr][cc]='(';this.props[cc+','+rr]={lv:0,platformLevel:this.platformLevel??1,platformSpeed:this.platformSpeed||1.3,platformPause:this.platformPause||1.8,platformPit:true};this.enemies=this.enemies.filter(e=>e.c!==cc||e.r!==rr);}
+        // Clic : place la plateforme. Sans relâcher, glisse pour tracer son trajet case par case (retour en arrière = efface).
+        const key=c+','+r;
+        if(first){
+          if(this.props[key]?.movingPlatform)this.removePlatform(key);
+          this.addRail(c,r);this.props[key].movingPlatform={path:[[c,r]],level:this.platformLevel??'auto',speed:this.platformSpeed||1.3,pause:this.platformPause||1.8};this.platformDraft=key;
+          this.toast('Sans relâcher, glisse pour tracer le trajet.');
+        } else {
+          const mp=this.props[this.platformDraft]?.movingPlatform;if(!mp)return;const path=mp.path;
+          let [x,y]=path[path.length-1];
+          while(x!==c||y!==r){
+            if(x!==c)x+=Math.sign(c-x);else y+=Math.sign(r-y);
+            const prev=path[path.length-2];
+            if(prev&&prev[0]===x&&prev[1]===y){const [lx,ly]=path.pop();if(!this.platformUses(lx,ly))this.restoreRail(lx,ly);continue;}
+            if(path.some(([a,b])=>a===x&&b===y))break;   // un trajet ne repasse pas sur lui-même
+            path.push([x,y]);this.addRail(x,y);
+          }
+        }
         this.rebuild();return;
       }
       if(it.ally) {if(!first)return;this.npcs=this.npcs.filter(n=>n.c!==c||n.r!==r);this.npcs.push({c,r,ally:true,id:this.opts.ally.id,price:Math.max(0,Math.round(this.opts.ally.price)),lives:Math.max(1,Math.min(9,Math.round(this.opts.ally.lives)))});if('~ '.includes(this.grid[r][c]))this.grid[r][c]=this.map.base;this.rebuild();return;}
       if (it.npc) { if (!first) return; this.npcs = this.npcs.filter(e => e.c !== c || e.r !== r); this.npcs.push({ c, r, id: this.opts.npc.id, lines: [this.opts.npc.line || 'Bienvenue !'] }); if ('~ '.includes(this.grid[r][c])) this.grid[r][c] = this.map.base; this.rebuild(); return; }
       if (it.shop) { if (!first) return; this.shop = this.shop.filter(e => e.c !== c || e.r !== r); this.shop.push({ c, r, item: this.opts.shop.item, price: Math.max(0, Math.round(+this.opts.shop.price || 0)), once: !!this.opts.shop.once }); if ('~ '.includes(this.grid[r][c])) this.grid[r][c] = this.map.base; this.rebuild(); return; }
       if (it.enemy) { if (!first) return; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r); this.enemies.push({ type: it.enemy, c, r, ...(it.enemy==='escargot'?{shellColor:this.snailColor||'default'}:{}), ...(it.enemy==='chat'?{catColor:this.catColor||'roux'}:{}) }); if (this.grid[r][c] === ' ' || (this.grid[r][c] === '~' && it.enemy !== 'marin')) this.grid[r][c] = '.'; this.rebuild(); return; }
-      const key = c + ',' + r, same = this.grid[r][c] === it.ch && (!it.deco || (this.props[key] || {}).deco === it.deco) && (!it.pickup || (this.props[key] || {}).item === it.pickup), TERRAIN = '~ .,:;/=-_%&!yzq}{[])¡¢£¥€';
+      const key = c + ',' + r, same = this.grid[r][c] === it.ch && (!it.deco || (this.props[key] || {}).deco === it.deco) && (!it.pickup || (this.props[key] || {}).item === it.pickup), TERRAIN = '~ .,:;/=-_%&!yzq}{[])¡¢£¥€' + BK.EXTRA_FLOOR_CHARS;
       if (same && !it.opts && !it.deco && !BK.DECO[it.ch]) return;
       // niveau du plancher sous l'objet : on le mémorise pour qu'il reste sur le plateau (ou au sol)
       let lvl = null, floor = null;
       if (!TERRAIN.includes(it.ch)) { const cur = this.grid[r][c], pr = this.props[key] || {}; if ((pr.lv != null || pr.h != null) && !TERRAIN.includes(cur)) { lvl = pr.lv != null ? pr.lv : pr.h; floor = pr.floor; } else if (pr.lv != null && TERRAIN.includes(cur)) { lvl = pr.lv; floor = cur === ':' || cur === '.' ? 'stone' : cur === ';' || cur === ',' ? 'grass' : cur; } else if (cur === ':' || cur === ';' || cur === 'X') { lvl = 1; floor = cur === ':' ? 'stone' : 'grass'; } else if (cur === '.' || cur === ',') { lvl = 0; floor = cur === '.' ? 'stone' : 'grass'; } else if (TERRAIN.includes(cur) && cur !== '~' && cur !== ' ') { lvl = 0; floor = cur; } }
-      if (it.ch === '1' || !this.map.roomExit && (it.ch === 'G' || it.ch === '|')) for (const row of this.grid) for (let i = 0; i < row.length; i++) if (row[i] === it.ch || (it.ch !== '1' && (row[i] === 'G' || row[i] === '|'))) row[i] = '.';   // uniques (une seule fin)
+      if (it.ch === '1' || !this.map.roomExit && (it.ch === 'G' || it.ch === '|')) this.grid.forEach((row, rr) => { for (let i = 0; i < row.length; i++) if (row[i] === it.ch || (it.ch !== '1' && (row[i] === 'G' || row[i] === '|'))) row[i] = this.floorUnder(i + ',' + rr); });   // uniques (une seule fin)
       if (it.opts === 'target') { const L = this.opts.target.letter; for (let rr = 0; rr < this.map.rows; rr++) for (let cc = 0; cc < this.map.cols; cc++) { const k2 = cc + ',' + rr; if (k2 !== key && 'ABCDEF'.includes(this.grid[rr][cc]) && ((this.props[k2] || {}).letter || this.grid[rr][cc]) === L) { this.grid[rr][cc] = '.'; delete this.props[k2]; } } }   // une cible par lettre
+      // Pièces, cœurs, cartes et objets à ramasser posés sur l'eau : l'eau reste (on va les chercher en bateau).
+      const waterUnder = (it.pickup || '$hk'.includes(it.ch)) && (this.grid[r][c] === '~' || this.props[key]?.floor === '~' && !TERRAIN.includes(this.grid[r][c]));
+      // Un objet posé sur un pont sur colonnes garde le pont (et sa colonne) dessous.
+      const bridgeKeep = !TERRAIN.includes(it.ch) && this.props[key]?.raisedBridge ? { raisedBridge: this.props[key].raisedBridge, ...(this.props[key].bridgeColumn ? { bridgeColumn: true } : {}) } : null;
+      const prevCh = this.grid[r][c], prevRailFloor = this.props[key]?.platformFloor;
       const keepLv = (this.props[key] || {}).lv ?? (':;'.includes(this.grid[r][c])?1:undefined); if (!same) delete this.props[key];
       if (keepLv != null && TERRAIN.includes(it.ch) && !'~ '.includes(it.ch)) this.props[key] = { lv: keepLv };   // l'étage reste quand on change le sol
       if (it.opts === 'tree') this.props[key] = { ...this.opts.tree }; else if (it.opts === 'flowers') this.props[key] = { colors: this.opts.flowers.colors.slice() }; else if (it.opts === 'target') this.props[key] = { letter: this.opts.target.letter }; else if (it.opts === 'gate') this.props[key] = { letter: this.opts.gate.letter.toLowerCase() };
       if (it.pickup) this.props[key] = Object.assign(this.props[key] || {}, { item: it.pickup });
       if (it.deco) this.props[key] = Object.assign(this.props[key] || {}, { deco: CABIN_VARIANTS[it.opts] ? this.opts[it.opts] : it.deco });
       if(it.deco==='castle_treasure')this.props[key]={...(this.props[key]||{}),treasureSeed:Math.floor(Math.random()*2147483647)};
-      if(it.opts==='autoLift')this.props[key]={...(this.props[key]||{}),autoLift:true,liftHeight:this.liftHeight||1,travelTime:this.travelTime||2.6,platformPause:this.platformPause||1.8};
+      if(it.opts==='autoLift')this.props[key]={...(this.props[key]||{}),autoLift:this.liftAuto!==false,liftHeight:this.liftHeight||2,travelTime:this.travelTime||2.6,platformPause:this.platformPause||1.8};
       if(it.opts==='secretWall')this.props[key]={...(this.props[key]||{}),secretGroup:this.secretGroup||'A',secretWidth:this.secretWidth||3,secretDepth:this.secretDepth||3,secretDirection:this.secretDirection??2};
       if(it.opts==='pipe')this.props[key]={...(this.props[key]||{}),pipeLink:this.pipeLink||'A'};
+      if(it.opts==='brick'&&(this.brickColor||BK.BRICK_COLOR)!==BK.BRICK_COLOR)this.props[key]={...(this.props[key]||{}),brickColor:this.brickColor};
       if(it.opts==='mechanism')this.props[key]={...(this.props[key]||{}),trapRest:this.trapRest??2,trapActive:this.trapActive??1,trapDelay:this.trapDelay??0,trapRange:this.trapRange??4,trapBurst:this.trapBurst??1};
       if(it.opts==='firebar')this.props[key]={...(this.props[key]||{}),length:this.firebarLength||3,direction:this.firebarDirection||1,speed:this.firebarSpeed||'normal',arms:this.firebarArms===2?2:1};
       if(it.opts==='statue'||it.opts==='table') this.props[key]={...(this.props[key]||{}),deco:this.opts[it.opts]};
       if(BK.LIGHT_KINDS.includes(it.deco||BK.DECO[it.ch]?.[0])) this.props[key]={...(this.props[key]||{}),lightColor:this.lightColor};
       if(it.deco||BK.DECO[it.ch]) this.props[key]={...(this.props[key]||{}),orientation:this.orientation};
       if (lvl != null) this.props[key] = Object.assign(this.props[key] || {}, { lv: lvl, floor });
+      if (waterUnder) this.props[key] = Object.assign(this.props[key] || {}, { floor: '~' });
+      if (bridgeKeep) this.props[key] = Object.assign(this.props[key] || {}, bridgeKeep, { floor: '=' });
+      if (it.opts === 'floorHeight' && this.floorLevel != null && this.floorLevel !== 'keep') { if (this.floorLevel > 0) this.props[key] = { ...(this.props[key] || {}), lv: this.floorLevel }; else if (this.props[key]) { delete this.props[key].lv; if (!Object.keys(this.props[key]).length) delete this.props[key]; } }
+      if (it.ch === '(' && !it.opts) this.props[key] = { ...(this.props[key] || {}), platformFloor: prevCh === '(' ? prevRailFloor ?? '.' : TERRAIN_CH.includes(prevCh) ? prevCh : this.map.base || '.' };   // rails posés sur le sol : le sol reste
+      if (it.opts === 'ramp') this.props[key] = { ...(this.props[key] || {}), material: this.rampMaterial || 'auto' };
       if (it.ch && TABS[0].items.some(x => x.ch === it.ch)) this.lastTerrain = it.ch;
       this.grid[r][c] = (it.opts==='statue'||it.opts==='table')&&this.opts[it.opts]!==it.opts?'"':it.ch; this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r);
       if (this.grid[r][c] !== 'H' && this.houses[c + ',' + r]) { delete this.houses[c + ',' + r]; if (typeof document !== 'undefined' && this.tab === 'maisons' && this.showTab) this.showTab('maisons'); }
@@ -313,7 +366,9 @@
     buildPanel() {
       const P = document.getElementById('editor-panel'); P.innerHTML = '';
       const tabs = document.createElement('div'); tabs.className = 'tabs'; P.appendChild(tabs);
-      const acts = document.createElement('div'); acts.className = 'acts'; tabs.appendChild(acts);
+      // Barre d'outils toujours visible (tourner, gomme, pipette, étages, annuler…) avec les actions du tableau à droite.
+      const bar = document.createElement('div'); bar.className = 'toolbar'; P.appendChild(bar);
+      const acts = document.createElement('div'); acts.className = 'acts';
       const categories = document.createElement('div'); categories.className='deco-categories'; categories.setAttribute('aria-label','Catégories de décorations'); categories.hidden=true; P.appendChild(categories);
       const strip = document.createElement('div'); strip.className = 'strip'; P.appendChild(strip);
       const items = document.createElement('div'); items.className = 'items';
@@ -324,17 +379,17 @@
       window.addEventListener('resize', updateArrows); this.updateArrows = updateArrows;
       const showTab = id => {
         this.tab = id; tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.id === id)); items.innerHTML = ''; items.className='items'; items.scrollLeft=0;
-        categories.setAttribute('aria-label',id==='bestiary'?'Familles du bestiaire':'Catégories de décorations');categories.hidden=id!=='deco'&&id!=='bestiary'; categories.innerHTML='';
+        categories.setAttribute('aria-label',id==='ennemis'?'Familles d’ennemis':'Catégories de décorations');categories.hidden=id!=='deco'&&id!=='ennemis'; categories.innerHTML='';
         if(id==='deco') for(const cat of [{id:'all',name:'Tout'},...DECO_CATEGORIES]) {
           const count=TABS.find(t=>t.id==='deco').items.filter(it=>cat.id==='all'||it.category===cat.id).length;
           const b=document.createElement('button'); const active=(this.decoCategory||'all')===cat.id; b.textContent=cat.name+' · '+count; b.classList.toggle('on',active); b.setAttribute('aria-pressed',String(active));
           b.addEventListener('click',()=>{this.decoCategory=cat.id;showTab('deco');}); categories.appendChild(b);
         }
-        if(id==='bestiary')for(const [key,name] of [['all','Tout'],...BK.BESTIARY_GROUPS]){const button=document.createElement('button');button.textContent=name;button.classList.toggle('on',(this.bestiaryCategory||'all')===key);button.addEventListener('click',()=>{this.bestiaryCategory=key;showTab('bestiary');});categories.appendChild(button);}
+        if(id==='ennemis')for(const [key,name] of [['all','Tout'],['classic','Classiques'],...BK.BESTIARY_GROUPS]){const button=document.createElement('button');button.textContent=name;button.classList.toggle('on',(this.bestiaryCategory||'all')===key);button.addEventListener('click',()=>{this.bestiaryCategory=key;showTab('ennemis');});categories.appendChild(button);}
         const tabDef = TABS.find(t => t.id === id);
         if (tabDef.form) { this.buildForm(items); requestAnimationFrame(updateArrows); return; }
         if (id === 'magasin') this.musicCard(items);
-        for (const it of tabDef.items) if(!(this.parent && it.ch==='H') && (id!=='deco'||!this.decoCategory||this.decoCategory==='all'||it.category===this.decoCategory)) if(id!=='bestiary'||!this.bestiaryCategory||this.bestiaryCategory==='all'||it.category===this.bestiaryCategory)items.appendChild(card(it));
+        for (const it of tabDef.items) if(!(this.parent && it.ch==='H') && (id!=='deco'||!this.decoCategory||this.decoCategory==='all'||it.category===this.decoCategory)) if(id!=='ennemis'||!this.bestiaryCategory||this.bestiaryCategory==='all'||(it.category||'classic')===this.bestiaryCategory)items.appendChild(card(it));
         if (id === 'maisons') this.houseCards(items);
         requestAnimationFrame(updateArrows);
       };
@@ -342,8 +397,8 @@
         const roomDoor=this.map.roomExit && it.ch==='G', icon=roomDoor?'🚪':it.icon, name=roomDoor?'Sortie de la pièce':it.name;
         const b = document.createElement('button'); b.className = 'item' + (it === this.item ? ' on' : ''); b.innerHTML = '<span class="ic">' + icon + '</span><span>' + name + '</span>' + (tabName ? '<span class="small">' + tabName + '</span>' : ''); if (it.hint) b.title = roomDoor?'Une case de plancher pour retourner dehors.':it.hint;
         if(it.enemy&&BK.ENEMIES[it.enemy]?.bestiary){const canvas=document.createElement('canvas');canvas.width=96;canvas.height=96;canvas.style.width='64px';canvas.style.height='64px';canvas.setAttribute('aria-hidden','true');const ctx=canvas.getContext('2d');ctx.translate(48,88);BK.sprites.drawEnemy(ctx,it.enemy,{s:BK.ENEMIES[it.enemy].boss?47:75,t:0});b.querySelector('.ic').replaceChildren(canvas);}
-        b.addEventListener('click', () => { if (it.tool === 'undo') { this.undo(); return; } if (it.tool === 'fill') { BK.confirmDialog({ title: '🪣 Tout remplir ?', text: 'Remplir tout le tableau avec « ' + (TABS[0].items.find(x => x.ch === (this.lastTerrain || '.')) || {}).name + ' » ? Les ennemis seront retirés.', confirmLabel: 'Remplir', onConfirm: () => { this.snapshot(); this.paint(0, 0, true); } }); return; } this.item = it; items.querySelectorAll('.item').forEach(x => x.classList.toggle('on', x === b)); this.renderOptions(); });
-        return b;
+        b.addEventListener('click', () => { if (it.tool === 'undo') { this.undo(); return; } if (it.tool === 'fill') { BK.confirmDialog({ title: '🪣 Tout remplir ?', text: 'Remplir tout le tableau avec « ' + (TABS[0].items.find(x => x.ch === (this.lastTerrain || '.')) || {}).name + ' » ? Les ennemis seront retirés.', confirmLabel: 'Remplir', onConfirm: () => { this.snapshot(); this.paint(0, 0, true); } }); return; } this.item = it; this.refreshToolbar(); this.renderOptions(); });
+        b._item = it; return b;
       };
       this.showTab = showTab;
       // recherche : filtre les objets de tous les onglets ; vide = retour à l'onglet courant
@@ -358,14 +413,19 @@
       });
       search.addEventListener('keydown', e => { if (e.key === 'Escape') { search.value = ''; showTab(this.tab); search.blur(); } e.stopPropagation(); });
       this.searchBox = search;
-      for (const t of TABS.filter(t=>!t.roomOnly||this.map.roomExit)) { const b = document.createElement('button'); b.textContent = t.name; b.dataset.id = t.id; b.addEventListener('click', () => { if (this.searchBox) this.searchBox.value = ''; showTab(t.id); }); tabs.insertBefore(b, acts); }
-      tabs.insertBefore(search, acts);
+      for (const t of TABS.filter(t=>(!t.roomOnly||this.map.roomExit)&&t.id!=='outils')) { const b = document.createElement('button'); b.textContent = t.name; b.dataset.id = t.id; b.addEventListener('click', () => { if (this.searchBox) this.searchBox.value = ''; showTab(t.id); }); tabs.appendChild(b); }
+      tabs.appendChild(search); tabs.appendChild(acts);
+      const allTools = TABS.flatMap(t => t.items || []).filter(it => it.tool && it.tool !== 'duelOpponent'), order = ['undo', 'rotate', 'erase', 'pick', 'raise', 'lower', 'raiseHalf', 'lowerHalf', 'fill'];
+      for (const id of order) { const it = allTools.find(x => x.tool === id); if (!it) continue; const b = card(it); b.className = 'tool'; b.innerHTML = '<span class="ic">' + it.icon + '</span><span>' + it.name + '</span>'; b.dataset.tool = id; bar.appendChild(b); }
+      this.refreshToolbar = () => { const cur = this.item; P.querySelectorAll('.item, .tool').forEach(b => b.classList.toggle('on', !!cur && (b._item === cur || (b.dataset.tool && cur.tool === (b.dataset.tool === 'pick' ? 'paste' : b.dataset.tool) && b.dataset.tool !== 'pick') || (b.dataset.tool === 'pick' && (cur.tool === 'pick' || cur.tool === 'paste'))))); };
       this.optBox = document.createElement('div'); this.optBox.className = 'sub'; P.appendChild(this.optBox);
-      showTab(this.map.roomExit?'piece':'decor'); this.renderOptions();
-      const act = (label, fn, cls) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', () => { BK.audio.click(); fn(); }); acts.appendChild(b); return b; };
+      showTab(this.map.roomExit?'piece':'sols'); this.renderOptions();
+      const act = (label, fn, cls, title) => { const b = document.createElement('button'); b.textContent = label; if (title) b.title = title; if (cls) b.className = cls; b.addEventListener('click', () => { BK.audio.click(); fn(); }); acts.appendChild(b); return b; };
       if (this.parent) { act(this.parent.kind==='duel'?'▶ Tester le duel':'▶ Tester la pièce', () => this.test(), 'primary'); this.saveBtn = act(this.parent.kind==='duel'?'⬅ Retour au duelliste':'⬅ Retour à l’extérieur', () => this.returnToParent()); }
-      else { act('▶ Tester', () => this.test(), 'primary'); this.saveBtn = act('💾 Sauvegarder', () => this.save()); act('📋 Copier le code', () => this.copyCode()); act('📤 Fichier', () => this.exportJson()); act('📂 Ouvrir', () => this.importJson()); act('← Menu', () => this.quit(), 'ghost'); }
-      const help = document.createElement('p'); help.className = 'hint'; help.textContent = this.map.roomExit ? 'Pièce : plancher, murs et meubles · Plusieurs sorties possibles · Repeins une sortie avec du plancher pour l’enlever · Clique sur une case en pointillés pour agrandir.' : 'Clique ou glisse sur la carte pour peindre · Flèches ou WASD : déplacer la vue · Molette : zoom · Ctrl+Z : annuler · Le départ, le but et chaque cible sont uniques.'; P.appendChild(help);
+      else { act('▶ Tester', () => this.test(), 'primary'); this.saveBtn = act('💾 Sauver', () => this.save(), '', 'Sauvegarder le tableau'); act('📋', () => this.copyCode(), '', 'Copier le code'); act('📤', () => this.exportJson(), '', 'Enregistrer dans un fichier'); act('📂', () => this.importJson(), '', 'Ouvrir un fichier'); act('← Menu', () => this.quit(), 'ghost'); }
+      const help = document.createElement('p'); help.className = 'hint'; help.hidden = true; help.textContent = this.map.roomExit ? 'Pièce : plancher, murs et meubles · Plusieurs sorties possibles · Repeins une sortie avec du plancher pour l’enlever · Clique sur une case en pointillés pour agrandir.' : 'Clique ou glisse sur la carte pour peindre · Flèches ou WASD : déplacer la vue · Molette : zoom · Ctrl+Z : annuler · Le départ, le but et chaque cible sont uniques.'; P.appendChild(help); const cv = document.getElementById('editor-canvas'); if (cv) cv.title = help.textContent;
+      // La carte prend toute la hauteur qui reste sous le panneau : plus besoin de défiler.
+      if (window.ResizeObserver && !this.panelObserver) { this.panelObserver = new ResizeObserver(() => document.documentElement.style.setProperty('--ed-panel', P.offsetHeight + 'px')); this.panelObserver.observe(P); }
     }
     // Modifications du tableau en cours de construction : le contenu existant est conservé.
     resize(cols, rows) {
@@ -377,6 +437,25 @@
     setTheme(id) { if (!BK.THEMES[id]) return; this.map.theme = id; this.rebuild(); this.settingsChanged('Décor : ' + BK.THEMES[id].name); }
     // Un réglage du tableau (taille, fond, décor, nom) : sauvegardé tout de suite si le tableau est déjà enregistré.
     settingsChanged(msg) { this.markDirty(); if (BK.loadMaps().some(m => m.id === this.map.id)) { this.save(); this.toast(msg + ' · sauvegardé'); } else this.toast(msg); }
+    // Plateformes mobiles tracées : une case de rail garde le sol d'origine, partagé quand deux trajets se croisent.
+    platformAt(c, r) { return Object.keys(this.props).find(k => this.props[k].movingPlatform?.path?.some(([a, b]) => a === c && b === r)) || null; }
+    platformUses(c, r) { return !!this.platformAt(c, r); }
+    addRail(c, r) {
+      const key = c + ',' + r, cur = this.grid[r][c]; if (cur === '(' && this.props[key]?.platformOf) return;
+      const floor = cur === '(' ? this.props[key]?.platformFloor ?? ' ' : TERRAIN_CH.includes(cur) ? cur : this.map.base || '.';
+      this.grid[r][c] = '('; this.props[key] = { lv: 0, platformFloor: floor === ':' ? '.' : floor === ';' ? ',' : floor, platformPit: true, platformOf: true };
+      this.enemies = this.enemies.filter(e => e.c !== c || e.r !== r);
+    }
+    restoreRail(c, r) { const key = c + ',' + r, f = this.props[key]?.platformFloor; this.grid[r][c] = f ?? this.map.base ?? '.'; delete this.props[key]; }
+    removePlatform(key) {
+      const path = this.props[key]?.movingPlatform?.path || []; delete this.props[key]?.movingPlatform;
+      for (const [c, r] of path) if (!this.platformUses(c, r)) this.restoreRail(c, r);
+    }
+    // Sol à remettre quand on retire un objet unique (départ, fin) : celui mémorisé sous lui, sinon la pierre.
+    floorUnder(key) {
+      const f = this.props[key]?.floor; if (f == null) { if (this.props[key]?.lv == null) delete this.props[key]; return '.'; }
+      return f === 'grass' ? ',' : f === 'stone' ? '.' : f;
+    }
     code() { return JSON.stringify(this.data()); }
     copyCode() {
       const txt = this.code(), done = () => this.toast('Code copié ! Colle-le dans la conversation.');
@@ -394,23 +473,26 @@
       const title = document.createElement('b'); title.textContent = it.icon + ' ' + it.name + ' :'; box.appendChild(title);
       if(it.opts==='supportedBridge'){
         sel('section',['A','B','C','D','E','F','G','H'].map(v=>[v,v]),this.bridgeGroup||'A',v=>this.bridgeGroup=v);
-        sel('étage',[1,1.5,2,2.5,3,4].map(v=>[v,v]),this.bridgeLevel||2,v=>this.bridgeLevel=+v);
+        sel('matériau',Object.entries(BK.MATERIALS).map(([id,m])=>[id,m.name]),this.bridgeMaterial||'bois',v=>this.bridgeMaterial=v);
+        sel('hauteur',[0,.5,1,1.5,2,2.5,3,3.5,4].map(v=>[v,v?'Étage '+v:'Au sol (0)']),this.bridgeLevel??2,v=>this.bridgeLevel=+v);
       }
       if(it.opts==='blastDrawbridge'){
         sel('direction',[[2,'Vers le haut ↑'],[0,'Vers le bas ↓'],[1,'Vers la gauche ←'],[3,'Vers la droite →']],this.bridgeDirection??2,v=>this.bridgeDirection=+v);
         sel('longueur',[2,3,4,5,6].map(n=>[n,n+' cases']),this.bridgeLength||3,v=>this.bridgeLength=+v);
       }
       if(it.opts==='movingPlatform'){
-        sel('direction',[['horizontal','Horizontale ↔'],['vertical','Verticale ↕']],this.platformAxis||'horizontal',v=>this.platformAxis=v);
-        sel('longueur',[2,3,4,5,6,7,8].map(n=>[n,n+' cases']),this.platformLength||4,v=>this.platformLength=+v);
-        sel('étage des quais',[0,.5,1,1.5,2,2.5,3,4].map(n=>[n,'Étage '+n]),this.platformLevel??1,v=>this.platformLevel=+v);
+        const how=document.createElement('span');how.textContent='Clique où tu veux la plateforme, puis glisse sans relâcher pour tracer son trajet. Deux trajets peuvent se croiser. Gomme : retire la plateforme.';box.appendChild(how);
+        sel('étage des quais',[['auto','Automatique (comme le pont ou l’étage voisin)'],...[0,.5,1,1.5,2,2.5,3,4].map(n=>[n,'Étage '+n])],this.platformLevel??'auto',v=>this.platformLevel=v==='auto'?'auto':+v);
         sel('vitesse',[[.7,'Lente'],[1.3,'Normale'],[2,'Rapide']],this.platformSpeed||1.3,v=>this.platformSpeed=+v);
       }
       if(it.opts==='autoLift'){
-        sel('montée',[.5,1,1.5,2,3,4].map(n=>[n,n+' étage(s)']),this.liftHeight||1,v=>this.liftHeight=+v);
-        sel('durée du trajet',[[1.8,'1,8 s'],[2.6,'2,6 s'],[4,'4 s']],this.travelTime||2.6,v=>this.travelTime=+v);
+        sel('fonctionnement',[['auto','Automatique'],['bomb','Avec une bombe']],this.liftAuto===false?'bomb':'auto',v=>{this.liftAuto=v==='auto';this.renderOptions();});
+        sel('hauteur',[.5,1,1.5,2,2.5,3,3.5,4].map(n=>[n,'Étage '+n]),this.liftHeight||2,v=>this.liftHeight=+v);
+        if(this.liftAuto!==false)sel('durée du trajet',[[1.8,'1,8 s'],[2.6,'2,6 s'],[4,'4 s']],this.travelTime||2.6,v=>this.travelTime=+v);
       }
-      if(['movingPlatform','autoLift'].includes(it.opts))sel('pause à chaque bout',[[1,'1 s'],[1.8,'1,8 s'],[3,'3 s']],this.platformPause||1.8,v=>this.platformPause=+v);
+      if(it.opts==='floorHeight')sel('hauteur',[['keep','Garder la hauteur de la case'],...[0,.5,1,1.5,2,2.5,3,3.5,4,4.5,5].map(n=>[n,n?'Étage '+n:'Au sol (0)'])],this.floorLevel??'keep',v=>this.floorLevel=v==='keep'?'keep':+v);
+      if(it.opts==='ramp')sel('matériau',[['auto','Classique'],...Object.entries(BK.MATERIALS).map(([id,m])=>[id,m.name])],this.rampMaterial||'auto',v=>this.rampMaterial=v);
+      if(it.opts==='movingPlatform'||(it.opts==='autoLift'&&this.liftAuto!==false))sel('pause à chaque bout',[[1,'1 s'],[1.8,'1,8 s'],[3,'3 s']],this.platformPause||1.8,v=>this.platformPause=+v);
       if(it.opts==='secretWall'){
         sel('pièce',['A','B','C','D','E','F','G','H'].map(v=>[v,v]),this.secretGroup||'A',v=>this.secretGroup=v);
         sel('pièce derrière le mur',[[2,'Vers le haut ↑'],[0,'Vers le bas ↓'],[1,'À gauche ←'],[3,'À droite →']],this.secretDirection??2,v=>this.secretDirection=+v);
@@ -430,6 +512,10 @@
         const note=document.createElement('span'),ends=Object.entries(this.props).filter(([key,pr])=>pr.deco==='greenpipe'&&(pr.pipeLink||'A')===(this.pipeLink||'A'));
         note.textContent=ends.length===2?'Reliés : '+ends.map(([key])=>key.replace(',', ' / ')).join(' ↔ '):ends.length<2?'Pose '+(2-ends.length)+' extrémité(s) avec cette lettre.':'Trop de tuyaux : donne une autre lettre à une paire.';
         box.appendChild(note);
+      }
+      if(it.opts==='brick'){
+        const l=document.createElement('label'),pick=document.createElement('input'),reset=document.createElement('button');l.textContent='couleur ';pick.type='color';pick.value=this.brickColor||BK.BRICK_COLOR;pick.addEventListener('input',()=>this.brickColor=pick.value);l.appendChild(pick);box.appendChild(l);
+        reset.textContent='🧱 Rouge brique';reset.addEventListener('click',()=>{this.brickColor=BK.BRICK_COLOR;pick.value=BK.BRICK_COLOR;});box.appendChild(reset);
       }
       if(it.opts==='snail') sel('couleur de coquille',Object.entries(BK.SNAIL_COLORS).map(([k,v])=>[k,v.name]),this.snailColor||'default',v=>this.snailColor=v);
       if(it.opts==='cat') sel('couleur du chat',Object.entries(BK.CAT_COLORS).map(([k,v])=>[k,v.name]),this.catColor||'roux',v=>this.catColor=v);

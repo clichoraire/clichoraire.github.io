@@ -9,6 +9,10 @@ Dossier réservé aux tableaux créés avec le mode **Debug** du jeu (visible se
    `CB.CUSTOM_WAVES['foret-2'] = { ... };` (clé = `slot` du JSON). Le jeu l'utilise alors à la place du tableau d'origine
    (la carte montre son nom et son texte ; l'éditeur l'ouvre tel quel depuis sa case). Le 1-1 est `tableau-foret-1.json`.
 
+Un tableau **sans** JSON relié (ex. 1-2, la nuée) : le Debug lance le vrai tableau du jeu. Tes changements s'appliquent avec
+« ✔ Appliquer et recommencer », qui le transforme en tableau de l'éditeur. Type « Nuée » (`"type": "swarm"`) : tenir X secondes,
+étoiles à 60 / 180 / 300 s, bombes magiques et bateau volant du 1-2 ; les monstres viennent de ta liste.
+
 `maxAlive` (onglet Objectif, « Max à l'écran ») : jamais plus de N monstres aléatoires vivants en même temps (0 = sans limite ; la mer
 des monstres est à 4).
 
@@ -51,7 +55,8 @@ pour bronze, argent, or, diamant.
 un seul grand combat, tous ses pouvoirs, il ne s'enfuit pas. Chaque groupe mélange ses `kinds` (sortes × nombre, `elite: true` par sorte : bouton ⭐ dans l'éditeur ; l'ancien `elite` de groupe est
 converti) et les fait sortir un
 par un toutes les `every` secondes (0 = tous d'un coup). `rel` (± s) le fait partir par rapport à la fin des arrivées du
-groupe d'avant (négatif = il commence avant que l'autre ait fini de sortir). Sans `at` ni `rel`, un groupe part 1,5 s après l'élimination du groupe d'avant (le premier à
+groupe d'avant (négatif = il commence avant que l'autre ait fini de sortir). `left` (nombre) le fait partir quand il ne reste que ce nombre d'ennemis du groupe d'avant (ceux qui ne sont pas encore
+arrivés comptent aussi). Sans `at`, `rel` ni `left`, un groupe part 1,5 s après l'élimination du groupe d'avant (le premier à
 1 s) ; avec `at`, il part à ce moment-là dès que son tour vient. L'ancien format `spawns` (paquets répétés) reste lu par le
 jeu et est converti en `sequence` quand on l'ouvre dans l'éditeur.
 

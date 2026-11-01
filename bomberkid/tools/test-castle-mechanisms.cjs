@@ -6,7 +6,11 @@ W.placeBomb(p);W.explodeBomb(W.bombs[0]);assert.equal(W.cell(3,3),0);assert(!W.h
 W.editorPreview=true;assert(!W.hiddenSecretAt(3,2));
 const E=new BK.Editor({name:'Mécanismes',theme:'castle',cols:12,rows:8,grid:Array(8).fill('.'.repeat(12)),props:{}});
 E.item={tool:'raiseHalf'};E.paint(2,2,true);assert.equal(E.props['2,2'].lv,.5);E.item={ch:'{',opts:'autoLift'};E.liftHeight=1.5;E.paint(2,2,true);assert(E.world.elevAt(2,2).auto);assert(Math.abs(E.world.elevAt(2,2).top-1.2)<1e-5);
-E.item={ch:'(',opts:'movingPlatform'};E.platformLength=4;E.platformAxis='vertical';E.platformLevel=.5;E.paint(6,2,true);assert.equal(E.world.movers[0].cells.length,4);assert.equal(E.world.movers[0].top,.3);assert.equal(E.world.movers[0].cells.at(-1).r,5);const code=JSON.parse(E.code());assert(code.props['2,2'].autoLift);assert(code.props['6,2'].platformPit);assert.equal(code.props['6,2'].platformLevel,.5);
+E.item={ch:'(',opts:'movingPlatform'};E.platformLevel=.5;E.paint(6,2,true);E.paint(6,5,false);assert.equal(E.world.movers[0].cells.length,4);assert.equal(E.world.movers[0].top,.3);assert.equal(E.world.movers[0].cells.at(-1).r,5);const code=JSON.parse(E.code());assert(code.props['2,2'].autoLift);assert(code.props['6,2'].platformPit);assert.equal(code.props['6,2'].movingPlatform.level,.5);
+// Two traced platforms crossing each other keep their own paths; backtracking shortens, eraser removes one platform.
+E.item={ch:'(',opts:'movingPlatform'};E.platformLevel='auto';E.paint(4,4,true);E.paint(9,4,false);E.paint(8,4,false);
+assert.equal(E.world.movers.length,2);assert.deepEqual(E.world.movers.map(m=>m.cells.length).sort(),[4,5]);assert(E.world.movers.find(m=>m.cells.length===5).cells.every(q=>q.r===4));
+E.item={tool:'erase'};E.paint(4,4,true);assert.equal(E.world.movers.length,1);assert.equal(E.grid[4][6],'(');assert.equal(E.grid[4][4],'.');
 const a=new BK.Adventure('adam',7),V=a.world,h=a.player;V.enemies=[];V.frozen=false;h.invuln=999;h.x=17.5;h.y=16.5;h.safe={x:h.x,y:h.y,dir:2};
 const ally=V.addPlayer(BK.charById('richard'),17,16,{hp:25,lives:3});Object.assign(ally,{ally:true,human:false,leader:h,invuln:999});
 const tick=()=>V.update(1/60);const wait=fn=>{for(let i=0;i<1800;i++){if(fn())return;tick();}throw Error('transport timeout');};

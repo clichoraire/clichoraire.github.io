@@ -25,8 +25,10 @@
   BK.DECO = DECO; BK.DECO_PROPS = DECO_PROPS;
   BK.hasInstrument = W => W.deco.some(k => k && BK.INSTRUMENTS.includes(k));
   const T_STONE = 0, T_GRASS = 1, T_WATER = 2, T_BRIDGE = 3, T_VOID = 4, T_DIRT = 5, T_ROAD = 6, T_PLAZA = 7, T_SIDEWALK = 8, T_CURB = 9, T_WOOD = 10, T_TILE = 11, T_CARPET = 12, T_LAVA = 13, T_ICE = 14, T_SNOW = 15;
-  const FLOORS = { '-': T_DIRT, '_': T_ROAD, '%': T_PLAZA, '&': T_SIDEWALK, '!': T_CURB, 'y': T_WOOD, 'z': T_TILE, 'q': T_CARPET, '[': T_LAVA, ']': T_ICE, ')': T_SNOW, ...Object.fromEntries(BK.DESERT_FLOORS.map(it=>[it.ch,it.terrain])) };
+  const FLOORS = { '-': T_DIRT, '_': T_ROAD, '%': T_PLAZA, '&': T_SIDEWALK, '!': T_CURB, 'y': T_WOOD, 'z': T_TILE, 'q': T_CARPET, '[': T_LAVA, ']': T_ICE, ')': T_SNOW, ...Object.fromEntries(BK.DESERT_FLOORS.map(it=>[it.ch,it.terrain])), ...Object.fromEntries(BK.EXTRA_FLOORS.filter(it=>!it.deep).map(it=>[it.ch,it.terrain])) };
   const LEVEL = 0.6;   // hauteur d'un plateau
+  // Terrain d'un caractère de sol (tuile gardée sous un pont, sous des rails…).
+  BK.terrainForChar = ch => ch === '~' || ch === BK.DEEP_WATER_CH ? T_WATER : ch === ' ' ? T_VOID : ch === ',' || ch === ';' ? T_GRASS : ch === '=' ? T_BRIDGE : FLOORS[ch] ?? T_STONE;
   const DIRS = BK.DIRS, MUSH_TOP = 1.3;   // hauteur du chapeau du gros champignon (trampoline)
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -44,7 +46,7 @@
       this.spawns = [];           // ennemis (lettres)
       this.boats = []; this.switches = []; this.exit = null; this.explore = !!o.explore; this.dayCycle = !!o.dayCycle; this.wasNight = false; this.exitKind = o.exitKind || 'portal';   // 'G' devient un portail, 'door' pour les maisons et le quai
       const n = this.cols * this.rows;
-      this.terrain = new Uint8Array(n); this.height = new Float32Array(n); this.ramp = new Int8Array(n);   // ramp : 0 non, 1 = le sud est plus haut, -1 = le nord, 2 = l'est, -2 = l'ouest
+      this.deepWater = new Set(); this.terrain = new Uint8Array(n); this.height = new Float32Array(n); this.ramp = new Int8Array(n);   // ramp : 0 non, 1 = le sud est plus haut, -1 = le nord, 2 = l'est, -2 = l'ouest
       this.targets = {}; this.gates = {}; this.trees = []; this.doors = []; this.cardsTotal = 0; this.pendingItems = []; this.coins = !!o.coins;
       this.trail = new Uint8Array(n); this.sparks = []; this.metal = new Int8Array(n).fill(-1); this.houses = o.houses || {}; this.props = {...(o.props || {})}; for(const [key,pr] of Object.entries(this.props)) if(pr.deco==='terrarium') this.props[key]={...pr,snails:(pr.snails||[]).map(s=>({...s}))}; this.rocks = []; this.shots = []; this.lifts = []; this.elevators = []; this.rails = []; this.movers = []; this.baseH = new Map(); this.campfires = [];this.firebars=[]; this.fishes = []; this.volcanoes = []; this.hives = []; this.bounceT = new Map(); this.growT = new Map(); this.puddles = []; this.debris = []; this.flowers = []; this.deco = new Array(n).fill(null);   // traînée de poudre : 1 = intacte, 2 = brûlée
       if (this.explore) { this.parseExplore(o.map); for(const [key,pr] of Object.entries(this.props)){if(pr.boat){const [c,r]=key.split(',').map(Number);if(this.tAt(c,r)===T_WATER)this.boats.push({x:c+.5,y:r+.5,dir:0,rowT:0,rider:null});}} }
@@ -74,12 +76,12 @@
       BK.migrateRemedyData(this.props);
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
         const ch = map[r][c], i = r * this.cols + c; let t = T_STONE, h = 0, cell = 0;
-        if (ch === '~') t = T_WATER; else if (ch === ' ') t = T_VOID; else if (FLOORS[ch] != null) t = FLOORS[ch];
+        if (ch === '~') t = T_WATER; else if (ch === BK.DEEP_WATER_CH) { t = T_WATER; this.deepWater.add(i); } else if (ch === ' ') t = T_VOID; else if (FLOORS[ch] != null) t = FLOORS[ch];
         else if (ch === ',') t = T_GRASS; else if (ch === ':') h = LEVEL; else if (ch === ';') { t = T_GRASS; h = LEVEL; }
         else if (ch === '=') t = T_BRIDGE; else if (ch === '/') { this.ramp[i] = 1; h = LEVEL / 2; }
         else if (ch === '}') this.lifts.push({ c, r, lv: 0, t: 1, moving: false });
         else if (ch === '{') this.elevators.push({ c, r, state: 'rest', t: 0 });
-        else if (ch === '(') this.rails.push({ c, r });   // rail : une plateforme mobile y glisse (voir buildMovers)
+        else if (ch === '(') { this.rails.push({ c, r }); const f = this.props[c + ',' + r]?.platformFloor; if (f != null && !this.props[c + ',' + r].platformPit) t = BK.terrainForChar(f) === T_VOID || BK.terrainForChar(f) === T_WATER ? T_STONE : BK.terrainForChar(f); }   // rail : une plateforme mobile y glisse (voir buildMovers)
         else if (ch === '#') cell = HARD; else if (ch === 'W') { cell = SOFT; this.special.set(c + ',' + r, { type: 'brick' }); }   // mur de briques : se casse avec une bombe
         else if (ch === 'x') cell = SOFT; else if (ch === 'X') { cell = SOFT; h = LEVEL; }
         else if (ch === 'T') { cell = HARD; this.trees.push({ c, r }); t = T_GRASS; }
@@ -103,10 +105,11 @@
         this.terrain[i] = t; this.height[i] = h; this.cells[i] = cell;
       }
       // Niveau des objets posés sur un plateau : d'après props (éditeur), sinon d'après les voisines.
-      const TERRAIN = '~ .,:;/=-_%&!yzq}{[]()';   // (X, bloc sur un plateau, est un objet : son sol vient des voisines de l'étage 1)
+      const TERRAIN = '~ .,:;/=-_%&!yzq}{[]()' + Object.keys(FLOORS).join('') + BK.DEEP_WATER_CH;   // (X, bloc sur un plateau, est un objet : son sol vient des voisines de l'étage 1)
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
         const ch = map[r][c], i = r * this.cols + c; if (TERRAIN.includes(ch)) continue;
         const pr = this.props[c + ',' + r];
+        if (pr?.floor === '~' && pr.lv == null) { this.terrain[i] = T_WATER; continue; }   // objet posé sur l'eau (éditeur) : l'eau reste
         if (pr && (pr.lv != null || pr.h != null)) { this.height[i] = pr.lv != null ? pr.lv * LEVEL : (pr.h ? LEVEL : 0); if (pr.floor === 'grass' || pr.floor === ',' || pr.floor === ';') this.terrain[i] = T_GRASS; else if (pr.floor === 'stone' || pr.floor === '.' || pr.floor === ':') this.terrain[i] = T_STONE; else if (pr.floor === '=') this.terrain[i] = T_BRIDGE; else if (FLOORS[pr.floor] != null) this.terrain[i] = FLOORS[pr.floor]; continue; }
         // étage et sol d'après les voisines qui sont de vrais sols (majorité ; à égalité, l'étage le plus bas)
         // (voisines directes d'abord, puis de plus en plus loin : une case entourée d'objets prend le sol des alentours)
@@ -124,7 +127,7 @@
       for (const L of this.lifts) { L.lv = Math.round(this.hAt(L.c, L.r) / LEVEL); }
       // ascenseur : plateau au repos un peu au-dessus de son sol (une bombe tient dessous), sommet deux étages plus haut
       this.buildMovers();
-      for (const E of this.elevators) { const i = this.idx(E.c, E.r); E.base = this.height[i]; E.rest = E.base + 0.35; E.top = E.base + LEVEL * 2; const pr=this.props[E.c+','+E.r]||{};if(pr.autoLift){E.auto=true;E.rest=E.base;E.top=E.base+Math.max(.5,Number(pr.liftHeight)||1)*LEVEL;E.duration=Math.max(.8,Number(pr.travelTime)||2.6);E.pause=Math.max(.5,Number(pr.platformPause)||1.8);E.state='rest';} this.height[i] = E.rest; }
+      for (const E of this.elevators) { const i = this.idx(E.c, E.r); E.base = this.height[i]; E.rest = E.base + 0.35; E.top = E.base + LEVEL * 2; const pr=this.props[E.c+','+E.r]||{};if(!pr.autoLift&&pr.liftHeight)E.top=E.base+Math.max(.5,Number(pr.liftHeight))*LEVEL;if(pr.autoLift){E.auto=true;E.rest=E.base;E.top=E.base+Math.max(.5,Number(pr.liftHeight)||1)*LEVEL;E.duration=Math.max(.8,Number(pr.travelTime)||2.6);E.pause=Math.max(.5,Number(pr.platformPause)||1.8);E.state='rest';} this.height[i] = E.rest; }
       // orientation des rampes et hauteur des portes (un pont-levis sur l'eau)
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
         const i = r * this.cols + c;
@@ -249,25 +252,43 @@
     // Rails : les cases « ( » qui se touchent forment un chemin ; une plateforme (étage +1) y fait l'aller-retour,
     // s'arrête une seconde aux bouts, et emporte le héros et les bombes posés dessus.
     buildMovers() {
-      const key = (c, r) => c + ',' + r, left = new Map(this.rails.map(x => [key(x.c, x.r), x]));
+      const key = (c, r) => c + ',' + r, used = new Set();
+      this.railFloor = new Map();
       for (const x of this.rails) this.baseH.set(this.idx(x.c, x.r), this.height[this.idx(x.c, x.r)]);
+      // Sol d'origine sous le trajet (eau, herbe…) ; les anciens tableaux sans cette info gardent le vide.
+      const floorT = ch => ch === '~' ? T_WATER : ch === ' ' ? T_VOID : ch === ',' || ch === ';' ? T_GRASS : ch === '=' ? T_BRIDGE : FLOORS[ch] ?? T_STONE;
+      const make = (cells, pr) => {
+        const base = this.baseH.get(this.idx(cells[0].c, cells[0].r)) || 0;
+        // hauteur automatique : celle des cases d'embarquement le long du trajet, un étage par défaut
+        let top = 0; for (const q of cells) for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const c = q.c + dc, r = q.r + dr; if (!this.inside(c, r) || this.railAt(c, r) || this.cells[this.idx(c, r)] || !this.walkableTerrain(c, r) || this.ramp[this.idx(c, r)]) continue; top = Math.max(top, this.hAt(c, r)); }
+        const M = { cells, pos: 0, dir: 1, speed: 1.3, wait: 0.6, x: cells[0].c + 0.5, y: cells[0].r + 0.5, base, top: top > base + 0.01 ? top : base + LEVEL };
+        M.floors = cells.map(q => { const f = this.props[key(q.c, q.r)]?.platformFloor; return f == null ? T_VOID : floorT(f); }); cells.forEach((q, k) => this.railFloor.set(this.idx(q.c, q.r), M.floors[k]));
+        M.speed=Math.max(.4,Math.min(3,Number(pr.platformSpeed)||1.3));M.pause=Math.max(.5,Number(pr.platformPause)||1.8);if(pr.platformLevel!=null&&pr.platformLevel!=='auto')M.top=Number(pr.platformLevel)*LEVEL;M.pit=!!pr.platformPit;this.movers.push(M);
+      };
+      // Plateformes tracées dans l'éditeur : chacune suit son propre trajet, même quand deux trajets se croisent.
+      for (const [k, pr] of Object.entries(this.props)) {
+        const mp = pr.movingPlatform; if (!mp || !Array.isArray(mp.path)) continue;
+        const cells = mp.path.map(([c, r]) => ({ c, r })).filter(q => this.inside(q.c, q.r) && this.railAt(q.c, q.r)); if (!cells.length) continue;
+        for (const q of cells) used.add(key(q.c, q.r));
+        make(cells, { platformLevel: mp.level, platformSpeed: mp.speed, platformPause: mp.pause, platformPit: true });
+      }
+      // Anciens rails : les cases voisines se relient en une seule ligne.
+      const left = new Map(this.rails.filter(x => !used.has(key(x.c, x.r)) && !this.props[key(x.c, x.r)]?.platformOf).map(x => [key(x.c, x.r), x]));
       const nbs = x => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dc, dr]) => left.get(key(x.c + dc, x.r + dr))).filter(Boolean);
       while (left.size) {
         let start = null; for (const x of left.values()) { if (nbs(x).length <= 1) { start = x; break; } } if (!start) start = left.values().next().value;
         const cells = []; let cur = start; while (cur) { cells.push({ c: cur.c, r: cur.r }); left.delete(key(cur.c, cur.r)); cur = nbs(cur)[0] || null; }
-        const base = this.baseH.get(this.idx(cells[0].c, cells[0].r)) || 0;
-        // la plateforme monte au niveau des cases d'embarquement (voisines des deux bouts du rail), un étage par défaut
-        let top = 0; for (const end of [cells[0], cells[cells.length - 1]]) for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const c = end.c + dc, r = end.r + dr; if (!this.inside(c, r) || left.has(key(c, r)) || this.railAt(c, r) || this.cells[this.idx(c, r)] || !this.walkableTerrain(c, r) || this.ramp[this.idx(c, r)]) continue; top = Math.max(top, this.hAt(c, r)); }
-        const M = { cells, pos: 0, dir: 1, speed: 1.3, wait: 0.6, x: cells[0].c + 0.5, y: cells[0].r + 0.5, base, top: top > base + 0.01 ? top : base + LEVEL };
-        const pr=this.props[cells[0].c+','+cells[0].r]||{};M.speed=Math.max(.4,Math.min(3,Number(pr.platformSpeed)||1.3));M.pause=Math.max(.5,Number(pr.platformPause)||1.8);if(pr.platformLevel!=null)M.top=Number(pr.platformLevel)*LEVEL;M.pit=!!pr.platformPit;this.movers.push(M);
+        make(cells, this.props[key(cells[0].c, cells[0].r)] || {});
       }
+      // Arrêts en chemin : la plateforme attend aussi devant chaque case où l'on peut embarquer à sa hauteur (pont, étage…).
+      for (const M of this.movers) M.stops = M.cells.map((q, k) => k > 0 && k < M.cells.length - 1 && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) => { const c = q.c + dc, r = q.r + dr; return this.inside(c, r) && !this.railAt(c, r) && !this.cells[this.idx(c, r)] && this.walkableTerrain(c, r) && Math.abs(this.hAt(c, r) - M.top) < 0.05; }));
       this.applyMovers();
     }
     railAt(c, r) { return this.rails.some(x => x.c === c && x.r === r); }
     moverAt(c, r) { return this.movers.find(M => Math.abs(M.x - c - 0.5) <= 0.5 + 1e-6 && Math.abs(M.y - r - 0.5) <= 0.5 + 1e-6) || null; }
     applyMovers() {
       for (const [i, b] of this.baseH) this.height[i] = b;
-      for(const M of this.movers)if(M.pit)for(const q of M.cells)this.terrain[this.idx(q.c,q.r)]=T_VOID;
+      for(const M of this.movers)if(M.pit)M.cells.forEach((q,k)=>this.terrain[this.idx(q.c,q.r)]=M.floors?.[k]??T_VOID);
       for (const M of this.movers) for (let k = 0; k < M.cells.length; k++) { const cl = M.cells[k]; if (Math.abs(M.x - cl.c - 0.5) <= 0.9 && Math.abs(M.y - cl.r - 0.5) <= 0.9) {this.height[this.idx(cl.c, cl.r)] = M.top;if(M.pit)this.terrain[this.idx(cl.c,cl.r)]=T_STONE;} }   // la dalle (0,94 de large) couvre la case dès qu'elle la chevauche un peu
     }
     updateMovers(dt) {
@@ -275,7 +296,7 @@
       for (const M of this.movers) {
         const ox = M.x, oy = M.y, n = M.cells.length; if (n < 2) continue;
         if (M.wait > 0) M.wait -= dt;
-        else { M.pos += M.dir * M.speed * dt; if (M.pos >= n - 1) { M.pos = n - 1; M.dir = -1; M.wait = M.pause||1.0; } else if (M.pos <= 0) { M.pos = 0; M.dir = 1; M.wait = M.pause||1.0; } }
+        else { const from = M.pos; M.pos += M.dir * M.speed * dt; const stop = M.stops?.findIndex((s, k) => s && k !== from && (k - from) * M.dir > 0 && (k - M.pos) * M.dir <= 0); if (stop > 0) { M.pos = stop; M.wait = M.pause||1.0; } else if (M.pos >= n - 1) { M.pos = n - 1; M.dir = -1; M.wait = M.pause||1.0; } else if (M.pos <= 0) { M.pos = 0; M.dir = 1; M.wait = M.pause||1.0; } }
         const k = Math.min(n - 2, Math.floor(M.pos)), u = M.pos - k, a = M.cells[k], b = M.cells[k + 1];
         M.x = a.c + 0.5 + (b.c - a.c) * u; M.y = a.r + 0.5 + (b.r - a.r) * u;
         const dx = M.x - ox, dy = M.y - oy; if (!dx && !dy) continue;
@@ -410,6 +431,7 @@
       const steps=Math.max(1,Math.ceil(dt*2.5/.1));for(let i=0;i<steps;i++){let x=b.x+dx*2.5*dt/steps,y=b.y+dy*2.5*dt/steps;if(water(x,b.y))b.x=x;if(water(b.x,y))b.y=y;}
       b.dir=p.dir;if(p.moving)b.rowT+=dt*7;p.x=b.x;p.y=b.y;p.nearDoor=p.nearDisplay=p.nearFire=p.nearFountain=null;
       for(const q of b.passengers||[]){q.x=b.x;q.y=b.y;q.dir=b.dir;}
+      { const it=this.itemAt(Math.floor(b.x),Math.floor(b.y)); if(it)this.takeItem(p,it); }   // pièces et objets posés sur l'eau : on les ramasse en bateau
       inp.bomb=false;if(inp.action){inp.action=false;this.useBoat(p);}
     }
     updateAlly(p, dt) {
@@ -566,6 +588,11 @@
       if (!p.alive || p.npc || !p.human || p.air || p.falling || p.carrying) return null;
       return this.enemies.filter(e => !e.dead && !!BK.PET_FOODS[e.type] && e.def.peaceful && !p.swallowedBy && Math.abs(this.groundZ(e.x,e.y)-this.groundZ(p.x,p.y))<.3 && this.canSee(e, p, 1.4)).sort((a,b) => Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0] || null;
     }
+    // Mur de briques : rouge brique partout, sauf si le créateur du tableau a choisi une autre couleur.
+    brickColors(c, r) {
+      const col = this.props[c + ',' + r]?.brickColor || BK.BRICK_COLOR;
+      return col === BK.BRICK_COLOR ? { top: '#d16a45', front: col, side: '#7a2f18' } : { top: BK.draw3d.shade(col, 1.18), front: col, side: BK.draw3d.shade(col, 0.68) };
+    }
     petFood(p,e) {
       return (BK.PET_FOODS[e.type]||[]).find(type=>(p.inv||[]).some(s=>s.type===type&&s.n>0));
     }
@@ -606,6 +633,9 @@
     }
     petAnimal(p) {
       const e = this.nearbyPet(p); if (!e) return false;
+      // Après ses deux caresses, un animal sauvage qui attend son repas le reçoit directement si le sac contient sa nourriture.
+      const bond = e.bond?.owner === p.id ? e.bond : null, food = e.def.wildlife && bond?.pets >= 2 && !(bond.meals >= 1) && this.petFood(p, e);
+      if (food && this.feedPet(p, e, food)) { this.events.push({ type: 'petFed', player: p, animal: e, food }); return true; }
       this.bondPet(p,e,'pet');
       e.petT = 1.1; e.pause = 1.1; e.target = null; e.follow = p; e.followT = Math.max(e.followT||0,8); e.followReady = false;
       this.setPose(p, 'pickup', 0.6); p.running = false;
@@ -992,7 +1022,7 @@
       const sp0 = this.special.get(c + ',' + r); if (sp0 && sp0.type === 'brick') this.special.delete(c + ',' + r);
       if (by) by.score += BK.BLOCK_SCORE;
       const SOFT_COLORS = { crate: '#a0703a', melon: '#ff5a5a', cheese: '#f4c430', gift: '#ffd54a', dirtblock: '#7d5428', pumpkin: '#ff8a1f' };
-      this.burst(c + 0.5, r + 0.5, 0.5, SOFT_COLORS[kind] || (sp0 && sp0.type === 'brick' ? this.theme.hard : this.theme.soft), 10, 1);
+      this.burst(c + 0.5, r + 0.5, 0.5, SOFT_COLORS[kind] || (sp0 && sp0.type === 'brick' ? this.brickColors(c, r).front : this.theme.soft), 10, 1);
       if (kind === 'melon') this.burst(c + 0.5, r + 0.5, 0.4, '#2e7d32', 6, 1);
       this.events.push({ type: 'blockDestroyed', c, r, player: by });
       const sp = this.special.get(c + ',' + r);
@@ -1067,6 +1097,8 @@
         this.addEnemy('escargot',spot.c,spot.r,{...sn,shellColor:sn.color,nickname:sn.nickname,shell:1,shellWait:0.7});
         this.setPose(p,'place',0.3);return true;
       }
+      // Près d'un animal qui aime cette nourriture (carotte pour le faon…), on la lui donne au lieu de la lancer.
+      { const pet = this.nearbyPet(p); if (pet && BK.PET_FOODS[pet.type]?.includes(s.type) && this.feedPet(p, pet, s.type)) { this.events.push({ type: 'petFed', player: p, animal: pet, food: s.type }); return true; } }
       if(BK.remedyId(s.type)==='antidote'){if(!(p.diarrheaT>0||p.shortfuseT>0||p.poison>0))return false;p.diarrheaT=p.shortfuseT=p.autoBombT=p.poison=p.poisonTick=0;spend();this.events.push({type:'cured',player:p,carry:true});return true;}
       if (s.type === 'wood') { if(!this.buildCampfire(p)) {this.events.push({type:'campfireBlocked',player:p,carry:true});return false;}spend();return true; }
       if (s.type === 'axe') return this.chopTree(p);
@@ -1087,7 +1119,9 @@
       }
       return false;
     }
-    slowAt(e) { if (!this.puddles.length) return 1; const c = Math.floor(e.x), r = Math.floor(e.y); return this.puddles.some(q => q.kind!=='toadSlime' && q.c === c && q.r === r) ? 0.12 : 1; }
+    // Sols collants (miel, boue) : seulement pour qui marche dessus.
+    floorSlow(e) { if (!this.explore || (e.z || 0) > 0.2) return 1; const f = BK.EXTRA_FLOOR_BY_T[this.tAt(Math.floor(e.x), Math.floor(e.y))]; return f?.slow || 1; }
+    slowAt(e) { const fs = this.floorSlow(e); if (!this.puddles.length) return fs; const c = Math.floor(e.x), r = Math.floor(e.y); return this.puddles.some(q => q.kind!=='toadSlime' && q.c === c && q.r === r) ? 0.12 : fs; }
     // ---- Cycle jour-nuit (4 minutes) : jour, crépuscule (30 s), nuit (70 s), aube (30 s). darkness() : 0 le jour, 1 en pleine nuit.
     darkness() {
       if (!this.dayCycle) return 0; const t = this.time % BK.DAY_CYCLE, u = t / BK.DAY_CYCLE;
@@ -1436,7 +1470,7 @@
       // course : deux appuis rapides dans la même direction ; elle use la stamina et s'arrête quand on lâche
       if (!p.bot && p.moving && !p.wasMoving) { if (p.lastTap && p.lastTap.dir === p.dir && this.time - p.lastTap.t < BK.DOUBLE_TAP && p.stamina > 5) { p.running = true; p.curSpeed = p.speed; } p.lastTap = { dir: p.dir, t: this.time }; }
       if (!p.moving || p.stamina <= 0) p.running = false;
-      const target = p.speed * (p.running ? BK.RUN_MULT * ((p.sizeScale || 1) < 1 ? 2 : 1) : 1) * (p.tongueSlow>0?.2:1) * this.toadSlimeSlow(p);
+      const target = p.speed * (p.running ? BK.RUN_MULT * ((p.sizeScale || 1) < 1 ? 2 : 1) : 1) * (p.tongueSlow>0?.2:1) * this.toadSlimeSlow(p) * (p.air ? 1 : this.floorSlow(p));
       p.curSpeed = p.running ? Math.min(target, Math.max(p.speed, p.curSpeed) + BK.RUN_ACCEL * dt) : target;
       if (p.running) { p.stamina = Math.max(0, p.stamina - BK.RUN_COST * dt); p.staminaWait = 0.7; p.dustT += dt; if (p.dustT > 0.14) { p.dustT = 0; this.burst(p.x - DIRS[p.dir].dx * 0.2, p.y - DIRS[p.dir].dy * 0.2, 0.15, 'rgba(230,220,200,0.8)', 2); } }
       else { p.staminaWait -= dt; if (p.staminaWait <= 0 && p.stamina < p.staminaMax) p.stamina = Math.min(p.staminaMax, p.stamina + p.staminaMax * p.staminaRegen / 100 * dt); }
@@ -1885,7 +1919,9 @@
         if (dH > e.leash) { e.state = 'return'; e.stateT = 0; this.events.push({ type: 'growl', enemy: e, back: true }); return; }
         if (!p || dP > 9) { e.state = 'return'; e.stateT = 0; return; }
         this.moveFree(e, p.x, p.y, e.speed * 1.5, dt); e.flip = p.x < e.x;
-        e.swingT = (e.swingT || 0) - dt; if (dP < 1.4 && e.swingT <= 0) { e.swingT = 0.55; e.swing = 1; this.events.push({ type: 'swing', enemy: e }); }   // coups d'épée sans arrêt
+        e.swingT = (e.swingT || 0) - dt; if (dP < 1.4 && e.swingT <= 0) { e.swingT = 0.55; e.swing = 1; e.swingHit = 0.18; this.events.push({ type: 'swing', enemy: e }); }   // coups d'épée sans arrêt
+        // L'épée touche vraiment à sa portée, même quand un coin de mur, une bombe ou une marche l'empêche de coller au héros.
+        if (e.swingHit > 0) { e.swingHit -= dt; if (e.swingHit <= 0 && p.alive && !p.air && !p.falling && Math.hypot(p.x - e.x, p.y - e.y) < 1.35 && Math.abs(this.groundZ(p.x, p.y) - this.groundZ(e.x, e.y)) < 0.35) this.hitPlayer(p, { kind: 'enemy', enemy: e, dmg: e.def.dmg || 10 }); }
         return;
       }
       if (p && e.stateT > 0.5 && dP < 6 && this.canSee(e, p, 6)) { e.state = 'chase'; e.stateT = 0; e.leash = 4 + Math.random() * 2; this.events.push({ type: 'growl', enemy: e }); return; }
@@ -2218,7 +2254,7 @@
           for (let i = 0; i < 3; i++) { const u = ((f.splashT * 1.1 + i * 0.33) % 1); ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 * (1 - u)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(surf.x, surf.y, surf.k * (0.15 + u * 0.55), surf.k * (0.08 + u * 0.28), 0, 0, Math.PI * 2); ctx.stroke(); }
           // on ne dessine que ce qui dépasse de la surface
           ctx.beginPath(); ctx.rect(surf.x - surf.k * 2, surf.y - surf.k * 4, surf.k * 4, surf.k * 4 + surf.k * 0.08); ctx.clip();
-        } else D3.shadow(ctx, cam, p.x, p.y, 0.3 * (p.def.size || 1) + 0.1, 0.3 * Math.max(0.4, 1 - f.z / 2), 0);
+        } else BK.draw3d.shadow(ctx, cam, p.x, p.y, 0.3 * (p.def.size || 1) + 0.1, 0.3 * Math.max(0.4, 1 - f.z / 2), 0);
         ctx.translate(pr.x, pr.y);
         BK.sprites.drawCharacter(ctx, p.def, { s: pr.k*(p.sizeScale||1), pose: 'hit', t: p.animT, poseT: 0.25, view, flip: p.dir === 1, walk: p.walk });
       } else {
@@ -2262,6 +2298,7 @@
       }
       // sol (les cases hors champ sont sautées)
       const D3 = BK.draw3d;
+      this._floorColor = (c, r, t) => floorColor(c, r, t); this._floorPattern = (p, c, r, t) => floorPattern(p, c, r, t);
       const cmin = Math.max(0, Math.floor(cam.target.x - 11)), cmax = Math.min(this.cols - 1, Math.ceil(cam.target.x + 11)), rmin = Math.max(0, Math.floor(cam.target.y - 10)), rmax = Math.min(this.rows - 1, Math.ceil(cam.target.y + 9));
       const list = [], bubbles = [];
       const camX = cam.pos.x;
@@ -2280,6 +2317,7 @@
       const floorColor = (c, r, t) => {
         if (t === T_ICE) return (c + r) % 2 ? '#cdeeff' : '#b9e3fb';
         if(t>=16&&t<=20)return BK.DESERT_FLOORS[t-16].colors[(c+r)%2];
+        if(BK.EXTRA_FLOOR_BY_T[t])return BK.EXTRA_FLOOR_BY_T[t].colors[(c+r)%2];
         if (t === T_SNOW) return (c + r) % 2 ? '#f7faff' : '#eaf1fa';
         if (t === T_LAVA) return '#e8471a';
         if (t === T_GRASS) return (c + r) % 2 ? T.grass || '#5fb84a' : T.grass2 || '#55a842';
@@ -2288,7 +2326,7 @@
         if (t === T_ROAD) return (c + r) % 2 ? '#4a4d55' : '#474a52';
         if (t === T_PLAZA) return (c + r) % 2 ? '#c9b89a' : '#b9a888';
         if (t === T_SIDEWALK || t === T_CURB) return (c + r) % 2 ? '#c4c6ca' : '#babcc0';
-        if (t === T_WOOD) return r % 2 ? '#b07a3e' : '#a66f35';
+        if (t === T_WOOD) return (c + r) % 2 ? '#b98349' : '#b37d44';
         if (t === T_TILE) return (c + r) % 2 ? '#f0ece4' : '#2b2f3a';
         if (t === T_CARPET) return '#9e2b2b';
         return (c + r) % 2 ? T.floor : T.floor2;
@@ -2321,6 +2359,7 @@
         const bu = ((time * 0.8 + c * 0.37 + r * 0.61) % 1); if (bu < 0.5) { const o = D3.onQuad(p, 0.3 + ((c * 5 + r) % 4) / 8, 0.3 + ((r * 3 + c) % 4) / 8); ctx.strokeStyle = 'rgba(255,230,150,' + (0.8 * (1 - bu * 2)) + ')'; ctx.beginPath(); ctx.arc(o.x, o.y, 2 + bu * 10, 0, Math.PI * 2); ctx.stroke(); }
       };
       const floorPattern = (p, c, r, t) => {
+        if (BK.EXTRA_FLOOR_BY_T[t]) { BK.drawExtraFloor(ctx, p, c, r, t, time); return; }
         if (this.lifts.length && this.liftAt(c, r)) { drawLift(p, c, r); return; }
         if (t === T_ICE) { const a = D3.onQuad(p, 0.12, 0.75), b = D3.onQuad(p, 0.45, 0.2), d = D3.onQuad(p, 0.55, 0.85), e = D3.onQuad(p, 0.88, 0.35); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(e.x, e.y); ctx.stroke(); if ((c * 7 + r * 3) % 4 === 0) { const f1 = D3.onQuad(p, 0.3, 0.5), f2 = D3.onQuad(p, 0.5, 0.6), f3 = D3.onQuad(p, 0.62, 0.42); ctx.strokeStyle = 'rgba(120,170,210,0.6)'; ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y); ctx.lineTo(f3.x, f3.y); ctx.stroke(); } return; }
         if (t === T_SNOW) { ctx.fillStyle = 'rgba(255,255,255,0.9)'; for (let k = 0; k < 3; k++) { const q = D3.onQuad(p, 0.15 + ((c * 5 + r * 7 + k * 11) % 7) / 10, 0.15 + ((c * 3 + r * 11 + k * 5) % 7) / 10); ctx.beginPath(); ctx.arc(q.x, q.y, 1.2, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = 'rgba(160,190,230,0.35)'; const q2 = D3.onQuad(p, 0.3 + ((c * 7 + r) % 5) / 10, 0.55 + ((c + r * 3) % 4) / 10); ctx.beginPath(); ctx.ellipse(q2.x, q2.y, 3.5, 1.6, 0, 0, Math.PI * 2); ctx.fill(); return; }
@@ -2337,7 +2376,10 @@
         else if (t === T_ROAD) { const h = this.tAt(c - 1, r) === T_ROAD || this.tAt(c + 1, r) === T_ROAD, v = this.tAt(c, r - 1) === T_ROAD || this.tAt(c, r + 1) === T_ROAD; if (h && !v) line(0.15, 0.5, 0.65, 0.5, '#e8c84a', 2); else if (v && !h) line(0.5, 0.15, 0.5, 0.65, '#e8c84a', 2); }
         else if (t === T_PLAZA) { line(0.5, 0, 0.5, 0.5, 'rgba(90,70,40,0.4)'); line(0, 0.5, 1, 0.5, 'rgba(90,70,40,0.4)'); line(0.25, 0.5, 0.25, 1, 'rgba(90,70,40,0.4)'); line(0.75, 0.5, 0.75, 1, 'rgba(90,70,40,0.4)'); }
         else if (t === T_SIDEWALK) { line(0.5, 0, 0.5, 1, 'rgba(60,60,70,0.35)'); line(0, 0.5, 1, 0.5, 'rgba(60,60,70,0.35)'); }
-        else if (t === T_WOOD) { line(0, 0.5, 1, 0.5, 'rgba(60,30,10,0.35)'); line((c % 2) ? 0.3 : 0.7, 0, (c % 2) ? 0.3 : 0.7, 0.5, 'rgba(60,30,10,0.35)'); line((c % 2) ? 0.7 : 0.3, 0.5, (c % 2) ? 0.7 : 0.3, 1, 'rgba(60,30,10,0.35)'); }
+        else if (t === T_WOOD) {   // quatre lattes par case, joints décalés, teintes et veinage légers
+          for (let n = 0; n < 4; n++) { const v0 = n / 4, v1 = (n + 1) / 4, tone = (c * 7 + r * 3 + n * 5) % 3; if (tone) D3.quad(ctx, [D3.onQuad(p, 0, v0), D3.onQuad(p, 1, v0), D3.onQuad(p, 1, v1), D3.onQuad(p, 0, v1)], tone === 1 ? 'rgba(255,225,170,0.10)' : 'rgba(70,35,10,0.08)');
+            const j = ((c * 3 + r * 5 + n * 2) % 4 + 1) / 5; line(j, v0, j, v1, 'rgba(70,38,14,0.45)'); line(0.08, v0 + 0.09, Math.min(0.92, j + 0.3), v0 + 0.11, 'rgba(120,70,30,0.18)'); if (n) line(0, v0, 1, v0, 'rgba(70,38,14,0.5)'); }
+        }
         else if (t === T_CARPET) { const edge = ['n', 's', 'e', 'w'].filter((d, i) => this.tAt(c + [0, 0, 1, -1][i], r + [-1, 1, 0, 0][i]) !== T_CARPET); for (const e of edge) { if (e === 'n') line(0, 0.08, 1, 0.08, '#ffd54a', 2); if (e === 's') line(0, 0.92, 1, 0.92, '#ffd54a', 2); if (e === 'w') line(0.08, 0, 0.08, 1, '#ffd54a', 2); if (e === 'e') line(0.92, 0, 0.92, 1, '#ffd54a', 2); } }
       };
       for (let r = rmin; r <= rmax; r++) for (let c = cmin; c <= cmax; c++) {
@@ -2345,29 +2387,39 @@
         if (!this.explore) { drawSpecial(D3.tile(ctx, cam, c, r, floorColor(c, r, T_STONE)), c, r); continue; }
         const t = this.terrain[i], h = this.height[i];
         if(this.hiddenSecretAt?.(c,r)){D3.tile(ctx,cam,c,r,'#242131');continue;}
-        if(this.props[c+','+r]?.raisedBridge && this.terrain[i]!==T_VOID){push(r+.02,c+.5,()=>this.drawSupportedBridge(ctx,cam,c,r,h,time));continue;}
+        if(this.props[c+','+r]?.raisedBridge && !this.collapsedBridge?.has(i) && this.terrain[i]!==T_VOID){push(r+.02,c+.5,()=>this.drawSupportedBridge(ctx,cam,c,r,h,time));continue;}
         if (this.elevators.length) { const E = this.elevAt(c, r); if (E) { push(r + 0.02, c + 0.5, () => drawElevator(E, c, r)); continue; } }
         if (this.rails.length && this.railAt(c, r)) {
           const base = this.baseH.get(i) || 0, horiz = this.railAt(c - 1, r) || this.railAt(c + 1, r), vert = this.railAt(c, r - 1) || this.railAt(c, r + 1);
           push(r + 0.02, c + 0.5, () => {
-            ctx.save();let q; if(this.props[c+','+r]?.platformPit){q=[[c,r],[c+1,r],[c+1,r+1],[c,r+1]].map(([x,y])=>cam.project(x,y,base));ctx.globalAlpha=.22;} else if (base > 0.01) q = D3.cube(ctx, cam, c, r, c + 1, r + 1, base, { top: '#3a3f4a', front: T.cliff || '#8a6a4a', side: T.cliffDark || '#5e4731' }, { faces: { front: this.hAt(c, r + 1) < base - 0.01, east: this.hAt(c + 1, r) < base - 0.01, west: this.hAt(c - 1, r) < base - 0.01 } }).top; else q = D3.tile(ctx, cam, c, r, '#3a3f4a');
-            ctx.strokeStyle = '#9aa3ad'; ctx.lineWidth = Math.max(1.5, cam.scaleAt(c + 0.5, r + 0.5) * 0.05);
-            const seg = (u0, v0, u1, v1) => { const a = D3.onQuad(q, u0, v0), b = D3.onQuad(q, u1, v1); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); };
-            if (horiz || !vert) { seg(0, 0.35, 1, 0.35); seg(0, 0.65, 1, 0.65); } if (vert) { seg(0.35, 0, 0.35, 1); seg(0.65, 0, 0.65, 1); }ctx.restore();
+            // Sol d'origine sous les rails (rien au-dessus d'un vide), puis de beaux rails : traverses en bois et deux barres d'acier.
+            const pit = this.props[c+','+r]?.platformPit, ft = pit ? this.railFloor?.get(i) ?? T_VOID : t; let q;
+            if (ft === T_WATER) q = D3.tile(ctx, cam, c, r, Math.sin(time*1.5+c*1.3+r*.7)>.3?T.water2||'#3f84ec':T.water||'#2f6fd6');
+            else if (ft === T_VOID) q = [[c,r],[c+1,r],[c+1,r+1],[c,r+1]].map(([x,y])=>cam.project(x,y,base));
+            else { q = base > 0.01 ? D3.cube(ctx, cam, c, r, c + 1, r + 1, base, { top: floorColor(c, r, ft), front: T.cliff || '#8a6a4a', side: T.cliffDark || '#5e4731' }, { faces: { front: this.hAt(c, r + 1) < base - 0.01, east: this.hAt(c + 1, r) < base - 0.01, west: this.hAt(c - 1, r) < base - 0.01 } }).top : D3.tile(ctx, cam, c, r, floorColor(c, r, ft)); floorPattern(q, c, r, ft); }
+            ctx.save(); if (pit && ft === T_VOID) ctx.globalAlpha = .45;
+            const k = cam.scaleAt(c + 0.5, r + 0.5), at = (u, v, along) => along ? D3.onQuad(q, v, u) : D3.onQuad(q, u, v);
+            for (const along of (vert && !horiz ? [true] : vert ? [false, true] : [false])) {
+              for (let n = 0; n < 3; n++) { const u = (n + .5) / 3; D3.quad(ctx, [at(u - .07, .2, along), at(u + .07, .2, along), at(u + .07, .8, along), at(u - .07, .8, along)], '#7a5332'); }
+              for (const v of [.33, .67]) { const a0 = at(0, v, along), a1 = at(1, v, along); ctx.lineCap = 'round'; ctx.strokeStyle = '#4c535c'; ctx.lineWidth = Math.max(2.5, k * .07); ctx.beginPath(); ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y); ctx.stroke(); ctx.strokeStyle = '#d5dbe2'; ctx.lineWidth = Math.max(1, k * .028); ctx.beginPath(); ctx.moveTo(a0.x, a0.y - k * .012); ctx.lineTo(a1.x, a1.y - k * .012); ctx.stroke(); }
+            }
+            ctx.restore();
           });
           continue;
         }
         if (t === T_VOID) continue;
         if (t === T_LAVA) { const p0 = D3.tile(ctx, cam, c, r, Math.sin(time * 1.5 + c * 1.3 + r * 0.7) > 0.3 ? '#ff6a1f' : '#e8471a'); drawLava(p0, c, r); continue; }
-        if (t === T_WATER) { const w = Math.sin(time * 1.5 + c * 1.3 + r * 0.7) > 0.3; D3.tile(ctx, cam, c, r, w ? T.water2 || '#3f84ec' : T.water || '#2f6fd6'); continue; }
+        if (t === T_WATER) { const w = Math.sin(time * 1.5 + c * 1.3 + r * 0.7) > 0.3; D3.tile(ctx, cam, c, r, this.deepWater.has(i) ? (w ? '#21559f' : '#1a4592') : w ? T.water2 || '#3f84ec' : T.water || '#2f6fd6'); continue; }
         if (this.ramp[i]) {
           push(r + 0.02, c + 0.5, () => {
             const rp = this.ramp[i], {hN,hS,hW,hE}=this.rampHeights(c,r);
             const z = (cx, cy) => Math.abs(rp) === 1 ? hN + (hS - hN) * (cy - r) : hW + (hE - hW) * (cx - c);
             const q = [cam.project(c, r, z(c, r)), cam.project(c + 1, r, z(c + 1, r)), cam.project(c + 1, r + 1, z(c + 1, r + 1)), cam.project(c, r + 1, z(c, r + 1))];
-            if (Math.abs(rp) === 1 && hS > hN) D3.quad(ctx, [q[3], q[2], cam.project(c + 1, r + 1, 0), cam.project(c, r + 1, 0)], T.cliff || '#8a6a4a');
-            D3.quad(ctx, q, '#9a8a6a'); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
-            for (let k = 1; k < 4; k++) { const a = D3.onQuad(q, 0, k / 4), b = D3.onQuad(q, 1, k / 4); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+            const m = BK.MATERIALS[this.props[c + ',' + r]?.material];   // matériau choisi dans l'éditeur (sinon rampe classique)
+            if (Math.abs(rp) === 1 && hS > hN) D3.quad(ctx, [q[3], q[2], cam.project(c + 1, r + 1, 0), cam.project(c, r + 1, 0)], m ? m.side : T.cliff || '#8a6a4a');
+            if (m) { D3.quad(ctx, q, m.top); BK.drawMaterialTop(ctx, q, m, Math.abs(rp) !== 1); }
+            else { D3.quad(ctx, q, '#9a8a6a'); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+            for (let k = 1; k < 4; k++) { const a = D3.onQuad(q, 0, k / 4), b = D3.onQuad(q, 1, k / 4); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); } }
           });
           continue;
         }
@@ -2419,10 +2471,10 @@
           }
           if (this.explore && v === HARD && this.trees.some(t => t.c === c && t.r === r)) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawTree(ctx, pr.x, pr.y, pr.k, time, this.props[c + ',' + r]); return; }
           if (this.explore && v === HARD && this.rocks.some(t => t.c === c && t.r === r)) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawRock(ctx, pr.x, pr.y, pr.k, c * 13 + r * 3); return; }
-          if (sp && sp.type === 'brick') { D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 0.9, { top: T.hardTop, front: T.hard, side: T.hardDark }, { z, bricks: 'rgba(60,20,10,0.5)', outline: 'rgba(0,0,0,0.25)' }); this.drawWallDeco(ctx,cam,c,r,z,time); return; }   // mur de briques (se casse)
+          if (sp && sp.type === 'brick') { D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 0.9, this.brickColors(c, r), { z, bricks: 'rgba(60,20,10,0.5)', outline: 'rgba(0,0,0,0.25)' }); this.drawWallDeco(ctx,cam,c,r,z,time); return; }   // mur de briques (se casse)
           if (this.explore && v === SOFT) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawBush(ctx, pr.x, pr.y, pr.k, T.bush || T.soft, c * 7 + r); return; }
           if (v === HARD) {
-            if (sp && sp.type === 'brick') D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 0.9, { top: T.hardTop, front: T.hard, side: T.hardDark }, { z, bricks: 'rgba(60,20,10,0.5)', outline: 'rgba(0,0,0,0.25)' });
+            if (sp && sp.type === 'brick') D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 0.9, this.brickColors(c, r), { z, bricks: 'rgba(60,20,10,0.5)', outline: 'rgba(0,0,0,0.25)' });
             else if (this.explore) D3.cube(ctx, cam, c + 0.04, r + 0.04, c + 0.96, r + 0.96, 0.85, { top: T.rockTop || T.hardTop, front: T.rock || T.hard, side: T.rockDark || T.hardDark }, { z, topInset: D3.shade(T.rockTop || T.hardTop, 0.9), outline: 'rgba(0,0,0,0.22)' });
             else D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, edge ? 1.0 : 0.9, { top: T.hardTop, front: T.hard, side: T.hardDark }, { z, topInset: D3.shade(T.hardTop, 0.93), outline: 'rgba(0,0,0,0.18)' });
           }
@@ -2452,8 +2504,8 @@
         D3.shadow(ctx, cam, b.x, b.y, 0.3 * Math.max(0.4, 1 - (zb - z0) / 3), 0.3, z0);
         if (b.rock) BK.sprites.drawRock(ctx, top.x, top.y - pr.k * 0.3, pr.k, { cracked: b.uses < 2 }); else { const bs = pr.k * 0.34 * (b.big ? 1.3 : 1); BK.sprites.drawBomb(ctx, top.x, top.y - bs, bs, { level:b.level, giga:b.giga, inflation:b.inflation, gift:b.gift, t: time - b.born, fuse: Math.max(0, b.t / BK.BOMB_FUSE) }); }
       });
-      for (const E of this.elevators) push(E.r + 0.5, E.c + 0.5, () => drawElevatorSlab(E));
-      for (const M of this.movers) push(M.y, M.x, () => {   // plateau glissant : dalle métal, bandes jaunes et noires, petite lueur dessous
+      for (const E of this.elevators) push(E.r + 0.02, E.c + 0.5, () => drawElevatorSlab(E));   // dessinée comme un sol : le héros dessus passe toujours devant
+      for (const M of this.movers) push(M.y - 0.48, M.x, () => {   // plateau glissant : dalle métal, bandes jaunes et noires, petite lueur dessous
         const top = M.top, f = D3.cube(ctx, cam, M.x - 0.47, M.y - 0.47, M.x + 0.47, M.y + 0.47, 0.14, { top: this.theme.castleFloor?'#d1bf9a':'#aab3bd', front: this.theme.castleFloor?'#806b4c':'#5a616a', side: this.theme.castleFloor?'#67553e':'#4a515a' }, { z: top - 0.14, outline: 'rgba(0,0,0,0.3)' });
         const q = f.top; ctx.strokeStyle = '#ffd54a'; ctx.lineWidth = Math.max(1.5, cam.scaleAt(M.x, M.y) * 0.04); ctx.beginPath(); for (const [u, v] of [[0.06, 0.06], [0.94, 0.06], [0.94, 0.94], [0.06, 0.94], [0.06, 0.06]]) { const o = D3.onQuad(q, u, v); if (u === 0.06 && v === 0.06 && ctx.lineWidth) ctx.moveTo(o.x, o.y); else ctx.lineTo(o.x, o.y); } ctx.stroke();
         ctx.fillStyle = '#5a616a'; for (const [u, v] of [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]) { const o = D3.onQuad(q, u, v); ctx.beginPath(); ctx.arc(o.x, o.y, 2.2, 0, Math.PI * 2); ctx.fill(); }
@@ -2505,7 +2557,7 @@
         ctx.font = 'bold ' + Math.round(k * 0.2) + 'px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText('🍖 ' + Math.ceil(fire.cook.dur - fire.cook.t) + ' s · '+fire.cook.left+' restante'+(fire.cook.left>1?'s':''), pr.x, by - k * 0.16);
       });
       for (const p of this.players) if (p.fishing && p.alive) push(p.y + 0.01, p.x, () => this.drawFishing(ctx, cam, p, time));
-      for(const b of this.boats) if(!b.rider) push(b.y+.1,b.x,()=>{const pr=cam.project(b.x,b.y,0);BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,false);BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,true);});
+      for(const b of this.boats) if(!b.rider) push(b.y+.1,b.x,()=>{const pr=cam.project(b.x,b.y,0);BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,false,{rider:false,time});BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,true,{rider:false,time});});
       for (const d of this.doors) push(d.r + 1.02, d.c + 0.5, () => BK.sprites.drawHouse(ctx, cam, d.c, d.r, time, this.explore ? this.groundZ(d.c + 0.5, d.r + 0.5) : 0, this.houses[d.c + ',' + d.r]));
       for (const p of this.players) push(p.seat ? p.seat.r + 0.5 + (p.dir === 2 ? -0.3 : 0.3) : p.y, p.x, () => {   // assis : devant la chaise (dos au dossier) ou derrière quand il regarde au loin
         if(p.swallowedBy)return;
@@ -2522,7 +2574,7 @@
         if (p.alive) D3.shadow(ctx, cam, p.x, p.y, (0.3 * (p.def.size || 1) + 0.1) * (p.sizeScale||1) * Math.max(0.45, 1 - (p.zOff || 0) / 2.5), 0.3, p.onBomb ? zg + 0.55 : zg);
         if(p.boat){
           const crew=(p.boat.passengers||[]).filter(q=>q.alive),size=pr.k*(crew.length?1.35:1);
-          BK.sprites.drawBoat(ctx,pr.x,pr.y,size,p.dir,p.boat.rowT,false);
+          BK.sprites.drawBoat(ctx,pr.x,pr.y,size,p.dir,p.boat.rowT,false,{rowing:p.moving,time});
           crew.slice(0,4).forEach((q,i)=>{ctx.save();ctx.translate(pr.x+pr.k*(i%2? .36:-.36),pr.y-pr.k*(.12+Math.floor(i/2)*.18));BK.sprites.drawCharacter(ctx,q.def,{s:pr.k*.48,pose:'idle',t:time,view:'front'});ctx.restore();});
           if(crew.length){ctx.save();ctx.font='bold '+Math.round(pr.k*.18)+'px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.strokeStyle='#29485f';ctx.lineWidth=3;const label='🤝 '+crew.length+' allié'+(crew.length>1?'s':'')+' à bord';ctx.strokeText(label,pr.x,pr.y+pr.k*.65);ctx.fillText(label,pr.x,pr.y+pr.k*.65);ctx.restore();}
         }
@@ -2531,13 +2583,13 @@
         if (p.invuln > 0 && p.alive && Math.floor(p.animT * 18) % 2) ctx.globalAlpha = 0.45;
         const view = p.dir === 0 ? 'front' : p.dir === 2 ? 'back' : 'side';
         const b = p.carrying;
-        BK.sprites.drawCharacter(ctx, p.def, { s: pr.k, pose: p.seat?'sit':p.pose, t: p.animT, poseT: p.poseT, view, flip: p.dir === 1, walk: p.walk, jolt: !!(p.fishing && p.fishing.bit && !p.fishing.caught), carrying: !!b, rock: !!(b && b.rock), rockCracked: !!(b && b.rock && b.uses < 2), bombLevel:b?.level, bombGiga:b?.giga, bombInflation:b?.inflation, bombGift:b?.gift, bombT: b ? time - b.born : 0, bombFuse: b ? Math.max(0, b.t / BK.BOMB_FUSE) : 1 });
+        BK.sprites.drawCharacter(ctx, p.def, { s: pr.k, pose: p.seat?'sit':p.boat?'fish':p.pose, t: p.animT, poseT: p.poseT, view, flip: p.dir === 1, walk: p.walk, jolt: !!(p.fishing && p.fishing.bit && !p.fishing.caught), carrying: !!b, rock: !!(b && b.rock), rockCracked: !!(b && b.rock && b.uses < 2), bombLevel:b?.level, bombGiga:b?.giga, bombInflation:b?.inflation, bombGift:b?.gift, bombT: b ? time - b.born : 0, bombFuse: b ? Math.max(0, b.t / BK.BOMB_FUSE) : 1 });
         if (p.axeUntil > this.time) { ctx.save();ctx.translate(pr.k*(p.dir===1?-0.35:0.35),-pr.k*0.65);ctx.rotate((p.dir===1?-1:1)*(0.8-(p.axeUntil-this.time)*3));BK.sprites.drawAxe(ctx,0,0,pr.k*0.8);ctx.restore(); }
         if (BK.wearsLantern(p) && p.alive && !p.falling) BK.sprites.drawLantern(ctx, pr.k * 0.3 * (p.dir === 1 ? -1 : 1), -pr.k * 0.42, pr.k, this.lanternOn(p), time, p.dir === 2);
         if (p.frozen > 0 && p.alive) { const H = pr.k * (0.8 + 0.7 * (p.def.size || 1)); ctx.globalAlpha = 0.55; ctx.fillStyle = '#bfefff'; BK.sprites.rr(ctx, -pr.k * 0.4, -H * 1.08, pr.k * 0.8, H * 1.12, pr.k * 0.12); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#eafcff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-pr.k * 0.3, -H * 1.0, pr.k * 0.07, H * 0.55); }
         if (p.shield > 0 && p.alive) { ctx.strokeStyle = 'rgba(180,140,240,' + (0.5 + 0.3 * Math.sin(time * 8)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, -pr.k * 0.55, pr.k * 0.55, pr.k * 0.7, 0, 0, Math.PI * 2); ctx.stroke(); }
         ctx.restore();
-        if(p.boat)BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k*((p.boat.passengers||[]).some(q=>q.alive)?1.35:1),p.dir,p.boat.rowT,true);
+        if(p.boat)BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k*((p.boat.passengers||[]).some(q=>q.alive)?1.35:1),p.dir,p.boat.rowT,true,{rowing:p.moving,time});
         if(p.human&&!p.npc&&!p.ally&&p.alive&&(p.seat||this.nearbySeat(p)))bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:p.seat?'⏎ Se lever':'⏎ S’asseoir',a:1,sign:true});
         else if(p.boat && this.boatLanding(p))bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:'⏎ Débarquer',a:1,sign:true});
         else if(this.nearbyBoat(p))bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:'⏎ Embarquer',a:1,sign:true});

@@ -75,28 +75,29 @@ body.touch #screen-game.active #touch { display: block; }
 @media (max-width: 760px) { .menu-dock .buttons button { min-width: 150px; font-size: 18px; padding: 10px 14px; } .menu-dock .buttons button small { display: none; } #overlay .box { min-width: 0; width: 92vw; padding: 16px; } }
 
 /* ---- éditeur : barre d'outils en haut, grandes icônes */
-#screen-editor { flex-direction: column; justify-content: flex-start; gap: 8px; padding: 8px; overflow: auto; }
-#screen-editor canvas.stage { max-width: 100vw; height: auto !important; width: auto !important; max-height: calc(100vh - 215px); aspect-ratio: 16 / 9; cursor: crosshair; touch-action: none; }
-#editor-panel { display: flex; flex-direction: column; gap: 6px; width: min(1280px, 100vw); background: rgba(255,255,255,.06); border-radius: 16px; padding: 8px 12px; }
-#editor-panel .tabs { display: flex; gap: 6px; align-items: center; }
+#screen-editor { flex-direction: column; justify-content: flex-start; gap: 6px; padding: 6px; overflow: auto; }
+#screen-editor canvas.stage { max-width: 100vw; height: auto !important; width: auto !important; max-height: calc(100vh - var(--ed-panel, 160px) - 26px); aspect-ratio: 16 / 9; cursor: crosshair; touch-action: none; }
+#editor-panel { display: flex; flex-direction: column; gap: 4px; width: min(1280px, 100vw); background: rgba(255,255,255,.06); border-radius: 14px; padding: 5px 10px; }
+#editor-panel .tabs { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 1150px) { #editor-panel .tabs { flex-wrap: wrap; } }
-#editor-panel .tabs button { padding: 7px 14px; font-size: 15px; border-radius: 10px; background: rgba(255,255,255,.08); box-shadow: none; }
+#editor-panel .tabs button { padding: 4px 10px; font-size: 14px; border-radius: 10px; background: rgba(255,255,255,.08); box-shadow: none; }
 #editor-panel .tabs button.on { background: var(--gold); color: #1b2a4a; }
 #editor-panel .acts { display: flex; gap: 6px; margin-left: auto; }
-#editor-panel .acts button { padding: 7px 12px; font-size: 14px; border-radius: 10px; }
+#editor-panel .acts button { padding: 5px 10px; font-size: 13px; border-radius: 10px; }
 #editor-panel .strip { display: flex; align-items: stretch; gap: 4px; min-width: 0; }
 #editor-panel .items { display: flex; flex: 1 1 auto; min-width: 0; gap: 6px; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; padding: 4px 2px; min-height: 84px; }
 #editor-panel .items::-webkit-scrollbar { height: 6px; }
 #editor-panel .items::-webkit-scrollbar-thumb { background: rgba(255,255,255,.25); border-radius: 3px; }
 #editor-panel .item { scroll-snap-align: start; }
-#editor-panel .arrow { display: none; flex: 0 0 28px; padding: 0; font-size: 26px; line-height: 1; border-radius: 10px; background: rgba(255,255,255,.1); box-shadow: none; align-self: center; height: 70px; }
+#editor-panel .arrow { display: none; flex: 0 0 28px; padding: 0; font-size: 26px; line-height: 1; border-radius: 10px; background: rgba(255,255,255,.1); box-shadow: none; align-self: center; height: 52px; }
 #editor-panel .strip.over .arrow { display: block; }
 #editor-panel .arrow:disabled { opacity: .25; }
-#editor-panel .item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 86px; flex: 0 0 auto; padding: 6px 4px; font-size: 12px; line-height: 1.1; border-radius: 12px; background: rgba(255,255,255,.08); box-shadow: none; border: 3px solid transparent; }
-#editor-panel .item .ic { font-size: 34px; }
+#editor-panel .item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 74px; flex: 0 0 auto; padding: 3px 3px; font-size: 11px; line-height: 1.1; border-radius: 12px; background: rgba(255,255,255,.08); box-shadow: none; border: 3px solid transparent; }
+#editor-panel .item .ic { font-size: 24px; }
+#editor-panel .item .ic canvas { width: 40px !important; height: 40px !important; }
 .goldcoin { display: inline-block; width: 30px; height: 30px; margin: 4px 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff2a8, #ffd54a 45%, #d99a00); border: 3px solid #a06f00; box-shadow: inset 0 0 0 3px rgba(160,111,0,.45); vertical-align: middle; }
 #editor-panel .item.on { border-color: var(--gold); background: rgba(255,213,74,.18); }
-#editor-panel .tabs input.search { font: inherit; font-weight: 700; font-size: 14px; padding: 7px 10px; border-radius: 10px; border: 0; background: rgba(255,255,255,.1); color: var(--ink); width: 150px; margin-left: 6px; }
+#editor-panel .tabs input.search { font: inherit; font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 10px; border: 0; background: rgba(255,255,255,.1); color: var(--ink); width: 110px; margin-left: 6px; }
 #editor-panel .tabs input.search:focus { outline: 2px solid var(--gold); background: rgba(255,255,255,.14); }
 #editor-panel .item .small { font-size: 10px; color: var(--dim); font-weight: 600; }
 #editor-panel .items .sep { flex: 0 0 2px; align-self: stretch; margin: 6px 6px; background: rgba(255,255,255,.18); border-radius: 1px; }
@@ -358,3 +359,12 @@ body.touch #screen-game.active #touch { display: block; }
 #overlay.playful .saved button{background:linear-gradient(#a27be1,#8054c5);color:#fff}
 #overlay.playful .body .big{color:#354d7d}
 #overlay .goldcoin.sm{width:18px;height:18px;margin:0 2px;border-width:2px;box-shadow:inset 0 0 0 2px rgba(160,111,0,.45)}
+
+/* Barre d'outils de l'éditeur : toujours visible, compacte */
+#editor-panel .toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+#editor-panel .toolbar .tool { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 12px; font-weight: 800; border-radius: 9px; background: rgba(255,255,255,.08); box-shadow: none; border: 2px solid transparent; white-space: nowrap; }
+#editor-panel .toolbar .tool .ic { font-size: 16px; }
+#editor-panel .toolbar .tool.on { border-color: var(--gold); background: rgba(255,213,74,.18); }
+#editor-panel .toolbar .acts { margin-left: auto; }
+#editor-panel .deco-categories { padding: 2px 0; gap: 4px; }
+#editor-panel .deco-categories button { min-height: 0; padding: 2px 8px; font-size: 11px; }

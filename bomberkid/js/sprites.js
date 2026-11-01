@@ -88,17 +88,54 @@
     else { ctx.fillStyle = '#fff'; for (let i = 0; i < 3; i++) { const a = t * 5 + i * 2.1, rr0 = w * (0.35 + 0.15 * Math.sin(t * 3 + i)); circle(ctx, Math.cos(a) * rr0, fy + Math.sin(a) * rr0 * 0.7, Math.max(1, k * 0.012)); ctx.fill(); } }
     ctx.restore();
   };
-  S.drawBoat = function(ctx,x,y,s,dir,t,front) {
-    ctx.save();ctx.translate(x,y+Math.sin(t*.4)*s*.015);
-    const side=dir===1||dir===3,w=s*(side?.62:.44),h=s*(side?.25:.38);
-    ctx.lineWidth=Math.max(1,s*.035);ctx.strokeStyle='#56351e';
-    if(!front){
-      ctx.fillStyle='rgba(190,238,255,.35)';ctx.beginPath();ctx.ellipse(0,s*.08,w*1.15,h*.9,0,0,TAU);ctx.fill();
-      ctx.fillStyle='#b77e43';ctx.beginPath();ctx.moveTo(-w,0);ctx.quadraticCurveTo(-w*.65,-h*1.35,w,0);ctx.quadraticCurveTo(w*.65,h*1.15,-w,0);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#593b26';ctx.beginPath();ctx.ellipse(0,-s*.035,w*.72,h*.55,0,0,TAU);ctx.fill();
-      ctx.strokeStyle='#dfad68';ctx.lineWidth=s*.08;ctx.beginPath();ctx.moveTo(-w*.55,-h*.1);ctx.lineTo(w*.55,h*.1);ctx.stroke();
-      ctx.strokeStyle='#bd9057';ctx.lineWidth=s*.045;for(const sign of [-1,1]){const sweep=Math.sin(t)*s*.12;ctx.beginPath();ctx.moveTo(sign*w*.4,-s*.06);ctx.lineTo(sign*w*1.4,h*.65+sweep);ctx.stroke();ctx.lineWidth=s*.1;ctx.beginPath();ctx.moveTo(sign*w*1.25,h*.52+sweep);ctx.lineTo(sign*w*1.5,h*.76+sweep);ctx.stroke();ctx.lineWidth=s*.045;}
-    } else {ctx.fillStyle='#94602f';ctx.beginPath();ctx.moveTo(-w,0);ctx.quadraticCurveTo(0,h*.6,w,0);ctx.quadraticCurveTo(w*.6,h*1.2,-w*.65,h*.55);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle='#e0ae6c';ctx.beginPath();ctx.moveTo(-w,0);ctx.quadraticCurveTo(0,h*.6,w,0);ctx.stroke();}
+  // Barque vue en 3/4 : coque (fond, flanc côté caméra, plat-bord, banc) et deux rames à l'échelle du héros.
+  // Les rames sortent toujours par les côtés de la barque, perpendiculaires à sa direction ; elles plongent quand on tire.
+  // front = seconde passe, dessinée par-dessus le rameur (flanc avant, poignées tenues devant lui).
+  S.drawBoat = function(ctx,x,y,s,dir,t,front,o) {
+    o = o || {};
+    const side = dir === 1 || dir === 3, fw = dir === 0 || dir === 3 ? 1 : -1, Y = 0.6, L = 0.72, B = 0.36, D = 0.14;
+    // repère de la barque : u vers la proue, v en travers (+v vers la caméra en vue de côté, vers la droite de face), z vers le haut
+    const P = (u, v, z) => side ? { x: u * fw * s, y: (v * Y - (z || 0)) * s } : { x: v * s, y: (u * fw * Y - (z || 0)) * s };
+    const beam = u => u >= 0 ? B * Math.pow(Math.max(0, 1 - Math.pow(u / L, 2)), 0.55) : B * Math.pow(Math.max(0, 1 - Math.pow(-u / (L * 0.92), 4)), 0.5);
+    const ring = (z, k) => { const pts = []; for (let i = 0; i <= 20; i++) { const u = -L * 0.92 + (L * 1.92) * i / 20; pts.push(P(u * k, beam(u) * k, z)); } for (let i = 20; i >= 0; i--) { const u = -L * 0.92 + (L * 1.92) * i / 20; pts.push(P(u * k, -beam(u) * k, z)); } return pts; };
+    const fill = (pts, col, stroke) => { ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, s * 0.022); ctx.stroke(); } };
+    const rowing = !!o.rowing, rider = o.rider !== false, ph = t || 0, sweep = rowing ? Math.sin(ph) * 0.16 : 0, pull = rowing && Math.cos(ph) > 0;
+    const bob = (rowing ? Math.sin(ph * 0.9) : Math.sin((o.time || 0) * 1.6)) * s * 0.012;
+    ctx.save(); ctx.translate(x, y + bob); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // Rame : manche du point de prise jusqu'au tolet, puis jusqu'à la pale.
+    const oar = (sign, part) => {
+      const lock = P(0.02, sign * B * 0.96, D);
+      const hand = side ? P(0.24 + sweep * 0.5, sign * 0.1, 0.36) : dir === 2 ? P(0.12 + sweep * 0.5, sign * 0.2, 0.34) : P(0.1 + sweep * 0.5, sign * 0.27, 0.36);
+      const blade = P(-sweep * 1.4, sign * (B + 0.5), pull ? -0.01 : rowing ? 0.1 : 0.0);
+      ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = Math.max(2, s * 0.05);
+      if (part !== 'outer') { ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.lineTo(lock.x, lock.y); ctx.stroke(); ctx.strokeStyle = '#5a3818'; ctx.lineWidth = Math.max(2.5, s * 0.065); const g = { x: hand.x + (lock.x - hand.x) * 0.18, y: hand.y + (lock.y - hand.y) * 0.18 }; ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.lineTo(g.x, g.y); ctx.stroke(); }
+      if (part !== 'inner') {
+        ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = Math.max(2, s * 0.05); ctx.beginPath(); ctx.moveTo(lock.x, lock.y); ctx.lineTo(blade.x, blade.y); ctx.stroke();
+        const a = Math.atan2(blade.y - lock.y, blade.x - lock.x); ctx.save(); ctx.translate(blade.x, blade.y); ctx.rotate(a); ctx.fillStyle = '#c9925a'; ctx.strokeStyle = '#6b4321'; ctx.lineWidth = Math.max(1, s * 0.02); ctx.beginPath(); ctx.ellipse(-s * 0.06, 0, s * 0.13, s * 0.055, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+        if (pull) { ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = Math.max(1, s * 0.02); ctx.beginPath(); ctx.ellipse(blade.x, blade.y + s * 0.02, s * 0.11, s * 0.035, 0, 0, TAU); ctx.stroke(); }
+        ctx.fillStyle = '#3d4248'; ctx.beginPath(); ctx.arc(lock.x, lock.y, Math.max(1.5, s * 0.03), 0, TAU); ctx.fill();
+      }
+    };
+    const rim = ring(D, 1), bottom = ring(0, 0.97);
+    if (!front) {
+      ctx.fillStyle = 'rgba(200,240,255,0.35)'; ctx.beginPath(); ctx.ellipse(0, s * 0.03, (side ? L : B) * s * 1.25, (side ? B : L) * Y * s * 1.2, 0, 0, TAU); ctx.fill();
+      if (rider) { if (side) oar(-1, 'all'); else { oar(-1, 'outer'); oar(1, 'outer'); } }
+      fill(bottom, '#7a4c26', '#4a2e16');                      // flanc de la coque (visible côté caméra)
+      fill(rim, '#c98f50', '#5a3818');                         // plat-bord
+      fill(ring(D - 0.01, 0.84), '#6b4426');                   // intérieur
+      ctx.strokeStyle = 'rgba(40,22,8,0.35)'; ctx.lineWidth = Math.max(1, s * 0.012);
+      for (const v of [-0.09, 0.09]) { const a = P(-L * 0.7, v, D - 0.01), b = P(L * 0.62, v, D - 0.01); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }   // lattes du fond
+      const seat = (u, w) => fill([P(u - w, -beam(u) * 0.86, D + 0.01), P(u + w, -beam(u) * 0.86, D + 0.01), P(u + w, beam(u) * 0.86, D + 0.01), P(u - w, beam(u) * 0.86, D + 0.01)], '#dcae73', '#7a5230');
+      seat(-0.05, 0.065); seat(-L * 0.7, 0.05);
+      if (!rider) for (const sign of [-1, 1]) { const a = P(-0.42, sign * 0.13, D + 0.02), b = P(0.4, sign * 0.13, D + 0.02); ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = Math.max(2, s * 0.045); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.fillStyle = '#c9925a'; ctx.beginPath(); ctx.ellipse(a.x, a.y, s * (side ? 0.1 : 0.04), s * (side ? 0.035 : 0.07), 0, 0, TAU); ctx.fill(); }   // rames rangées
+      if (rider && dir === 2) { oar(-1, 'inner'); oar(1, 'inner'); }
+    } else {
+      // flanc avant par-dessus les jambes du rameur, puis poignées tenues devant lui
+      const half = []; for (let i = 0; i <= 20; i++) { const u = -L * 0.92 + (L * 1.92) * i / 20; half.push(side ? [u, beam(u)] : [u, null]); }
+      if (side) { const top = half.map(([u, b]) => P(u, b, D)), bot = half.map(([u, b]) => P(u * 0.97, b * 0.97, 0)).reverse(); fill([...top, ...bot], '#7a4c26', '#4a2e16'); ctx.strokeStyle = '#c98f50'; ctx.lineWidth = Math.max(2, s * 0.05); ctx.beginPath(); top.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); ctx.stroke(); }
+      else { const us = []; for (let i = 0; i <= 12; i++) { const u = fw > 0 ? L * i / 12 : -L * 0.92 * i / 12; us.push(u); } const sideA = us.map(u => P(u, beam(u), D)), sideB = us.map(u => P(u, -beam(u), D)).reverse(); const topArc = [...sideB, ...sideA.slice(1)]; const botArc = topArc.map(q => ({ x: q.x * 0.97, y: q.y + D * s })).reverse(); fill([...topArc, ...botArc], '#7a4c26', '#4a2e16'); ctx.strokeStyle = '#c98f50'; ctx.lineWidth = Math.max(2, s * 0.05); ctx.beginPath(); topArc.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); ctx.stroke(); }
+      if (rider) { if (side) oar(1, 'all'); else if (dir === 0) { oar(-1, 'inner'); oar(1, 'inner'); } }
+    }
     ctx.restore();
   };
 

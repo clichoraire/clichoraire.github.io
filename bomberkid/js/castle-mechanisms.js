@@ -61,9 +61,11 @@ BK.sprites.drawDeco=function(ctx,kind,x,y,k,t,nb,seed,orientation,lightColor,pro
  if(kind!=='crackedstone')return draw.call(this,ctx,kind,x,y,k,t,nb,seed,orientation,lightColor,props);
  ctx.save();ctx.translate(x,y);ctx.scale(k,k);ctx.lineJoin='round';ctx.lineWidth=.035;ctx.strokeStyle='#4d5361';
  const poly=(pts,color)=>{ctx.fillStyle=color;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();ctx.stroke();};
- poly([[-.5,-.18],[.35,-.18],[.35,-1.05],[-.5,-1.05]],'#9da7b6');poly([[.35,-.18],[.52,-.35],[.52,-1.2],[.35,-1.05]],'#626f84');poly([[-.5,-1.05],[-.32,-1.2],[.52,-1.2],[.35,-1.05]],'#d4d9dd');
- ctx.strokeStyle='#727d8c';ctx.lineWidth=.018;for(const h of [-.46,-.76]){ctx.beginPath();ctx.moveTo(-.48,h);ctx.lineTo(.34,h);ctx.stroke();}
- ctx.strokeStyle='#374054';ctx.lineWidth=.045;ctx.beginPath();ctx.moveTo(.06,-1.05);ctx.lineTo(-.12,-.83);ctx.lineTo(.05,-.65);ctx.lineTo(-.18,-.43);ctx.lineTo(-.08,-.18);ctx.moveTo(.05,-.65);ctx.lineTo(.24,-.55);ctx.lineTo(.32,-.35);ctx.moveTo(-.12,-.83);ctx.lineTo(-.35,-.78);ctx.stroke();ctx.restore();
+ // Comme un bloc de ciment, en gris pâle, avec une fine craque discrète.
+ ctx.strokeStyle='rgba(90,98,110,.35)';ctx.lineWidth=.02;
+ poly([[-.5,-.18],[.35,-.18],[.35,-1.05],[-.5,-1.05]],'#c9ced5');poly([[.35,-.18],[.52,-.35],[.52,-1.2],[.35,-1.05]],'#a3aab4');poly([[-.5,-1.05],[-.32,-1.2],[.52,-1.2],[.35,-1.05]],'#e4e7eb');
+ poly([[-.36,-1.08],[-.24,-1.17],[.42,-1.17],[.3,-1.08]],'#d8dce1');
+ ctx.strokeStyle='rgba(98,106,118,.55)';ctx.lineWidth=.016;ctx.beginPath();ctx.moveTo(.02,-1.05);ctx.lineTo(-.06,-.9);ctx.lineTo(.03,-.78);ctx.lineTo(-.04,-.62);ctx.moveTo(.03,-.78);ctx.lineTo(.13,-.72);ctx.stroke();ctx.restore();
 };
 
 // Une bombe doit réellement entrer latéralement sous un ascenseur à explosion.
@@ -104,15 +106,17 @@ const bridgeRender=W.renderArenaEffects;
 W.renderArenaEffects=function(ctx,cam,time,push){
  bridgeRender.call(this,ctx,cam,time,push);
  for(const b of this.blastDrawbridges||[]){
-  const D=BK.DIRS[b.direction],S={dx:-D.dy,dy:D.dx},u=b.state==='open'?1:b.state==='lowering'?Math.min(1,b.t/1.2):0,angle=(1-u*u)*Math.PI/2;
+  // Abaissé, le tablier devient un vrai pont en bois du terrain : le sol le dessine sous le héros.
+  if(b.state==='open')continue;
+  const D=BK.DIRS[b.direction],S={dx:-D.dy,dy:D.dx},u=b.state==='lowering'?Math.min(1,b.t/1.2):0,angle=(1-u*u)*Math.PI/2;
   const x=b.c+.5-D.dx*.5,y=b.r+.5-D.dy*.5;
   const point=(w,n)=>cam.project(x+S.dx*w+D.dx*n*Math.cos(angle),y+S.dy*w+D.dy*n*Math.cos(angle),b.z+.035+n*Math.sin(angle));
   push(Math.max(b.r+.55,b.r+D.dy*b.length*Math.cos(angle)+.5),b.c+.5,()=>{
-   ctx.save();ctx.lineWidth=2;
-   const panel=(a,n,c,m,color)=>BK.draw3d.quad(ctx,[point(a,n),point(c,n),point(c,m),point(a,m)],color,'#493728');
-   panel(-.48,0,.48,b.length,'#59402b');
-   for(let n=0;n<b.length*4;n++)panel(-.46,n/4+.015,.46,(n+1)/4-.015,n%2?'#b68a50':'#996737');
-   for(const w of [-.35,.28]){panel(w,0,w+.07,b.length,'#596675');for(let n=.15;n<b.length;n+=.5){const p=point(w+.035,n);ctx.fillStyle='#ffe0a2';ctx.beginPath();ctx.arc(p.x,p.y,Math.max(1,p.k*.025),0,Math.PI*2);ctx.fill();}}
+   ctx.save();
+   // Mêmes couleurs que le pont en bois : bois uni et fines lignes de planches, sans contour sombre.
+   BK.draw3d.quad(ctx,[point(-.5,0),point(.5,0),point(.5,b.length),point(-.5,b.length)],'#a0703a');
+   ctx.strokeStyle='rgba(60,30,10,0.45)';ctx.lineWidth=1;
+   for(let n=1;n<b.length*4;n++){const a=point(-.5,n/4),q=point(.5,n/4);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(q.x,q.y);ctx.stroke();}
    for(const w of [-.52,.52]){const a=cam.project(x+S.dx*w,y+S.dy*w,b.z+1.15),p=point(w,b.length*.9);ctx.strokeStyle=u===0?'#d9c69b':'#9f8a66';ctx.lineWidth=3;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.setLineDash([]);}
    if(this.editorPreview&&b.state==='raised')for(const q of b.cells)BK.draw3d.quad(ctx,[[q.c,q.r],[q.c+1,q.r],[q.c+1,q.r+1],[q.c,q.r+1]].map(([x,y])=>cam.project(x,y,b.z+.04)),'rgba(255,205,80,.18)','#ffc956');
    ctx.restore();
@@ -159,18 +163,21 @@ W.hitBridgeColumn=function(c,r,b){
 };
 W.drawSupportedBridge=function(ctx,cam,c,r,h,time){
  const pr=this.props[c+','+r],D=BK.draw3d;
+ // La tuile d'origine reste visible sous un pont surélevé (eau, herbe, chemin…).
+ if(pr.under!=null&&h>.05){const t=BK.terrainForChar(pr.under);if(t===2)D.tile(ctx,cam,c,r,Math.sin(time*1.5+c*1.3+r*.7)>.3?this.theme.water2||'#3f84ec':this.theme.water||'#2f6fd6');else if(t!==4){const q=D.tile(ctx,cam,c,r,this._floorColor?.(c,r,t)||'#9a9a9a');this._floorPattern?.(q,c,r,t);}}
  if(pr.bridgeColumn&&!this.brokenBridgeColumns?.has(c+','+r)){
   D.cube(ctx,cam,c+.16,r+.16,c+.84,r+.84,.15,{top:'#c8c3ce',front:'#85808e',side:'#625d6a'});
-  D.cube(ctx,cam,c+.27,r+.27,c+.73,r+.73,Math.max(.1,h-.3),{top:'#c8c3ce',front:'#aca6b4',side:'#817b8c'},{z:.15,bricks:'#746e7e',rows:Math.ceil(h*4),cols:1});
+  const cm=BK.MATERIALS[pr.material]||BK.MATERIALS.pierre;if(h>.35)D.cube(ctx,cam,c+.27,r+.27,c+.73,r+.73,Math.max(.1,h-.3),pr.material&&pr.material!=='bois'?{top:cm.top,front:cm.side,side:cm.dark}:{top:'#c8c3ce',front:'#aca6b4',side:'#817b8c'},{z:.15,bricks:'rgba(0,0,0,.18)',rows:Math.ceil(h*4),cols:1});
  }
  const pending=this.bridgeCollapses?.find(q=>q.group===pr.raisedBridge),jitter=pending?Math.sin(time*65)*.03:0;
- const f=D.cube(ctx,cam,c,r,c+1,r+1,.13,{top:'#bb925a',front:'#725337',side:'#513b2b'},{z:h-.13+jitter});ctx.save();ctx.strokeStyle='#725337';ctx.lineWidth=1.5;for(let n=1;n<4;n++){const a=D.onQuad(f.top,0,n/4),b=D.onQuad(f.top,1,n/4);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}ctx.restore();
+ const m=BK.MATERIALS[pr.material]||BK.MATERIALS.bois,vertical=!!(this.props[c+','+(r-1)]?.raisedBridge||this.props[c+','+(r+1)]?.raisedBridge);   // planches en travers du passage
+ const f=D.cube(ctx,cam,c,r,c+1,r+1,.13,{top:m.top,front:m.side,side:m.dark},{z:h-.13+jitter});BK.drawMaterialTop(ctx,f.top,m,!vertical);
 };
 const columnUpdate=W.updateArenaEffects;
 W.updateArenaEffects=function(dt){
  columnUpdate.call(this,dt);
  for(const q of this.bridgeCollapses||[]){if(q.done)continue;q.t-=dt;if(q.t>0)continue;q.done=true;
-  for(const [key,p]of Object.entries(this.props))if(p.raisedBridge===q.group){const [c,r]=key.split(',').map(Number),i=this.idx(c,r);this.burst(c+.5,r+.5,this.height[i],'#a47b49',12,1);this.terrain[i]=4;this.height[i]=0;this.cells[i]=0;this.deco[i]=null;
+  for(const [key,p]of Object.entries(this.props))if(p.raisedBridge===q.group){const [c,r]=key.split(',').map(Number),i=this.idx(c,r);this.burst(c+.5,r+.5,this.height[i],'#a47b49',12,1);this.terrain[i]=p.under!=null?BK.terrainForChar(p.under):4;this.height[i]=(p.underLv||0)*.6;(this.collapsedBridge=this.collapsedBridge||new Set()).add(i);this.cells[i]=0;this.deco[i]=null;
    for(const hero of this.players)if(hero.alive&&!hero.air&&!hero.falling&&Math.floor(hero.x)===c&&Math.floor(hero.y)===r)this.startFall(hero,'void');
    for(const e of this.enemies)if(!e.dead&&Math.floor(e.x)===c&&Math.floor(e.y)===r)this.hurtEnemy(e,null,999,'bomb');
   }this.shake=.45;
