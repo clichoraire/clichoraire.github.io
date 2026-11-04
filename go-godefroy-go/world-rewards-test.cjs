@@ -1,0 +1,13 @@
+const A=require('node:assert/strict'),G=require('./physics'),C=require('./course'),S=require('./specials');
+const save=G.fresh(),f=G.create(save),chest=C.wallCaches(1)[0];
+Object.assign(f,{time:2,x:chest.x+1,y:chest.y});
+S.collectWallTreasures(f,chest.x-1,chest.y);A.equal(f.wallTreasureGold,150);S.collectWallTreasures(f,chest.x-1,chest.y);A.equal(f.wallTreasureGold,150);
+const gold=G.settle(save,f);A(gold>=150);A.equal(G.settle(save,f),0);
+const loaded=G.sanitize(JSON.parse(JSON.stringify(save))),again=G.create(loaded);Object.assign(again,{x:chest.x,y:chest.y,time:2});S.collectWallTreasures(again,chest.x,chest.y);A.equal(again.wallTreasureGold,undefined);
+A(C.cacheHole(1,Math.floor((chest.x-C.stages[1].at-C.stoneOffset(4))/C.CELL_W),4));
+for(let i=2;i<C.stages.length;i++)A(C.wallCaches(i)[0].value>C.wallCaches(i-1)[0].value);
+const bird=G.create(G.fresh());Object.assign(bird,{time:2,x:2001,y:40,vx:10,vy:0,gullRide:{left:3}});G.strikeStones(bird,1990,40);A.equal(bird.endReason,'wall');A(bird.gullWallBonus);A.equal(G.earnings(bird).bonuses.find(b=>b.gold===500).gold,500);
+bird.endReason='ground';A(!G.earnings(bird).bonuses.some(b=>b.rate?.includes('emplumé')));
+let vials=0;for(let i=0;i<10000;i++)if(S.fuelAt(i,f).active)vials++;A(vials>200&&vials<500);
+let cannon;for(let i=0;i<1000;i++){const a=S.at(i,f);if(a.active&&a.kind===9){cannon=a;break;}}A(cannon);A.equal(cannon.rx,18);A.equal(cannon.ry,114);
+console.log('Wall chests: cavities, swept collection, growing rewards, save/load and no duplicate payout. Gull wall bonus and rare fuel verified.');

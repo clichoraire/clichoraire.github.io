@@ -1,0 +1,5 @@
+const fs=require('fs'),vm=require('vm');const root=__dirname+'/';
+const groups=JSON.parse(fs.readFileSync(root+'riders.js','utf8').split('const groups=')[1].split(';\nlet loaded')[0]);
+function entry(l){const g=groups.find(g=>l>=g.start&&l<g.start+g.frames.length);return {file:g.file,b:g.frames[l-g.start][3]};}
+const env={Image:class{naturalWidth=1774;naturalHeight=887},window:{matchMedia:()=>({matches:false})},GGLaunch:require(root+'launch-gear'),GGRiders:{objectHeight(l,w){const b=entry(l).b;return w*b.h/b.w;}}};vm.createContext(env);vm.runInContext(fs.readFileSync(root+'art.js','utf8'),env);
+const probes=[];for(let l of [1,2,3,4,23,24]){const {file,b}=entry(l),h=170*b.h/b.w;for(let [ax,ay,soles] of [[270,466,[[207,460],[340,461]]],[775,466,[[698,463],[830,462]]],[1295,466,[[1242,460],[1372,460]]]])for(let [x,y]of soles){const px=(x-ax)*.32,py=env.mountedBodyY(l,h)+55+(y-ay)*.32+2;probes.push({level:l,file,x:Math.round(b.x+(px+85)/170*b.w),y:Math.round(b.y+(py+h*.35)/h*b.h)});}}console.log(JSON.stringify(probes));
