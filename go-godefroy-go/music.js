@@ -32,6 +32,6 @@ function renderAccent(kind,rate=24000){
  else {for(const [at,m,duration] of [[0,74,.22],[.25,74,.22],[.5,81,.38],[.94,86,.5],[1.5,86,1.65]]){brass(m,at,duration,.30);brass(m-12,at,duration,.18);}for(const m of [62,66,69,74])brass(m,1.5,1.65,.12);for(const at of [0,.25,.5,.94,1.5])drum(at,.35);for(const at of [1.2,1.28,1.36,1.44])drum(at,.14,true);}
  for(let i=0;i<length;i++)out[i]=Math.tanh(out[i]);cache.set(key,out);return out;
 }
-function themeFor(state){return state.hidden||state.phase==='title'?null:state.tab==='forge'?'shop':['launching','flight','landing'].includes(state.phase)?'flight':null;}
+function themeFor(state){return state.hidden?null:state.phase==='title'?'title':state.tab==='forge'?'shop':['launching','flight','landing'].includes(state.phase)?'flight':null;}
 const api={render,renderAccent,tensionFor,themeFor};if(typeof module!=='undefined')module.exports=api;else root.GGMusic=api;
 })(typeof window!=='undefined'?window:globalThis);

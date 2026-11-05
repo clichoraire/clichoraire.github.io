@@ -3,13 +3,27 @@
   'use strict';
   const KEY = 'cb.save';
   const S = CB.Save = { KEY };
-  S.blank = id => ({ id, gold: 0, xp: 0, level: 1, cannon: 'classique', cannons: ['classique'], ball: 'fer', balls: ['fer'], upgrades: {}, cannonUpgrades: {}, effects: {}, talents: {}, points: 0, ally: null, allyBought: false, ally2: null, ally2Bought: false, items: {}, towers: 0, homing: 0, specialLevel: 1, slot2: false, special2: null, discovered: 0, shown: 0, bestTime: 0, nightKills: 0, portal: false, portalShown: false, targetsHit: 0, targetsShown: false, brigandsShown: false, boatShown: false, boatSecret: false, pirate: false, pirateLevel: 1, usePirate: false, hiddenWorlds: {}, hiddenShown: {}, portals: {}, portalsShown: {}, powers: {}, usePower: null, seenBy: {}, killsBy: {}, progress: {}, kills: 0, plays: 0, wins: 0, bestCombo: 0 });
-  S.fresh = () => ({ current: null, profiles: {}, settings: { sound: true, music: true, soundVolume: 100, musicVolume: 55, aim: 'auto', fx: 'auto' } });
+  S.blank = id => ({ id, gold: 0, xp: 0, level: 1, cannon: 'classique', cannons: ['classique'], ball: 'fer', balls: ['fer'], reticle: 'classique', reticleColor: null, upgrades: {}, cannonUpgrades: {}, effects: {}, talents: {}, points: 0, ally: null, allyBought: false, ally2: null, ally2Bought: false, items: {}, towers: 0, homing: 0, specialLevel: 1, powerReserve: 0, wallBreaker: 0, cardTraining: {}, boughtChoices: 0, rerollStock: 0, slot2: false, special2: null, discovered: 0, shown: 0, bestTime: 0, nightKills: 0, portal: false, portalShown: false, targetsHit: 0, targetsShown: false, brigandsShown: false, boatShown: false, boatSecret: false, pirate: false, pirateLevel: 1, usePirate: false, hiddenWorlds: {}, hiddenShown: {}, portals: {}, portalsShown: {}, powers: {}, usePower: null, seenBy: {}, killsBy: {}, progress: {}, kills: 0, plays: 0, wins: 0, bestCombo: 0 });
+  S.fresh = () => ({ current: null, profiles: {}, settings: { sound: true, music: true, soundVolume: 100, musicVolume: 55, aim: 'auto', fx: 'auto', shake: true, flashes: true, tutorial: true, combatText: true, largeAim: false } });
   S.load = storage => {
     const data = S.fresh();
     try { const raw = JSON.parse(storage.getItem(KEY) || 'null'); if (raw && typeof raw === 'object') { Object.assign(data, raw); data.settings = Object.assign(S.fresh().settings, raw.settings || {}); data.profiles = raw.profiles || {}; } } catch (e) { }
     for (const [id, p] of Object.entries(data.profiles)) { const old = p && p.talents === undefined, q = Object.assign(S.blank(id), p); if (old) q.points = Math.max(0, (q.level || 1) - 1); if (!(q.specialLevel >= 1)) q.specialLevel = 1; if (!(q.towers >= 0)) q.towers = 0; if (q.upgrades && q.upgrades.auto) { delete q.upgrades.auto; q.gold += 60; } if (!q.cannonUpgrades || typeof q.cannonUpgrades !== 'object') q.cannonUpgrades = {}; if (q.upgrades && Object.keys(q.upgrades).length) { const cu = q.cannonUpgrades[q.cannon || 'classique'] ||= { uniques: {} }; for (const [k0, v] of Object.entries(q.upgrades)) { const k = k0 === 'vie' ? 'armure' : k0; if (CB.UPGRADES[k]) cu[k] = Math.max(cu[k] || 0, v); } } for (const cu of Object.values(q.cannonUpgrades)) { if (!cu.uniques || typeof cu.uniques !== 'object') cu.uniques = {}; if (cu.vie) { cu.armure = Math.max(cu.armure || 0, cu.vie); delete cu.vie; } }   /* l'ancienne amélioration « vie » du canon devient l'armure */ q.upgrades = {};   /* les niveaux d'amélioration appartiennent au canon : l'ancien profil les garde sur le canon équipé */ for (const k of ['hiddenWorlds', 'hiddenShown', 'portals', 'portalsShown', 'powers']) if (!q[k] || typeof q[k] !== 'object') q[k] = {}; if (q.usePirate && !q.usePower) q.usePower = 'pirate'; for (const k of ['gold', 'xp', 'kills', 'points', 'discovered', 'shown', 'bestTime', 'nightKills', 'targetsHit']) if (!Number.isFinite(q[k])) q[k] = 0;
       /* l'ancien achat « tir automatique » est remboursé : on tire toujours en continu */ if (q.upgrades && q.upgrades.auto) { delete q.upgrades.auto; q.gold += 60; } { const mig = b => CB.BALL_MIGRATE[b] || b; q.ball = mig(q.ball || 'fer'); q.balls = [...new Set((Array.isArray(q.balls) ? q.balls : ['fer']).map(mig))]; if (!q.balls.includes('fer')) q.balls.unshift('fer'); } /* 2026-10-31 : la tête chercheuse devient une carte (niveaux achetés remboursés) ; plus de points de stats à placer */ if (q.homing > 0) { for (let i = 0; i < Math.min(q.homing, CB.HOMING.prices.length); i++) q.gold += CB.HOMING.prices[i]; q.homing = 0; } q.points = 0; data.profiles[id] = q; }
+    // Les anciennes défaites à 1–2 étoiles ouvraient à tort la suite du tableau 2.
+    // Ne pas retirer la progression d’un profil ayant déjà réussi un tableau suivant.
+    for (const q of Object.values(data.profiles)) {
+      if(q.campaignVersion>=2)continue;
+      const f = q.progress && q.progress.foret;
+      if (f && (f[1] || 0) < 3 && (f[1] > 0 || q.boatSecret) && !f.slice(2).some(Boolean) && !q.pirateWorld) {
+        f[1] = 0; q.shown = Math.min(q.shown || 0, 1); q.boatSecret = false; q.boatShown = false;
+      }
+    }
+    for (const p of Object.values(data.profiles)) {
+      p.wallBreaker = S.wallBreakerLevel(p);
+      p.reticle = CB.reticleStyle(p.reticle);
+      p.reticleColor = CB.reticleColor(p.reticleColor);
+    }
     return data;
   };
   S.store = (data, storage) => { try { storage.setItem(KEY, JSON.stringify(data)); return true; } catch (e) { return false; } };
@@ -49,18 +63,34 @@
   S.rewardCount = (p, kind) => { let n = 0; for (let l = 2; l <= (p.level || 1); l++) if ((CB.LEVEL_REWARDS[l] || {})[kind]) n++; return n; };
   S.discount = p => Math.min(.3, S.rewardCount(p, 'discount') * CB.DISCOUNT_STEP);
   S.disc = (p, v) => Math.round(v * (1 - S.discount(p || {})));   // prix du hangar avec le rabais gagné en montant de niveau
-  S.extraChoices = p => S.rewardCount(p, 'choice');
+  S.extraChoices = p => Math.min(3, S.rewardCount(p, 'choice') + Math.max(0, Math.floor(p.boughtChoices || 0)));
+  S.choiceCount = p => 3 + S.extraChoices(p);
+  S.buyChoice = p => { const n = S.extraChoices(p), cost = CB.CHOICE_PRICES[n]; if (cost == null || p.gold < S.disc(p, cost)) return false; p.gold -= S.disc(p, cost); p.boughtChoices = (p.boughtChoices || 0) + 1; return true; };
+  S.rerollStock = p => Math.max(0, Math.min(3, Math.floor(p.rerollStock || 0)));
+  S.buyReroll = p => { const n = S.rerollStock(p), cost = CB.REROLL_PRICES[n]; if (cost == null || p.gold < S.disc(p, cost)) return false; p.gold -= S.disc(p, cost); p.rerollStock = n + 1; return true; };
+  S.buyCardTraining = (p, key) => { if (p.level < CB.CARD_TRAINING.minLevel || !CB.CARD_TUNING[key] || !S.cardAllowed(p, key)) return false; const cost = S.disc(p, CB.cardTrainingCost(p, key)); if (!Number.isFinite(cost) || p.gold < cost) return false; p.gold -= cost; (p.cardTraining ||= {})[key] = CB.cardTrainingLevel(p, key) + 1; return true; };
   S.rerolls = p => S.rewardCount(p, 'reroll');
   S.reached = (p, kind, key) => { if (p && p.cheatCards) return true; const l = CB.rewardLevel(kind, key); return l == null || (p.level || 1) >= l; };
   // Carte du tirage permise : lock = débloquée par le niveau ; power = débloquée par le niveau ET achetée au hangar
-  S.cardAllowed = (p, key) => { const c = CB.CARDS[key]; if (!c) return false; if (!p) return !c.lock && !c.power; if (c.lock) return S.reached(p, 'card', key); if (c.power) return S.reached(p, 'power', key) && (!!(p.cardPowers || {})[key] || !!p.cheatCards); return true; };
+  S.cardAllowed = (p, key) => { const c = CB.CARDS[key]; if (!c) return false; if (c.world) return !!p && (!!p.cheatCards || S.worldDone(p, CB.WORLDS.findIndex(w => w.id === c.world))); if (!p) return !c.lock && !c.power; if (c.lock) return S.reached(p, 'card', key); if (c.power) return S.reached(p, 'power', key) && (!!(p.cardPowers || {})[key] || !!p.cheatCards); return true; };
+  S.cardDiscovered = (p, key) => CB.CARDS[key]?.combo ? !!p?.usedCombos?.[key] : S.cardAllowed(p, key);
+  S.cardUnlockHint = (p, key) => {
+    const c = CB.CARDS[key];
+    if (c.world === 'pirates') return 'Bats le boss de la Mer des pirates.';
+    if (c.combo) return 'Utilise ce combo une fois pendant un tableau pour le découvrir.';
+    const level = CB.rewardLevel(c.power ? 'power' : 'card', key);
+    const steps = [];
+    if (level && (p?.level || 1) < level) steps.push('Atteins le niveau ' + level);
+    if (c.power && !p?.cardPowers?.[key]) steps.push('Achète cette carte au hangar · Pouvoirs (' + S.disc(p, CB.POWER_CARD_PRICES[key]) + ' pièces)');
+    return steps.join(', puis ');
+  };
   S.buyCardPower = (p, key) => { const c = CB.CARDS[key], price = CB.POWER_CARD_PRICES[key]; if (!c || !c.power || (p.cardPowers || {})[key] || !S.reached(p, 'power', key) || p.gold < S.disc(p, price)) return false; p.gold -= S.disc(p, price); (p.cardPowers ||= {})[key] = true; return true; };
   S.spendPoint = (p, key) => { if (!CB.TALENTS[key] || !(p.points > 0) || (p.talents?.[key] || 0) >= CB.TALENT_MAX) return false; p.talents ||= {}; p.talents[key] = (p.talents[key] || 0) + 1; p.points--; return true; };
   S.buyAlly = p => { if (p.allyBought || p.gold < S.disc(p, CB.HELPER.price)) return false; p.gold -= S.disc(p, CB.HELPER.price); p.allyBought = true; if (!p.ally || p.ally === p.id) p.ally = (CB.PLAYERS.find(m => m.id !== p.id) || {}).id || null; return true; };
   S.buyAlly2 = p => { if (!p.allyBought || p.ally2Bought || p.gold < S.disc(p, CB.HELPER.price2)) return false; p.gold -= S.disc(p, CB.HELPER.price2); p.ally2Bought = true; if (!p.ally2 || p.ally2 === p.id || p.ally2 === p.ally) p.ally2 = (CB.PLAYERS.find(m => m.id !== p.id && m.id !== p.ally) || {}).id || null; return true; };
   S.setAlly3 = (p, id) => { if (!p.ally2Bought || !(p.items && p.items.trio) || id === p.id || id === p.ally || id === p.ally2 || !CB.playerById(id)) return false; p.ally3 = id; return true; };   // la réserve (objet « Trio de choc »)
   // Cheat : tous les canons, boulets, effets au max, objets, tours, tête chercheuse, deuxième case, coéquipiers, niveau 3 du pouvoir, tous les pouvoirs uniques
-  S.cheatItems = p => { p.items ||= {}; for (const k of Object.keys(CB.ITEMS)) p.items[k] = true; p.cannons = Object.keys(CB.CANNONS); p.balls = Object.keys(CB.BALLS); p.effects ||= {}; for (const k of Object.keys(CB.EFFECTS)) p.effects[k] = CB.EFFECTS[k].max; p.towers = CB.TOWER.max; p.homing = CB.HOMING.max; p.slot2 = true; p.specialLevel = CB.SPECIAL_LEVELS.length; for (const k of Object.keys(CB.CANNONS)) { const cu = S.cannonUp(p, k); for (const u of Object.keys(CB.UPGRADES)) cu[u] = CB.UPGRADES[u].max; for (const x of CB.CANNON_UNIQUES[k] || []) cu.uniques[x.id] = x.max; }
+  S.cheatItems = p => { p.items ||= {}; for (const k of Object.keys(CB.ITEMS)) p.items[k] = true; p.cannons = Object.keys(CB.CANNONS); p.balls = Object.keys(CB.BALLS); p.effects ||= {}; for (const k of Object.keys(CB.EFFECTS)) p.effects[k] = CB.EFFECTS[k].max; p.towers = CB.TOWER.max; p.homing = CB.HOMING.max; p.slot2 = true; p.powerReserve = CB.POWER_RESERVE.prices.length; p.wallBreaker = CB.WALL_BREAKER.prices.length; p.specialLevel = CB.SPECIAL_LEVELS.length; for (const k of Object.keys(CB.CANNONS)) { const cu = S.cannonUp(p, k); cu.movement = true; for (const u of Object.keys(CB.UPGRADES)) cu[u] = CB.UPGRADES[u].max; for (const x of CB.CANNON_UNIQUES[k] || []) cu.uniques[x.id] = x.max; }
     p.allyBought = true; p.ally2Bought = true; const free = CB.PLAYERS.map(m => m.id).filter(id => id !== p.id); if (!p.ally || p.ally === p.id) p.ally = free[0]; if (!p.ally2 || p.ally2 === p.id || p.ally2 === p.ally) p.ally2 = free.find(id => id !== p.ally); if (!p.ally3 || [p.id, p.ally, p.ally2].includes(p.ally3)) p.ally3 = free.find(id => id !== p.ally && id !== p.ally2);
     for (const id of Object.keys(CB.POWERS)) S.grantPower(p, id); p.cheatCards = true; return p; };
   S.cheatGod = (p, on) => { p.cheats ||= {}; p.cheats.god = on == null ? !p.cheats.god : !!on; return p.cheats.god; };
@@ -68,6 +98,15 @@
   // Pouvoirs débloqués en avançant : la sphère après le monde 1, les tours après le monde 2.
   S.itemUnlocked = (p, key) => { const it = CB.ITEMS[key]; return !!it && (it.unlockLevel != null ? S.reached(p, 'item', key) : it.unlockWorld == null || S.worldDone(p, it.unlockWorld)); };   // sphère : niveau 10
   S.towersUnlocked = p => S.reached(p, 'item', 'tower');   // niveau 17 (avant : monde 2)
+  S.wallBreakerLevel = p => Math.max(0, Math.min(CB.WALL_BREAKER.prices.length, Math.floor(Number(p?.wallBreaker) || 0)));
+  S.buyWallBreaker = p => {
+    const n = S.wallBreakerLevel(p), price = CB.WALL_BREAKER.prices[n];
+    if (price == null || p.gold < S.disc(p, price)) return false;
+    p.gold -= S.disc(p, price); p.wallBreaker = n + 1; return true;
+  };
+  S.reserveLevel = p => Math.max(0, Math.min(CB.POWER_RESERVE.prices.length, Math.floor(Number(p?.powerReserve) || 0)));
+  S.chargeCapacity = p => 1 + S.reserveLevel(p);
+  S.buyPowerReserve = p => { const n = S.reserveLevel(p), price = CB.POWER_RESERVE.prices[n]; if (price == null || p.gold < S.disc(p, price)) return false; p.gold -= S.disc(p, price); p.powerReserve = n + 1; return true; };
   S.buySlot2 = p => { if (p.slot2 || p.gold < S.disc(p, CB.SLOT2.price)) return false; p.gold -= S.disc(p, CB.SLOT2.price); p.slot2 = true; return true; };
   // Le pouvoir d'un autre membre se débloque en jouant avec lui et en terminant le monde 1 (data = toute la sauvegarde ; sans data, pas de condition)
   S.powerUnlockedBy = (data, id) => { const q = data && data.profiles && data.profiles[id]; return !!q && S.worldDone(q, 0); };
@@ -105,6 +144,8 @@
   S.cannonUp = (p, key) => { key = key || p.cannon || 'classique'; p.cannonUpgrades ||= {}; const cu = p.cannonUpgrades[key] ||= { uniques: {} }; cu.uniques ||= {}; return cu; };
   S.upgradeLevel = (p, key, cannon) => S.cannonUp(p, cannon)[key] || 0;
   S.uniqueLevel = (p, id, cannon) => S.cannonUp(p, cannon).uniques[id] || 0;
+  S.hasMovement = (p, cannon = p?.cannon) => !!p?.cannonUpgrades?.[cannon]?.movement;
+  S.buyMovement = (p, cannon = p.cannon) => { const cost = S.disc(p, CB.movementCost(cannon)); if (!CB.CANNONS[cannon] || !p.cannons.includes(cannon) || S.hasMovement(p, cannon) || p.gold < cost) return false; p.gold -= cost; S.cannonUp(p, cannon).movement = true; return true; };
   S.buyUpgrade = (p, key, cannon) => { cannon = cannon || p.cannon || 'classique'; if (!CB.UPGRADES[key] || !p.cannons.includes(cannon)) return false; const cu = S.cannonUp(p, cannon), lvl = cu[key] || 0; if (lvl >= CB.UPGRADES[key].max) return false; const cost = CB.upgradeCost(key, lvl, cannon); if (p.gold < S.disc(p, cost)) return false; p.gold -= S.disc(p, cost); cu[key] = lvl + 1; return true; };   // on peut améliorer un canon acheté sans l'avoir équipé
   S.buyUnique = (p, id, cannon) => { cannon = cannon || p.cannon || 'classique'; const u = CB.uniqueDef(cannon, id); if (!u || !p.cannons.includes(cannon)) return false; const cu = S.cannonUp(p, cannon), lvl = cu.uniques[id] || 0; if (lvl >= u.max) return false; const cost = u.prices[lvl]; if (p.gold < S.disc(p, cost)) return false; p.gold -= S.disc(p, cost); cu.uniques[id] = lvl + 1; return true; };
   S.buyEffect = (p, key) => { const lvl = p.effects[key] || 0; if (lvl >= CB.EFFECTS[key].max) return false; const cost = CB.effectCost(key, lvl); if (p.gold < S.disc(p, cost)) return false; p.gold -= S.disc(p, cost); p.effects[key] = lvl + 1; return true; };

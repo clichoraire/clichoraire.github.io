@@ -290,3 +290,108 @@ Contrôle supplémentaire : `node atelier-test.cjs` depuis ce dossier.
 ### Illustrations intégrées — 25 objets
 Six atlas transparents `assets/riders-*-v2.png` générés avec l’outil imagegen intégré. Chaque ligne contient trois poses du chevalier sur son objet et une illustration de l’objet seul. Le bouclier initial conserve ses poses approuvées ; son objet lâché reprend désormais la sangle et la même finition. La forge et la rampe partagent les images ; le décollage réutilise le même objet, à la même échelle.
 Les prompts complets et références sont dans `assets/PROMPTS-riders-v2.json`. `riders.js` contient les coordonnées des cellules précalculées, sans lecture de pixels dans le navigateur (compatible avec ouverture locale). Le lancement attend le chargement des atlas. Vérification : `node riders-test.cjs`.
+
+### Lot du 4 novembre 2026 — son, forge, château, nuages et sorts
+Audio : musique dès l’écran titre (`in-game-1`, démarrée au premier clic ou touche, exigence des navigateurs) ; tous les boutons jouent uniquement « app click » ; le jingle du bilan s’estompe en 0,45 s quand on clique « À la forge » ou « Encore un essai » (`soundEngine.fade('results')`).
+Forge : le texte « Aperçu · … » sous le héros est retiré ; les poses sur poêle, poêle culottée et plateau utilisent les illustrations intégrées des atlas (pieds vraiment dans la poêle) et s’animent dans la boutique (l’horloge de la forge est maintenant utilisée, et les index de poses tolèrent une horloge négative). Onglet Magie : sorcière animée sur canvas (louche qui tourne, liquide vert fluo, bulles qui éclatent, vapeur), bombes illustrées avec mèche, onglet de famille unique supprimé, quatre boosters redessinés (amphore, fusée-tonneau naine, bonbonne de tempête, bonbonnes jumelles) et SVG régénérés dans `assets/equipment/boost-*.svg` par `GGEquipment.svg`. Le booster est sanglé sur le dos du chevalier ; la flamme (`boostFlameArt`) s’allonge, s’élargit, gagne des étincelles et devient bleue à partir de l’Essence de Tempête ; la fumée augmente avec le niveau.
+Prix : lancement `300 × 1,26^n`, aérien `400 × 1,15^n + 150 n` (chaque objet doit se mériter). Altitude : 0,08 écu/m jusqu’à 1 000 m puis 0,012 écu/m (30 000 m ≈ 430 écus au lieu de 3 600).
+Monde : château du tableau 1 redessiné à pleine échelle avec contours fins (tours rondes, toits coniques, fanions animés, herse, lanternes, blason, lierre) ; détruit, il se brise en deux moitiés avec débris puis laisse des ruines (`castleBreakArt`, `castleRubbleArt`). Boîte de collision rectangulaire pour tours et château (casque à 6 m devant) : on s’arrête contre la façade, plus à 100 px devant. Fissure dessinée (crevasse sombre, bord éclairé, éclats) au lieu d’une ligne noire. Le gobelin de la tour gigote, vise avec un arc quand Godefroy arrive à moins de 650 m et tire une grosse flèche toutes les 2,6 s (parade avec X au bon moment, sinon −38 % de vitesse). Ballons, ballon rouge et montgolfière ondulent par tranches comme la cape (`swayingSprite`).
+Altitudes : objets de la vallée jusqu’à ~2 500 m, monde des nuages de 2 500 à 7 000 m (ciel pastel, plancher de cumulus, tours de guet sur nuages dans `GGCourse.cloudTowers`, qui arrêtent ou se brisent comme au sol, avec archer), espace à partir de ~6 800 m avec étoiles filantes seulement. Trois nuages rebondissants : blanc (POUF), gros nuage de pluie (kind 10) et deux nuages reliés par un arc-en-ciel (kind 11), chacun avec animation POUF (bouffées, gouttes ou étincelles, texte) et un surcroît de vitesse.
+Coffres des remparts : portée élargie (12 × 80 m, ×1,6 à l’arrêt dans la brèche) et animation d’ouverture (couvercle, pièces, éclat). Bombes : vraie explosion (flash, boule de feu, fumée, 44 briques qui volent et rebondissent au sol, BOUM). Skateboards : roues rotatives (pierre, acier, or, rouge) superposées aux illustrations. Premier franchissement d’un tableau : chorale de cinq chanteuses en robe pendant ~10 s avec la fanfare.
+Sorts (`GG.spells`) vendus par la sorcière : « Sablier du temps » (650 écus) ralentit le monde ×2 pendant ~3 s réelles, Godefroy garde une maniabilité ×1,9 ; coût 30 % de l’essence magique, recharge 5 s ; touches 1–4 configurables dans la boutique, barre de sorts en bas de l’écran (icônes parchemin, recharge, manque d’essence), voile bleu et sabliers pendant l’effet. Don passif « Œil de faucon » (900/2 400/5 200 écus, 3 degrés) : la caméra recule en vol (facteur 0,88/0,76/0,64), affiché chez la sorcière sans emplacement. Missions : à partir du palier 5, « Garder X km/h sous Y m pendant Z s » (vol rapide près du sol).
+Sauvegardes : `spells {owned, slots}` et `passives {hawkEye}` ajoutés et assainis. Tests mis à jour : `sound-test` (piste titre), `specials-test` (bandes d’altitude, kinds 10/11), `test.cjs` (barème d’altitude), `atelier-test` (bac à sable avec `GG`). Vérification navigateur par captures headless (`setBackground(false)` nécessaire sans focus).
+
+## Lot « enfants » du 4 novembre 2026 — filets de pêche, sorcière, missions, déblocages
+
+- **Touche X supprimée.** Tous les rebonds sur les monstres sont parfaits, sans texte « PARFAIT ». Le coup de bélier n'existe plus. Les flèches des tours font « CLANG » sur l'armure (vitesse ×0,8), plus de parade chronométrée.
+- **Bandes d'aide retirées** en bas de l'écran (aide des touches en vol et sous la rampe).
+- **Barre de sorts** : contenu des cases centré verticalement.
+- **Canon et bombe en volume** : fût cylindrique dégradé, bouche ouverte, anneaux, roues avec moyeu et roues arrière pour la profondeur.
+- **Canons pêcheurs.** Les canons au sol (objet 9) ne propulsent plus : quand Godefroy vole **entre 1 000 et 3 000 m** et passe devant, le fût le suit et tire toutes les 4,2 s un **filet de pêche** (balle de corde qui se déploie en ~3× la taille du chevalier, plombs sur le pourtour). Touché : `f.netted`, plus de portance ni de commande, chute immédiate (~2,5 s depuis 2 000 m), fin de vol « net ». Sauter sur un canon (contact) le fait **exploser** (débris bois/fer) et le brise pour le reste du vol, avec une petite impulsion. Mission « Briser X canons ».
+- **Biome des nuages 3× plus haut** : nuages de 7 560 m à 21 000 m (`CLOUD_ROW=18`, `SPACE_ROW=50`), tours sur nuages entre 9 000 et 16 500 m, espace et étoiles filantes au-dessus de 20 500 m, nouvelle couche de cumulus vers 9 600–13 500 m.
+- **Sorcière redessinée** sur son canevas : nuit, lune, chat noir, chapeau rapiécé qui oscille, clignement des yeux, bras qui touille, chaudron sur ses pattes au-dessus du feu.
+- **Missions rigolotes** : icône par type (🗺️ 🦘 ⚡ 💰 🔥 🎈 🪂 💣 🎁 🧱 ⏱️ 🛩️), cartes avec barre de progression, « BRAVO ! ✓ » animé.
+- **Déblocage d'une famille d'objets** (La glisse / Dans les airs) : grande carte « NOUVEAUTÉ À LA FORGE ! » avec confettis, visible 6 s ou jusqu'au clic (`announceUnlocks`).
+
+## Lot « sorcière » du 4 novembre 2026 — cabane, onglet Magie à débloquer, forge sur un écran
+
+- **Cabane de la sorcière** (`GGCourse.witchHut`, x = 1 500 m, altitude 1 000 m, 22 m × 400 m de zone de contact) dessinée avec `assets/witch-hut.png` sur un nuage. Un simple contact, même lent, la fait voler en éclats (`f.witchFound`, événement `witch`). Le jeu se met en pause et affiche la sorcière en grand (`#witch-intro`, `showWitchIntro`). `save.witchFound` est enregistré tout de suite.
+- **Onglet Magie verrouillé** (cadenas) tant que la cabane n'est pas détruite. Atelier de test : toujours ouvert.
+- **Sorcière** : planche `assets/witch-sheet.png` (12 poses, 4 × 3) animée en CSS (`.witch-sprite`), affichée en grand en bas à gauche de la forge dans l'onglet Magie. L'ancien canevas dessiné n'est plus utilisé.
+- Les deux images ont été détourées avec `chroma.cjs` (Chrome headless, remplissage depuis les bords) à partir des JPEG fournis.
+- **Forge sur un écran** : les améliorations sont des cartes à un seul bouton (7 par rangée, achat direct), sans panneau de détail. Onglets d'équipement compactés, bande d'évolution masquée, Godefroy ancré en bas. Défilement de secours seulement si la fenêtre est très basse.
+- **Cadrans de vol** (vitesse + altitude en bas à droite) : achat unique de 350 écus dans Améliorations, bouton ⏱ sous la pause pour les montrer ou les cacher (`save.instrumentsShown`). Quand ils sont affichés, le bandeau du haut ne garde que distance et essence.
+- **Filet** : maillage en losanges clair cerclé de blanc, plus grand (rayon 120 px), vol de 2,4 s au lieu de 1,35 s, visée moins précise, message « UN FILET ! ÉVITE-LE ! ».
+- **Goéland** : zone d'accroche élargie à la taille de l'image (±11 m, ±120 m d'altitude), durée de portage réduite de 2 s.
+- **Coffres du rempart** : l'animation utilisait l'horloge du vol, figée à l'arrêt dans le mur. Elle suit maintenant le temps d'atterrissage. Portée élargie à l'arrêt.
+- **Murs moins solides** : coût par pierre 2 500 → 140, vitesse minimale de casse 126 → 86 km/h. Mur 1 traversé à 200 km/h avec Force 3/10 ou plus ; Force 0 demande plusieurs passages.
+
+### Départ sans booster (suite du lot « sorcière »)
+
+- Une nouvelle partie n'a **aucun booster** : réservoir à 0 (`create()` teste `save.witchFound`), pas de booster dessiné, pas de jauge d'essence ni de bouton FEU (`body.no-boost`), fioles d'essence invisibles, mission « Activer le booster » sautée, cartes « Plein gaz ! » et « Le plein, svp ! » masquées.
+- Détruire la cabane offre le **premier booster**, plein et utilisable tout de suite dans le même vol.
+- L'onglet **Magie n'existe pas** dans la forge tant que la sorcière n'est pas trouvée (plus de cadenas).
+- Migration : une sauvegarde qui possède déjà un booster acheté, un sort ou une bombe est considérée comme ayant trouvé la sorcière.
+- **Aperçu du héros** : dans « Dans les airs », l'équipement est dessiné à l'échelle du vol ×1,7, comme dans « La glisse ». Le canevas s'agrandit autour des grandes ailes avec des marges négatives, sans déplacer la mise en page (`GGWingArt.bounds`).
+- **Bourse** en haut à droite : trois pièces d'or puis le nombre, sans le mot « écus ».
+- **Navigation entre objets** : deux grosses flèches rouges (`.gear-arrow`, `data-step`) de chaque côté du panneau d'équipement, centrées verticalement, dans La glisse, Dans les airs et Magie. Elles remplacent la bande d'évolution, qui reste masquée.
+
+### Tunnel du château, super saut et poêle au gras
+
+- **Tunnel sous le château** (`GGCourse.castleTunnel`, `tunnelProfile`) : entrée à 455 m, sortie à 545 m, 150 m sous terre. Un chevalier qui arrive sous le linteau (moins de 105 m d'altitude) ou qui touche le sol dans les 32 m avant l'entrée glisse dedans (`f.tunnel`, `enterTunnel`, `tunnelStep`), passe sous les murs et ressort avec un petit bond. Vue en coupe avec étais, torches et portails de pierre (`tunnelArt`). La caméra descend pendant la traversée. Au-dessus du linteau, le château arrête toujours le vol.
+- **Super saut** (amélioration `jump`, 10 niveaux) : chaque niveau ajoute 1,6 m/s de vitesse verticale au bout de la rampe.
+- **Poêle culottée au gras** (objet 3) : graisse dorée qui déborde du rebord avant, gouttes qui tombent, petites éclaboussures (`panGreaseArt`), et gouttelettes de graisse sur la rampe.
+- Flèches de la forge : centrage sans `transform`, donc plus de saut vertical au survol. Héros de la forge remonté juste sous l'enseigne.
+
+## Combo, saut manuel, pet de Godefroy et tunnel en vol libre
+
+- **Combo de destructions** : chaque monstre écrasé, tour brisée, canon explosé, cabane de sorcière ou rempart franchi paie plus que le précédent (10, 15, 25, 35… soit `GGMonsters.comboGold(n)`). Un « COMBO ×n » suit le chevalier, une pastille s'ajoute à l'or récolté, et le bilan reçoit une ligne dédiée. Les slimes et les ballons ne comptent pas.
+- **Bilan du vol** : la liste des gains défile dans une boîte à hauteur fixe (`.earnings-scroll`), l'en-tête reste collé, le total reste visible et la ligne en cours de comptage est gardée à l'écran. Les lignes à 0 écu ne sont plus affichées.
+- **Saut manuel** : il faut appuyer sur ESPACE (ou toucher l'écran) au bout de la rampe. `GG.create(save, angle, true)` ne donne plus d'élan vertical ; `GG.jump(flight, qualité)` l'ajoute. Parfait dans les 0,16 s avant le bout, plus faible si trop tôt, encore possible 0,3 s après le bout, et aucun élan sans appui. Une barre de timing (`#jump-bar`) guide le joueur. L'amélioration « Super saut » renforce chaque saut.
+- **Pet de Godefroy** : avant la sorcière, le boost est un pet (`flight.fartMode`). Trois réserves de gaz, une poussée vers l'avant et surtout vers le haut par appui (assez pour soulever la première armure d'environ deux hauteurs de chevalier), et le ventre se recharge lentement (`GG.FART`). La jauge s'appelle « GAZ ». La cabane de la sorcière remplace le pet par le premier vrai booster.
+- **Tunnel du château** : plus large (400 m de haut, de 350 m à 650 m), avec une tranchée ouverte à chaque bout. On y vole soi-même : un courant d'air porte le chevalier le long de la galerie et donne une légère poussée plafonnée, les flèches montent et descendent, et frotter le sol ou le plafond ralentit. Une vitesse minimale garantit la sortie. Tomber dans une tranchée mène aussi au tunnel. Le tunnel est dessiné dès qu'il entre dans l'écran, avec des traînées de vent.
+- **Goéland** : foncer dans une tour ou un château avec le goéland dans les mains donne le même bonus spécial que dans un rempart.
+- **Flèches rouges de la forge** : états de survol et de clic nets, sans déplacement.
+
+## Filet visible à toute vitesse et saut divin
+
+- **Filet des canons** : le filet monte d'abord très vite du canon jusqu'à un point fixe devant et sous le chevalier (`NET_AHEAD`, `NET_BELOW`), annoncé par une flèche « ⚠ FILET ! » au bord de l'écran. Il s'ouvre ensuite et glisse pendant une durée fixe (`NET_GLIDE`) vers l'endroit où le chevalier sera. L'approche a donc la même allure et laisse le même temps de réaction à toutes les vitesses. Un rond rouge pointillé marque la cible. Monter ou piquer suffit pour l'éviter.
+- **Saut divin** : une fine ligne dorée dans la zone verte de la barre de saut. La toucher donne un saut plus fort que le saut parfait (`GG.JUMP_GOD`), avec le message « SAUT DIVIN ! DIGNE D'UN DIEU ! ».
+
+## Sorcière redécoupée, filet de corde, grosse cabane et barre de saut
+
+- **Sorcière** : `assets/witch-sheet.png` est régénérée depuis l'image d'origine. Le liseré blanc et les poches blanches sous les bras sont retirés, et les 12 images sont recalées sur le bord du chaudron (la troisième rangée était 32 px trop haute, d'où le saut). La bulle de rencontre est raccourcie : le booster offert est dessiné, et elle dit seulement « Viens me voir dans la forge, j'y serai ! ».
+- **Filet** : pendant sa glissade, le filet utilise `assets/net-open.png`, un filet de corde vu de côté, l'ouverture vers le chevalier. La zone de capture suit l'image, haute et étroite.
+- **Cabane de la sorcière** : environ trois fois plus grosse (`GGCourse.witchHut.size`), posée sur un banc de nuages, avec une zone de contact agrandie de 450 m à 1 450 m d'altitude et plusieurs explosions quand elle éclate.
+- **Barre de saut** : un appui beaucoup trop tôt, avant la zone rayée, ne compte plus comme un saut. La barre affiche « TROP TÔT ! ATTENDS… » et on peut encore sauter. Le pion ne s'arrête plus : un trait marque l'endroit de l'appui.
+
+## Chorale sans musique, rampe bien visible, filets à éviter, boosters ×5, trésors doublés et bombes volantes
+
+- **Chorale d’un nouveau tableau** : pendant que la chorale chante, la musique principale s’efface en douceur, reste muette, puis revient à la fin du chant (`holdMusic` et `hushLevel` dans `sound.js`). Une pause ou un nouveau vol libère la musique tout de suite.
+- **Rampe** : chaque niveau ajoute 110 unités de hauteur et 170 de longueur (au lieu de 55 et 80). La longueur allonge la descente (60 %) et le plat de sortie (40 %) ; la hauteur repousse un peu le pied pour ne jamais devenir une falaise. La vitesse de décollage garde son ancien barème par niveau (`SPEED_STEP` dans `course.js`). Sur l’aire de départ, la caméra reste proche du chevalier (zoom 100 %), comme avant.
+- **Mission « Éviter N filets »** : un filet qui a fini son approche sans rien attraper est compté (`netsDodged`) et ne peut plus attraper. Les missions sont ajoutées à la fin de la liste pour ne pas décaler les identifiants des sauvegardes ; `missionOrder` les fait apparaître à partir du palier 5.
+- **Boosters** : prix multipliés par 5 (base 900 au lieu de 180).
+- **Trésors doublés** : achat unique de 1 500 écus dans l’onglet Améliorations. Pièces, bourses et coffres des remparts valent le double (`treasureFactor`). L’or des ennemis ne change pas.
+- **Bombes volantes** : champ indépendant et très rare (`BOMB` dans `specials.js`). En attraper une donne une grosse poussée vers l’avant (jusqu’à 125 % de la vitesse maximale), un coup de hauteur moyen, un combo et un gros « KABOOOOM !!! » (`airBombArt`, `kaboomArt`).
+
+## Vol long sans coupure et nouveau dragon
+
+- **Fin de vol** : l'ancienne limite fixe de 300 secondes simulées coupait les longs vols en plein ciel, vers 38 km pour un chevalier rapide. Elle est remplacée par un garde-fou : le vol ne s'arrête que si le chevalier n'a pas avancé de 150 m en deux minutes simulées (`progressX`, `progressAt` dans `physics.js`).
+- **Dragon** : `dragon()` dans `game.js` est redessiné (ailes qui battent, tête à cornes, ventre crème, flamme qui vacille). Il sert au décor du territoire du Dragon, où il est plus gros et dérive lentement, et aux deux dragons des objectifs à 30 km et 100 km.
+
+## Boss dragon, portail, monde magique, Grand Sorcier, montée difficile et filets lisibles
+
+- **Dragon (44 km)** : il remplace le rempart des 45 km (`stages[5].boss`). À 170 m, il se met à voler juste devant le chevalier et se laisse rattraper à la moitié de sa vitesse : le combat a la même allure à toute vitesse, joué au ralenti pour un chevalier très rapide (`duelSlow`), caméra reculée. Chaque coup à 144 km/h ou plus lui retire un des trois cœurs affichés au-dessus de sa tête et le repousse de 110 m. Trop lent : il ne bronche pas. Les cœurs perdus sont sauvegardés (`dragonHearts`).
+- **Portail** : au dernier cœur, le dragon tombe, un portail s'ouvre 200 m plus loin et le chevalier y vole tout seul, doucement (`cruise`). Il ressort au début du monde magique avec sa vitesse d'avant le combat. Une fois le dragon battu (`dragonDefeated`), le portail reste ouvert à tous les vols.
+- **Monde magique (45 à 100 km)** : nouveau décor (`magicBackdropArt`), plafond à 3 200 m, murs de briques bleutées, tours magiques plus hautes, arbres flottants cassables qui coûtent 45 % de la vitesse, fées qui donnent 10 secondes d'armure magique (boost constant, sorts déviés, arbres traversés), sorciers au sol qui lancent des sorts, hommes-oiseaux qui lancent des lances, enclumes qui tombent. Règles dans `magic.js`, dessins dans `magic-art.js`.
+- **Tirs** : comme les filets, chaque tir est annoncé, puis une zone rouge clignotante montre où il va tomber. Elle suit lentement le chevalier, puis se fige à la fin : un vrai changement de trajectoire l'esquive, ne rien faire non.
+- **Grand Sorcier (99,5 km)** : un géant sur son bâton magique, même approche que le dragon. Il suffit de le toucher une fois : explosions, écran de fin avec feux d'artifice (`showEnding`), puis le bilan. Cette victoire ne dépend plus des serments d'altitude.
+- **Montée** : libre près du sol, de plus en plus coûteuse en altitude (`CLIMB` dans `physics.js`). À fond, la première armure plafonne vers 950 m, le milieu de partie vers 2 600 m, le meilleur équipement vers 7 000 m. Un objet bonus qui projette vers le haut garde tout son élan pendant un instant (`kickUntil`).
+- **Filets** : approche plus longue (3,6 s simulées au lieu de 2,3) et zone rouge clignotante « DANGER » épinglée au bord droit de l'écran tant que l'endroit réel est hors champ.
+
+## Interface mobile : en-tête, menu, missions, cadran et forge compacte
+
+- **En-tête** : hors vol, il ne reste que MENU, le jour et la bourse. MENU ouvre une superposition (`#menu-panel`) : son et musique, comment jouer, plein écran, retour à l'accueil. En vol : la note (qui ouvre le mixage, où se trouve maintenant l'interrupteur du son) et le point d'interrogation. Plus de bouton plein écran dans l'en-tête.
+- **En vol** : l'indicateur « Assiette » est retiré. Pause, cadrans et missions sont dans une colonne (`#flight-buttons`). Sur téléphone (`phone-ui` : 700 px de large ou moins, ou 520 px de haut ou moins), la liste des missions est cachée derrière le bouton ⭐.
+- **Tablette et téléphone** (`touch-ui` : pointeur tactile ou 900 px de large ou moins) : la bande du bas appartient aux trois boutons de commande. La bourse, les sorts et le cadran sont rangés juste au-dessus et ne passent jamais dessus ni dessous.
+- **Forge sur téléphone** : plus de bandeau « L'Échoppe de l'Enclume » ni de grand aperçu, quatre onglets sur une ligne. Les améliorations s'affichent une carte à la fois avec deux grosses flèches (`kid-carousel`, `upgradeIndex`). La glisse et les airs sont compactés ; la boutique de la sorcière passe en une colonne, y compris sur tablette en portrait.

@@ -20,6 +20,46 @@
   // Point d'écran -> coordonnées du monde à la profondeur donnée.
   CB.unproject = (x, y, depth) => { const V = CB.VIEW, k = depth + 18; return { x: (x - V.cx) * k / V.f, y: 4 - (y - V.horizon) * k / V.fy, z: depth }; };
   CB.clampAim = (x, y) => { const V = CB.VIEW; return { x: Math.max(16, Math.min(V.w - 16, x)), y: Math.max(16, Math.min(V.horizon + V.size * .5, y)) }; };
+  // Tracés fermés : la dernière coordonnée rejoint la première, sans saut.
+  const routes = {
+    glisse: [[-1,0],[1,0],[-1,0]],
+    Z: [[-1,-1],[1,-1],[-1,1],[1,1],[-1,-1]],
+    M: [[-1,1],[-1,-1],[0,.25],[1,-1],[1,1],[-1,1]],
+    ML: [[-1,1],[-1,-1],[-.55,.2],[-.1,-1],[-.1,1],[.35,1],[.35,-1],[.35,1],[1,1],[-1,1]],
+    H: [[-1,-1],[-1,1],[-1,0],[1,0],[1,-1],[1,1],[1,0],[-1,0],[-1,-1]],
+    U: [[-1,-1],[-1,.25],[-.8,.75],[-.4,1],[.4,1],[.8,.75],[1,.25],[1,-1],[1,.25],[.8,.75],[.4,1],[-.4,1],[-.8,.75],[-1,.25],[-1,-1]],
+    P: [[-1,1],[-1,-1],[.35,-1],[1,-.7],[1,-.25],[.35,.05],[-1,.05],[-1,1]],
+    L: [[-1,-1],[-1,1],[1,1],[-1,1],[-1,-1]],
+    V: [[-1,-1],[0,1],[1,-1],[0,1],[-1,-1]],
+    W: [[-1,-1],[-.5,1],[0,-.25],[.5,1],[1,-1],[0,-.7],[-1,-1]]
+  };
+  const paths = Object.fromEntries(Object.entries(routes).map(([name, points]) => {
+    let length = 0;
+    const segments = points.slice(1).map(([x,y], i) => {
+      const [ax,ay] = points[i], size = Math.hypot(x-ax,y-ay);
+      const segment = { ax, ay, x, y, start: length, size }; length += size; return segment;
+    });
+    return [name, { length, segments }];
+  }));
+  function panelPosition(e) {
+    const P = e.panel, m = P.motion, V = CB.VIEW;
+    const phase = ((P.age / m.period * m.dir + m.phase) % 1 + 1) % 1;
+    let x, y;
+    if (m.path === 'O' || m.path === 'ovale') {
+      x = Math.cos(phase * Math.PI * 2); y = Math.sin(phase * Math.PI * 2);
+    } else {
+      const route = paths[m.path], distance = phase * route.length;
+      const q = route.segments.find(q => distance < q.start + q.size) || route.segments.at(-1);
+      const k = (distance - q.start) / q.size;
+      x = q.ax + (q.x - q.ax) * k; y = q.ay + (q.y - q.ay) * k;
+    }
+    const scale = V.f / (e.z + 18);
+    e.size = Math.min(2.8, m.cell * V.w * .25 / (1.45 * scale), V.h * .12 / (5.9 * scale));
+    const ay = m.path === 'O' ? Math.min(m.ay * V.h, m.ax * V.w) : m.ay * V.h;
+    const lift = Math.max(0, .72 * V.h - CB.clampAim(V.cx, V.h).y);
+    const pos = CB.unproject((m.x + x * m.ax) * V.w, m.y * V.h - lift + y * ay + (1-P.up) * e.size * scale * .65, e.z);
+    e.x = pos.x; e.y = pos.y;
+  }
   CB.BASE_COOLDOWN = .8; CB.BASE_SPEED = 65; CB.BASE_HP = 50;
 
   // Stats de tir à partir du profil (améliorations, canon, niveau) et du talent du personnage.
@@ -33,7 +73,7 @@
       damage: (1 + up('degats') + tal('degats')) * (1 + (cm.damage || 0)) * (1 + (pm.damage || 0)) * (1 + .08 * uq('synchro')),
       maxHp: CB.BASE_HP + tal('vie') + (pm.hp || 0),   // la vie appartient au personnage (talents, talent de famille)
       maxArmor: CB.cannonArmor(cannonKey) + up('armure'),   // l'armure appartient au canon : elle encaisse les coups avant la vie
-      confetti: cannonKey === 'confetti' ? (() => { const l = uq('volee'), C = CB.CONFETTI; return { every: l ? C.levels.every[l - 1] : C.every, dmg: l ? C.levels.dmg[l - 1] : C.dmg, z: l ? C.levels.z[l - 1] : C.z }; })() : null,   // canon confetti : volée de confettis sur les monstres trop proches
+      confetti: ['confetti','sucre'].includes(cannonKey) ? (() => { const l = uq('volee'), C = CB.CONFETTI; return { every: l ? C.levels.every[l - 1] : C.every, dmg: l ? C.levels.dmg[l - 1] : C.dmg, z: l ? C.levels.z[l - 1] : C.z }; })() : null,   // canon confetti : volée de confettis sur les monstres trop proches
       gold: (1 + up('butin') + tal('butin')) * (1 + (cm.gold || 0)) * (1 + (pm.gold || 0)) * (1 + .1 * uq('jackpot')),
       goldFlat: 0,
       crit: up('critique') + tal('critique') + (cm.crit || 0) + (pm.crit || 0) + .04 * uq('visee'),
@@ -70,20 +110,20 @@
       this.special = player && CB.SPECIALS[player.id] ? Object.assign({ id: player.id, name: player.perk.name, icon: player.perk.icon }, CB.SPECIALS[player.id]) : null;
       { const up = player && profile ? CB.Save.usedPower(profile) : null; if (up && CB.SPECIALS[up] && CB.POWERS[up]) this.special = Object.assign({ id: up, name: CB.POWERS[up].name, icon: CB.POWERS[up].icon, unique: true }, CB.SPECIALS[up]); }   // pouvoir unique (pirate, torpilles…) choisi au hangar à la place du sien
       const sid2 = profile && profile.slot2 && profile.special2, m2 = sid2 && CB.playerById(sid2); this.special2 = player && m2 && sid2 !== player.id && CB.SPECIALS[sid2] ? Object.assign({ id: sid2, name: m2.perk.name, icon: m2.perk.icon }, CB.SPECIALS[sid2]) : null; this.charge2 = 0;   // case vierge : un deuxième pouvoir, sa propre jauge
-      this.spPower = 1; this.charge = 0; this.specialsUsed = 0; this.spUses = 0; this.spUses2 = 0;   // spPower : force de l'attaque spéciale selon son niveau au hangar (réglé après les stats)
-      this.fxBy = {}; this.fx = { cheat: 0, slowmo: 0, rally: 0, ghost: 0, magnet: 0, laser: 0, tornado: 0, teleport: 0, licorne: 0, priere: 0, pika: 0, blizzard: 0, protect: 0, pirate: 0, ballons: 0, cerbere: 0, meteores: 0 }; this.pirates = null; this.pirateShots = 0; this.parade = null; this.paradeShots = 0; this.cerbere = null; this.meteorTick = 0; this.meteorHits = 0; this.spirits = null; this.fxTick = 0; this.pikaTick = 0; this.blizzTick = 0; this.tornadoes = null; this.vortex = null; this.unicorn = null; this.angels = null; this.guest = null; this.flash = 0; // effets temporaires des attaques spéciales (secondes restantes)
+      this.chargeCapacity = CB.Save.chargeCapacity(profile); this.spPower = 1; this.charge = 0; this.specialsUsed = 0; this.spUses = 0; this.spUses2 = 0;   // spPower : force de l'attaque spéciale selon son niveau au hangar (réglé après les stats)
+      this.fxBy = {}; this.fx = { cheat: 0, slowmo: 0, rally: 0, ghost: 0, soccer: 0, magnet: 0, laser: 0, tornado: 0, teleport: 0, licorne: 0, priere: 0, pika: 0, blizzard: 0, protect: 0, pirate: 0, ballons: 0, cerbere: 0, meteores: 0 }; this.pirates = null; this.pirateShots = 0; this.parade = null; this.paradeShots = 0; this.cerbere = null; this.meteorTick = 0; this.meteorHits = 0; this.spirits = null; this.fxTick = 0; this.pikaTick = 0; this.blizzTick = 0; this.tornadoes = null; this.vortex = null; this.unicorn = null; this.angels = null; this.guest = null; this.flash = 0; // effets temporaires des attaques spéciales (secondes restantes)
       this.def = CB.waveDef(worldIndex, waveIndex);
       custom = custom || (window.CB.CUSTOM_WAVES || {})[this.world.id + '-' + (waveIndex + 1)] || null;
       if (custom) {
         this.custom = custom; const base = CB.worldById(custom.world) || this.world;
         this.world = Object.assign({}, base, { scene: custom.scene || base.id, sky: custom.sky || base.sky, ground: custom.ground || base.ground, space: !!custom.space, enemies: (custom.random && custom.random.enemies || []).filter(k => CB.ENEMIES[k]), boss: custom.boss || null });
-        this.def = { world: worldIndex, index: waveIndex, type: custom.type || 'kill', goal: custom.goal || 10, seconds: custom.seconds || 40, density: custom.density || 1, name: custom.name || 'Tableau', text: custom.text || '', cibles: custom.cibles || null, brigands: custom.brigands || null, swarm: custom.type === 'swarm' ? (custom.swarm || CB.waveDef(0, 1).swarm) : null };   // nuée de l'éditeur : décompte, étoiles, bombes et bateau du 1-2 ; les monstres viennent de la liste
+        this.def = { world: worldIndex, index: waveIndex, type: custom.type || 'kill', goal: custom.goal || 10, seconds: custom.seconds || 40, density: custom.density || 1, name: custom.name || 'Tableau', text: custom.text || '', cibles: custom.cibles || null, brigands: custom.brigands || null, swarm: custom.type === 'swarm' ? (custom.swarm || CB.SWARM_DEFAULT) : null };   // nuée de l'éditeur : décompte, étoiles, bombes et bateau du 1-2 ; les monstres viennent de la liste
         this.schedule = (custom.spawns || []).filter(s => CB.ENEMIES[s.type]).map(s => ({ type: s.type, elite: !!s.elite, every: Math.max(.05, +s.every || .5), interval: Math.max(.1, +s.interval || 5), count: Math.max(1, Math.round(+s.count || 1)), next: Math.max(0, +s.at || 0), left: Math.max(1, Math.round(+s.count || 1)), packsLeft: Math.max(1, Math.round(+s.packs || 1)) - 1 }));
         // séquence de l'éditeur : groupes ordonnés ; un groupe mélange ses sortes de monstres, et part quand le groupe d'avant est éliminé (ou à « at » s si précisé)
       }
       const seqSrc = this.custom ? (custom.sequence || []) : (this.def.sequence || null);   // séquence de groupes : éditeur, ou tableau officiel (ex. 1-3 : première vague de chauves-souris)
       if (seqSrc) {
-        this.sequence = seqSrc.map((g, idx) => ({ idx, launched: false, spawned: [], kinds: (g.kinds || []).filter(k => k && (CB.ENEMIES[k.type] || (String(k.type).startsWith('boss:') && CB.BOSSES[k.type.slice(5)]))).map(k => ({ type: k.type, count: Math.max(1, Math.round(+k.count || 1)), elite: !!k.elite || !!g.elite })), every: g.every == null || g.every === '' || isNaN(+g.every) ? .6 : Math.max(0, +g.every), at: g.at == null || g.at === '' ? null : Math.max(0, +g.at), rel: g.rel == null || g.rel === '' || isNaN(+g.rel) ? null : +g.rel, left: g.left == null || g.left === '' || isNaN(+g.left) ? null : Math.max(0, Math.round(+g.left)), elite: !!g.elite })).filter(g => g.kinds.length);
+        this.sequence = seqSrc.map((g, idx) => ({ idx, launched: false, spawned: [], shuffle: !!g.shuffle, kinds: (g.kinds || []).filter(k => k && (CB.ENEMIES[k.type] || (String(k.type).startsWith('boss:') && CB.BOSSES[k.type.slice(5)]))).map(k => ({ type: k.type, count: Math.max(1, Math.round(+k.count || 1)), elite: !!k.elite || !!g.elite })), every: g.every == null || g.every === '' || isNaN(+g.every) ? .6 : Math.max(0, +g.every), at: g.at == null || g.at === '' ? null : Math.max(0, +g.at), rel: g.rel == null || g.rel === '' || isNaN(+g.rel) ? null : +g.rel, left: g.left == null || g.left === '' || isNaN(+g.left) ? null : Math.max(0, Math.round(+g.left)), elite: !!g.elite })).filter(g => g.kinds.length);
         this.seq = { i: 0, active: [], alive: [], clearAt: null, lastEnd: null, gap: CB.SEQUENCE_GAP };   // at : temps absolu ; rel : ± s par rapport à la fin des arrivées du groupe d'avant ; sinon après son élimination
       }
       this.stats = CB.stats(profile || CB.Save.blank('x'), player); if (this.stats.fullCharge && this.special) this.charge = 1; if (this.stats.fullCharge && this.special2) this.charge2 = 1;   // objet unique « Jauge pleine »
@@ -93,33 +133,65 @@
       this.towers = []; for (let i = 0; i < this.stats.towers; i++) this.towers.push({ side: i === 0 ? -1 : 1, cooldown: 1.5 + i * .5, recoil: 0, shots: 0, aim: { x: CB.VIEW.cx, y: CB.VIEW.horizon * .6 } });
       this.sphere = this.stats.sphere ? { tick: 0, hit: 0, hits: 0 } : null; this.confetti = this.stats.confetti ? { tick: this.stats.confetti.every * .5, hit: 0, bursts: 0 } : null; this.plane = null; this.refillAfter = false; this.refillAfter2 = false; this.impacts = 0; this.lastImpact = null;
       this.maxHp = this.stats.maxHp; this.hp = this.maxHp; this.shield = this.stats.shield; this.maxArmor = this.stats.maxArmor; this.armor = this.maxArmor; this.armorHit = 0;
-      this.time = 0; this.intro = 2.2; this.kills = 0; this.gold = 0; this.xp = 0; this.shots = 0; this.hits = 0;
+      this.nextGoldCoin = 12; this.coinsCollected = 0; this.coinGold = 0; this.time = 0; this.intro = 2.2; this.kills = 0; this.gold = 0; this.xp = 0; this.shots = 0; this.hits = 0;
       this.enemies = []; this.balls = []; this.bursts = []; this.texts = []; this.cards = []; this.choice = null;
       this.spawn = .8; this.cooldown = 0; this.event = null; this.puzzle = null; this.stun = null; this.poison = 0; this.dark = 0; this.eventsSeen = 0; this.puzzlesSolved = 0; this.puzzleFails = 0; this.shieldsBroken = 0;
       this.nextEvent = Infinity; this.aim = { x: CB.VIEW.cx, y: CB.VIEW.horizon * .55 }; this.over = false; this.won = false; this.reason = '';
       this.lastElite = -99; this.combo = 0; this.comboTimer = 0; this.bestCombo = 0; this.boss = null; this.bossSpawned = false;
       this.boxes = 0; this.boxesHit = 0; this.nextBox = this.def.type === 'boss' ? CB.BOXES.first : (this.def.type === 'cibles' || this.def.type === 'brigands') ? Infinity : CB.BOXES.normal.first[0] + this.random() * (CB.BOXES.normal.first[1] - CB.BOXES.normal.first[0]);   /* boîtes bonus « ? » dans tous les tableaux (sauf les mini-jeux), au hasard */ this.bossPhases = 0; this.cardFly = null; this.surprises = 0; this.weakHits = 0; this.guestPick = null; this.portrait = null;   // tableau de boss : boîtes bonus « ? » (apparues / tirées), phases franchies
-      this.hurt = 0; this.regenTimer = 0; this.recoil = 0; this.lastEffect = null; this.elitesKilled = 0;
+      this.healFx = 0; this.hurt = 0; this.regenTimer = 0; this.recoil = 0; this.lastEffect = null; this.elitesKilled = 0;
       this.ally = this.stats.ally ? this.makeAlly(this.stats.ally, 1) : null; this.bench = this.stats.ally3 || null; this.swaps = 0; this.god = !!this.stats.god;   // réserve : échangeable en pause ; god : cheat d'invincibilité
       const fam = id => (CB.playerById(id) || {}).family; this.familyBuff = !!(player && this.ally && this.ally2 && fam(this.ally.id) === player.family && fam(this.ally2.id) === player.family);
       if (this.familyBuff) { this.stats.rate *= 1 + CB.FAMILY_BUFF.rate; this.texts.push({ text: '🛡️ BONUS FAMILLE : +' + Math.round(CB.FAMILY_BUFF.rate * 100) + ' % DE CADENCE !', x: 0, y: 13, z: 18, age: -2.4, color: (CB.FAMILIES[player.family] || {}).color || '#ffd23f', big: true }); }
       // nuit sans fin
       this.seenBy = {}; this.killsBy = {}; this.boost = 0; this.boostTimer = 0;
-      this.runXp = 0; this.runLevel = 1; this.pendingLevels = 0; { const Sv = CB.Save; this.cardCount = 3 + (Sv && profile ? Math.min(2, Sv.extraChoices(profile)) : 0); this.rerolls = Sv && profile ? Sv.rerolls(profile) : 0; this.rerollsUsed = 0; }   /* récompenses de niveau : cartes en plus, « rebrasser » */ this.meteorCard = 0; this.gustTimer = 6; this.armorFixT = 0; this.cardFxHits = 0; // niveaux gagnés pendant la vague : chacun offre trois cartes
+      this.runXp = 0; this.runLevel = 1; this.pendingLevels = 0; { const Sv = CB.Save; this.cardCount = 3 + (Sv && profile ? Math.min(3, Sv.extraChoices(profile)) : 0); this.rerolls = Sv && profile ? Sv.rerolls(profile) : 0; this.rerollsUsed = 0; }   /* récompenses de niveau : cartes en plus, « rebrasser » */ this.meteorCard = 0; this.gustTimer = 6; this.armorFixT = 0; this.cardFxHits = 0; // niveaux gagnés pendant la vague : chacun offre trois cartes
       this.E = this.def.endless === 'dinos' ? CB.ENDLESS_DINOS : CB.ENDLESS; // réglages du mode sans fin selon le tableau
       this.scenery = this.def.scene && CB.SCENERY[this.def.scene] ? Object.assign({}, this.world, CB.SCENERY[this.def.scene]) : null;
       this.miniBossDone = false; this.nextGift = Infinity; this.gifts = 0; this.crystalsBroken = 0;
       if (!this.custom && this.def.type !== 'cibles' && this.def.type !== 'brigands' && this.def.type !== 'boss' && this.def.type !== 'endless' && this.def.type !== 'swarm') { const [a, b] = CB.EVENTS.first; this.nextEvent = a + this.random() * (b - a); }   // pas dans la nuit sans fin ni la vallée : elles ont leurs propres secrets
-      this.cibles = this.def.type === 'cibles' ? CB.minigame('cibles', this.def.cibles) : null; this.targetsHit = 0; this.targetsMissed = 0; this.targetsSpawned = 0; this.nextTarget = this.cibles ? 2 : Infinity; this.brigands = this.def.type === 'brigands' ? CB.minigame('brigands', this.def.brigands) : null; this.round = 0; this.brigandsHit = 0; this.civilsHit = 0; this.panels = null; this.nextRound = this.brigands ? 2.5 : Infinity; this.targetsBefore = (profile && profile.targetsHit) || 0; this.targetTimes = this.def.targets ? this.def.targets.at.slice() : null;
-      this.swarm = this.def.type === 'swarm' ? this.def.swarm : null; this.nextBomb = this.swarm ? this.swarm.bombFrom : Infinity; this.bombs = 0; this.bombsDefused = 0; this.bombsExploded = 0;
+      this.cibles = this.def.type === 'cibles' ? CB.minigame('cibles', this.def.cibles) : null; this.targetsHit = 0; this.targetsMissed = 0; this.targetsSpawned = 0; this.nextTarget = this.cibles ? 2 : Infinity; this.brigands = this.def.type === 'brigands' ? CB.minigame('brigands', this.def.brigands) : null; this.round = 0; this.brigandsHit = 0; this.civilsHit = 0; this.panels = null; this.nextRound = this.brigands ? 2.5 : Infinity; this.targetsBefore = (profile?.targetDiscoveries?.[this.world.id] || (this.wi===0?profile?.targetsHit:0)) || 0; this.targetTimes = this.def.targets ? (this.def.targets.kills || this.def.targets.at).slice() : null;
+      this.swarm = this.def.type === 'swarm' ? this.def.swarm : null; this.magicBombs = ['kill', 'killTimed', 'survive', 'endless', 'sink', 'boss', 'swarm'].includes(this.def.type); this.nextBomb = this.swarm ? this.swarm.bombFrom : this.magicBombs ? 20 : Infinity; this.bombs = 0; this.bombsDefused = 0; this.bombsExploded = 0;
       this.endless = this.def.type === 'endless'; this.discoveries = 0; this.discoveredBefore = (profile && profile.discovered) || 0; this.seen = []; this.news = []; this.nextChest = this.custom ? (+this.custom.chestEvery > 0 ? (+this.custom.chestAt > 0 ? +this.custom.chestAt : +this.custom.chestEvery) : Infinity) : this.E.chest ? this.E.chest.firstAt : Infinity; this.chestsSeen = 0;
       if (this.E.gift) this.nextGift = this.E.gift.firstAt;
-      this.seenBefore = (profile && profile.seenBy) || {}; this.nightKillsBefore = (profile && profile.nightKills) || 0; this.board2Done = !!(profile && CB.Save.stars(profile, 'foret', 1) > 0); this.boardDone = !!(profile && this.world && CB.Save.stars(profile, this.world.id, this.vi) > 0); this.fleet = null; this.nextFleet = 20; this.nextBonusBox = 30; this.boatSecretBefore = !!(profile && profile.boatSecret); this.nextBoat = null; this.splashes = 0; this.bites = 0; this.px = 0; this.canDodge = !!(this.world.dodge || this.def.dodge || this.def.type === 'boss'); this.beam = null; this.nextShip = null; this.ships = 0; this.shipsSunk = 0; this.dodged = 0; this.pirateWorldWon = false; this.pirateWon = false; this.worldWon = null; this.powerWon = null; this.portalSeen = !!(profile && CB.Save.portalFound(profile, this.world.id)); this.portal = null; this.portalSpawned = false; this.portalDone = false; this.secretFound = false;
+      this.seenBefore = (profile && profile.seenBy) || {}; this.nightKillsBefore = (profile && profile.nightKills) || 0; this.board2Done = !!(profile && CB.Save.stars(profile, 'foret', 1) > 0); this.boardDone = !!(profile && this.world && CB.Save.stars(profile, this.world.id, this.vi) > 0); this.fleet = null; this.nextFleet = 20; this.nextBonusBox = 30; this.boatSecretBefore = !!(profile && profile.boatSecret); this.nextBoat = null; this.splashes = 0; this.bites = 0; this.px = 0; this.canDodge = CB.Save.hasMovement(profile); this.beam = null; this.nextShip = null; this.ships = 0; this.shipsSunk = 0; this.dodged = 0; this.pirateWorldWon = false; this.pirateWon = false; this.worldWon = null; this.powerWon = null; this.portalSeen = !!(profile && CB.Save.portalFound(profile, this.world.id)); this.portal = null; this.portalSpawned = false; this.portalDone = false; this.secretFound = false;
       // Voyage par le portail : on garde les cartes, le niveau de la partie et la vie du tableau précédent.
       if (carry) { for (const k of carry.cards || []) if (CB.CARDS[k]) { this.cards.push(k); if (!CB.CARDS[k].instant) CB.CARDS[k].apply(this.stats, this, this.cardLevel(k)); } this.runLevel = carry.runLevel || 1; this.runXp = carry.runXp || 0; this.maxHp = this.stats.maxHp; this.shield = this.stats.shield; this.hp = Math.max(1, Math.round(this.maxHp * (carry.hpRatio == null ? 1 : carry.hpRatio))); this.maxArmor = this.stats.maxArmor; this.armor = Math.round(this.maxArmor * (carry.armorRatio == null ? 1 : carry.armorRatio)); this.news.push({ kind: 'discovery', text: this.def.endless === 'dinos' ? 'BIENVENUE DANS LE PASSÉ : LA VALLÉE DES DINOSAURES' : 'TABLEAU SECRET : ' + String(this.def.name).toUpperCase(), time: 0 }); }
+      if (this.def.voyage) this.boardFishers();
+      if (this.def.pirateCrew) {
+        this.choosingCrew = true;
+        this.choice = Object.keys(CB.PIRATE_CREWS);
+      }
+      if (this.def.sniper) {
+        this.sniperMisses = 0;
+        this.nextEvent = this.nextBox = this.nextGoldCoin = Infinity;
+        this.magicBombs = false;
+        this.ally = this.ally2 = this.special = this.special2 = this.sphere = this.confetti = null;
+        this.towers = [];
+        this.stats.fleet = 0;
+      }
+      if (this.def.comboTrial) {
+        for (const card of ['explosif', 'midas']) {
+          this.cards.push(card);
+          CB.CARDS[card].apply(this.stats, this, 1);
+        }
+        this.news.push({ kind: 'discovery', text: 'MIDAS EXPLOSIF · VISE LES CITROUILLES DORÉES !', time: 0 });
+        this.nextFuse = 4;
+        this.fusesHit = 0;
+        this.nextEvent = Infinity;
+      }
+      if (CB.Missions) CB.Missions.init(this);
+    }
+    boardFishers() {
+      const crew = CB.PLAYERS.filter(p => ![this.player?.id, this.ally?.id, this.ally2?.id].includes(p.id));
+      this.fishers = crew.slice(0, 4).map((p, i) => ({ id: p.id, side: i < 2 ? -1 : 1, slot: i % 2, fledAt: null }));
+    }
+    get secondCannonX() {
+      const V = CB.VIEW;
+      return this.px + Math.min(V.size * 1.45, V.w * .21) * 18 / V.f;
     }
     // Monde des pirates : ◀ ▶ déplacent le canon sur le pont pour esquiver boulets et rayons (px = position en unités du monde)
-    move(dir, dt) { if (!this.canDodge || this.over || this.stun || this.choice) return; const lim = Math.min(10, CB.VIEW.spread * .55); this.px = Math.max(-lim, Math.min(lim, this.px + dir * 16 * dt)); }
+    move(dir, dt) { if (!this.canDodge || this.over || this.stun || this.choice) return; const lim = Math.min(10, CB.VIEW.spread * .55); this.px = Math.max(-lim, Math.min(this.pirateCrew === 'cannons' ? lim - (this.secondCannonX - this.px) : lim, this.px + dir * 16 * dt)); }
     get sea() { return this.def.scene === 'mer' || this.world.scene === 'mer'; }
     get under() { return (this.def.scene || this.world.scene) === 'abysses'; }   // sous l'eau (les Abysses) : on est un sous-marin, les boulets sont des torpilles   // le tableau se joue sur l'eau (bateau pirate ou scène « mer » de l'éditeur)
     // Nageur arrivé à la coque : il reste là (tant qu'on ne l'a pas tué), bondit hors de l'eau vers le bateau et mord, avec éclaboussures.
@@ -134,25 +206,64 @@
     get runProgress() { return Math.min(1, this.runXp / CB.runXpFor(this.runLevel)); }
     // XP de la vague : à chaque niveau, un tirage de trois cartes (les niveaux en attente s'enchaînent).
     gainXp(n) {
+      if (this.def.sniper) return;
       this.runXp += n; let need = CB.runXpFor(this.runLevel);
       while (this.runXp >= need) { this.runXp -= need; this.runLevel++; this.pendingLevels++; this.texts.push({ text: 'NIVEAU ' + this.runLevel + ' !', x: 0, y: 9, z: 20, age: 0, color: '#ffd23f' }); need = CB.runXpFor(this.runLevel); }
       if (this.pendingLevels > 0 && !this.choice && !this.over) this.offerCards();
     }
-    get timeLeft() { return this.def.seconds != null && !this.swarm && (this.def.type === 'survive' || this.def.type === 'killTimed') ? Math.max(0, this.def.seconds - this.time) : null; }   // le compte à rebours seulement quand le temps compte
-    get openEnded() { return this.endless || !!this.swarm; } // on peut arrêter quand on veut, les étoiles dépendent du temps
+    get timeLeft() { return this.def.seconds != null && (this.def.type === 'swarm' || this.def.type === 'survive' || this.def.type === 'killTimed') ? Math.max(0, this.def.seconds - this.time) : null; }   // le compte à rebours seulement quand le temps compte
+    get openEnded() { return this.endless || !!this.swarm || !!this.missionsEndless; } // on peut arrêter quand on veut, les étoiles dépendent du temps
     get progress() { const d = this.def; if (d.type === 'boss') { const b = this.boss; return b ? Math.min(1, 1 - b.hp / b.maxHp) : this.bossSpawned ? 1 : 0; } if (d.type === 'sink') return Math.min(1, this.shipsSunk / d.goal); if (this.cibles) return Math.min(1, this.targetsHit / this.cibles.count); if (this.brigands) return Math.min(1, this.round / this.brigands.rounds); if (this.endless) { const E = this.E.chest; if (!E) return 0; const prev = this.chestsSeen ? E.firstAt + (this.chestsSeen - 1) * E.every : 0; return Math.min(1, (this.time - prev) / (this.nextChest - prev)); } if (d.type === 'kill' || d.type === 'killTimed') return Math.min(1, this.kills / d.goal); if (d.type === 'survive' || this.swarm) return Math.min(1, this.time / d.seconds); if (this.boss) return 1 - this.boss.hp / this.boss.maxHp; return 0; }
     radiusOf(e) { return (e.boss ? e.size * 1.25 * CB.BOSS_SCALE : 2 + (e.size - 1) * 1.3) * (this._ballSize || 1); }
     // Profondeur visée : l'ennemi sous le réticule, sinon une distance moyenne.
+    get shotSpeed() { return CB.BASE_SPEED * this.stats.range * (this.brigands?.choreography ? 2.5 : 1); }
     target() {
       let depth = 45, best = Infinity;
-      for (const e of this.enemies) { const p = CB.project(e), d = Math.hypot(p.x - this.aim.x, p.y - this.aim.y); if (d < Math.max(28, p.scale * 2.3 * e.size * (e.boss ? CB.BOSS_SCALE : 1)) && d < best) { best = d; depth = e.boss ? e.z : e.z * 65 / (65 + e.speed); } }
-      const t = depth / (CB.BASE_SPEED * this.stats.range);
+      for (const e of this.enemies) { if (e.dead || e.escaped) continue; const p = CB.project(e), d = Math.hypot(p.x - this.aim.x, p.y - this.aim.y); if (d < Math.max(28, p.scale * 2.3 * e.size * (e.boss ? CB.BOSS_SCALE : 1)) && d < best) { best = d; depth = e.boss ? e.z : e.z * 65 / (65 + e.speed); } }
+      const t = depth / this.shotSpeed;
       return Object.assign(CB.unproject(this.aim.x, this.aim.y, depth), { t });
+    }
+    soccerAlive(enemy) { return !!enemy && !enemy.dead && !enemy.escaped && !enemy.retreat && this.enemies.includes(enemy) && !this.isDecor(enemy); }
+    soccerNext(from) {
+      return this.enemies.filter(e => e !== from && this.soccerAlive(e))
+        .sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y, a.z - from.z) - Math.hypot(b.x - from.x, b.y - from.y, b.z - from.z))[0] || null;
+    }
+    bounceSoccer(ball, enemy) {
+      if (this.puzzle || this.isDecor(enemy)) { ball.hit = true; return; }
+      const previous = ball.soccerPrevious;
+      // Retour sur l’autre membre du duo ; remplacer un mort seulement si le dernier touché vit encore.
+      const next = this.soccerAlive(previous) ? previous : (!previous || this.soccerAlive(enemy)) ? this.soccerNext(enemy) : null;
+      ball.soccerPrevious = enemy; ball.soccerTarget = next;
+      ball.x = enemy.x; ball.y = enemy.y; ball.z = enemy.z;
+      ball.hitIds = new Set([enemy.id]); ball.hit = !next;
+      this.bursts.push({ x: enemy.x, y: enemy.y, z: enemy.z, age: 0, kind: 'pop', color: '#ffffff', size: 1 });
+    }
+    steerSoccer(ball, dt) {
+      if (!ball.soccerTarget) return;
+      if (this.puzzle) { ball.hit = true; return; }
+      if (!this.soccerAlive(ball.soccerTarget)) {
+        ball.soccerTarget = this.soccerAlive(ball.soccerPrevious) ? this.soccerNext(ball.soccerPrevious) : null;
+        if (!ball.soccerTarget) { ball.hit = true; return; }
+      }
+      const e = ball.soccerTarget, dx = e.x - ball.x, dy = e.y - ball.y, dz = e.z - ball.z;
+      const length = Math.hypot(dx, dy, dz), speed = Math.min(CB.SOCCER.speed, length / Math.max(dt, .001));
+      ball.vx = dx / (length || 1) * speed; ball.vy = dy / (length || 1) * speed; ball.vz = dz / (length || 1) * speed;
     }
     rollEffect() { for (const [key, lvl] of Object.entries(this.stats.effects)) if (lvl > 0 && this.random() < lvl * CB.EFFECT_CHANCE) return key; return null; }
     // Lance un (ou plusieurs) boulets depuis la position x "origin" (0 = notre canon, CB.HELPER.x = le coéquipier).
     launch(origin, target, dmgMult = 1, ally = false) {
-      const s = this.stats, t = target.t, vz = CB.BASE_SPEED * s.range, effect = this.rollEffect();
+      // Un projectile neutre : aucun pouvoir ne modifie le choix du joueur.
+      if (this.puzzle) {
+        if (ally) return null;
+        const t = target.t;
+        this.balls.push({ x: origin, y: 1.8, z: 0, vx: (target.x - origin) / t, vy: (target.y - 1.8 + 9 * t * t) / t, vz: CB.BASE_SPEED * this.stats.range,
+          trail: [], dmg: 1, size: 1, puzzleShot: true, ally: false, hitIds: new Set(), age: 0 });
+        this.extraShot = 0;
+        return null;
+      }
+      const soccer = this.fxMine('soccer', ally);
+      // Le premier impact suit la visée ; les suivants alternent entre les deux ennemis.
+      const s = this.stats, t = target.t, vz = this.shotSpeed, effect = soccer ? null : this.rollEffect();
       const count = s.shots + (effect === 'etoiles' ? 2 : 0) + (this.fx.cheat > 0 ? 1 : 0) + (this.extraShot || 0) + (s.triple && !ally && this.random() < s.triple ? 1 : 0), spread = (effect === 'etoiles' ? 3.2 : 2.4) * (s.fan ? 1.8 : 1), vet = this.fxMine('veteran', ally);   // boulets du vétéran (Richard) : 2× plus gros, 3× plus forts
       dmgMult *= (this.fx.rally > 0 ? 1 + this.spPower : 1) * (this.fx.ghost > 0 ? 1 + .5 * this.spPower : 1) * (this.fx.licorne > 0 ? 1 + this.spPower : 1) * (vet ? 3 : 1);
       for (let i = 0; i < count; i++) {
@@ -160,13 +271,34 @@
         this.balls.push({ x: origin, y: 1.8, z: 0, vx: (tx - origin) / t, vy: (target.y - 1.8 + 9 * t * t) / t, vz, trail: [], dmg: s.damage * dmgMult, size: s.size * (effect === 'bowling' ? 2.2 : 1) * (effect === 'etoiles' ? .8 : 1) * (vet ? 2 : 1), veteran: vet, variant: Math.floor(this.random() * 12),
           pierce: effect === 'bowling' || this.fxMine('ghost', ally), pierceLeft: ally ? 0 : s.pierceLeft || 0, splash: effect === 'feu' ? 6 : s.splash, chain: effect === 'eclair', freeze: effect === 'neige', effect, ally, disco: this.fxMine('licorne', ally), warp: this.fxMine('teleport', ally), ghost: this.fxMine('ghost', ally), hitIds: new Set(), bounced: false, age: 0 });
       }
+      if (soccer) for (const b of this.balls.slice(-count)) Object.assign(b, { soccer: true, straight: true, vy: (target.y - 1.8) / t, pierce: false, pierceLeft: 0, splash: 0, chain: false, freeze: false, disco: false, warp: false, ghost: false, size: Math.max(1.5, b.size), dmg: b.dmg * 2 });
       this.extraShot = 0;
       return effect;
     }
     fire() {
-      if (this.over || this.choice || this.cooldown > 0 || this.stun) return false;
+      if (this.outro || this.over || this.choice || this.cooldown > 0 || this.stun) return false;
+      if (this.def.sniper) {
+        const enemy = this.enemies.find(e => e.sniper && !e.dead);
+        if (!enemy || this.balls.length) return false;
+        const target = CB.unproject(this.aim.x, this.aim.y, enemy.z);
+        const vz = 380, time = enemy.z / vz;
+        this.balls.push({
+          x: this.px, y: 1.8, z: 0, vx: (target.x - this.px) / time, vy: (target.y - 1.8) / time, vz,
+          straight: true, trail: [], dmg: enemy.maxHp, size: 1, hitIds: new Set(), age: 0
+        });
+        this.cooldown = .45;
+        this.shots++;
+        this.recoil = 1;
+        return true;
+      }
       this.extraShot = this.stats.burst && (this.shots + 1) % this.stats.burst === 0 ? 1 : 0;   // surchauffe (mitraille turbo) : un tir sur N part en double
-      this.lastEffect = this.launch(this.px, this.target()); this.cooldown = CB.BASE_COOLDOWN / this.stats.rate / (this.fx.slowmo > 0 ? 2.5 : 1); this.shots++; this.recoil = 1;
+      const target = this.target(), first = this.balls.length;
+      this.lastEffect = this.launch(this.px, target);
+      if (this.pirateCrew === 'cannons' && !this.puzzle) {
+        const ball = this.balls[first], origin = this.secondCannonX;
+        this.balls.push({ ...ball, x: origin, vx: (target.x - origin) / target.t, trail: [], hitIds: new Set() });
+      }
+      this.cooldown = CB.BASE_COOLDOWN / this.stats.rate / (this.fx.slowmo > 0 ? 2.5 : 1); this.shots++; this.recoil = 1;
       return true;
     }
     // La licorne d'Alexie : vole en huit devant la scène pendant 15 s et lance des rayons arc-en-ciel sur les monstres.
@@ -214,15 +346,15 @@
       this.launch(ox, { x: best.x, y: best.y, z: depth, t }, CB.HELPER.damage, true); a.cooldown = CB.BASE_COOLDOWN / s.rate; a.recoil = 1; a.shots++;
     }
     // Multiplicateur de PV du moment : tableau personnalisé, et montée progressive de la nuit sans fin.
-    hpMult() { const E = this.E, R = this.def.ramp; return ((this.custom || {}).hpScale || 1) * (this.endless ? 1 + Math.floor(this.time / E.hpRamp) * E.hpPerRamp : 1) * (R && !this.custom ? 1 + Math.floor(this.time / R.every) * R.hp : 1); }   // def.ramp : de plus en plus forts
+    hpMult() { const E = this.E, R = this.def.ramp; return (CB.Missions ? CB.Missions.pressure(this).hp : 1) * ((this.custom || {}).hpScale || 1) * (this.endless ? 1 + Math.floor(this.time / E.hpRamp) * E.hpPerRamp : 1) * (R && !this.custom ? 1 + Math.floor(this.combatAge / R.every) * R.hp : 1); }   // def.ramp : de plus en plus forts
     spawnEnemy(type, at, forceElite, tier = 0) {
       const def = CB.ENEMIES[type], r = this.random, wi = this.wi, cs = this.custom || {}, T = CB.TIERS[tier] || CB.TIERS[0];
-      const elite = forceElite != null ? (forceElite && !def.noElite) : !def.noElite && !at && this.time > 8 && this.time - this.lastElite > 11 && !this.enemies.some(e => e.elite) && r() < .13;
+      const elite = forceElite != null ? (forceElite && !def.noElite) : !this.gentleStart && !def.noElite && !at && this.time > 8 && this.time - this.lastElite > 11 && !this.enemies.some(e => e.elite) && r() < .13;
       if (elite) this.lastElite = this.time;
       // grosses versions (2× plus grosses, 2× plus résistantes) : seulement les apparitions naturelles ; dans la nuée, de plus en plus souvent
-      const big = !!def.big && !at && forceElite === undefined && r() < def.big.chance * (this.swarm ? .5 + 1.5 * Math.min(1, this.time / this.def.seconds) : 1);
-      const e = { id: nextId++, type, def, elite, tier, big, name: (elite ? def.variant.name : big ? def.big.name : def.name) + (T.name ? ' ' + T.name : ''), color: elite ? def.variant.color : (T.color || def.color), size: def.size * (elite ? 1.25 : 1) * (tier ? 1 + tier * .08 : 1) * (big ? def.big.size : 1),
-        hp: def.hp * CB.hpScale(wi) * this.hpMult() * T.hp * (elite ? 3 : 1) * (big ? def.big.hp : 1), speed: def.speed * CB.speedScale(wi) * (cs.speedScale || 1) * T.speed * (.9 + r() * .25) * (elite ? 1.15 : 1) * (this.def.night && !def.shot ? this.def.night.speed : 1) * (this.def.ramp && !this.custom && !def.shot ? 1 + Math.floor(this.time / this.def.ramp.every) * this.def.ramp.speed : 1) * (this.swarm && this.swarm.ramp && !def.hazard ? 1 + this.swarm.ramp.speed * Math.min(1, this.time / this.def.seconds) : 1), damage: def.damage,
+      const big = !this.gentleStart && !!def.big && !at && forceElite === undefined && r() < def.big.chance * (this.swarm ? .5 + 1.5 * Math.min(1, this.time / this.def.seconds) : 1);
+      const e = { id: nextId++, spawnTime: this.time, type, def, elite, tier, big, name: (elite ? def.variant.name : big ? def.big.name : def.name) + (T.name ? ' ' + T.name : ''), color: elite ? def.variant.color : (T.color || def.color), size: def.size * (elite ? 1.25 : 1) * (tier ? 1 + tier * .08 : 1) * (big ? def.big.size : 1),
+        hp: def.hp * CB.hpScale(wi) * this.hpMult() * T.hp * (elite ? 3 : 1) * (big ? def.big.hp : 1), speed: def.speed * CB.speedScale(wi) * (cs.speedScale || 1) * T.speed * (.9 + r() * .25) * (elite ? 1.15 : 1) * (this.def.night && !def.shot ? this.def.night.speed : 1) * (this.def.ramp && !this.custom && !def.shot ? 1 + Math.floor(this.combatAge / this.def.ramp.every) * this.def.ramp.speed : 1) * (this.swarm && this.swarm.ramp && !def.hazard ? 1 + this.swarm.ramp.speed * Math.min(1, this.time / this.def.seconds) : 1), damage: def.damage,
         x: 0, baseX: 0, y: 0, baseY: 0, z: at ? at.z : 80 + r() * 12, phase: r() * 6.28, age: 0, frozen: 0, amp: Math.min(1, CB.VIEW.spread / 22) };
       // Position : parfois (35 %) les monstres arrivent très larges, jusqu'au bord de la zone visible ; sinon plus groupés au centre.
       // la nuée : les chauves-souris arrivent de plus en plus éparpillées (de 35 % à 100 % de la zone en 5 minutes)
@@ -232,19 +364,31 @@
         e.x = at ? at.x : (r() - .5) * 2 * sx; e.baseX = at ? at.x : Math.max(-V.spread + margin, Math.min(V.spread - margin, e.x * .85));
         e.y = at ? at.y : 4 + r() * (sy - 4); e.baseY = at ? e.y : 4 + r() * (sy - 4); }
       if (this.def.giant && !at && !this.isDecor(e)) { e.size *= this.def.giant.size; e.hp *= this.def.giant.hp; }   // géants de la mer
-      if (this.def.scene === 'mer' && !at && !this.isDecor(e)) { const fly = !def.swim && (!!def.strafe || type === 'archeopteryx' || type === 'bat'); e.y = e.baseY = fly ? 9 + r() * 6 : def.swim ? .3 + r() * .4 : 2.5 + r() * 2.5; }   // nageurs : le corps à la ligne d'eau (y ≈ 0), à moitié immergé   // sur l'eau, ou dans les airs pour les volants
-      e.maxHp = e.hp; if (at) e.baseX = at.x; if (def.shield) e.shield = e.shieldMax = def.shield * CB.hpScale(wi) * this.hpMult();   // alien : son petit vaisseau encaisse d'abord
+      if (this.def.scene === 'mer' && !at && !this.isDecor(e)) { const fly = !def.swim && (!!def.flying || !!def.strafe || type === 'archeopteryx' || type === 'bat'); e.y = e.baseY = fly ? 9 + r() * 6 : def.swim ? .3 + r() * .4 : 2.5 + r() * 2.5; }   // nageurs : le corps à la ligne d'eau (y ≈ 0), à moitié immergé   // sur l'eau, ou dans les airs pour les volants
+      if (this.gentleStart && !this.isDecor(e) && !e.boss) { e.speed *= this.def.opening.speed || .75; e.calmMotion=!!this.def.opening.straight; e.hp = Math.min(e.hp, this.stats.damage * 2); }
+      if (CB.Missions && !this.isDecor(e)) e.speed *= CB.Missions.pressure(this).speed;
+      e.maxHp = e.hp; if (at) e.baseX = at.x; if (def.shield) e.shield = e.shieldMax = this.gentleStart ? this.stats.damage : def.shield * CB.hpScale(wi) * this.hpMult();   // alien : son petit vaisseau encaisse d'abord
       if (def.shot) { e.x = at.x; e.y = at.y; e.tx = this.px || 0; }   // un tir vise là où est le canon au moment du départ : on peut s'en tasser
       if (def.chest) { e.y = 4 + r() * 6; e.z = 95; }
       if (def.hazard) { e.z = at ? at.z : 26 + r() * 10; e.fuse = def.fuse; e.speed = 0; }
       if (def.crystal) { e.speed = 0; if (!at) e.z = 30 + r() * 14; }
       if (def.gift) { e.y = 5 + r() * 5; e.z = 92; }
       if (def.box) { e.speed = 0; if (!at) { e.z = 40; e.y = e.baseY = 7; } }
-      const decor = def.chest || def.shot || def.gift || def.crystal || def.hazard || def.target || def.box; // pas des monstres : ni bestiaire, ni annonce
+      const decor = def.coin || def.chest || def.shot || def.gift || def.crystal || def.hazard || def.target || def.box; // pas des monstres : ni bestiaire, ni annonce
       if (!decor) this.seenBy[type] = (this.seenBy[type] || 0) + 1;
-      { const gc = this.guardChance(); if (gc > 0 && !decor && !this.isDecor(e) && !def.ship && !def.riser && !def.swim && !(e.shield > 0) && !e.boss && r() < gc) { e.guard = true; e.shield = e.shieldMax = Math.max(3, Math.round(e.hp * .8)); this.guards = (this.guards || 0) + 1; } }   // parfois, un bouclier transparent devant lui : on le casse d'abord
+      { const gc = this.guardChance(); if (!this.gentleStart && gc > 0 && !decor && !this.isDecor(e) && !def.ship && !def.riser && !def.swim && !(e.shield > 0) && !e.boss && r() < gc) { e.guard = true; e.shield = e.shieldMax = Math.max(3, Math.round(e.hp * .8)); this.guards = (this.guards || 0) + 1; } }   // parfois, un bouclier transparent devant lui : on le casse d'abord
       if (this.endless && !decor && !this.seen.includes(type)) { this.seen.push(type); if (!(this.seenBefore[type] > 0)) this.news.push({ kind: 'monster', text: 'NOUVEAU MONSTRE : ' + def.name.toUpperCase(), time: this.time }); }
       this.enemies.push(e); return e;
+    }
+    spawnGoldCoin() {
+      const e = this.spawnEnemy('goldCoin', { x: (this.random() - .5) * CB.VIEW.spread, y: 5 + this.random() * 7, z: 48 }, false);
+      e.coinValue = CB.coinValue(this.wi); e.hp = e.maxHp = 1; return e;
+    }
+    collectGoldCoin(e) {
+      if (e.collected) return false; e.collected = true; e.dead = true;
+      const value = e.coinValue || CB.coinValue(this.wi); this.gold += value; this.coinGold += value; this.coinsCollected++;
+      this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'pop', color: '#ffe38a', size: 2 });
+      this.texts.push({ text: '+' + value, coin: true, big: true, x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#ffd23f' }); return true;
     }
     // Nuit sans fin : choix du style (les derniers débloqués sont favorisés) et du palier de couleur selon le temps.
     pickEndless(timeScale = 1) {
@@ -292,8 +436,70 @@
       }
     }
     // Mini-jeu : une cible ailée entre par un côté, à une hauteur et une profondeur au hasard, et traverse en battant des ailes.
-    // Mini-jeu du brigand : trois panneaux se lèvent (gauche, milieu, droite, pas trop écartés), un brigand et deux civils, puis redescendent
+    spawnSniperEnemy() {
+      const index = this.kills, kinds = ['bat', 'owl', 'ghost', 'pumpkin'];
+      const enemy = this.spawnEnemy(kinds[index % kinds.length], { x: 0, y: 8, z: 76 + index % 5 * 7 }, false);
+      enemy.sniper = true;
+      enemy.size = Math.max(1.15, enemy.size);
+      this.positionSniperEnemy(enemy);
+    }
+    positionSniperEnemy(enemy) {
+      const V = CB.VIEW, index = this.kills, lane = (index * 3 % 7) - 3;
+      const x = V.w * (.5 + lane * .105) + Math.sin(enemy.age * (.55 + index * .035)) * Math.min(V.w, V.h) * .055;
+      const y = Math.min(V.h * (.38 + index % 3 * .075), CB.clampAim(x, V.h).y - 14);
+      const position = CB.unproject(x, y + Math.sin(enemy.age * .9) * Math.min(6, V.h * .012), enemy.z);
+      enemy.x = position.x;
+      enemy.y = position.y;
+    }
+    spawnFuseGroup() {
+      const V = CB.VIEW, z = 50, side = this.random() < .5 ? -1 : 1;
+      const x = side * Math.min(10, V.spread * .5);
+      const carrier = this.spawnEnemy('pumpkin', { x, y: 8, z }, false);
+      carrier.fuseCarrier = true;
+      carrier.color = '#ffd34c';
+      carrier.size *= 1.35;
+      for (const [dx, dy, dz] of [[-5,1,2],[5,-1,1],[-2,3,-3],[3,3,-4]]) {
+        this.spawnEnemy('bat', { x: x + dx, y: 8 + dy, z: z + dz }, false);
+      }
+    }
+    get brigandsTotal() { return this.brigands.rounds * Math.max(1, Math.round(this.brigands.bads || 1)); }
+    // Formations en cases d'écran : profondeur indépendante de la place occupée à l'écran.
+    spawnMovingRound() {
+      const B = this.brigands, r = this.random, round = this.round, { tier, letters, palette } = B.choreography;
+      const k = round / Math.max(1, B.rounds - 1), show = B.show[0] + (B.show[1] - B.show[0]) * k;
+      const opening = round < 3, pattern = (round + palette) % 4;
+      const count = opening ? 3 : Math.min(6, 3 + (round % (tier >= 3 || k > .66 ? 4 : 3)));
+      const roles = Array.from({ length: count }, (_, i) => i < B.bads);
+      for (let i = count - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [roles[i], roles[j]] = [roles[j], roles[i]]; }
+      const nTop = count === 3 ? count : Math.floor(count / 2);
+      const moves = opening ? ['glisse'] : letters.slice(0, Math.min(letters.length, 2 + Math.floor(k * letters.length) + Math.floor(tier / 2)));
+      const shape = (i, row) => moves[(round - 3 + (pattern === 0 ? 0 : pattern === 1 ? row : i)) % moves.length] || 'glisse';
+      const speed = .95 + tier * .035 + k * .35, basePeriod = 2.6 / speed, basePhase = r();
+      const uneven = !opening && pattern % 2 === 0;
+      this.panels = roles.map((bad, i) => {
+        const row = Number(i >= nTop), cols = row ? count - nTop : nTop, col = row ? i - nTop : i;
+        const cell = (pattern === 3 ? .68 : .87) / cols;
+        const path = shape(i, row), group = pattern === 0 ? 0 : pattern === 1 ? row : i;
+        const z = opening ? 28 + (round === 0 ? 0 : i * 5) : 23 + ((i * 11 + round * 7 + palette * 3) % (23 + Math.min(10, tier * 2)));
+        const e = this.spawnEnemy(bad ? 'brigand' : 'civil', { x: 0, y: 4, z });
+        e.hp = e.maxHp = 1;
+        e.look = (i + round + palette) % 3 !== 0;
+        e.costume = (i + round * 3 + palette) % 8;
+        e.panel = { age: 0, up: 0, life: show, rise: B.rise, motion: {
+          path, cell, x: .5 + (col - (cols-1)/2) * cell + (uneven ? (r()-.5) * cell * .16 : 0),
+          y: count === 3 ? .51 : row ? .63 : .39,
+          ax: cell * (uneven ? .17 : .24), ay: path === 'ovale' ? .025 : .061,
+          dir: (group + round) % 2 ? -1 : 1, period: 2 * Math.min(show * .96, basePeriod * (1 + group % 3 * .16)),
+          phase: basePhase + (pattern >= 2 ? group * .17 : 0)
+        } };
+        panelPosition(e);
+        return e;
+      });
+      this.round++;
+      return this.panels;
+    }
     spawnRound() {
+      if (this.brigands.choreography) return this.spawnMovingRound();
       const B = this.brigands, r = this.random, k = this.round / Math.max(1, B.rounds - 1), show = B.show[0] + (B.show[1] - B.show[0]) * k, n = Math.max(1, Math.round(B.panels || 3)), nb = Math.max(1, Math.min(n, Math.round(B.bads || 1)));
       const idx = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; } const bads = new Set(idx.slice(0, nb));
       const badFace = CB.ENEMIES[B.bad] ? B.bad : 'brigand', goodFace = CB.ENEMIES[B.good] ? B.good : 'civil', sp = B.spacing == null ? 11 : B.spacing;
@@ -325,12 +531,33 @@
     }
     // Monstres d'un monde : les trois premiers de la liste tout le temps ; les spéciaux (cracheurs, soigneurs, contact) seulement
     // à partir du deuxième tableau du monde, après 25 s et une fois sur quatre, pour que ça reste un jeu d'enfant.
-    pickWorldEnemy() { if (this.def.roster) return this.def.roster[Math.floor(this.random() * this.def.roster.length)]; const list = this.world.enemies, base = list.slice(0, 3), extra = list.slice(3), r = this.random; if (extra.length && this.vi >= 1 && this.time > (this.def.warmup && !this.custom ? this.def.warmup.seconds : 25) && r() < .25) return extra[Math.floor(r() * extra.length)]; return base[Math.floor(r() * base.length)]; }
-    isDecor(e) { const d = e.def; return !!(e.target === true || d.crystal || d.gift || d.chest || d.portal || d.hazard || d.shot || d.target || d.shieldAll || d.orb || d.panel || d.secretBoat || d.box); }
+    get gentleStart() { return !!this.def.opening && !this.custom && this.openingEndedAt == null; }
+    get combatAge() { return this.def.opening && !this.custom ? this.openingEndedAt == null ? 0 : Math.max(0, this.time - this.openingEndedAt) : this.time; }
+    pickWorldEnemy() {
+      const opening = this.def.opening, r=this.random;
+      if (opening && !this.custom) {
+        const easy=opening.easy || ['bat'];
+        if(this.gentleStart) return easy[Math.floor(r()*easy.length)];
+        if(this.def.voyage && r()<(this.combatAge<40?.7:.45)) return 'goelandPirate';
+        if(this.def.regularBats && r()<this.def.regularBats) return 'bat';
+        const ordered=this.def.progressiveRoster || this.def.roster;
+        if(this.combatAge < 40) { const available=ordered.slice(0,Math.min(ordered.length,easy.length+1)); return available[Math.floor(r()*available.length)]; }
+        if(this.combatAge < 80) { const available=ordered.slice(0,Math.max(easy.length+1,Math.ceil(ordered.length*.7))); return available[Math.floor(r()*available.length)]; }
+        // Plus on avance, plus les ennemis costauds occupent la vague.
+        const strong=this.def.strongRoster || ordered.slice(-1);
+        if(r() < Math.min(.65,.3+(this.combatAge-80)/400)) return strong[Math.floor(r()*strong.length)];
+        return ordered[Math.floor(r()*ordered.length)];
+      }
+      if (this.def.roster) return this.def.roster[Math.floor(r()*this.def.roster.length)];
+      const list=this.world.enemies, base=list.slice(0,3), extra=list.slice(3);
+      if(extra.length && this.vi>=1 && this.time>25 && r()<.25) return extra[Math.floor(r()*extra.length)];
+      return base[Math.floor(r()*base.length)];
+    }
+    isDecor(e) { const d = e.def; return !!(e.target === true || d.coin || d.crystal || d.gift || d.chest || d.portal || d.hazard || d.shot || d.target || d.shieldAll || d.orb || d.panel || d.secretBoat || d.box); }
     // ---------- Événements loufoques ----------
     triggerEvent(kind, arg) {
       const r = this.random; this.eventsSeen++; this.lastEvent = kind;
-      if (kind === 'boucliers') { const n = 2 + (r() < .5 ? 1 : 0), V = CB.VIEW; for (let i = 0; i < n; i++) { const u = CB.unproject((i + .5) * V.w / n, V.horizon * .55, CB.WALL.z), e = this.spawnEnemy('bouclier', { x: u.x, y: u.y, z: CB.WALL.z }); e.hp = e.maxHp = CB.WALL.hits; e.wall = { i, n }; } this.news.push({ kind: 'discovery', text: 'MURS MAGIQUES ! TES BOULETS S’Y ÉCRASENT : CASSE-LES (OU VISE À CÔTÉ)', time: this.time }); this.texts.push({ text: '🛡️ MURS MAGIQUES !', x: 0, y: 13, z: 20, age: 0, color: '#4fc3ff', big: true }); }   // chaque mur couvre une bande de l'écran (moitié, tiers…) ; les monstres derrière ne sont pas protégés, seuls les tirs qui passent dans la bande s'y écrasent
+      if (kind === 'boucliers') { const n = 2 + (r() < .5 ? 1 : 0), V = CB.VIEW; for (let i = 0; i < n; i++) { const u = CB.unproject((i + .5) * V.w / n, V.horizon * .55, CB.WALL.z), e = this.spawnEnemy('bouclier', { x: u.x, y: u.y, z: CB.WALL.z }); e.hp = e.maxHp = this.def.wallHits ?? CB.wallHits(this.wi); e.wall = { i, n }; } this.news.push({ kind: 'discovery', text: 'MURS MAGIQUES ! TES BOULETS S’Y ÉCRASENT : CASSE-LES (OU VISE À CÔTÉ)', time: this.time }); this.texts.push({ text: '🛡️ MURS MAGIQUES !', x: 0, y: 13, z: 20, age: 0, color: '#4fc3ff', big: true }); }   // chaque mur couvre une bande de l'écran (moitié, tiers…) ; les monstres derrière ne sont pas protégés, seuls les tirs qui passent dans la bande s'y écrasent
       else if (kind === 'bombeSurprise') { const e = this.spawnEnemy('bombeMagique', { x: (r() - .5) * 8, y: 4.5, z: 9 }); e.fuse = 2.5; this.shake = Math.max(this.shake || 0, .4); this.texts.push({ text: '💣 BOMBE SURPRISE !', x: 0, y: 10, z: 12, age: 0, color: '#b14fff', big: true }); }
       else if (kind === 'puzzle') this.startPuzzle(arg);
     }
@@ -345,21 +572,23 @@
       let p;
       if (kind === 'ordre') { const n = Math.min(6, 3 + Math.floor(d / 1.2)), rev = d >= 1.5 && r() < .4, move = d >= 2, nums = Array.from({ length: n }, (_, i) => i + 1).sort(() => r() - .5), gap = n > 4 ? 7.5 : 10;
         const orbs = nums.map((num, i) => orb((i - (n - 1) / 2) * gap, 9 + (r() - .5) * 4, 28, { num }));
-        p = { kind, orbs, seq: (rev ? nums.slice().sort((a, b) => b - a) : nums.slice().sort((a, b) => a - b)).map(nm => orbs.find(o => o.num === nm)), step: 0, rev, move, time: 9 + 2 * n }; p.next = p.seq[0].num;
+        p = { kind, orbs, seq: (rev ? nums.slice().sort((a, b) => b - a) : nums.slice().sort((a, b) => a - b)).map(nm => orbs.find(o => o.num === nm)), step: 0, rev, move, time: 4 + 1.5 * n }; p.next = p.seq[0].num;
         this.texts.push({ text: rev ? '🧩 À L’ENVERS : ' + n + ' → 1 !' : '🧩 TIRE ' + nums.slice().sort((a, b) => a - b).join(', ') + ' DANS L’ORDRE !', x: 0, y: 14, z: 28, age: 0, color: '#ffd23f', big: true }); }
       else if (kind === 'couleur') { const C = P.colors, want = C[Math.floor(r() * C.length)], need = Math.min(6, 3 + Math.floor(d / 1.5)), others = Math.min(7, 3 + Math.floor(d)), n = need + others, list = [];
         for (let i = 0; i < need; i++) list.push(want); for (let i = 0; i < others; i++) { const o = C.filter(c => c !== want); list.push(o[i % o.length]); } list.sort(() => r() - .5);
         const cols = Math.min(5, Math.ceil(n / 2)), orbs = list.map((c, i) => orb(((i % cols) - (cols - 1) / 2) * 8.5, 6 + Math.floor(i / cols) * 6 + (r() - .5) * 1.5, 30 + (r() - .5) * 4, { color: c.hex, colorKey: c.key, bob: r() * 6 }));
-        p = { kind, orbs, want, need, got: 0, move: true, speed: .8 + d * .25, time: 10 + need * 1.6 };
+        p = { kind, orbs, want, need, got: 0, move: true, speed: .8 + d * .25, time: 5 + need * 1.5 };
         this.texts.push({ text: '🎈 TIRE SEULEMENT LES ' + want.name + ' !', x: 0, y: 14, z: 28, age: 0, color: want.hex, big: true }); }
       else if (kind === 'simon') { const C = P.colors.slice(0, 4), len = Math.min(7, 3 + Math.floor((d - 1) / 1.2)), orbs = C.map((c, i) => orb((i - 1.5) * 9, 9 + (i % 2 ? 2.5 : 0), 28, { color: c.hex, colorKey: c.key, simon: true }));
         const seq = []; for (let i = 0; i < len; i++) { let o; do o = orbs[Math.floor(r() * orbs.length)]; while (seq.length && o === seq[seq.length - 1] && r() < .7); seq.push(o); }
-        const on = Math.max(.35, .65 - d * .04), off = .2; p = { kind, orbs, seq, step: 0, phase: 'show', showT: 0, on, off, time: len * (on + off) + 7 + len * 1.5 };
+        const on = Math.max(.35, .65 - d * .04), off = .2; p = { kind, orbs, seq, step: 0, phase: 'show', showT: 0, on, off, time: len * (on + off) + 4 + len * 1.35 };
         this.texts.push({ text: '🧠 REGARDE BIEN… PUIS RÉPÈTE !', x: 0, y: 14, z: 28, age: 0, color: '#ffd23f', big: true }); }
       else { const n = d >= 2.5 ? 4 : 3, gap = n === 4 ? 9 : 11, slots = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * gap), empty = Math.floor(r() * n);
         const orbs = slots.map((x, i) => orb(x, 6.5, 24, { slot: i, bomb: i !== empty, open: 1 }));
-        p = { kind, orbs, slots, phase: 'show', phaseT: 2.4, swaps: 0, swap: null, swapDur: Math.max(.2, .5 - d * .05), shuffleT: 3 + Math.min(2, d * .3), time: 99 };
+        p = { kind, orbs, slots, phase: 'show', phaseT: 1.6, swaps: 0, swap: null, swapDur: Math.max(.2, .5 - d * .05), shuffleT: 2.4 + Math.min(.8, d * .15), time: 9 };
         this.texts.push({ text: '💣 REGARDE OÙ EST LE COFFRE VIDE !', x: 0, y: 14, z: 26, age: 0, color: '#ffd23f', big: true }); }
+      this.balls = [];   // les tirs lancés avant le puzzle ne choisissent aucune cible
+      p.duration = p.time;
       this.puzzle = p; this.puzzlesSeen = (this.puzzlesSeen || 0) + 1;   // pas de bandeau : il cacherait les coffres qu'il faut regarder
       return p;
     }
@@ -367,6 +596,8 @@
     puzzleTarget() { const p = this.puzzle; if (!p) return null; if (p.kind === 'ordre') return p.seq[p.step]; if (p.kind === 'simon') return p.phase === 'play' ? p.seq[p.step] : null; if (p.kind === 'couleur') return p.orbs.find(o => !o.done && o.colorKey === p.want.key) || null; return p.phase === 'choose' ? p.orbs.find(o => !o.bomb) : null; }
     updatePuzzle(dt) {
       const p = this.puzzle, r = this.random;
+      p.time -= dt;
+      if (p.time <= 0) { this.endPuzzle(false); return; }
       if (p.kind === 'ordre' && p.move) for (const o of p.orbs) { o.x = o.baseX + Math.sin(this.time * 1.3 + o.num * 1.7) * 3; }
       if (p.kind === 'couleur') for (const o of p.orbs) if (!o.done) { o.x = o.baseX + Math.sin(this.time * p.speed + o.bob) * 2.5; o.y = o.baseY + Math.cos(this.time * p.speed * 1.3 + o.bob) * 1.2; }
       if (p.kind === 'simon' && p.phase === 'show') { p.showT += dt; const per = p.on + p.off, i = Math.floor(p.showT / per), inOn = p.showT - i * per < p.on; for (const o of p.orbs) o.lit = 0; if (i < p.seq.length) { if (inOn) p.seq[i].lit = 1; } else { p.phase = 'play'; p.step = 0; this.texts.push({ text: 'À TOI !', x: 0, y: 13, z: 26, age: 0, color: '#7dff9a', big: true }); } return; }
@@ -374,13 +605,12 @@
       if (p.kind === 'bonneteau') {
         if (p.phase === 'show') { p.phaseT -= dt; if (p.phaseT <= 0) { p.phase = 'shuffle'; p.phaseT = p.shuffleT; this.texts.push({ text: 'ÇA MÉLANGE !', x: 0, y: 13, z: 24, age: 0, color: '#ffd23f', big: true }); } return; }
         if (p.phase === 'shuffle') { for (const o of p.orbs) o.open = Math.max(0, o.open - dt * 4);
-          if (!p.swap) { if (p.phaseT <= 0) { p.phase = 'choose'; p.time = Math.max(4, 7 - this.puzzleLevel() * .4); this.texts.push({ text: 'TIRE SUR LE COFFRE VIDE !', x: 0, y: 13, z: 24, age: 0, color: '#7dff9a', big: true }); return; }
+          if (!p.swap) { if (p.phaseT <= 0) { p.phase = 'choose'; this.texts.push({ text: 'TIRE SUR LE COFFRE VIDE !', x: 0, y: 13, z: 24, age: 0, color: '#7dff9a', big: true }); return; }
             const n = p.orbs.length, a = Math.floor(r() * n); let b = Math.floor(r() * (n - 1)); if (b >= a) b++; const A = p.orbs.find(o => o.slot === a), B = p.orbs.find(o => o.slot === b); p.swap = { A, B, t: 0, from: [A.x, B.x], up: r() < .5 ? 1 : -1 }; p.swaps++; }
           const sw = p.swap; sw.t += dt / p.swapDur; const k = Math.min(1, sw.t), e2 = k * k * (3 - 2 * k);
           sw.A.x = sw.A.baseX = sw.from[0] + (sw.from[1] - sw.from[0]) * e2; sw.B.x = sw.B.baseX = sw.from[1] + (sw.from[0] - sw.from[1]) * e2; sw.A.y = 6.5 + Math.sin(k * Math.PI) * 2.2 * sw.up; sw.B.y = 6.5 - Math.sin(k * Math.PI) * 2.2 * sw.up;
           if (k >= 1) { const sa = sw.A.slot; sw.A.slot = sw.B.slot; sw.B.slot = sa; sw.A.y = sw.B.y = 6.5; p.swap = null; } p.phaseT -= dt; return; }
       }
-      p.time -= dt; if (p.time <= 0) this.endPuzzle(false);
     }
     puzzleHit(e) {
       const p = this.puzzle; if (!p || e.done) return; e.flash = .2;
@@ -388,7 +618,7 @@
       if (p.kind === 'ordre') { if (e === p.seq[p.step]) { good(); p.step++; p.next = p.step < p.seq.length ? p.seq[p.step].num : null; if (p.step >= p.seq.length) this.endPuzzle(true); }
         else { this.puzzleFails++; for (const o of p.orbs) { o.done = false; o.flash = .3; } p.step = 0; p.next = p.seq[0].num; this.texts.push({ text: 'OUPS ! RECOMMENCE À ' + p.seq[0].num, x: 0, y: 13, z: 28, age: 0, color: '#ff6b6b' }); } return; }
       if (p.kind === 'couleur') { if (e.colorKey === p.want.key) { good(); e.dead = true; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'pop', color: e.color, size: 1.5 }); p.got++; if (p.got >= p.need) this.endPuzzle(true); }
-        else { this.puzzleFails++; p.time = Math.max(.5, p.time - 3); this.texts.push({ text: 'PAS CETTE COULEUR ! −3 s', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#ff6b6b' }); } return; }
+        else { this.puzzleFails++; p.time = Math.max(0, p.time - 3); this.texts.push({ text: 'PAS CETTE COULEUR ! −3 s', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#ff6b6b' }); } return; }
       if (p.kind === 'simon') { if (p.phase !== 'play') return; e.lit = 1; if (e === p.seq[p.step]) { p.step++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'crit', color: e.color }); if (p.step >= p.seq.length) this.endPuzzle(true); }
         else { this.puzzleFails++; p.phase = 'show'; p.showT = -.6; p.step = 0; this.texts.push({ text: 'OUPS ! REGARDE ENCORE…', x: 0, y: 13, z: 28, age: 0, color: '#ff6b6b' }); } return; }
       if (p.phase !== 'choose') return; for (const o of p.orbs) o.open = 1; if (!e.bomb) { e.done = true; this.endPuzzle(true); } else this.endPuzzle(false, e);
@@ -403,7 +633,7 @@
     // ---------- Étourdissements et états ----------
     stunBy(kind, from) {
       if (this.stun || this.fx.priere > 0 || this.fxMine('ghost') || this.fxMine('teleport') || this.fx.protect > 0) return false;
-      if (this.shield > 0) { this.shield--; this.hurt = .3; this.texts.push({ text: 'BOUCLIER', x: 0, y: 6, z: 6, age: 0, color: '#7fd4ff' }); return false; }
+      if (this.shield > 0) { this.blockShield(); return false; }
       const st = CB.STUN[kind]; this.stun = { kind, need: st.need, taps: 0, time: st.seconds, total: st.seconds }; this.hurt = .4; this.shake = Math.max(this.shake || 0, .5); this.combo = 0;
       this.texts.push({ text: st.name, x: 0, y: 10, z: 10, age: 0, color: st.color, big: true }); this.texts.push({ text: 'TAPE VITE SUR TIRER !', x: 0, y: 7, z: 8, age: -.5, color: '#fff' });
       return true;
@@ -412,7 +642,7 @@
     freeStun(text) { if (!this.stun) return; const k = this.stun.kind; this.stun = null; this.bursts.push({ x: 0, y: 3, z: 3, age: 0, kind: k === 'ice' ? 'ice' : 'boom', color: k === 'ice' ? '#a9e9ff' : '#ffe76c', size: 6 }); this.texts.push({ text, x: 0, y: 8, z: 8, age: 0, color: '#7dff9a', big: true }); }
     afflict(kind, from) {
       if (this.fx.priere > 0 || this.fxMine('ghost') || this.fxMine('teleport') || this.fx.protect > 0) return false;
-      if (this.shield > 0) { this.shield--; this.hurt = .3; this.texts.push({ text: 'BOUCLIER', x: 0, y: 6, z: 6, age: 0, color: '#7fd4ff' }); return false; }
+      if (this.shield > 0) { this.blockShield(); return false; }
       if (kind === 'poison') { this.poison = 5; this.hurt = .4; this.texts.push({ text: '🤢 EMPOISONNÉ !', x: 0, y: 9, z: 10, age: 0, color: '#7dff3a', big: true }); }
       else if (kind === 'dark') { this.dark = 4; this.texts.push({ text: '🌑 MAGIE NOIRE !', x: 0, y: 9, z: 10, age: 0, color: '#c47dff', big: true }); }
       return true;
@@ -444,25 +674,30 @@
     get zoomFx() { const total = (this.spOf('milo') || {}).seconds || 8, left = this.fx.slowmo, el = total - left; return { k: Math.min(1, el * 3.3, left), punch: Math.max(0, 1 - el / .45) }; }
     get laserGrow() { const sp = this.spOf('mickael'), total = (sp && sp.seconds) || 10, max = sp && CB.SPECIALS.mickael.levels ? CB.SPECIALS.mickael.levels.grow[(sp.level || 1) - 1] : 1; return (.2 + .8 * Math.min(1, (total - this.fx.laser) / 2.5)) * max; }   // le laser part petit et grossit sur 2,5 s ; sa taille maximale dépend du niveau
     get laserLevel() { const sp = this.spOf('mickael'); return sp ? (sp.level || 1) : 2; }
+    // Une unité = une jauge entière ; la fraction conserve la progression vers la charge suivante.
+    capCharge(value) { const rounded = Math.round(value); return Math.min(this.chargeCapacity, Math.abs(value - rounded) < 1e-6 ? rounded : value); }
+    nextFullCharge(value) { return Math.min(this.chargeCapacity, Math.floor(value) + 1); }
+    chargeProgress(value) { return value >= this.chargeCapacity ? 1 : value % 1; }
     get specialReady() { return !!this.special && this.charge >= 1 && !this.specialBusy; }
     spNeed(sp, uses) { return sp.kills * CB.xpPerKill(this.wi) * Math.min(4, Math.pow(CB.SPECIAL_RAMP, uses || 0)); }   // XP à accumuler : « kills » monstres ordinaires du monde, puis de plus en plus
     spOf(id) { return [this.special, this.special2].find(x => x && x.id === id) || null; }   // le pouvoir (principal ou de la case) qui porte cet id
     get special2Ready() { return !!this.special2 && this.charge2 >= 1 && !this.special2Busy; }
     get special2Busy() { const k = this.special2 && CB.SPECIAL_FX[this.special2.id]; return !!k && this.fx[k] > 0; }
     get special2Left() { const k = this.special2 && CB.SPECIAL_FX[this.special2.id]; return k ? this.fx[k] : 0; }
-    useSpecial2() { if (!this.special2Ready || this.over || this.choice) return false; this.charge2 = 0; this.specialsUsed++; this.spUses2++; this.lastSpecial = this.special2.id; this.spBossDealt = 0; this.castSpecial(this.special2, 0); return true; }
+    useSpecial2() { if (this.puzzle || this.outro || !this.special2Ready || this.over || this.choice) return false; this.charge2 = Math.max(0, this.charge2 - 1); this.specialsUsed++; this.spUses2++; this.lastSpecial = this.special2.id; this.spBossDealt = 0; this.castSpecial(this.special2, 0); return true; }
     fxMine(k, ally = false) { return this.fx[k] > 0 && (this.fxBy[k] || 'player') === (ally ? 'ally' : 'player'); }   /* l'effet à durée k est actif ET c'est ce canon (joueur ou allié) qui l'a lancé */
     get specialBusy() { const k = this.special && CB.SPECIAL_FX[this.special.id]; return !!k && this.fx[k] > 0 && this.fxBy[k] !== 'ally'; }   // secondes restantes de l'attaque à durée du joueur
     get specialLeft() { const k = this.special && CB.SPECIAL_FX[this.special.id]; return k ? this.fx[k] : 0; }
     // Attaque spéciale du personnage : une par membre de la famille, déclenchée quand la jauge est pleine.
     useSpecial() {
-      if (!this.specialReady || this.over || this.choice) return false;
-      this.charge = 0; this.specialsUsed++; this.spUses++; this.lastSpecial = this.special.id; this.spBossDealt = 0;   // nouveau lancer : le plafond de dégâts sur le boss repart de zéro
+      if (this.puzzle || this.outro || !this.specialReady || this.over || this.choice) return false;
+      this.charge = Math.max(0, this.charge - 1); this.specialsUsed++; this.spUses++; this.lastSpecial = this.special.id; this.spBossDealt = 0;   // nouveau lancer : le plafond de dégâts sur le boss repart de zéro
       this.castSpecial(this.special, 0);
       return true;
     }
     // Lance une attaque spéciale (celle du joueur depuis le canon, ou celle du coéquipier depuis la gauche).
     castSpecial(sp, origin = 0, byAlly = false) {
+      if (this.puzzle) return;
       const s = this.stats, live = () => this.enemies.filter(e => !e.dead && !e.def.shot);
       this.texts.push({ text: (byAlly ? CB.playerById(sp.id).name.toUpperCase() + ' : ' : '') + sp.icon + ' ' + sp.name.toUpperCase() + ' !', x: byAlly ? -14 : 0, y: 12, z: 18, age: 0, color: byAlly ? '#7fd4ff' : '#ffd23f' });
       if (CB.playerById(sp.id)) this.portrait = { id: sp.id, age: 0, side: byAlly ? -1 : 1, text: CB.playerById(sp.id).name.toUpperCase() + ' !' };   // le vrai visage du membre de la famille apparaît
@@ -490,9 +725,9 @@
         case 'edison': this.fx.tornado = sp.seconds || 10; this.tornadoes = [{ x: -24, z: 60, age: 0 }, { x: 2, z: 78, age: -.6 }, { x: 26, z: 55, age: -1.1 }]; this.shake = Math.max(this.shake || 0, .8); this.texts.push({ text: '🌪️ TORNADES !', x: 0, y: 20, z: 40, age: -.3, color: '#dfe9ff', big: true }); break;
         case 'josue': for (const e of live()) if (!e.boss) e.frozen = Math.max(e.frozen, 1.5); this.fx.rally = sp.seconds || 30; this.texts.push({ text: '📣 À L’ATTAQUE !', x: 0, y: 9, z: 12, age: -.3, color: '#ff6b6b', big: true }); break;
         case 'emily': this.fx.blizzard = sp.seconds || 12; this.blizzTick = .5; this.flash = .5; this.freezeAll(3); for (const e of live()) this.applyDamage(e, s.damage * 1.5 * this.spPower, false, 'neige'); this.texts.push({ text: '❄️ BLIZZARD !', x: 0, y: 16, z: 30, age: -.4, color: '#a9e9ff', big: true }); break;
-        case 'eliott': this.fx.ghost = sp.seconds || 8; this.flash = .3; this.spirits = [0, 1, 2].map(i => ({ x: (i - 1) * 12, y: 6 + i * 2, z: 10, age: i * .4, target: null, cooldown: .6 + i * .4 })); this.texts.push({ text: '👻 BOUH !', x: 0, y: 10, z: 12, age: -.3, color: '#dfe9ff', big: true }); break;
+        case 'eliott': this.fx.soccer = CB.SOCCER.seconds; this.flash = .25; break;
         case 'alexie': this.fx.licorne = this.licorneTotal = sp.seconds || 15; this.unicorn = { x: -26, y: 16, z: 38, dir: 1, cooldown: .9, shots: 0, age: 0 }; this.hp = Math.min(this.maxHp, this.hp + 15); break;
-        case 'zachary': { const t = this.target(), n = this.balls.length; this.launch(origin, t, 8 * this.spPower); for (const b of this.balls.slice(n)) { b.size *= 2.5; b.splash = 0; b.special = 'fusee'; b.rocket = true; b.fuseZ = Math.max(12, t.t * CB.BASE_SPEED * s.range); b.vy = (t.y - 1.8) / t.t; b.pierce = false; } break; }
+        case 'zachary': { const t = this.target(), n = this.balls.length; this.launch(origin, t, 8 * this.spPower); for (const b of this.balls.slice(n)) { b.size *= 2.5; b.splash = 0; b.special = 'fusee'; b.rocket = true; b.fuseZ = Math.max(12, t.t * this.shotSpeed); b.vy = (t.y - 1.8) / t.t; b.pierce = false; } break; }
       }
     }
     // La parade du cirque : des animaux en ballons traversent le ciel (demi-tour aux bords) et lâchent des ballons-bombes sur le monstre le plus proche
@@ -577,9 +812,9 @@
     // Phase suivante du boss (à 2/3 puis 1/3 de ses PV) : il se fâche, attaque plus vite et gagne des pouvoirs
     bossPhase(e) {
       const def = e.def, lists = def.powers && !def.mini ? def.powers : CB.BOSS_POWERS, prev = e.powers || []; e.act++; this.bossPhases++;
-      e.powers = lists[Math.min(e.act, lists.length - 1)]; e.powerIndex = 0; e.boltTimer = Math.min(e.boltTimer, .9); e.flash = .5; this.shake = Math.max(this.shake || 0, .9); this.flash = Math.max(this.flash || 0, .3);
+      e.powers = (e.redDragon ? CB.RED_DRAGON.powers : lists)[Math.min(e.act, lists.length - 1)]; e.powerIndex = 0; e.boltTimer = Math.min(e.boltTimer, .9); e.flash = .5; this.shake = Math.max(this.shake || 0, .9); this.flash = Math.max(this.flash || 0, .3);
       for (const o of this.enemies) if (o.def && o.def.shot) o.dead = true;   // ses tirs en vol disparaissent : on respire une seconde
-      this.plane = this.makePlane('PHASE ' + (e.act + 1), e.act % 2 ? -1 : 1);   // un membre de la famille traverse le ciel en avion avec la bannière ; pas de description
+      this.plane = this.makePlane((e.redDragon ? CB.RED_DRAGON.names[e.act] : def.phaseNames?.[e.act]) || 'PHASE ' + (e.act + 1), e.act % 2 ? -1 : 1);   // un membre de la famille traverse le ciel en avion avec la bannière ; pas de description
       e.retreat = { t: 0, x0: e.x, y0: e.y, z0: e.z, dir: e.x >= 0 ? 1 : -1 }; e.salvo = null; e.dodge = null; e.sideOff = 0; this.beam = null;   // il a mal, s'enfuit, puis revient plus fâché (couleur, taille, vitesse)
       this.texts.push({ text: 'AÏE !!!', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#ff3a3a', big: true });
     }
@@ -625,7 +860,11 @@
     spawnBoss(key = this.world.boss) {   // un seul combat jusqu'au bout, en trois phases (le boss ne s'enfuit plus) ; aussi pour « boss:clé » de l'éditeur
       const def = CB.BOSSES[key]; if (!def) return null; const cs = this.custom || {};
       const b = { id: nextId++, type: 'boss', boss: true, def, name: def.name, color: def.color, size: def.size, hp: def.hp * CB.hpScale(this.wi) * (cs.hpScale || 1) * CB.BOSS_HP, speed: 9, damage: 20, x: 0, y: 29, z: 125, baseX: 0, baseY: 9, phase: 0, age: 0, frozen: 0, minionTimer: def.every, boltTimer: def.boltEvery * 1.5, hover: 34, intro: { t: 0 }, sideOff: 0, dodgeCd: 2, attacks: 0 };
-      b.maxHp = b.hp; b.act = 0; b.full = true; b.target = -1; const lists = def.powers && !def.mini ? def.powers : CB.BOSS_POWERS; b.powers = lists[0]; b.powerIndex = 0; if (def.hover) b.hover = def.hover; b.hover0 = b.hover; if (def.sea) { b.y = b.baseY = .4; }   // phase 0 : premiers pouvoirs ; bossPhase() passe aux suivants à 2/3 et 1/3 des PV
+      if (key === 'batking' && this.def.redDragon) {
+        b.redDragon = true;
+        b.hp *= .57;
+      }
+      b.maxHp = b.hp; b.act = 0; b.full = true; b.target = -1; const lists = def.powers && !def.mini ? def.powers : CB.BOSS_POWERS; b.powers = (b.redDragon ? CB.RED_DRAGON.powers : lists)[0]; b.powerIndex = 0; if (def.hover) b.hover = def.hover; b.hover0 = b.hover; if (def.sea) { b.y = b.baseY = .4; }   // phase 0 : premiers pouvoirs ; bossPhase() passe aux suivants à 2/3 et 1/3 des PV
       this.boss = b; this.bossSpawned = true; this.enemies.push(b);
       this.news.push({ kind: 'boss', text: (def.tag || 'BOSS') + ' : ' + def.name.toUpperCase() + ' !' + (def.intro ? ' ' + def.intro : ''), time: this.time }); return b;
     }
@@ -646,7 +885,7 @@
       let n = 0; for (const e of this.enemies) { if (e.dead || e.escaped || e.boss || this.isDecor(e)) continue; n++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: -Math.min(.5, this.random() * .4), kind: 'kaboom', color: '#ff8c2a', size: 4 + e.size * 2, life: .8 }); this.applyDamage(e, 1e9, true, 'bombe'); }
       this.flash = Math.max(this.flash || 0, .6); this.shake = Math.max(this.shake || 0, 1); this.bursts.push({ x: 0, y: 6, z: 20, age: 0, kind: 'nova', size: 50, life: .8 }); this.texts.push({ text: n ? '💥 GROSSE BOMBE !' : '💥 BOUM… personne !', x: 0, y: 12, z: 16, age: -.5, color: '#ff8c2a', big: true }); return n;
     }
-    fillCharge() { if (!this.special) return false; if (this.specialBusy) this.refillAfter = true; else this.charge = 1; if (this.special2) { if (this.special2Busy) this.refillAfter2 = true; else this.charge2 = 1; } this.texts.push({ text: this.specialBusy ? '⚡ JAUGE PLEINE APRÈS LE POUVOIR !' : '⚡ JAUGE PLEINE !', x: 0, y: 11, z: 14, age: 0, color: '#ffd23f', big: true }); return true; }   // pendant un pouvoir à durée, la jauge se remplira dès qu'il se termine
+    fillCharge() { if (!this.special) return false; if (this.specialBusy) this.refillAfter = true; else this.charge = this.nextFullCharge(this.charge); if (this.special2) { if (this.special2Busy) this.refillAfter2 = true; else this.charge2 = this.nextFullCharge(this.charge2); } this.texts.push({ text: this.specialBusy ? '⚡ JAUGE PLEINE APRÈS LE POUVOIR !' : '⚡ JAUGE PLEINE !', x: 0, y: 11, z: 14, age: 0, color: '#ffd23f', big: true }); return true; }   // pendant un pouvoir à durée, la jauge se remplira dès qu'il se termine
     // Tête chercheuse : le boulet se tourne vers le monstre le plus proche (dans la portée du niveau), avec un virage limité ; il garde sa vitesse
     homeBall(ball, dt, lvl = this.stats.homing) {
       const H = CB.HOMING, range = H.range[lvl - 1], turn = H.turn[lvl - 1]; let best = null, bd = range;
@@ -662,6 +901,8 @@
     // Fin de la nuée : un méga dragon passe de profil, de gauche à droite, et chasse tout ce qui reste hors de l'écran ; le tableau se termine quand tout le monde est sorti
     startOutro() {
       const O = (this.swarm && this.swarm.ramp && this.swarm.ramp.outro) || { speed: 21, flee: 27 }, W = CB.VIEW.spread + 40;
+      this.puzzle = null; this.event = null; this.beam = null; this.balls = [];
+      for (const e of this.enemies) if (e.def.orb || e.def.shot) e.dead = true;
       this.outro = { age: 0, x: -W, y: 13, z: 40, dir: 1, speed: O.speed, flee: O.flee, done: false, roar: 0 }; this.shake = Math.max(this.shake || 0, .8); this.flash = Math.max(this.flash || 0, .5);
       this.texts.push({ text: '🐉 UN MÉGA DRAGON !!!', x: 0, y: 14, z: 26, age: 0, color: '#ff8c2a', big: true });
       for (const e of this.enemies) if (!e.dead && e.def.hazard) { e.dead = true; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'pop', color: '#b14fff' }); }   // les bombes restantes s'éteignent
@@ -675,14 +916,16 @@
     }
     // Nuée : palier de couleur (rouge, doré) de plus en plus probable avec le temps
     swarmTier() { const R = this.swarm && this.swarm.ramp; if (!R || !R.tiers) return 0; for (let i = R.tiers.length - 1; i >= 0; i--) { const [from, max] = R.tiers[i]; if (this.time >= from && this.random() < max * Math.min(1, (this.time - from) / Math.max(1, this.def.seconds - from))) return i + 1; } return 0; }
-    spawnInterval() { if (this.boss && this.boss.mini) return 2.2 / this.def.density; if (this.swarm) return Math.max(.17, .95 - this.time * .0029) / this.def.density; if (this.endless) return Math.max(.3, 1.25 - this.time * .0025) / this.def.density; const wu = !this.custom && this.def.warmup ? 1 + (this.def.warmup.slow - 1) * Math.max(0, 1 - this.time / this.def.warmup.seconds) : 1; return wu * Math.max(.32, (1.3 - this.time * .006) / this.def.density / (1 + CB.tierOf(this.wi) * .12)); }   // def.warmup : début en douceur (1-3)
+    spawnInterval() { if (this.gentleStart) return this.def.opening.every; if(this.def.voyage && !this.custom) return Math.max(.45,.85-this.combatAge*.004); if (this.def.opening && !this.custom && this.combatAge < 40) return 2.2 - this.combatAge * .025; if (this.boss && this.boss.mini) return 2.2 / this.def.density; if (this.swarm) return Math.max(.30, .95 - (Math.min(this.time, 100) + Math.max(0, this.time - 100) * .2) / this.def.seconds * .87) / this.def.density; if (this.endless) return Math.max(.3, 1.25 - this.time * .0025) / this.def.density; const wu = !this.custom && this.def.warmup ? 1 + (this.def.warmup.slow - 1) * Math.max(0, 1 - this.time / this.def.warmup.seconds) : 1; return (this.def.spawnIntervalScale || 1) * wu * Math.max(.32, (1.3 - this.combatAge * .006) / this.def.density / (1 + CB.tierOf(this.wi) * .12)); }   // def.warmup : début en douceur (1-3)
     update(dt) {
       if (this.over || this.choice) return;
-      dt = clamp(dt, 0, .05); this.time += dt; const s = this.stats, r = this.random;
+      dt = clamp(dt, 0, .05); this.time += dt; if (this.gentleStart && !this.def.voyage && ['survive','killTimed'].includes(this.def.type)) this.def.seconds = Math.max(this.def.seconds, this.time + 120); if (this.gentleStart && (this.openingChoices || 0) >= this.def.opening.cards) { this.openingEndedAt = this.time; this.nextBomb = this.time + 12; this.nextEvent = this.time + 25; } if (CB.Missions) CB.Missions.tick(this, dt); const s = this.stats, r = this.random;
+      if (this.time >= this.nextGoldCoin && !this.puzzle && !this.outro && !this.cibles && !this.brigands) { this.nextGoldCoin = this.time + 18 + r() * 10; if (this.enemies.filter(e => e.def.coin && !e.dead).length < 3) this.spawnGoldCoin(); }
       if (this.cardFly) { this.cardFly.age += dt; if (this.cardFly.age >= CB.CARD_FLY) { this.cardFly = null; if (this.pendingLevels > 0 && !this.choice && !this.over) this.offerCards(); } }   // la carte a fini de voler : les trois choix
       if (this.portrait) { this.portrait.age += dt; if (this.portrait.age > 1.7) this.portrait = null; }
+      this.healFx = Math.max(0, (this.healFx || 0) - dt);
       for (const k in this.fx) this.fx[k] = Math.max(0, this.fx[k] - dt);
-      if (this.refillAfter && this.special && !this.specialBusy) { this.refillAfter = false; this.charge = 1; this.texts.push({ text: '⚡ JAUGE PLEINE !', x: 0, y: 11, z: 14, age: 0, color: '#ffd23f', big: true }); } if (this.refillAfter2 && this.special2 && !this.special2Busy) { this.refillAfter2 = false; this.charge2 = 1; }
+      if (this.refillAfter && this.special && !this.specialBusy) { this.refillAfter = false; this.charge = this.nextFullCharge(this.charge); this.texts.push({ text: '⚡ JAUGE PLEINE !', x: 0, y: 11, z: 14, age: 0, color: '#ffd23f', big: true }); } if (this.refillAfter2 && this.special2 && !this.special2Busy) { this.refillAfter2 = false; this.charge2 = this.nextFullCharge(this.charge2); }
       if (this.plane) { this.plane.t += dt; if (this.plane.t >= CB.PLANE.seconds) this.plane = null; } if (this.armorHit > 0) this.armorHit = Math.max(0, this.armorHit - dt);
       if (this.fx.pika > 0) { this.pikaTick -= dt; if (this.pikaTick <= 0) { this.pikaTick = .2; let from = { x: 0, y: 2, z: 0 }; const total = (this.spOf('adam') || {}).seconds || 2.5;
         for (const e of this.enemies) { if (e.dead || e.escaped || e.def.crystal || e.def.gift || e.def.chest || e.def.portal) continue; this.bursts.push({ x: from.x, y: from.y, z: from.z, to: { x: e.x, y: e.y, z: e.z }, age: 0, kind: 'bolt', life: .25, color: '#ffe76c', width: 7, seed: Math.floor(this.random() * 999) }); if (!e.boss) e.frozen = Math.max(e.frozen, this.fx.pika); this.applyDamage(e, s.damage * 4 * .2 / total * this.spPower, false, 'eclair'); from = e; } } }
@@ -691,7 +934,7 @@
       if (this.poison > 0) { this.poison = Math.max(0, this.poison - dt); this.hp = Math.max(1, this.hp - 1.5 * dt); }
       if (this.dark > 0) this.dark = Math.max(0, this.dark - dt);
       // événements loufoques
-      if (this.time >= this.nextEvent && !this.boss && !this.puzzle) { const kinds = CB.EVENTS.kinds; this.triggerEvent(kinds[Math.floor(r() * kinds.length)]); const [a, b] = CB.EVENTS.every; this.nextEvent = this.time + a + r() * (b - a); }
+      if (!this.gentleStart && this.time >= this.nextEvent && !this.boss && !this.puzzle && !this.outro) { const kinds = CB.EVENTS.kinds; this.triggerEvent(kinds[Math.floor(r() * kinds.length)]); const [a, b] = CB.EVENTS.every; this.nextEvent = this.time + a + r() * (b - a); }
       if (this.puzzle) this.updatePuzzle(dt);
       if (this.unicorn) this.updateUnicorn(dt);
       if (this.outro) this.updateOutro(dt);
@@ -716,29 +959,42 @@
       // apparitions
       if (this.time >= this.intro && !this.outro) {   // plus rien n'apparaît pendant le passage du dragon
         if (!this.puzzle) this.spawn -= dt;   // pendant le puzzle, le temps s'arrête
-        const randomOn = !this.cibles && !this.brigands && (!this.custom || (this.custom.random && this.custom.random.enabled !== false && this.world.enemies.length));
+        const randomOn = !this.def.sniper && !this.cibles && !this.brigands && (!this.custom || (this.custom.random && this.custom.random.enabled !== false && this.world.enemies.length));
         const bossOnly = this.def.type === 'boss' && !this.custom; // tableau de boss : pas de monstres, le boss est seul devant nous (l'éditeur fait ce qu'il veut)
-        if (this.spawn <= 0 && !bossOnly) { if (this.endless && !this.custom) { const pk = this.pickEndless(); this.spawnEnemy(pk.type, null, undefined, pk.tier); } else if (this.def.night && !this.custom) { this.spawnEnemy(this.pickEndless(this.def.night.timeScale).type); } else if (this.swarm && !this.custom) { const list = this.swarm.roster, R = this.swarm.ramp || {}, pr = Math.min(1, this.time / this.def.seconds); this.spawnEnemy(list[Math.floor(r() * list.length)], null, undefined, this.swarmTier()); if (R.pairFrom != null && this.time > R.pairFrom && r() < (R.pairMax || .6) * (this.time - R.pairFrom) / (this.def.seconds - R.pairFrom)) this.spawnEnemy(list[Math.floor(r() * list.length)], null, undefined, this.swarmTier()); } else if (randomOn) { const cap = this.custom ? +this.custom.maxAlive || 0 : this.def.maxAlive || 0; if (!cap || this.enemies.filter(e => !e.dead && !e.escaped && !this.isDecor(e)).length < cap) this.spawnEnemy(this.pickWorldEnemy()); } this.spawn = this.spawnInterval(); }   // maxAlive : jamais plus de N monstres en même temps (la mer : 4)
-        // tableau 1-3 : trois cibles passent à des moments fixes ; mini-jeu 1-7 : des cibles ailées traversent le ciel, de plus en plus vite
-        if (this.targetTimes && this.targetTimes.length && this.time >= this.targetTimes[0]) { this.targetTimes.shift(); this.spawnEnemy('cible', { x: (r() - .5) * CB.VIEW.spread * 1.4, y: 6 + r() * 6, z: 95 }); this.texts.push({ text: '🎯 UNE CIBLE !', x: 0, y: 14, z: 30, age: 0, color: '#ffd23f' }); }
+        if (this.spawn <= 0 && !bossOnly) { if (this.def.opening && !this.custom) { const cap=this.gentleStart ? this.def.opening.maxAlive : this.combatAge<80 ? Math.min(6,this.def.maxAlive||6) : this.def.maxAlive||0; if(!cap || this.enemies.filter(e=>!e.dead&&!e.escaped&&!this.isDecor(e)).length<cap) this.spawnEnemy(this.pickWorldEnemy()); } else if (this.endless && !this.custom) { const pk = this.pickEndless(); this.spawnEnemy(pk.type, null, undefined, pk.tier); } else if (this.def.night && !this.custom) { this.spawnEnemy(this.pickEndless(this.def.night.timeScale).type); } else if (this.swarm && !this.custom) { const list = this.swarm.roster, R = this.swarm.ramp || {}, pr = Math.min(1, this.time / this.def.seconds); this.spawnEnemy(list[Math.floor(r() * list.length)], null, undefined, this.swarmTier()); if (R.pairFrom != null && this.time > R.pairFrom && r() < (R.pairMax || .6) * (this.time - R.pairFrom) / (this.def.seconds - R.pairFrom)) this.spawnEnemy(list[Math.floor(r() * list.length)], null, undefined, this.swarmTier()); } else if (randomOn) { const cap = this.gentleStart ? this.def.opening.maxAlive : this.def.opening && !this.custom && this.combatAge < 80 ? Math.min(6, this.def.maxAlive || 6) : this.custom ? +this.custom.maxAlive || 0 : this.def.maxAlive || 0; if (!cap || this.enemies.filter(e => !e.dead && !e.escaped && !this.isDecor(e)).length < cap) this.spawnEnemy(this.pickWorldEnemy()); } this.spawn = this.spawnInterval(); }   // maxAlive : jamais plus de N monstres en même temps (la mer : 4)
+        if (this.def.sniper && !this.enemies.some(e => e.sniper && !e.dead)) this.spawnSniperEnemy();
+        if (this.def.comboTrial && !this.puzzle && this.time >= this.nextFuse && !this.enemies.some(e => e.fuseCarrier && !e.dead)) {
+          this.spawnFuseGroup();
+          this.nextFuse = this.time + 5;
+        }
+        // tableau 1-3 : trois cibles passent à 40, 100 et 160 ennemis abattus ; mini-jeu 1-7 : des cibles ailées traversent le ciel, de plus en plus vite
+        if (this.targetTimes && this.targetTimes.length && (this.def.targets.kills ? this.kills : this.time) >= this.targetTimes[0]) { this.targetTimes.shift(); this.spawnEnemy('cible', { x: (r() - .5) * CB.VIEW.spread * 1.4, y: 6 + r() * 6, z: 95 }); this.texts.push({ text: '🎯 UNE CIBLE !', x: 0, y: 14, z: 30, age: 0, color: '#ffd23f' }); }
         if (this.brigands && !this.panels && this.round < this.brigands.rounds && this.time >= this.nextRound) this.spawnRound();
         if (this.cibles && this.targetsSpawned < this.cibles.count && this.time >= this.nextTarget) { this.spawnFlyer(); const [a, b] = this.cibles.every; this.nextTarget = this.time + a + (b - a) * this.targetsSpawned / this.cibles.count; }
         // la vallée : cadeaux étoilés, puis le Mégaoiseau du temps après miniBossAt secondes
         if (this.endless && this.time >= this.nextGift) { this.spawnEnemy('cadeau'); this.gifts++; this.nextGift = this.time + this.E.gift.every; }
         if (this.endless && this.E.miniBoss && !this.miniBossDone && !this.boss && !this.custom && this.time >= this.E.miniBossAt) this.spawnMiniBoss();
         // bombes magiques de la nuée : de plus en plus souvent (toutes les 12 s au début, 7 s à la fin)
-        if (this.swarm && this.time >= this.nextBomb) { this.spawnEnemy('bombeMagique'); this.bombs++; const [a, b] = this.swarm.bombEvery; this.nextBomb = this.time + a + (b - a) * Math.min(1, this.time / this.def.seconds); }
+        if (this.magicBombs && !this.gentleStart && !this.puzzle && this.time >= this.nextBomb) {
+          if (!this.enemies.some(e => e.type === 'bombeMagique' && !e.dead && !e.escaped)) { this.spawnEnemy('bombeMagique'); this.bombs++; }
+          const [a, b] = this.swarm ? this.swarm.bombEvery : [22, 14];
+          this.nextBomb = this.time + a + (b - a) * Math.min(1, this.time / (this.swarm ? this.def.seconds : 180));
+        }
         // le bateau volant secret de la nuée : passe de gauche à droite tant qu'on ne l'a pas brisé (3 coups) ; jamais revu une fois le secret trouvé
-        if (this.swarm && this.swarm.boatAt && !this.boatSecret && !this.boatSecretBefore && !this.outro && !this.enemies.some(e => e.def.secretBoat && !e.dead && !e.escaped) && this.time >= (this.nextBoat == null ? this.swarm.boatAt : this.nextBoat)) {
-          const b = this.spawnEnemy('bateauVolant', { x: -CB.VIEW.spread - 12, y: 13, z: 46 }); b.vx = 4.5; b.baseY = 13; b.hp = b.maxHp = b.def.hits; this.nextBoat = this.time + this.swarm.boatEvery;
+        const secretBoat = this.swarm || this.def.secretBoat;
+        if (secretBoat && secretBoat.boatAt && !this.boatSecret && !this.boatSecretBefore && !this.outro && !this.enemies.some(e => e.def.secretBoat && !e.dead && !e.escaped) && this.time >= (this.nextBoat == null ? secretBoat.boatAt : this.nextBoat)) {
+          const b = this.spawnEnemy('bateauVolant', { x: -CB.VIEW.spread - 12, y: 13, z: 46 }); b.vx = 4.5; b.baseY = 13; b.hp = b.maxHp = b.def.hits; this.nextBoat = this.time + secretBoat.boatEvery;
           this.texts.push({ text: '⛵ UN BATEAU VOLANT ! TIRE DESSUS 3 FOIS !', x: 0, y: 16, z: 30, age: 0, color: '#ffd23f', big: true }); }
         // coffres mystères (une fois le tableau 2 mérité), puis le coffre doré, unique, après portalAt secondes
         if (this.time >= this.nextChest && (this.custom ? +this.custom.chestEvery > 0 : this.endless && this.E.chest && this.nightKillsBefore + this.kills >= this.E.unlockKills)) { this.spawnEnemy('coffre'); this.chestsSeen++; this.nextChest = this.time + (this.custom ? +this.custom.chestEvery : this.E.chest.every); }   // éditeur : chestAt / chestEvery (0 = jamais)   // depuis maintenant, pas depuis le début : sinon les coffres manqués arrivent tous d'un coup
-        { const portalAt = this.custom ? +this.custom.portalAt || 0 : this.endless ? this.E.portalAt : (this.def.portalAt || 0), dbg = !!(window.CB.app && window.CB.app.debug);   // éditeur : portalAt (0 = jamais) ; en Debug, le coffre doré passe même si le portail est déjà trouvé
-          if (portalAt > 0 && (!this.portalSeen || dbg) && (this.boardDone || dbg) && !this.portalSpawned && this.time >= portalAt) { this.spawnEnemy('coffreOr'); this.portalSpawned = true; } }   // le coffre doré n'apparaît qu'une fois le tableau déjà réussi
+        { const portalKills = this.custom ? +this.custom.portalKills || 0 : +this.def.portalKills || 0;
+          const portalAt = this.custom ? +this.custom.portalAt || 0 : this.endless ? this.E.portalAt : (this.def.portalAt || 0), dbg = !!(window.CB.app && window.CB.app.debug);
+          const ready = portalKills > 0 ? this.kills >= portalKills : portalAt > 0 && this.time >= portalAt;
+          if (ready && (!this.portalSeen || dbg) && (portalKills > 0 || this.boardDone || dbg) && !this.portalSpawned) { this.spawnEnemy('coffreOr'); this.portalSpawned = true; } }
+
         // bateaux pirates (monde caché) : de plus en plus souvent, jamais plus de « max » à la fois
-        if (this.def.riders && !this.custom && !this.outro) { const Rd = this.def.riders; if (this.nextRider == null) this.nextRider = Rd.first; if (this.time >= this.nextRider) { if (this.enemies.filter(e => !e.dead && !e.escaped && e.def.riser).length < (Rd.max || 1)) this.spawnRider(); const k = Math.min(1, this.time / (this.def.seconds || 150)); this.nextRider = this.time + Rd.every[0] + (Rd.every[1] - Rd.every[0]) * k; } }   // clowns canonniers de la Foire, de plus en plus souvent
-        if (this.def.ships && !this.custom && !this.outro) { const Sh = this.def.ships; if (this.nextShip == null) this.nextShip = Sh.first; if (this.time >= this.nextShip) { if (this.enemies.filter(e => !e.dead && !e.escaped && e.def.ship).length < Sh.max) { this.spawnEnemy(Sh.kinds[Math.floor(r() * Sh.kinds.length)]); this.ships++; } const k = Math.min(1, this.time / (this.def.seconds || 150)); this.nextShip = this.time + Sh.every[0] + (Sh.every[1] - Sh.every[0]) * k; } }
+        if (!this.gentleStart && (!this.def.opening || this.combatAge >= 45) && this.def.riders && !this.custom && !this.outro) { const Rd = this.def.riders; if (this.nextRider == null) this.nextRider = Rd.first; if (this.time >= this.nextRider) { if (this.enemies.filter(e => !e.dead && !e.escaped && e.def.riser).length < (Rd.max || 1)) this.spawnRider(); const k = Math.min(1, this.time / (this.def.seconds || 150)); this.nextRider = this.time + Rd.every[0] + (Rd.every[1] - Rd.every[0]) * k; } }   // clowns canonniers de la Foire, de plus en plus souvent
+        if (!this.gentleStart && (!this.def.opening || this.combatAge >= 30) && this.def.ships && !this.custom && !this.outro) { const Sh = this.def.ships; if (this.nextShip == null) this.nextShip = Sh.first; if (this.time >= this.nextShip) { if (this.enemies.filter(e => !e.dead && !e.escaped && e.def.ship).length < Sh.max) { this.spawnEnemy(Sh.kinds[Math.floor(r() * Sh.kinds.length)]); this.ships++; } const k = Math.min(1, this.time / (this.def.seconds || 150)); this.nextShip = this.time + Sh.every[0] + (Sh.every[1] - Sh.every[0]) * k; } }
         // le boss sort tout de suite (une seconde après l'intro), seul : un seul grand combat en trois phases
         if (this.def.type === 'boss' && !this.boss && !this.bossSpawned && this.world.boss && this.time >= this.intro + 1 && !this.choice && !this.pendingLevels) { for (const o of this.enemies) if (!o.boss && !o.def.ship && !o.def.box) { o.dead = true; this.bursts.push({ x: o.x, y: o.y, z: o.z, age: 0, kind: 'pop', color: o.color }); } this.spawnBoss(this.world.boss); }
         // boîtes bonus « ? » (tableaux de boss) : une à la fois, au hasard, qui disparaît si on tarde
@@ -749,7 +1005,7 @@
         this.spawnEnemy(sp.type, null, sp.elite); sp.left--;
         if (sp.left > 0) sp.next += sp.every; else if (sp.packsLeft > 0) { sp.packsLeft--; sp.left = sp.count; sp.next += sp.interval; } else sp.next = null;
       }
-      if (this.sequence && (this.seq.i < this.sequence.length || this.seq.active.length)) {
+      if (!this.gentleStart && !this.outro && this.sequence && (this.seq.i < this.sequence.length || this.seq.active.length)) {
         const q = this.seq; q.alive = q.alive.filter(e => !e.dead && !e.escaped);
         while (q.i < this.sequence.length) {   // lancement des groupes, dans l'ordre ; plusieurs peuvent être actifs en même temps (temps absolu ou relatif)
           const g = this.sequence[q.i]; let go = false;
@@ -759,7 +1015,9 @@
           else if (q.i === 0) go = this.time >= 1;
           else if (!q.active.length && !q.alive.length) { if (q.clearAt == null) q.clearAt = this.time; go = this.time >= q.clearAt + q.gap; }
           if (!go) break;
-          const list = []; for (const k of g.kinds) for (let n = 0; n < k.count; n++) list.push(k);   // chaque entrée garde sa sorte et son drapeau élite for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(this.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+          const list = []; for (const k of g.kinds) for (let n = 0; n < k.count; n++) list.push(k);
+          // Mélanger les individus, en conservant les quantités et le statut élite de chaque badge.
+          if (g.shuffle) for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(this.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
           g.launched = true; g.launchedAt = this.time; q.active.push({ g, queue: list, next: this.time }); q.lastEnd = this.time + Math.max(0, list.length - 1) * g.every; q.clearAt = null; q.i++;
         }
         for (const a of q.active) while (a.queue.length && this.time >= a.next) { const k = a.queue.shift(), sp = k.type.startsWith('boss:') ? this.spawnBossOf(k.type.slice(5)) : this.spawnEnemy(k.type, null, !!k.elite); if (sp) { q.alive.push(sp); a.g.spawned.push(sp); } a.next += a.g.every; }
@@ -767,11 +1025,16 @@
       }
       const slowAll = (1 - Math.min(.6, s.slow)) * (this.fx.slowmo > 0 ? .4 : 1) * (this.fx.blizzard > 0 ? .45 : 1);
       for (const e of this.enemies) {
-        e.previous = { x: e.x, y: e.y, z: e.z }; e.frozen = Math.max(0, e.frozen - dt); if (!(e.frozen > 0)) e.age += dt;
+        e.previous = { x: e.x, y: e.y, z: e.z }; e.frozen = Math.max(0, e.frozen - dt); if (!(e.frozen > 0) && !e.netted) e.age += dt;
         if (e.burn && !e.dead) { e.burn.t -= dt; e.burn.tick += dt; if (e.burn.tick >= .5) { e.burn.tick -= .5; this.applyDamage(e, e.burn.dps * .5, false, 'feu'); } if (e.burn.t <= 0) e.burn = null; }   // figé : plus d'animation non plus
         if (e.glue > 0) e.glue -= dt; if (e.chill > 0) e.chill -= dt;
         if (e.venom && !e.dead) { const V = e.venom, F = CB.CARD_FX.venom; V.t -= dt; V.tick += dt; if (V.tick >= 1) { V.tick -= 1; this.applyDamage(e, V.dps, false, 'poison'); const lvl = this.stats.venom || 1; if (!e.dead && this.random() < F.spread[lvl - 1]) { const n = this.enemies.find(o => o !== e && !o.dead && !o.escaped && !o.venom && !this.isDecor(o) && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < F.radius); if (n) { n.venom = { t: F.secs, dps: V.dps, tick: 0 }; this.venomSpread = (this.venomSpread || 0) + 1; this.bursts.push({ x: n.x, y: n.y, z: n.z, age: 0, kind: 'pop', color: '#c47dff', size: 1.2 }); } } } if (V.t <= 0) e.venom = null; }   // le poison peut sauter au voisin
+        if (e.netted > 0) {
+          e.netted = Math.max(0, e.netted - dt);
+          if (e.netted > 0) continue;
+        }
         const speed = e.speed * slowAll * (e.glue > 0 ? 1 - CB.CARD_FX.glue.slow : 1) * (e.chill > 0 ? 1 - CB.CARD_FX.chill.slow : 1);
+        if (e.sniper) { this.positionSniperEnemy(e); continue; }
         if (e.boss) {
           if (e.leaving) { e.z += (speed + 18) * dt; e.y += dt * 3; if (e.z > 130) e.dead = true; continue; }
           if (e.diving) { e.diveT += dt; e.y -= dt * 7; e.alpha = Math.max(0, 1 - e.diveT / 1.3); if (Math.floor(e.diveT * 6) !== Math.floor((e.diveT - dt) * 6)) { this.bursts.push({ x: e.x + (this.random() - .5) * 10, y: 0, z: e.z, age: 0, kind: 'splash', size: 2.5, life: .9 }); this.splashes++; } if (e.diveT >= 1.4) { e.dead = true; e.quiet = true; this.boss = null; this.bossSpawned = false; this.spawnBoss(e.def.next, true); } continue; }   // le Léviathan plonge : le vrai boss arrive
@@ -779,12 +1042,12 @@
           const A = CB.BOSS_ANIM, agile = 1 + .35 * (e.act || 0), lift = e.def.sea ? 0 : 20;   // plus fâché = plus vif
           if (e.intro) { const I = e.intro; I.t += dt; const k = Math.min(1, I.t / A.intro), ease = 1 - Math.pow(1 - k, 3); e.z = 125 + (e.hover - 125) * ease; e.y = e.baseY + (1 - ease) * lift + Math.sin(I.t * 5) * 1.5 * (1 - k); e.x = Math.sin(I.t * 2.6) * 14 * (1 - ease);   // grande entrée : il plonge du ciel en zigzag
             if (k >= 1) { e.intro = null; e.arrived = true; e.boltTimer = Math.min(e.boltTimer, 1.2); this.shake = Math.max(this.shake || 0, 1); this.flash = Math.max(this.flash || 0, .35); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: e.color, size: 9, life: .7 }); this.texts.push({ text: 'GRAAAH !', x: e.x, y: e.y + 6, z: e.z, age: 0, color: '#ff3a3a', big: true }); } continue; }
-          if (e.retreat) { const T = e.retreat; T.t += dt; const t = T.t, t1 = A.hurt, t2 = t1 + A.flee, t3 = t2 + A.gone;
+          if (e.retreat) { const T = e.retreat; T.t += dt; const scale = e.redDragon ? .38 : 1, t = T.t / scale, t1 = A.hurt, t2 = t1 + A.flee, t3 = t2 + A.gone;
             if (t < t1) { e.flash = .2; e.x = T.x0 + Math.sin(t * 40) * 1.2; e.y = T.y0 - t * 2 * (lift ? 1 : 0); }   // il a mal : il tremble et pique du nez
             else if (t < t2) { const k = (t - t1) / A.flee; e.z = T.z0 + k * 90; e.y = T.y0 + k * lift; e.x = T.x0 + T.dir * k * 20; e.alpha = Math.max(0, 1 - k * 1.2); }   // il s'enfuit au loin
             else if (t < t3) { e.alpha = 0; if (!T.said) { T.said = true; this.texts.push({ text: 'IL REVIENT…', x: 0, y: 14, z: 30, age: 0, color: '#ffd23f' }); } }
             else { const k = Math.min(1, (t - t3) / A.back), ease = 1 - Math.pow(1 - k, 3);
-              if (!T.back) { T.back = true; e.color = A.colors[Math.min(e.act - 1, A.colors.length - 1)]; e.size *= 1.06; this.texts.push({ text: 'ENCORE PLUS FÂCHÉ !', x: 0, y: 14, z: 30, age: 0, color: e.color, big: true }); }   // rouge, puis doré ; un peu plus gros
+              if (!T.back) { T.back = true; e.color = (e.def.phaseColors || A.colors)[Math.min(e.act - 1, A.colors.length - 1)]; e.size *= 1.06; this.texts.push({ text: 'ENCORE PLUS FÂCHÉ !', x: 0, y: 14, z: 30, age: 0, color: e.color, big: true }); }   // rouge, puis doré ; un peu plus gros
               e.z = 125 + (e.hover - 125) * ease; e.y = e.baseY + (1 - ease) * lift; e.x = -T.dir * 16 * (1 - ease); e.alpha = Math.min(1, k * 3);
               if (k >= 1) { e.retreat = null; e.alpha = 1; e.boltTimer = .8; this.shake = Math.max(this.shake || 0, 1); this.flash = Math.max(this.flash || 0, .3); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: e.color, size: 9, life: .7 }); this.texts.push({ text: 'GRRRR !', x: e.x, y: e.y + 6, z: e.z, age: 0, color: e.color, big: true }); } }
             continue; }
@@ -795,14 +1058,38 @@
           else { e.sideOff = (e.sideOff || 0) * Math.max(0, 1 - dt * 4); e.dodgeCd = (e.dodgeCd || 0) - dt;
             if (e.def.agile && e.dodgeCd <= 0 && e.frozen <= 0) for (const ball of this.balls) { if (ball.seen || ball.ally || ball.vz <= 0 || ball.z < e.z - 26 || ball.z > e.z - 4) continue; ball.seen = true; const tt = (e.z - ball.z) / ball.vz, bx = ball.x + ball.vx * tt; if (Math.abs(bx - e.x) < 7 && this.random() < A.dodge.chance) { e.dodge = { t: 0, dir: bx >= e.x ? -1 : 1 }; e.dodgeCd = A.dodge.every; e.dodges = (e.dodges || 0) + 1; this.texts.push({ text: 'HOP !', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#ffd23f' }); break; } } }   // il voit venir un boulet : parfois il l'évite
           if (e.arrived) { e.x = Math.sin(e.age * .5 * agile) * 10 * Math.min(1, CB.VIEW.spread / 22) + (e.sideOff || 0); e.y = e.def.sea ? .4 + Math.sin(e.age * 1.2) * .3 : Math.min(CB.VIEW.spreadY - 3, 9) + Math.sin(e.age * .8 * agile) * 2;
+            if (e.redDragon && e.act > 0) {
+              e.x = Math.sin(e.age * (e.act === 1 ? 1.45 : 1.05)) * Math.min(14, CB.VIEW.spread * .63);
+              e.y += Math.sin(e.age * 1.6) * (e.act === 1 ? 2.8 : 1.2);
+              if (e.act === 1) {
+                const dive = (1 + Math.sin(e.age * 1.45)) / 2;
+                e.z += (46 - 24 * dive - e.z) * Math.min(1, dt * 6);
+                e.y -= 3 * dive;
+              }
+            }
             // attaques au hasard (rarement deux fois la même de suite), à des intervalles variés ; en rafale : les tirs suivants partent l'un derrière l'autre
             if (e.salvo) { const V2 = e.salvo; V2.t -= dt; if (V2.t <= 0) { V2.t = V2.gap; this.bossAttack(e, V2.power, true); if (--V2.left <= 0) e.salvo = null; } }
+            else if (e.redDragon) {
+              e.boltTimer -= dt;
+              if (e.boltTimer <= 0) {
+                const power = e.powers[e.powerIndex++ % e.powers.length];
+                e.boltTimer = CB.RED_DRAGON.intervals[e.act];
+                this.bossAttack(e, power === 'faisceau' && !this.canDodge ? 'triple' : power);
+              }
+            }
             else { e.boltTimer -= dt; if (e.boltTimer <= 0) { const list = e.powers; let p = list[Math.floor(this.random() * list.length)]; if (p === e.lastPower && list.length > 1 && this.random() < .6) p = list[Math.floor(this.random() * list.length)]; e.lastPower = p; e.boltTimer = e.def.boltEvery * (.45 + this.random() * .95) * (1 - .18 * (e.act || 0)); this.bossAttack(e, p); } } }
           continue;
         }
         const d = e.def;
         if (e.swept) { this.sweepStep(e, dt); continue; }
-        if (d.panel) { const P = e.panel, rs = P.rise || .35; P.age += dt; P.up = P.age < rs ? P.age / rs : P.age > P.life - rs ? Math.max(0, (P.life - P.age) / rs) : 1; if (P.age >= P.life) e.escaped = true; continue; }   // panneaux du brigand : ils se lèvent, attendent, redescendent
+        if (d.panel) {
+          const panel = e.panel, rise = panel.rise || .35;
+          panel.age += dt;
+          panel.up = clamp(Math.min(panel.age / rise, (panel.life - panel.age) / rise), 0, 1);
+          if (panel.motion) panelPosition(e);
+          if (panel.age >= panel.life) e.escaped = true;
+          continue;
+        }
         if (d.cross) { e.x += e.vx * dt; e.baseX = e.x; e.y = e.baseY + Math.sin(e.age * 1.6 + e.phase) * .7; if (e.x > CB.VIEW.spread + 12) { e.escaped = true; this.texts.push({ text: 'IL S’ÉLOIGNE…', x: e.x - 6, y: e.y + 3, z: e.z, age: 0, color: '#cfe8ff' }); } continue; }   // bateau volant : traverse de gauche à droite
         if (e.vanish) { const v = e.vanish; v.age += dt; e.flash = 1; if (v.age > v.delay) { const k = (v.age - v.delay) / .45; e.alpha = Math.max(0, 1 - k); e.warpScale = 1 + k * .7; e.y += dt * 5; if (k >= 1) { e.quiet = true; e.killedBy = 'triche'; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'crit', color: '#fff' }); this.applyDamage(e, 1e9, true, 'triche'); } } continue; }   // claquement de doigts : figé, blanc, puis s'évapore
         if (e.flee) { e.x += e.flee * dt; e.y += dt * 1.6; e.baseX = e.x; if (e.x > CB.VIEW.spread + 18) e.dead = true; continue; }   // chassé par le dragon : il sort par la droite
@@ -823,34 +1110,48 @@
         if (d.shot) { e.x += ((e.tx || 0) - e.x) * Math.min(1, speed * dt / Math.max(e.z, 1)); e.y += (2 - e.y) * Math.min(1, speed * dt / Math.max(e.z, 1));
           if (d.hold && e.z <= d.hold) { e.z = d.hold; e.fuse = (e.fuse == null ? d.fuse : e.fuse) - dt; if (e.fuse <= 0) { e.dead = true; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'kaboom', color: '#ff8c2a', size: 8, life: .9 }); this.shake = Math.max(this.shake || 0, .8); this.flash = Math.max(this.flash || 0, .25); this.texts.push({ text: 'BOUM !!!', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#ff8c2a', big: true }); this.damage(e.damage, e); } } }   // l'onde de choc nous atteint même de loin : on doit la désamorcer
         else if (d.flyer || e.flyer) { this.flyStep(e, dt); continue; }
-        else if (d.straight) { }
+        else if (d.straight || e.calmMotion) { }
+        else if(d.chaotic) { e.x=Math.max(-CB.VIEW.spread+2,Math.min(CB.VIEW.spread-2,e.baseX+Math.sin(e.age*.8+e.phase)*9));e.y=Math.max(2,Math.min(CB.VIEW.spreadY-2,e.baseY+Math.sin(e.age*1.1+e.phase)*7)); }
         else if (d.zigzag) { e.x = e.baseX + Math.sin(e.age * 2.2 + e.phase) * 5 * e.amp; e.y = e.baseY + Math.sin(e.age * 1.8) * 2; }
         else if (d.strafe) { e.x = e.baseX + Math.sin(e.age * 1.3 + e.phase) * 9 * e.amp; }
         else e.x += (e.baseX + Math.sin(e.age * 1.4 + e.phase) * 2 - e.x) * Math.min(1, dt * 3);
       }
       if (this.boostTimer > 0) { this.boostTimer -= dt; if (this.boostTimer <= 0) this.boost = 0; }
-      if (s.blackhole) for (const b of this.balls) { if (b.size < 2) continue; const R = 6 + 2 * s.blackhole, k = Math.min(1, dt * .9 * s.blackhole); for (const e of this.enemies) { if (e.boss || e.dead) continue; const d = Math.hypot(e.x - b.x, e.y - b.y, e.z - b.z); if (d < R) { e.x += (b.x - e.x) * k; e.y += (b.y - e.y) * k; e.z += (b.z - e.z) * k * .4; e.baseX = e.x; e.baseY = e.y; } } }
+      if (s.blackhole && !this.puzzle) for (const b of this.balls) { if (b.size < 2) continue; const R = 6 + 2 * s.blackhole, k = Math.min(1, dt * .9 * s.blackhole); for (const e of this.enemies) { if (e.boss || e.dead || e.netted) continue; const d = Math.hypot(e.x - b.x, e.y - b.y, e.z - b.z); if (d < R) { e.x += (b.x - e.x) * k; e.y += (b.y - e.y) * k; e.z += (b.z - e.z) * k * .4; e.baseX = e.x; e.baseY = e.y; } } }
       // boulets
       this._ballSize = 1; const byZ = this.enemies.slice().sort((a, b) => a.z - b.z), walls = this.enemies.filter(e => e.wall && !e.dead), WZ = CB.WALL.z;   // le plus proche d'abord : une boîte devant le boss encaisse le boulet, pas lui
-      for (const ball of this.balls) {
+      for (const ball of this.balls.slice()) {
+        if (this.puzzle && !ball.puzzleShot) { ball.hit = true; continue; }
+        if (ball.soccer) { this.steerSoccer(ball, dt); if (ball.hit) continue; }
         const old = { x: ball.x, y: ball.y, z: ball.z }; ball.trail.push(old); if (ball.trail.length > 12) ball.trail.shift(); ball.age += dt;
         if (ball.rocket) { ball.x += ball.vx * dt; ball.y += ball.vy * dt; ball.z += ball.vz * dt; if (ball.z >= ball.fuseZ || ball.z > 110) { this.kaboom(ball); continue; } }
         else if (ball.mega) { ball.x += ball.vx * dt; ball.y += ball.vy * dt; ball.z += ball.vz * dt; this.shake = Math.max(this.shake || 0, .35); }   // le méga boulet file tout droit et fait trembler l'écran
         else if (ball.straight) { if (ball.torpedo) this.homeBall(ball, dt, CB.HOMING.max); ball.x += ball.vx * dt; ball.y += ball.vy * dt; ball.z += ball.vz * dt; }   // boulets des pirates, torpilles (tête chercheuse) : en ligne droite, sans gravité
-        else { if (s.homing && !ball.ally) this.homeBall(ball, dt); ball.x += ball.vx * dt; ball.y += ball.vy * dt - 9 * dt * dt; ball.vy -= 18 * dt; ball.z += ball.vz * dt; }
+        else { if (s.homing && !ball.ally && !ball.puzzleShot) this.homeBall(ball, dt); ball.x += ball.vx * dt; ball.y += ball.vy * dt - 9 * dt * dt; ball.vy -= 18 * dt; ball.z += ball.vz * dt; }
         // murs magiques : le boulet qui traverse la profondeur du mur dans sa bande d'écran s'y écrase (le méga boulet et la fusée passent)
-        if (walls.length && !ball.mega && !ball.rocket && old.z < WZ && ball.z >= WZ) { const q = (WZ - old.z) / (ball.z - old.z), wx = old.x + (ball.x - old.x) * q, wy = old.y + (ball.y - old.y) * q, n = walls[0].wall.n, idx = Math.floor(CB.project({ x: wx, y: wy, z: WZ }).x / (CB.VIEW.w / n)), wall = walls.find(e => e.wall.i === idx && !e.dead);
-          if (wall) { ball.hitIds.add(wall.id); if (!ball.ally) this.hits++; this.wallHits = (this.wallHits || 0) + 1; this.bursts.push({ x: wx, y: wy, z: WZ, age: 0, kind: 'ice', size: 2.5 + ball.size }); this.applyDamage(wall, ball.dmg, false, ball.effect); ball.hit = true; continue; } }
+        if (walls.length && !ball.mega && !ball.rocket && ((old.z < WZ && ball.z >= WZ) || (ball.soccer && old.z > WZ && ball.z <= WZ))) { const q = (WZ - old.z) / (ball.z - old.z), wx = old.x + (ball.x - old.x) * q, wy = old.y + (ball.y - old.y) * q, n = walls[0].wall.n, idx = Math.floor(CB.project({ x: wx, y: wy, z: WZ }).x / (CB.VIEW.w / n)), wall = walls.find(e => e.wall.i === idx && !e.dead);
+          if (wall) { ball.hitIds.add(wall.id); if (!ball.ally) this.hits++; this.wallHits = (this.wallHits || 0) + 1; this.bursts.push({ x: wx, y: wy, z: WZ, age: 0, kind: 'ice', size: 2.5 + ball.size }); this.applyDamage(wall, 1, false, ball.effect, ball.ally ? 0 : CB.Save.wallBreakerLevel(this.profile)); ball.hit = true; continue; } }
         for (const e of byZ) {
-          if (e.dead || e.escaped || e.retreat || e.wall || ball.hitIds.has(e.id) || (ball.ally && e.def.orb)) continue;   /* les boulets des aides traversent les orbes du puzzle */
+          if (e.dead || e.escaped || e.retreat || e.wall || ball.hitIds.has(e.id) || (e.def.orb && (ball.ally || !ball.puzzleShot))) continue;   /* les boulets des aides traversent les orbes du puzzle */
+          if (ball.soccerTarget && e !== ball.soccerTarget && !this.isDecor(e)) continue;
           const p = e.previous || e, ax = old.x - p.x, ay = old.y - p.y, az = old.z - p.z, dx = ball.x - e.x - ax, dy = ball.y - e.y - ay, dz = ball.z - e.z - az, q = clamp(-(ax * dx + ay * dy + az * dz) / (dx * dx + dy * dy + dz * dz || 1), 0, 1);
           const radius = (e.boss ? e.size * 1.25 * CB.BOSS_SCALE : 2 + (e.size - 1) * 1.3) + (ball.size - 1) * 1.2;
-          // le boss est une grande plaque à sa profondeur (pas une sphère qui avalerait une boîte posée devant lui) : touché quand le boulet traverse son plan dans son contour
-          const qb = e.boss ? (Math.abs(dz) > 1e-6 ? -az / dz : Math.abs(az) < 1.5 ? 0 : -1) : q, touched = e.boss ? qb >= 0 && qb <= 1 && Math.hypot(ax + qb * dx, ay + qb * dy) < radius : Math.hypot(ax + q * dx, ay + q * dy, az + q * dz) < radius;
+          // Boss et pancartes : toucher leur silhouette dans leur plan de profondeur.
+          const board = e.panel?.motion, flat = e.boss || board;
+          const qb = Math.abs(dz) > 1e-6 ? -az / dz : Math.abs(az) < 1.5 ? 0 : -1;
+          let touched;
+          if (!flat) touched = Math.hypot(ax + q * dx, ay + q * dy, az + q * dz) < radius;
+          else if (qb < 0 || qb > 1) touched = false;
+          else if (board) {
+            const x = ax + qb * dx, y = ay + qb * dy, height = e.size * CB.VIEW.f / CB.VIEW.fy;
+            touched = e.panel.up >= .35 && Math.abs(x) < 1.45 * e.size && y > -1.2 * height && y < 1.9 * height;
+          } else touched = Math.hypot(ax + qb * dx, ay + qb * dy) < radius;
           if (touched) {
             if (ball.rocket) { this.kaboom(ball); break; }
             if (e.boss && e.def.weak) { const es = 1.3 * CB.BOSS_SCALE, wk = e.def.weak; ball.weak = Math.hypot(ball.x - (e.x + wk.x * es), ball.y - (e.y - wk.y * es)) < wk.r * es + ball.size * .6; } else ball.weak = false;   // en pleine couronne ?
-            ball.hitIds.add(e.id); this.hitEnemy(e, ball); if (ball.mega) { this.shake = Math.max(this.shake || 0, .7); if (!e.dead && !e.boss) e.z += 4; }
+            ball.hitIds.add(e.id); this.hitEnemy(e, ball); if (ball.mega) { this.shake = Math.max(this.shake || 0, .7); if (!e.dead && !e.boss && !e.netted) e.z += 4; }
+            if (e.def.orb) { ball.hit = true; break; }   // un tir ne valide qu'un choix, même s'il est perçant
+            if (ball.soccer) { this.bounceSoccer(ball, e); break; }
             if (ball.pierce) continue;
             if (ball.pierceLeft > 0) { ball.pierceLeft--; continue; }   // rayon perçant (canon laser)
             if (s.bounces > (ball.bounces || 0) && !this.puzzle) {   /* pendant le puzzle, pas de ricochet vers le mauvais orbe */ const next = this.nearest(e, 40, ball.hitIds); if (next) { ball.bounces = (ball.bounces || 0) + 1; ball.bounced = true; if (s.frostBounce) this.freezeAround(e, 8, s.frostBounce); const t = Math.max(.15, Math.hypot(next.x - ball.x, next.z - ball.z) / ball.vz); ball.vx = (next.x - ball.x) / t; ball.vz = (next.z - ball.z) / t || ball.vz; ball.vy = (next.y - ball.y + 9 * t * t) / t; continue; } }
@@ -860,64 +1161,86 @@
       }
       if (this.sea) for (const ball of this.balls) if (!ball.hit && !ball.rocket && ball.y <= 0 && ball.z > 1) { ball.hit = true; this.splashes++; this.bursts.push({ x: ball.x, y: 0, z: ball.z, age: 0, kind: 'splash', size: .7 + ball.size * .35, life: .8 }); }   // PLOUF ! le boulet coule
       this.balls = this.balls.filter(b => !b.hit && b.z < 125 && b.z > -12 && b.y > -4 && b.y < 90);
+      if (this.def.sniper && this.shots > this.hits + this.sniperMisses && !this.balls.length) {
+        this.sniperMisses++;
+        if (this.sniperMisses === 4) { this.finish(false, 'snipe'); return; }
+      }
       // ennemis qui nous atteignent
-      for (const e of this.enemies) if (!e.dead && !e.boss && e.z < 3) { e.escaped = true; if (e.def.shot && this.canDodge && Math.abs(e.x - this.px) > 2.4) { this.dodged++; this.texts.push({ text: 'RATÉ !', x: e.x, y: 3, z: 5, age: 0, color: '#7fd4ff' }); if (this.sea) { this.bursts.push({ x: e.x, y: 0, z: 4, age: 0, kind: 'splash', size: 1, life: .8 }); this.splashes++; } } else if (e.def.portal) this.openPortal(e); else if (e.def.chest) this.discover(e); else if (e.def.gift || e.def.target || e.target === true) { } else if (e.def.touch) this.stunBy(e.def.touch, e); else if (e.def.status) this.afflict(e.def.status, e); else this.damage(e.damage, e); }
+      for (const e of this.enemies) if (!e.dead && !e.boss && e.z < 3) { e.escaped = true; if (e.def.shot && this.canDodge && Math.abs(e.x - this.px) > 2.4) { this.dodged++; this.texts.push({ text: 'RATÉ !', x: e.x, y: 3, z: 5, age: 0, color: '#7fd4ff' }); if (this.sea) { this.bursts.push({ x: e.x, y: 0, z: 4, age: 0, kind: 'splash', size: 1, life: .8 }); this.splashes++; } } else if (e.def.portal) this.openPortal(e); else if (e.def.chest) this.discover(e); else if (e.def.coin) { if (Math.abs(e.x - this.px) < 3) this.collectGoldCoin(e); } else if (e.def.gift || e.def.target || e.target === true) { } else if (e.def.touch) this.stunBy(e.def.touch, e); else if (e.def.status) this.afflict(e.def.status, e); else this.damage(e.damage, e); }
       this.enemies = this.enemies.filter(e => !e.dead && !e.escaped);
-      for (const b of this.bursts) b.age += dt; this.bursts = this.bursts.filter(b => b.age < (b.life || .7)); this.shake = Math.max(0, (this.shake || 0) - dt * 1.4); this.hitFx = Math.max(0, (this.hitFx || 0) - dt * 1.8);
+      for (const b of this.bursts) b.age += dt; this.bursts = this.bursts.filter(b => b.age < (b.life || .7)); this.shake = Math.max(0, (this.shake || 0) - dt * 1.4); this.hitFx = Math.max(0, (this.hitFx || 0) - dt * 1.8); this.shieldFx = Math.max(0, (this.shieldFx || 0) - dt * 1.4); if (this.shieldNotice) this.shieldNotice.time = Math.max(0, this.shieldNotice.time - dt);
       for (const t of this.texts) t.age += dt / (t.life || 1); this.texts = this.texts.filter(t => t.age < 1.1);
       // objectifs
       const d = this.def;
       if (this.over) return;
       if (this.cibles && this.targetsSpawned >= this.cibles.count && !this.enemies.some(e => !e.dead && !e.escaped && (e.def.flyer || e.flyer))) this.finish(true, 'cibles');
       if (this.brigands) { this.endRoundCheck(); if (this.round >= this.brigands.rounds && !this.panels) this.finish(true, 'brigands'); }
-      if (d.type === 'kill' && this.kills >= d.goal) this.finish(true);
+      if (d.type === 'kill' && !this.missionsEndless && this.kills >= d.goal) this.finish(true);
       else if (d.type === 'sink' && this.shipsSunk >= d.goal) this.finish(true);
-      else if (d.type === 'survive') { const left = d.seconds - this.time, n = Math.ceil(left); if (left > 0 && n <= 3 && n !== this.countdownN) { this.countdownN = n; this.countdown = { n, t: 0 }; } if (this.time >= d.seconds) { this.finish(true); this.countdown = { n: 'win', t: 0 }; } }   // dernières secondes : 3… 2… 1… puis GAGNÉ !
-      else if (d.type === 'swarm' && this.time >= d.seconds && !this.outro) this.startOutro();
+      else if (d.type === 'survive') { const left = d.seconds - this.time, n = Math.ceil(left); if (left > 0 && n <= 3 && n !== this.countdownN) { this.countdownN = n; this.countdown = { n, t: 0 }; } if (this.time >= d.seconds) { if (d.dragonOutro) { if (!this.outro) this.startOutro(); } else { this.finish(true); this.countdown = { n: 'win', t: 0 }; } } }   // dernières secondes : 3… 2… 1… puis GAGNÉ !
+      else if (d.type === 'swarm' && this.time >= d.seconds && !this.outro) { if (d.dragonOutro) this.startOutro(); else this.finish(true, 'nuee'); }
       else if (d.type === 'killTimed') { if (this.kills >= d.goal) this.finish(true); else if (this.time >= d.seconds) this.finish(false, 'temps'); }
     }
     nearest(from, max, exclude) { let best = null, bd = max; for (const e of this.enemies) { if (e === from || e.dead || e.escaped || exclude?.has(e.id)) continue; const d = Math.hypot(e.x - from.x, e.y - from.y, e.z - from.z); if (d < bd) { bd = d; best = e; } } return best; }
     hitEnemy(e, ball) {
-      if (e.def.orb) { if (!ball.ally) this.hits++; this.puzzleHit(e); return; }
+      if (this.missionCounters && ball.bounced && !this.isDecor(e)) this.missionCounters.bounce.add(e.id);
+      if (e.def.orb) { if (!ball.ally) { this.hits++; this.puzzleHit(e); } return; }
       const s = this.stats; let dmg = ball.dmg * (1 + this.boost); if (s.cometCap) dmg *= 1 + Math.min(1, ball.z / 70) * s.cometCap;
       const crit = (s.odin && this.shield > 0) || this.fx.cheat > 0 || this.random() < s.crit; if (crit) dmg *= 2;
-      if (ball.weak) { dmg *= CB.BOSS_ANIM.weak; e.weakFlash = .6; this.weakHits++; this.texts.push({ text: '👑 COURONNE !', x: e.x, y: e.y + 7, z: e.z, age: 0, color: '#ffffff', big: true }); this.bursts.push({ x: e.x, y: e.y + 6, z: e.z, age: 0, kind: 'crit', color: '#fff' }); }   // point faible : ×1,6 et le rubis flashe
-      if (s.knock && !e.boss && !e.dead) e.z += 2.5 * s.knock;
+      if (ball.weak) { dmg *= CB.BOSS_ANIM.weak; e.weakFlash = .6; this.weakHits++; this.texts.push({ text: e.def.weakName || '👑 COURONNE !', x: e.x, y: e.y + 7, z: e.z, age: 0, color: '#ffffff', big: true }); this.bursts.push({ x: e.x, y: e.y + 6, z: e.z, age: 0, kind: 'crit', color: '#fff' }); }   // point faible : ×1,6 et le rubis flashe
+      if (s.knock && !e.boss && !e.dead && !e.netted) e.z += 2.5 * s.knock;
       if (e.boss && s.fonte) dmg *= 1 + s.fonte;   // fonte (canon de lave) : les boss fondent
       if (s.burn && !e.boss && !ball.ally && !this.isDecor(e)) e.burn = { t: 3, dps: s.burn, tick: 0 };   // brûlure : des dégâts pendant 3 s
       if (!ball.ally) this.hits++; this.applyDamage(e, dmg, crit, ball.mega ? 'mega' : ball.effect);
-      if (!ball.ally && !ball.pirate && !this.isDecor(e)) this.cardEffects(e);   // glu, glace, feu, poison (cartes de pouvoir)
+      if (!ball.ally && !ball.pirate && !this.isDecor(e)) {
+        if (s.fishingNet && !ball.netChecked) {
+          ball.netChecked = true;
+          if (this.random() < CB.FISHING_NET.chance * s.fishingNet) this.castFishingNet(e);
+        }
+        this.cardEffects(e);
+      }   // glu, glace, feu, poison (cartes de pouvoir)
       if (!ball.ally && !ball.pirate && ball.variant != null) { const bd = CB.BALLS[s.ball]; if (bd && bd.premium) { this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'impact', skin: s.ball, variant: CB.ballVariant(s.ball, ball.variant), size: Math.max(1, ball.size), life: .85 }); this.impacts++; this.lastImpact = bd.sfx || null; } }   // Fête, Espace, Bijoux : chaque variante éclate à sa façon
       if (ball.splash > 0) { let touched = 1; for (const o of this.enemies) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < ball.splash) { touched++; this.applyDamage(o, dmg * .6, false, 'feu'); } if (s.siphon) this.hp = Math.min(this.maxHp, this.hp + touched * s.siphon); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'fire', size: ball.splash }); }
       if (ball.chain) { let from = e; for (let i = 0; i < 2; i++) { const n = this.nearest(from, 16); if (!n) break; this.bursts.push({ x: from.x, y: from.y, z: from.z, to: { x: n.x, y: n.y, z: n.z }, age: 0, kind: 'bolt' }); this.applyDamage(n, dmg * .8, false, 'eclair'); from = n; } }
       if (ball.freeze) { for (const o of this.enemies) if (!o.boss && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < 8) o.frozen = 3; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 8 }); }
     }
+    castFishingNet(impact) {
+      const net = CB.FISHING_NET;
+      const duration = net.seconds + net.extraSeconds * (this.stats.fishingNet - 1);
+      for (const enemy of this.enemies) {
+        if (enemy.dead || enemy.escaped || enemy.boss || enemy.wall || this.isDecor(enemy)) continue;
+        if (Math.hypot(enemy.x - impact.x, enemy.y - impact.y, enemy.z - impact.z) <= net.radius) {
+          enemy.netted = Math.max(enemy.netted || 0, duration);
+        }
+      }
+      this.bursts.push({ x: impact.x, y: impact.y, z: impact.z, age: 0, kind: 'fishingNet', size: net.radius, life: duration });
+    }
     // Cartes de pouvoir au toucher (2026-10-31) : chacune a sa chance ; feu, poison et glu peuvent toucher des voisins
     cardEffects(e) {
       const s = this.stats, F = CB.CARD_FX, r = this.random, around = (n, radius) => this.enemies.filter(o => o !== e && !o.dead && !o.escaped && !this.isDecor(o) && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < radius).sort((a, b) => Math.hypot(a.x - e.x, a.z - e.z) - Math.hypot(b.x - e.x, b.z - e.z)).slice(0, n);
-      if (s.glue && r() < F.glue.chance[s.glue - 1]) { for (const o of [e, ...around(F.glue.spread[s.glue - 1], F.glue.radius)]) { o.glue = F.glue.secs; this.bursts.push({ x: o.x, y: o.y, z: o.z, age: 0, kind: 'pop', color: '#7dff4f', size: 1.4 }); } this.texts.push({ text: 'GLU !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#7dff4f' }); this.cardFxHits++; }
-      if (s.chill && r() < s.chill) { e.chill = F.chill.secs; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 2 }); this.cardFxHits++; }
-      if (s.ignite && r() < F.ignite.chance[s.ignite - 1]) { const dps = Math.max(1, s.damage * F.ignite.dps); for (const o of [e, ...around(F.ignite.count[s.ignite - 1] - 1, F.ignite.radius)]) if (!o.boss || o === e) o.burn = { t: F.ignite.secs, dps, tick: 0, fire: true }; this.texts.push({ text: '🔥 EN FEU !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#ff8c2a' }); this.cardFxHits++; }
-      if (s.venom && r() < F.venom.chance[s.venom - 1]) { const dps = Math.max(1, s.damage * F.venom.dps); for (const o of [e, ...around(F.venom.count[s.venom - 1] - 1, F.venom.radius)]) o.venom = { t: F.venom.secs, dps, tick: 0 }; this.texts.push({ text: '☠️ POISON !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#c47dff' }); this.cardFxHits++; }
+      if (s.glue && r() < F.glue.chance[s.glue - 1]) { for (const o of [e, ...around(F.glue.spread[s.glue - 1], F.glue.radius)]) { o.glue = F.glue.secs + CB.cardTrainingLevel(this.profile, 'glu') * .1; this.bursts.push({ x: o.x, y: o.y, z: o.z, age: 0, kind: 'pop', color: '#7dff4f', size: 1.4 }); } this.texts.push({ text: 'GLU !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#7dff4f' }); this.cardFxHits++; }
+      if (s.chill && r() < s.chill) { e.chill = F.chill.secs + CB.cardTrainingLevel(this.profile, 'froid') * .1; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 2 }); this.cardFxHits++; }
+      if (s.ignite && r() < F.ignite.chance[s.ignite - 1]) { const dps = Math.max(1, s.damage * F.ignite.dps) * (1 + CB.cardTrainingLevel(this.profile, 'braise') / 100); for (const o of [e, ...around(F.ignite.count[s.ignite - 1] - 1, F.ignite.radius)]) if (!o.boss || o === e) o.burn = { t: F.ignite.secs, dps, tick: 0, fire: true }; this.texts.push({ text: '🔥 EN FEU !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#ff8c2a' }); this.cardFxHits++; }
+      if (s.venom && r() < F.venom.chance[s.venom - 1]) { const dps = Math.max(1, s.damage * F.venom.dps) * (1 + CB.cardTrainingLevel(this.profile, 'venin') / 100); for (const o of [e, ...around(F.venom.count[s.venom - 1] - 1, F.venom.radius)]) o.venom = { t: F.venom.secs, dps, tick: 0 }; this.texts.push({ text: '☠️ POISON !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: '#c47dff' }); this.cardFxHits++; }
     }
     // Météores, forgeron, bourrasque (cartes de pouvoir à minuterie)
     updateCardPowers(dt) {
       const s = this.stats, F = CB.CARD_FX, r = this.random, live = () => this.enemies.filter(e => !e.dead && !e.escaped && !this.isDecor(e));
-      if (s.meteor) { this.meteorCard += dt; if (this.meteorCard >= F.meteor.every[s.meteor - 1]) { this.meteorCard = 0; const L = live(); for (let i = 0; i < F.meteor.count[s.meteor - 1] && L.length; i++) { const e = L.splice(Math.floor(r() * L.length), 1)[0]; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'meteore', life: .5, size: 3 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: -.3, kind: 'kaboom', color: '#ff8c2a', size: 4, life: .7 }); for (const o of live()) if (Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < F.meteor.radius) this.applyDamage(o, s.damage * F.meteor.dmg[s.meteor - 1] * (o === e ? 1 : .5), o === e, 'meteorCard'); this.meteorCardHits = (this.meteorCardHits || 0) + 1; } this.shake = Math.max(this.shake || 0, .25); } }
-      if (s.armorFix && this.armor < this.maxArmor) { this.armorFixT += dt; if (this.armorFixT >= F.armorFix.every) { this.armorFixT = 0; this.armor = Math.min(this.maxArmor, this.armor + s.armorFix); this.texts.push({ text: '🔨 +' + s.armorFix, x: 0, y: 5, z: 6, age: 0, color: '#9fdcff' }); } }
-      if (s.gust) { this.gustTimer -= dt; if (this.gustTimer <= 0) { const [a, b] = F.gust.every; this.gustTimer = a + r() * (b - a); const push = F.gust.push[s.gust - 1]; for (const e of live()) if (!e.boss && !e.def.ship && !e.def.riser) e.z = Math.min(e.z + push * (e.z < 30 ? 1 : .5), 100); this.gusts = (this.gusts || 0) + 1; this.gustFx = 1; this.texts.push({ text: '🌬️ BOURRASQUE !', x: 0, y: 11, z: 20, age: 0, color: '#dff6ff', big: true }); } }
+      if (s.meteor) { this.meteorCard += dt; if (this.meteorCard >= F.meteor.every[s.meteor - 1]) { this.meteorCard = 0; const L = live(); for (let i = 0; i < F.meteor.count[s.meteor - 1] && L.length; i++) { const e = L.splice(Math.floor(r() * L.length), 1)[0]; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'meteore', life: .5, size: 3 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: -.3, kind: 'kaboom', color: '#ff8c2a', size: 4, life: .7 }); for (const o of live()) if (Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < F.meteor.radius) this.applyDamage(o, s.damage * F.meteor.dmg[s.meteor - 1] * (1 + CB.cardTrainingLevel(this.profile, 'meteore') / 100) * (o === e ? 1 : .5), o === e, 'meteorCard'); this.meteorCardHits = (this.meteorCardHits || 0) + 1; } this.shake = Math.max(this.shake || 0, .25); } }
+      if (s.armorFix && this.armor < this.maxArmor) { this.armorFixT += dt; if (this.armorFixT >= F.armorFix.every) { this.armorFixT = 0; this.armor = Math.min(this.maxArmor, this.armor + s.armorFix * (1 + CB.cardTrainingLevel(this.profile, 'forgeron') / 100)); this.texts.push({ text: '🔨 +' + s.armorFix, x: 0, y: 5, z: 6, age: 0, color: '#9fdcff' }); } }
+      if (s.gust) { this.gustTimer -= dt; if (this.gustTimer <= 0) { const [a, b] = F.gust.every; this.gustTimer = a + r() * (b - a); const push = F.gust.push[s.gust - 1] * (1 + CB.cardTrainingLevel(this.profile, 'bourrasque') / 100); for (const e of live()) if (!e.boss && !e.def.ship && !e.def.riser) e.z = Math.min(e.z + push * (e.z < 30 ? 1 : .5), 100); this.gusts = (this.gusts || 0) + 1; this.gustFx = 1; this.texts.push({ text: '🌬️ BOURRASQUE !', x: 0, y: 11, z: 20, age: 0, color: '#dff6ff', big: true }); } }
       if (this.gustFx > 0) this.gustFx = Math.max(0, this.gustFx - dt * 1.2);
     }
-    guardChance() { if (this.cibles || this.brigands || this.puzzle || (this.custom && !this.custom.guards)) return 0; const k = CB.tierOf(this.wi) + this.vi * .25; return this.wi === 0 && this.vi < 2 ? 0 : Math.min(.14, .04 + .02 * k); }   // jamais aux tableaux 1-1 et 1-2 ; de plus en plus souvent ensuite
-    applyDamage(e, dmg, crit, effect) {
-      if (e.dead || e.leaving || e.retreat) return;   // parti se cacher entre deux phases : intouchable
-      if (e.wall) { dmg = 1; crit = false; }   // mur magique : chaque coup compte pour un, quelle que soit la force du boulet
+    guardChance() { if (this.def.sniper || this.cibles || this.brigands || this.puzzle || (this.custom && !this.custom.guards)) return 0; const k = CB.tierOf(this.wi) + this.vi * .25; return this.wi === 0 && this.vi < 2 ? 0 : Math.min(.14, .04 + .02 * k); }   // jamais aux tableaux 1-1 et 1-2 ; de plus en plus souvent ensuite
+    applyDamage(e, dmg, crit, effect, wallBonus = 0) {
+      if (this.outro || e.dead || e.leaving || e.retreat || e.def.orb) return;   // parti se cacher entre deux phases : intouchable
+      if (e.wall) { dmg = 1 + wallBonus; crit = false; }   // murs : un dégât par impact, plus le bonus Brise-mur du héros
       if (e.def.hits) { dmg = 1; crit = false; this.boatHits = (this.boatHits || 0) + 1; if (e.hp > 1) this.texts.push({ text: '💥 ' + (e.def.hits - e.hp + 1) + ' / ' + e.def.hits, x: e.x, y: e.y + 3.5, z: e.z, age: 0, color: '#ffd23f', big: true }); }   // bateau volant : chaque boulet compte pour un coup, peu importe les dégâts
       if (e.boss && e.mini && this.enemies.some(o => !o.dead && o.def.crystal)) { e.flash = .1; if (!this.shieldHint || this.time - this.shieldHint > 1.2) { this.shieldHint = this.time; this.texts.push({ text: 'CASSE LES CRISTAUX !', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#7fd4ff' }); } this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 3 }); return; }
       if (e.boss && effect && CB.BOSS_SPECIAL.sources.includes(effect)) { const B = CB.BOSS_SPECIAL, cap = e.maxHp * B.budget - (this.spBossDealt || 0); if (B.flat && B.flat[effect]) dmg = e.maxHp * B.flat[effect]; else { dmg = Math.min(dmg * B.resist, Math.max(0, cap)); this.spBossDealt = (this.spBossDealt || 0) + dmg; } if (dmg <= 0) { e.flash = .1; if (!this.bossHint || this.time - this.bossHint > 1.5) { this.bossHint = this.time; this.texts.push({ text: 'IL RÉSISTE !', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#ffd23f' }); } return; } }
       if (e.shield > 0) { e.shield -= dmg; e.flash = .15; if (e.shield <= 0) { e.shield = 0; if (e.guard) { e.guard = false; this.guardsBroken = (this.guardsBroken || 0) + 1; this.bursts.push({ x: e.x, y: e.y, z: e.z - 1, age: 0, kind: 'ice', size: 3 }); this.texts.push({ text: 'BOUCLIER BRISÉ !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#9fdcff' }); } else { e.speed *= 1.3; this.shipsBroken = (this.shipsBroken || 0) + 1; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#9fdcff', size: 2 }); this.texts.push({ text: 'VAISSEAU DÉTRUIT !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#7fd4ff' }); } } else this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'hit', color: '#9fdcff' }); return; }   // le vaisseau de l'alien casse en premier ; l'alien à nu est plus vif
       e.hp -= dmg; e.flash = .15; e.killedBy = effect;
-      if (e.boss && this.def.type === 'boss' && !(effect && CB.BOSS_SPECIAL.sources.includes(effect))) { const add = Math.min(.5, dmg / e.maxHp * CB.BOSS_CHARGE), full = v => v > 1 - 1e-6 ? 1 : v; if (this.special && !this.specialBusy) this.charge = full(Math.min(1, this.charge + add)); if (this.special2 && !this.special2Busy) this.charge2 = full(Math.min(1, this.charge2 + add)); }   // pas de monstres à abattre : c'est en frappant le boss que la jauge se remplit
+      if (e.boss && this.def.type === 'boss' && !(effect && CB.BOSS_SPECIAL.sources.includes(effect))) { const add = Math.min(.5, dmg / e.maxHp * CB.BOSS_CHARGE), full = v => this.capCharge(v); if (this.special && !this.specialBusy) this.charge = full(this.charge + add); if (this.special2 && !this.special2Busy) this.charge2 = full(this.charge2 + add); }   // pas de monstres à abattre : c'est en frappant le boss que la jauge se remplit
       if (e.boss && e.mini && e.stage === 1 && e.hp <= e.maxHp * .5) { e.stage = 2; e.color = e.def.angry; e.powers = e.def.powers[1]; e.powerIndex = 0; this.shake = 1; this.news.push({ kind: 'boss', text: 'IL EST FÂCHÉ ! NOUVEAU : PLUIE DE ROCHERS, RUGISSEMENT', time: this.time }); this.texts.push({ text: 'GRRRR !', x: e.x, y: e.y + 5, z: e.z, age: 0, color: '#ff3a3a', big: true }); }
       while (e.boss && !e.mini && e.act < CB.BOSS_PHASES.length && e.hp > 0 && e.hp <= e.maxHp * CB.BOSS_PHASES[e.act]) this.bossPhase(e);   // un gros coup peut sauter une phase
       this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: crit ? 'crit' : 'hit', color: e.color });
@@ -925,42 +1248,55 @@
       if (e.hp <= 0) this.kill(e);
     }
     kill(e) {
-      e.dead = true; const s = this.stats;
+      if (e.collected) return; e.dead = true; const s = this.stats;
+      if (e.def.coin) { this.collectGoldCoin(e); return; }
       if (e.def.ship) { this.shipsSunk++; this.texts.push({ text: '⚓ COULÉ !', x: e.x, y: e.y + 4, z: e.z, age: 0, color: '#ffd23f', big: true }); this.bursts.push({ x: e.x, y: 0, z: e.z, age: 0, kind: 'splash', size: 2 + e.size * .6, life: .9 }); this.splashes++; this.shake = Math.max(this.shake || 0, .3); }
-      if (e.def.shot) { this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: e.type === 'bolt' ? 'pop' : 'boom', color: e.color, size: e.size });
+      if (e.def.shot) { if (this.missionCounters) this.missionCounters.projectiles++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: e.type === 'bolt' ? 'pop' : 'boom', color: e.color, size: e.size });
         if (e.def.explode) { let n = 0; for (const o of this.enemies) if (o !== e && !o.dead && !o.escaped && !this.isDecor(o) && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < e.def.explode) { n++; this.applyDamage(o, this.stats.damage * 2.5, true, 'feu'); } this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'kaboom', color: '#ff8c2a', size: 5, life: .8 }); this.shake = Math.max(this.shake || 0, .4); this.texts.push({ text: n ? 'BOUM ! ' + n + ' BRÛLÉS' : 'BOUM !', x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#ff8c2a', big: true }); }
         else if (e.type !== 'bolt') this.texts.push({ text: 'DÉSAMORCÉ !', x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#7fd4ff' }); return; }
       if (e.def.pop && !e.swept && !e.vanish) { const Pp = e.def.pop, n = Pp.count || 1; for (let i = 0; i < n; i++) { const o = this.spawnEnemy(Pp.into, { x: e.x + (i - (n - 1) / 2) * 1.8, y: e.y + (this.random() - .5) * .8, z: e.z + .5 + i * .4 }, false); if (o) { o.frozen = .2; o.popped = true; } } this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'pop', color: e.color, size: e.size * 1.4 }); this.texts.push({ text: 'POP !', x: e.x, y: e.y + 2.5, z: e.z, age: 0, color: CB.ENEMIES[Pp.into].color }); }   // ballon de la Foire : il revient en ballon plus faible
       if (e.def.secretBoat) { this.boatSecret = true; this.shake = Math.max(this.shake || 0, .7); this.flash = Math.max(this.flash || 0, .4); for (let i = 0; i < 10; i++) this.bursts.push({ x: e.x + (this.random() - .5) * 5, y: e.y + (this.random() - .5) * 3, z: e.z, age: i * .04, kind: 'pop', color: i % 2 ? '#8a5a2b' : '#f1e7d0', size: 1.3 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ffd23f', size: 4 });
-        this.texts.push({ text: '⛵ LE BATEAU SE BRISE !', x: e.x, y: e.y + 4, z: e.z, age: 0, color: '#ffd23f', big: true }); this.news.push({ kind: 'discovery', text: 'UN NOUVEAU SECRET S’EST OUVERT SUR LA CARTE !', time: this.time }); return; }
+        this.texts.push({ text: '⛵ LE BATEAU SE BRISE !', x: e.x, y: e.y + 4, z: e.z, age: 0, color: '#ffd23f', big: true }); this.news.push({ kind: 'discovery', text: 'UN NOUVEAU SECRET ! TERMINE LE TABLEAU POUR OUVRIR LE CHEMIN.', time: this.time }); return; }
       if (e.def.shieldAll) { this.shieldsBroken++; this.gold += e.def.gold; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 9 }); this.shake = Math.max(this.shake || 0, .35); const left = this.enemies.some(o => o !== e && !o.dead && o.def.shieldAll); this.texts.push({ text: left ? 'MUR BRISÉ !' : 'PLUS DE MURS !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#4fc3ff', big: !left }); return; }
       if (e.def.crystal) { this.crystalsBroken++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 5 }); this.texts.push({ text: 'CRAC !', x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#7fd4ff' }); this.xp += 3; this.gainXp(3); if (this.boss && this.boss.mini && !this.enemies.some(o => !o.dead && o !== e && o.def.crystal)) this.texts.push({ text: 'IL EST VULNÉRABLE !', x: this.boss.x, y: this.boss.y + 5, z: this.boss.z, age: 0, color: '#ffd23f', big: true }); return; }
-      if (e.def.panel) { if (e.def.bad) { this.brigandsHit++; this.gold += e.def.gold; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ffd23f', size: 3 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: .05, kind: 'crit', color: '#fff' }); this.texts.push({ text: e.face ? 'ATTRAPÉ !' : '🤠 BRIGAND ATTRAPÉ !', x: e.x, y: e.y + 4, z: e.z, age: 0, color: '#ffd23f', big: true }); if (!(this.panels || []).some(o => o.def.bad && !o.dead)) for (const o of this.panels || []) if (o !== e && !o.dead) o.panel.life = Math.min(o.panel.life, o.panel.age + .35); }
+      if (e.def.panel) { if (e.def.bad) { this.brigandsHit++; if (e.panel && e.panel.age - e.panel.rise < 1) this.quickBrigands = (this.quickBrigands || 0) + 1; this.gold += e.def.gold; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ffd23f', size: 3 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: .05, kind: 'crit', color: '#fff' }); this.texts.push({ text: e.face ? 'ATTRAPÉ !' : '🤠 BRIGAND ATTRAPÉ !', x: e.x, y: e.y + 4, z: e.z, age: 0, color: '#ffd23f', big: true }); if (!(this.panels || []).some(o => o.def.bad && !o.dead)) for (const o of this.panels || []) if (o !== e && !o.dead) o.panel.life = Math.min(o.panel.life, o.panel.age + .35); }
         else { this.civilsHit++; this.hurt = .5; this.shake = Math.max(this.shake || 0, .5); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'pop', color: '#4fa3ff', size: 2 }); this.texts.push({ text: e.face ? 'OUPS ! PAS LUI !' : 'OUPS ! UN CIVIL !', x: e.x, y: e.y + 4, z: e.z, age: 0, color: '#ff3a3a', big: true }); } return; }
-      if (e.def.target || e.target === true) { this.targetsHit++; this.gold += e.def.gold; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ff3a3a', size: 2.5 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: .05, kind: 'crit', color: '#fff' });
+      if (e.def.target || e.target === true) { this.targetsHit++; if (this.time - e.spawnTime < 2) this.quickTargets = (this.quickTargets || 0) + 1; this.gold += e.def.gold; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ff3a3a', size: 2.5 }); this.bursts.push({ x: e.x, y: e.y, z: e.z, age: .05, kind: 'crit', color: '#fff' });
         if (e.def.flyer || e.flyer) this.texts.push({ text: 'TOUCHÉ !', x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#ffd23f' }); else { const n = Math.min(3, this.targetsHit); this.texts.push({ text: '🎯 CIBLE ' + n + ' / 3 !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#ffd23f', big: true }); if (n === 3 && (this.targetsBefore || 0) < 3) this.news.push({ kind: 'discovery', text: 'LES TROIS CIBLES ! UN MINI-JEU APPARAÎT SUR LA CARTE', time: this.time }); } return; }
       if (e.def.box) { this.boxesHit++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ffd23f', size: 2.5 }); for (let i = 0; i < 6; i++) this.bursts.push({ x: e.x + (this.random() - .5) * 3, y: e.y + (this.random() - .5) * 3, z: e.z, age: i * .05, kind: 'pop', color: ['#ff4f6b', '#4fc3ff', '#ffd23f', '#9cff6b', '#c54fff', '#fff'][i], size: 1.2 });
         this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'kaboom', color: '#ffd23f', size: 5, life: .7 }); this.shake = Math.max(this.shake || 0, .45); this.flash = Math.max(this.flash || 0, .15);
-        this.runLevel++; this.pendingLevels++; this.texts.push({ text: '⬆ NIVEAU ' + this.runLevel + ' !', x: e.x, y: e.y + 3, z: e.z, age: -.3, color: '#ffd23f', big: true }); if (this.special && !this.specialBusy) this.charge = Math.min(1, this.charge + CB.BOXES.charge); this.cardFly = { x: e.x, y: e.y, z: e.z, age: 0 }; return; }   // la carte vole vers nous, puis les trois choix   // boîte bonus : +1 niveau (trois cartes) et un bout de jauge
+        this.runLevel++; this.pendingLevels++; this.texts.push({ text: '⬆ NIVEAU ' + this.runLevel + ' !', x: e.x, y: e.y + 3, z: e.z, age: -.3, color: '#ffd23f', big: true }); if (this.special && !this.specialBusy) this.charge = this.capCharge(this.charge + CB.BOXES.charge); this.cardFly = { x: e.x, y: e.y, z: e.z, age: 0 }; return; }   // la carte vole vers nous, puis les trois choix   // boîte bonus : +1 niveau (trois cartes) et un bout de jauge
       if (e.def.gift) { this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'boom', color: '#ff4f9a', size: 2 }); this.texts.push({ text: 'CADEAU !', x: e.x, y: e.y + 3, z: e.z, age: 0, color: '#ffd23f', big: true }); this.pendingLevels++; this.cardFly = { x: e.x, y: e.y, z: e.z, age: 0 }; return; }
       if (e.def.hazard) { this.bombsDefused++; this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'ice', size: 6 }); this.texts.push({ text: 'POUF !', x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#e5bfff' }); this.xp += 4; this.gainXp(4); return; }
       this.kills++; this.combo++; this.comboTimer = 2.5; this.bestCombo = Math.max(this.bestCombo, this.combo);
       if (e.def.portal) { this.openPortal(e); return; }
       if (e.def.chest) { this.discover(e); return; }
+      if (CB.Missions) CB.Missions.recordKill(this, e);
       this.killsBy[e.type] = (this.killsBy[e.type] || 0) + 1;
+      if (this.missionCounters) { const c = this.missionCounters; if (e.elite) { c.elites[e.type] = (c.elites[e.type] || 0) + 1; if (!e.hurtPlayer) c.eliteClean++; } if (e.z < 15) c.closeKills++; if (e.z > 60) c.farKills++; if (e.burn) c.burn.add(e.id); if (e.frozen > 0 || e.chill > 0) c.freeze.add(e.id); }
       // secret de la nuit sans fin : au centième monstre abattu, le tableau 2 apparaît sur la carte
       if (this.wi === 0 && this.vi === 0 && this.E.unlockKills && !this.secretFound && this.nightKillsBefore < this.E.unlockKills && this.nightKillsBefore + this.kills >= this.E.unlockKills) this.secretFound = true;   // 100 abattus : le tableau 2 se révèle sur la carte, sans bandeau
       // variantes spéciales : un peu plus d'or (×2) et beaucoup plus d'XP (×5)
       const mult = (e.boss ? 40 : e.elite ? 2 : 1) * (CB.TIERS[e.tier || 0].gold || 1), xpMult = (e.boss ? 40 : e.elite ? 5 : 1) * (1 + (e.tier || 0)) * (this.def.type === 'boss' ? CB.BOSS_XP : 1);
       const gold = ((CB.goldBase(this.wi) + (e.def.gold || 0)) * s.gold + s.goldFlat) * mult * CB.comboMult(this.combo) * (this.fx.magnet > 0 ? 2 : 1), xpGain = CB.xpPerKill(this.wi) * xpMult;
       // Jauge spéciale : elle se remplit avec l'XP « brute » du monstre (élite ×5, palier de couleur, boss ×40 plafonné à la moitié), et chaque lancer du tableau rend le suivant plus long (CB.SPECIAL_RAMP)
-      const full = v => v > 1 - 1e-6 ? 1 : v, spXp = CB.xpPerKill(this.wi) * (e.boss ? 40 : e.elite ? 5 : 1) * (1 + (e.tier || 0));
+      const full = v => this.capCharge(v), spXp = CB.xpPerKill(this.wi) * (e.boss ? 40 : e.elite ? 5 : 1) * (1 + (e.tier || 0));
       if (this.special && !this.specialBusy) this.charge = full(this.charge + Math.min(.5, spXp / this.spNeed(this.special, this.spUses)));
       if (this.special2 && !this.special2Busy) this.charge2 = full(this.charge2 + Math.min(.5, spXp / this.spNeed(this.special2, this.spUses2)));   // pendant une attaque à durée (licorne, prière), la jauge ne se remplit pas
       this.gold += gold; this.xp += xpGain; this.gainXp(xpGain);
       if (s.harvest) { this.boost = Math.min(2, this.boost + gold * .01 * s.harvest); this.boostTimer = 5 + (s.harvest - 1); }
+      if (e.fuseCarrier) {
+        this.fusesHit++;
+        e.killedBy = 'feu';
+        this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: 'fire', size: 11 });
+        for (const neighbor of this.enemies) {
+          if (!neighbor.dead && !this.isDecor(neighbor) && Math.hypot(neighbor.x-e.x, neighbor.y-e.y, neighbor.z-e.z) <= 11) {
+            this.applyDamage(neighbor, s.damage * 2, false, 'feu');
+          }
+        }
+      }
       if (s.midas && e.killedBy === 'feu') { for (const o of this.enemies) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) < 6 + s.midas) this.applyDamage(o, 1.5 * s.midas * s.damage, false, 'midas'); for (let i = 0; i < 3 + s.midas; i++) this.bursts.push({ x: e.x + (this.random() - .5) * 3, y: e.y + this.random() * 3, z: e.z, age: 0, kind: 'pop', color: '#ffd23f', size: .7 }); }
-      if (s.lifesteal) this.hp = Math.min(this.maxHp, this.hp + s.lifesteal);
+      if (s.lifesteal) { const before = this.hp; this.hp = Math.min(this.maxHp, this.hp + s.lifesteal); if (this.hp > before) this.healFx = 1.1; }
       if (!e.quiet) this.bursts.push({ x: e.x, y: e.y, z: e.z, age: 0, kind: e.boss ? 'boom' : 'pop', color: e.color, size: e.size });
       this.texts.push({ text: '+' + Math.round(gold), x: e.x, y: e.y + 2, z: e.z, age: 0, color: '#ffd23f' });
       if (e.elite) this.elitesKilled++;
@@ -981,7 +1317,8 @@
     }
     cardAllowed(k) { const Sv = CB.Save; return !Sv || !Sv.cardAllowed || Sv.cardAllowed(this.profile, k); }   // cartes verrouillées au départ (débloquées en montant de niveau)
     // Rebrasser (récompense de niveau) : un nouveau tirage, autant de fois qu'on a de « rebrasser » dans ce tableau
-    reroll() { if (!this.choice || this.rerollsUsed >= this.rerolls) return false; this.rerollsUsed++; const before = this.choice.slice(); this.choice = null; this.offerCards(); if (!this.choice) this.choice = before; return true; }
+    get rerollsLeft() { return Math.max(0, this.rerolls - this.rerollsUsed) + (this.profile ? CB.Save.rerollStock(this.profile) : 0); }
+    reroll() { if (this.choosingCrew || !this.choice || this.over || this.rerollsLeft <= 0) return false; if (this.rerollsUsed < this.rerolls) this.rerollsUsed++; else this.profile.rerollStock = CB.Save.rerollStock(this.profile) - 1; const before = this.choice.slice(); this.choice = null; this.offerCards(); if (!this.choice) this.choice = before; return true; }
     // Cadeau surprise : un effet au hasard, toujours chouette
     openSurprise() {
       const s = this.stats, r = this.random, kinds = ['or', 'cartes', 'soin', 'boum', 'gel', 'jauge', 'mystere', 'enormes'], k = kinds[Math.floor(r() * kinds.length)]; let text = '';
@@ -995,14 +1332,39 @@
       else { s.size *= 1.5; s.damage *= 1.2; text = '🟣 BOULETS ÉNORMES !'; }
       this.surprises++; this.surpriseLast = k; this.flash = Math.max(this.flash || 0, .3); this.texts.push({ text: '🎁 CADEAU SURPRISE !', x: 0, y: 13, z: 16, age: 0, color: '#ff8ac6', big: true }); this.texts.push({ text, x: 0, y: 9, z: 12, age: -.6, color: '#ffd23f', big: true }); this.news.push({ kind: 'discovery', text: 'CADEAU SURPRISE : ' + text, time: this.time }); return k;
     }
-    pickCard(i) { if (!this.choice) return null; const key = this.choice[i] || this.choice[0]; this.cards.push(key); CB.CARDS[key].apply(this.stats, this, this.cardLevel(key)); { const c = CB.CARDS[key]; if (this.stats.luckyCard && key !== 'deChance' && !c.instant && !c.surprise && this.cardLevel(key) < c.max && this.random() < this.stats.luckyCard) { this.cards.push(key); c.apply(this.stats, this, this.cardLevel(key)); this.luckyHits = (this.luckyHits || 0) + 1; this.texts.push({ text: '🎲 DOUBLE CHANCE : ' + c.name.toUpperCase() + ' +1 !', x: 0, y: 12, z: 16, age: -.3, color: '#ffd23f', big: true }); } }   /* Double chance : un niveau bonus */ this.choice = null; this.pendingLevels = Math.max(0, this.pendingLevels - 1); if (this.pendingLevels > 0 && !this.over) this.offerCards(); return key; }
+    pickCard(i) {
+      if (!this.choice) return null;
+      if (this.choosingCrew) {
+        const key = this.choice[i];
+        if (!key) return null;
+        this.pirateCrew = key;
+        if (key === 'fishers') this.boardFishers();
+        this.choosingCrew = false;
+        this.choice = null;
+        return key;
+      } this.openingChoices = (this.openingChoices || 0) + 1; const key = this.choice[i] || this.choice[0]; const shieldBefore = this.shield; this.cards.push(key); if (CB.CARDS[key].combo && this.profile) (this.profile.usedCombos ||= {})[key] = true; CB.CARDS[key].apply(this.stats, this, this.cardLevel(key)); { const c = CB.CARDS[key]; if (this.stats.luckyCard && key !== 'deChance' && !c.instant && !c.surprise && this.cardLevel(key) < c.max && this.random() < this.stats.luckyCard) { this.cards.push(key); c.apply(this.stats, this, this.cardLevel(key)); this.luckyHits = (this.luckyHits || 0) + 1; this.texts.push({ text: '🎲 DOUBLE CHANCE : ' + c.name.toUpperCase() + ' +1 !', x: 0, y: 12, z: 16, age: -.3, color: '#ffd23f', big: true }); } }   /* Double chance : un niveau bonus */ if (this.shield > shieldBefore) this.shieldNotice = { time: 2.5, text: 'PROTECTION ACTIVÉE !' }; this.choice = null; this.pendingLevels = Math.max(0, this.pendingLevels - 1); if (this.pendingLevels > 0 && !this.over) this.offerCards(); return key; }
+    blockShield() {
+      this.shield--;
+      this.shieldFx = 1;
+      this.shieldNotice = { time: 2, text: this.shield ? 'COUP BLOQUÉ !' : 'DERNIER COUP BLOQUÉ !' };
+      this.bursts.push({ x: 0, y: 5, z: 7, age: 0, kind: 'ice', size: 9 });
+    }
     damage(n, from) {
+      if (this.over) return false;
+      // Un choc contre la coque fait fuir un pêcheur, même si le canon porte une armure.
+      if (this.fishers && from && n > 0 && !this.outro && !this.god) {
+        const crew=this.fishers.filter(f=>f.fledAt==null), side=from.x<0?-1:1;
+        const f=crew.find(f=>f.side===side)||crew[0];
+        if(f) { f.fledAt=this.time; this.shake=Math.max(this.shake||0,.5); this.texts.push({text:'JE PRÉFÈRE LA PISCINE !',x:0,y:10,z:18,age:0,color:'#ffe07a',big:true}); }
+      }
+      if (this.outro) return false;
       if (this.god) { if (!this.godHint || this.time - this.godHint > 1.5) { this.godHint = this.time; this.texts.push({ text: '🛡️ INVINCIBLE', x: 0, y: 6, z: 6, age: 0, color: '#ffd23f' }); } return false; }   // cheat
       if (this.fx.priere > 0) { if (!this.protectHint || this.time - this.protectHint > 1) { this.protectHint = this.time; this.texts.push({ text: '✝ PROTÉGÉ !', x: 0, y: 6, z: 6, age: 0, color: '#fff3a0' }); } this.bursts.push({ x: 0, y: 4, z: 6, age: 0, kind: 'ice', size: 6 }); return false; }
       if (this.fxMine('ghost') || this.fxMine('teleport') || this.random() < this.stats.dodge) { this.texts.push({ text: 'ESQUIVE !', x: 0, y: 6, z: 6, age: 0, color: '#7fd4ff' }); return false; }
-      if (this.shield > 0) { this.shield--; this.hurt = .3; this.texts.push({ text: 'BOUCLIER', x: 0, y: 6, z: 6, age: 0, color: '#7fd4ff' });
+      if (this.shield > 0) { this.blockShield();
         if (this.shield === 0 && this.stats.odin >= 2) { for (const e of this.enemies.slice()) if (!e.dead) this.applyDamage(e, 6 * this.stats.damage * this.stats.odin, true, 'odin'); this.bursts.push({ x: 0, y: 6, z: 12, age: 0, kind: 'boom', color: '#7fd4ff', size: 3 }); this.texts.push({ text: 'ONDE D’ODIN !', x: 0, y: 10, z: 12, age: 0, color: '#7fd4ff' }); }
         return false; }
+      if (this.missionCounters && n > 0) { this.missionCounters.damage += n; this.missionCounters.firstDamage = Math.min(this.missionCounters.firstDamage, this.time); if (from) from.hurtPlayer = true; }
       n *= 1 - Math.min(.6, this.stats.armor || 0);   // blindage (canon classique)
       if (this.armor > 0) { const a = Math.min(this.armor, n); this.armor -= a; n -= a; this.armorHit = .6; this.hurt = Math.max(this.hurt, .25); this.hitFx = 1; this.shake = Math.max(this.shake || 0, .55); this.combo = 0; if (this.armor <= 0) this.texts.push({ text: '🛡️ ARMURE BRISÉE !', x: 0, y: 7, z: 7, age: 0, color: '#9fdcff', big: true }); if (n <= 0) return true; }   // l'armure du canon prend le coup ; ce qui dépasse touche la vie
       this.hp = Math.max(0, this.hp - n); this.hurt = .6; this.combo = 0; this.hitFx = 1; this.shake = Math.max(this.shake || 0, .65);   // touché : secousse et gros écran rouge
@@ -1010,11 +1372,21 @@
       return true;
     }
     finish(won, reason) {
+      if (this.over) return;
+      this.finishLegacy(won, reason);
+      if (CB.Missions) CB.Missions.finish(this, won, reason);
+      if (this.fishers) {
+        this.fisherSurvivors = this.fishers.filter(f => f.fledAt == null).length;
+        const arrived = this.def.voyage ? won && this.time >= this.def.voyage.seconds : won && this.won && reason !== 'abandon';
+        this.fisherGold = arrived ? this.fisherSurvivors * (this.def.voyage?.reward ?? CB.FISHER_REWARD) : 0; this.bonusGold += this.fisherGold;
+      }
+    }
+    finishLegacy(won, reason) {
       if (this.over) return; this.over = true; this.won = won; this.reason = won ? 'gagne' : reason || 'detruit';
       if (reason === 'portail' && !this.endless) { this.portalDone = true; this.won = true; this.reason = 'portail'; this.stars = 0; this.bonusGold = Math.round(this.time / 12); this.bonusXp = Math.round(this.time / 3); return; }   // le portail d'un tableau ordinaire : on voyage, sans étoile pour ce tableau
-      if (this.brigands) { const pct = Math.max(0, this.brigandsHit - this.civilsHit) / (this.brigands.rounds * Math.max(1, Math.round(this.brigands.bads || 1))), m = this.brigands.medals; this.stars = CB.medalStars(pct, m); this.medalMax = m.length; this.won = this.stars > 0; this.reason = 'brigands'; this.bonusGold = this.brigandsHit * 3; this.bonusXp = this.brigandsHit * 4; return; }
+      if (this.brigands) { const pct = Math.max(0, this.brigandsHit - this.civilsHit) / this.brigandsTotal, m = this.brigands.medals; this.stars = CB.medalStars(pct, m); this.medalMax = m.length; this.won = this.stars > 0; this.reason = 'brigands'; this.bonusGold = this.brigandsHit * 3; this.bonusXp = this.brigandsHit * 4; return; }
       if (this.cibles) { const pct = this.targetsHit / this.cibles.count, m = this.cibles.medals; this.stars = CB.medalStars(pct, m); this.medalMax = m.length; this.won = this.stars > 0; this.reason = 'cibles'; this.bonusGold = this.targetsHit * 2; this.bonusXp = this.targetsHit * 3; return; }
-      if (this.swarm) { const st = this.swarm.stars; this.stars = this.time >= st[2] ? 3 : this.time >= st[1] ? 2 : this.time >= st[0] ? 1 : 0; this.won = this.stars > 0; this.reason = reason || 'nuee'; this.bonusGold = Math.round(this.time / 12); this.bonusXp = Math.round(this.time / 3); return; }
+      if (this.swarm) { const st = this.swarm.stars; this.stars = this.time >= st[2] ? 3 : this.time >= st[1] ? 2 : this.time >= st[0] ? 1 : 0; this.won = !!won && this.time >= this.def.seconds; if (!this.won) this.stars = 0; this.reason = reason || 'nuee'; this.bonusGold = Math.round(this.time / 12); this.bonusXp = Math.round(this.time / 3); return; }
       if (this.endless) { // la nuit se termine toujours « bien » : les étoiles dépendent du temps survécu
         const st = this.E.stars; this.stars = this.time >= st[2] ? 3 : this.time >= st[1] ? 2 : this.time >= st[0] ? 1 : 0; this.won = this.stars > 0; this.reason = reason || 'nuit';
         if (reason === 'portail') { this.portalDone = true; this.won = true; this.stars = Math.max(1, this.stars); }
@@ -1031,23 +1403,26 @@
   // Encaisse les récompenses d'une vague terminée dans le profil (une seule fois).
   CB.claim = (profile, wave) => {
     if (!wave.over || wave.claimed) return null; wave.claimed = true;
+    if (wave.stageDiscoveries) { const key = CB.Missions.key(wave.wi, wave.vi), entries = (profile.stageBestiary ||= {})[key] ||= {}; Object.assign(entries, wave.stageDiscoveries); }
     const gold = Math.round(wave.gold) + wave.bonusGold, xp = Math.round(wave.xp) + wave.bonusXp;
     profile.gold += gold; const levels = CB.Save.addXp(profile, xp);
     profile.kills += wave.kills; profile.plays++; profile.seenBy ||= {}; profile.killsBy ||= {};
     for (const [k, n] of Object.entries(wave.seenBy)) profile.seenBy[k] = (profile.seenBy[k] || 0) + n; for (const [k, n] of Object.entries(wave.killsBy)) profile.killsBy[k] = (profile.killsBy[k] || 0) + n; profile.bestCombo = Math.max(profile.bestCombo || 0, wave.bestCombo);
-    let newWorld = false, newStars = 0, newNodes = 0; const S = CB.Save, worldBefore = S.worldUnlocked(profile, wave.wi + 1), revealedBefore = S.revealed(profile), portalBefore = !!profile.portal, targetsBefore = profile.targetsHit || 0, b4Before = S.stars(profile, 'foret', 3) > 0, boatBefore = !!profile.boatSecret;
-    if (wave.boatSecret) profile.boatSecret = true; const powerBefore = wave.powerWon ? S.powerOwned(profile, wave.powerWon) : true; if (wave.powerWon) S.grantPower(profile, wave.powerWon); const hwBefore = wave.worldWon ? S.hiddenOpen(profile, wave.worldWon) : true; if (wave.worldWon) S.openHidden(profile, wave.worldWon); const portalWBefore = S.portalFound(profile, wave.world.id);
-    if (wave.def.targets && wave.targetsHit) profile.targetsHit = Math.max(targetsBefore, Math.min(3, wave.targetsHit));   // les trois cibles dans une même partie (le meilleur résultat est gardé)
+    let newWorld = false, newStars = 0, newNodes = 0; const S = CB.Save, nextWorld = CB.nextMainWorld ? CB.nextMainWorld(wave.wi) : wave.wi + 1, worldBefore = S.worldUnlocked(profile, nextWorld), revealedBefore = S.revealed(profile), portalBefore = !!profile.portal, targetsBefore = profile.targetsHit || 0, b4Before = S.stars(profile, 'foret', CB.WORLDS[0].extra2.from) > 0, boatBefore = !!profile.boatSecret;
+    if (wave.boatSecret && wave.won) profile.boatSecret = true; const powerBefore = wave.powerWon ? S.powerOwned(profile, wave.powerWon) : true; if (wave.powerWon) S.grantPower(profile, wave.powerWon); const hwBefore = wave.worldWon ? S.hiddenOpen(profile, wave.worldWon) : true; if (wave.worldWon) S.openHidden(profile, wave.worldWon); const portalWBefore = S.portalFound(profile, wave.world.id);
+    if (wave.wi === 0 && wave.def.targets && wave.targetsHit) profile.targetsHit = Math.max(targetsBefore, Math.min(3, wave.targetsHit));   // les trois cibles dans une même partie (le meilleur résultat est gardé)
     // les secrets comptent quel que soit le type du tableau (le 1-1 est un tableau relié « 100 à abattre », plus la nuit sans fin)
     if (wave.wi === 0 && wave.vi === 0) profile.nightKills = (profile.nightKills || 0) + wave.kills;
     if (wave.discoveries) profile.discovered = Math.min(wave.E.maxDiscoveries, (profile.discovered || 0) + wave.discoveries);
     if (wave.portalDone) S.setPortal(profile, wave.world.id);   // monde 1 : profile.portal ; ailleurs : profile.portals[monde]
     if (wave.openEnded) profile.bestTime = Math.max(profile.bestTime || 0, Math.round(wave.time));
     if (wave.won) {
-      profile.wins++; const arr = profile.progress[wave.world.id] ||= []; const before = arr[wave.vi] || 0; arr[wave.vi] = Math.max(before, wave.stars); newStars = Math.max(0, arr[wave.vi] - before);
-      newWorld = !worldBefore && S.worldUnlocked(profile, wave.wi + 1) && wave.wi + 1 < CB.WORLDS.length;
+      if (!wave.missionResults || wave.eventFinished) profile.wins++; const arr = profile.progress[wave.world.id] ||= []; const before = arr[wave.vi] || 0;
+      let earned = wave.stars; if (wave.missionResults) { const key = CB.Missions.key(wave.wi, wave.vi), done = (profile.missionStars ||= {})[key] ||= {}; for (const m of wave.missionResults) if (m.complete) done[m.id] = true; earned = Math.min(3, Object.values(done).filter(Boolean).length); if (wave.eventFinished) (profile.stageFinished ||= {})[key] = true; }
+      arr[wave.vi] = Math.max(before, earned); newStars = Math.max(0, arr[wave.vi] - before);
+      newWorld = !worldBefore && nextWorld >= 0 && S.worldUnlocked(profile, nextWorld) && nextWorld < CB.WORLDS.length;
     }
-    newNodes = S.revealed(profile) - revealedBefore + (profile.portal && !portalBefore ? 1 : 0) + ((profile.targetsHit || 0) >= 3 && targetsBefore < 3 ? 1 : 0) + (wave.wi === 0 && wave.vi === 3 && wave.won && !b4Before ? 1 : 0) + (profile.boatSecret && !boatBefore ? 1 : 0) + (!hwBefore ? 1 : 0) + (wave.wi > 0 && !portalWBefore && S.portalFound(profile, wave.world.id) ? 1 : 0);
+    newNodes = S.revealed(profile) - revealedBefore + (profile.portal && !portalBefore ? 1 : 0) + ((profile.targetsHit || 0) >= 3 && targetsBefore < 3 ? 1 : 0) + (wave.wi === 0 && wave.vi === CB.WORLDS[0].extra2.from && wave.won && !b4Before ? 1 : 0) + (profile.boatSecret && !boatBefore ? 1 : 0) + (!hwBefore ? 1 : 0) + (wave.wi > 0 && !portalWBefore && S.portalFound(profile, wave.world.id) ? 1 : 0);
     return { gold, xp, levels, stars: wave.stars, newStars, newWorld, newNodes, level: profile.level, newPower: !powerBefore };
   };
 })(window.CB);

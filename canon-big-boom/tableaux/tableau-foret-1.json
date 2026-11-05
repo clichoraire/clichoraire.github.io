@@ -1,12 +1,12 @@
 {
   "slot": "foret-1",
   "world": "foret",
-  "name": "Niveau 1-1",
-  "text": "",
+  "name": "Les Premiers Pas",
+  "text": "100",
   "type": "kill",
   "goal": 100,
-  "seconds": 300,
-  "density": 1,
+  "seconds": 120,
+  "density": 1.1,
   "scene": "foret",
   "sky": [
     "#0b1437",
@@ -20,31 +20,65 @@
     "enemies": []
   },
   "spawns": [],
-  "boss": null,
-  "hpScale": 1,
-  "speedScale": 1,
   "sequence": [
     {
       "kinds": [
         {
           "type": "bat",
-          "count": 8
+          "count": 8,
+          "elite": false
         }
       ],
-      "every": 1.1,
+      "every": 0.7,
       "at": null,
-      "elite": false
+      "rel": null
     },
     {
       "kinds": [
         {
           "type": "bat",
-          "count": 20
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "bat",
+          "count": 9,
+          "elite": false
         }
       ],
-      "every": 1,
+      "every": 0.7,
       "at": null,
-      "elite": false,
+      "rel": null,
+      "left": 1
+    },
+    {
+      "kinds": [
+        {
+          "type": "bat",
+          "count": 1,
+          "elite": true
+        }
+      ],
+      "every": 0.3,
+      "at": null,
+      "rel": -2,
+      "left": null
+    },
+    {
+      "kinds": [
+        {
+          "type": "bat",
+          "count": 13,
+          "elite": false
+        },
+        {
+          "type": "owl",
+          "count": 1,
+          "elite": false
+        }
+      ],
+      "every": 0.7,
+      "at": null,
       "rel": null,
       "left": null
     },
@@ -52,70 +86,95 @@
       "kinds": [
         {
           "type": "bat",
-          "count": 18
+          "count": 15,
+          "elite": false
         },
         {
           "type": "owl",
-          "count": 3,
+          "count": 1,
           "elite": false
         }
       ],
-      "every": 0.8,
+      "every": 0.6,
       "at": null,
-      "elite": false
+      "rel": null
     },
     {
       "kinds": [
         {
           "type": "bat",
-          "count": 6
+          "count": 25,
+          "elite": false
         }
       ],
-      "every": 0,
+      "every": 0.6,
       "at": null,
-      "elite": false,
-      "rel": -2,
+      "rel": null
+    },
+    {
+      "kinds": [
+        {
+          "type": "owl",
+          "count": 2,
+          "elite": false
+        }
+      ],
+      "every": 0.6,
+      "at": null,
+      "rel": 4,
       "left": null
     },
     {
       "kinds": [
         {
           "type": "bat",
-          "count": 20
+          "count": 1,
+          "elite": true
         },
         {
-          "type": "owl",
-          "count": 6
-        },
-        {
-          "type": "ghost",
-          "count": 5,
+          "type": "bat",
+          "count": 14,
           "elite": false
         }
       ],
-      "every": 0.5,
+      "every": 0.6,
       "at": null,
-      "elite": false,
-      "rel": -2,
+      "rel": -1,
       "left": null
     },
     {
       "kinds": [
         {
-          "type": "bat",
-          "count": 60
-        },
-        {
           "type": "owl",
-          "count": 10
+          "count": 7,
+          "elite": false
         }
       ],
-      "every": 0.3,
+      "every": 1,
       "at": null,
-      "elite": false
+      "rel": null
+    },
+    {
+      "kinds": [
+        {
+          "type": "bat",
+          "count": 100,
+          "elite": false
+        }
+      ],
+      "every": 0.6,
+      "at": null,
+      "rel": 4,
+      "left": null
     }
   ],
-  "chestAt": 25,
-  "chestEvery": 35,
-  "portalAt": 45
+  "boss": null,
+  "hpScale": 1,
+  "speedScale": 1,
+  "maxAlive": 0,
+  "chestAt": 0,
+  "chestEvery": 0,
+  "portalAt": 0,
+  "spread": 0.7,
+  "portalKills": 0
 }

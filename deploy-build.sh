@@ -10,6 +10,8 @@ MSG="${1:-Mise à jour des jeux}"; [ "$MSG" = "--force" ] && MSG="Mise à jour d
 # mise en ligne mais pas sa version, on refuse (sauf --force), pour ne jamais republier un « 1.0 » périmé.
 ver_of() { node -e "const w={};global.window=w;require('$1');process.stdout.write((w.ZC||w.HK||w.SK||w.FS||w.BC||w.CB||w.BK).VERSION)"; }
 VER_ZC=$(ver_of "$PROJETS/ZoneControl/js/config.js"); VER_HK=$(ver_of "$PROJETS/HockeyBoisjoli/js/config.js"); VER_SK=$(ver_of "$PROJETS/SnowKids/js/config.js"); VER_FS=$(ver_of "$PROJETS/FrigoSnap/js/config.js"); VER_BC=$(ver_of "$PROJETS/BallonChasseur/js/config.js"); VER_CB=$(ver_of "$PROJETS/CanonBigBoom/js/config.js"); VER_BK=$(ver_of "$PROJETS/Bomberkid/js/config.js")
+# Go Godefroy Go n'a ni config.js ni dépôt Git : sa version est dans le fichier VERSION, à augmenter à chaque mise en ligne.
+VER_GG=$(tr -d '[:space:]' < "$PROJETS/go-godefroy-go/VERSION")
 HEAD_ZC=$(git -C "$PROJETS/ZoneControl" rev-parse HEAD); HEAD_HK=$(git -C "$PROJETS/HockeyBoisjoli" rev-parse HEAD); HEAD_SK=$(git -C "$PROJETS/SnowKids" rev-parse HEAD); HEAD_FS=$(git -C "$PROJETS/FrigoSnap" rev-parse HEAD); HEAD_BC=$(git -C "$PROJETS/BallonChasseur" rev-parse HEAD); HEAD_CB=$(git -C "$PROJETS/CanonBigBoom" rev-parse HEAD); HEAD_BK=$(git -C "$PROJETS/Bomberkid" rev-parse HEAD)
 if [ -f versions.json ] && [[ " $* " != *" --force "* ]]; then
   for j in "bunker $VER_ZC $HEAD_ZC" "hockey $VER_HK $HEAD_HK" "snow $VER_SK $HEAD_SK" "frigo $VER_FS $HEAD_FS" "ballon $VER_BC $HEAD_BC" "canon $VER_CB $HEAD_CB" "bomber $VER_BK $HEAD_BK"; do set -- $j
@@ -18,9 +20,9 @@ if [ -f versions.json ] && [[ " $* " != *" --force "* ]]; then
     if [ "$OLDC" != "$3" ] && [ "$OLDV" = "$2" ]; then echo "✖ $1 : le code a changé mais la version est encore $2. Augmente VERSION dans js/config.js (ou ./deploy.sh --force)."; exit 1; fi
   done
 fi
-echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"hockey\": { \"version\": \"$VER_HK\", \"commit\": \"$HEAD_HK\" }, \"snow\": { \"version\": \"$VER_SK\", \"commit\": \"$HEAD_SK\" }, \"frigo\": { \"version\": \"$VER_FS\", \"commit\": \"$HEAD_FS\" }, \"ballon\": { \"version\": \"$VER_BC\", \"commit\": \"$HEAD_BC\" }, \"canon\": { \"version\": \"$VER_CB\", \"commit\": \"$HEAD_CB\" }, \"bomber\": { \"version\": \"$VER_BK\", \"commit\": \"$HEAD_BK\" } }" > versions.json
-echo "window.GAME_VERSIONS = { 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK', 'snow-kids/': '$VER_SK', 'frigo-snap/': '$VER_FS', 'ballon-chasseur/': '$VER_BC', 'canon-big-boom/': '$VER_CB', 'bomberkid/': '$VER_BK' };" > versions.js
-echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK · Snow Kids $VER_SK · Frigo Snap $VER_FS · Ballon Chasseur $VER_BC · Canon Big Boom $VER_CB · Bomberkid $VER_BK"
+echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"hockey\": { \"version\": \"$VER_HK\", \"commit\": \"$HEAD_HK\" }, \"snow\": { \"version\": \"$VER_SK\", \"commit\": \"$HEAD_SK\" }, \"frigo\": { \"version\": \"$VER_FS\", \"commit\": \"$HEAD_FS\" }, \"ballon\": { \"version\": \"$VER_BC\", \"commit\": \"$HEAD_BC\" }, \"canon\": { \"version\": \"$VER_CB\", \"commit\": \"$HEAD_CB\" }, \"bomber\": { \"version\": \"$VER_BK\", \"commit\": \"$HEAD_BK\" }, \"godefroy\": { \"version\": \"$VER_GG\" } }" > versions.json
+echo "window.GAME_VERSIONS = { 'go-godefroy-go/': '$VER_GG', 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK', 'snow-kids/': '$VER_SK', 'frigo-snap/': '$VER_FS', 'ballon-chasseur/': '$VER_BC', 'canon-big-boom/': '$VER_CB', 'bomberkid/': '$VER_BK' };" > versions.js
+echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK · Snow Kids $VER_SK · Frigo Snap $VER_FS · Ballon Chasseur $VER_BC · Canon Big Boom $VER_CB · Bomberkid $VER_BK · Go Godefroy Go $VER_GG"
 
 echo "▸ Bunker Zone (copie de ZoneControl/)"
 rsync -a --delete --exclude .git --exclude .DS_Store --exclude '_extract.html' "$PROJETS/ZoneControl/" bunker-zone/
@@ -45,6 +47,16 @@ echo "▸ Bomberkid (copie de Bomberkid/)"
 # ne distingue pas la casse mais GitHub Pages, oui.
 if git ls-files --error-unmatch -- Bomberkid >/dev/null 2>&1; then git rm -r -q --cached -- Bomberkid; rm -rf Bomberkid; fi
 rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/Bomberkid/" bomberkid/
+
+echo "▸ Go Godefroy Go (code et seulement les images, sons et musiques utilisés par le jeu)"
+# Le dossier source contient aussi des aperçus, des sons bruts et des notes de travail : on ne publie que ce que le jeu charge.
+G="$PROJETS/go-godefroy-go"
+rm -rf go-godefroy-go; mkdir -p go-godefroy-go/assets/audio go-godefroy-go/assets/music
+cp "$G"/*.js "$G"/*.cjs "$G"/*.css "$G/index.html" "$G/README.md" go-godefroy-go/
+cp "$G"/assets/*.png go-godefroy-go/assets/
+rsync -a --exclude .DS_Store "$G/assets/wings" "$G/assets/equipment" go-godefroy-go/assets/
+rsync -a --exclude .DS_Store "$G/assets/audio/mixed" go-godefroy-go/assets/audio/
+rsync -a --exclude .DS_Store "$G/assets/music/mixed" go-godefroy-go/assets/music/
 
 echo "▸ Sosaria Online (bundle + assets chargés à l'exécution)"
 (cd "$PROJETS/sosaria" && node build.js >/dev/null)

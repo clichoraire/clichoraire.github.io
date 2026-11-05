@@ -163,6 +163,7 @@
     ec.addEventListener('pointerdown', e => { e.preventDefault(); ec.setPointerCapture(e.pointerId); const cur = BK.current; if (cur && cur.onPointer) cur.onPointer('down', ...epos(e), e.buttons); });
     ec.addEventListener('pointermove', e => { const cur = BK.current; if (cur && cur.onPointer) cur.onPointer('move', ...epos(e), e.buttons); });
     ec.addEventListener('pointerup', e => { const cur = BK.current; if (cur && cur.onPointer) cur.onPointer('up', ...epos(e), 0); });
+    for (const type of ['pointercancel','lostpointercapture']) ec.addEventListener(type, e => { const cur = BK.current; if (cur && cur.onPointer) cur.onPointer('cancel', ...epos(e), 0); });
     ec.addEventListener('wheel', e => { e.preventDefault(); const cur = BK.current; if (cur && cur.onWheel) cur.onWheel(e.deltaY); }, { passive: false });
     window.addEventListener('keydown', () => BK.audio.unlock(), { once: true });
     window.addEventListener('pointerdown', () => BK.audio.unlock(), { once: true });

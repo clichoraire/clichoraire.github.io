@@ -169,7 +169,7 @@
   // ---------------------------------------------------------------- trampoline
   W.trampolineJump = function (p, c, r) {
     const gz = (x, y) => this.explore ? this.groundZ(x, y) : 0, run = !!p.running, dir = p.dir ?? 0, D = BK.DIRS[dir], h0 = gz(c + 0.5, r + 0.5);
-    const free = (cc, rr) => this.inside(cc, rr) && !this.cell(cc, rr) && this.walkableTerrain(cc, rr) && !this.solidEnemyAt(cc, rr) && gz(cc + 0.5, rr + 0.5) <= h0 + 0.65;
+    const free = (cc, rr) => this.inside(cc, rr) && !this.cell(cc, rr) && this.walkableTerrain(cc, rr) && !this.solidEnemyAt(cc, rr) && gz(cc + 0.5, rr + 0.5) <= h0 + 0.61 && this.jumpHeightClear(p.x,p.y,cc+.5,rr+.5);
     let target = null; for (let d = run ? 3 : 2; d >= 1 && !target; d--) { const cc = c + D.dx * d, rr = r + D.dy * d; if (free(cc, rr)) target = { c: cc, r: rr }; }
     const tx = target ? target.c + 0.5 : c + 0.5, ty = target ? target.r + 0.5 : r + 0.5, b = target ? this.bombAt(target.c, target.r) : null;
     p.air = { x0: p.x, y0: p.y, z0: gz(p.x, p.y), x1: tx, y1: ty, z1: gz(tx, ty) + (b ? 0.55 : 0), h: run ? 1.5 : 1.15, t: 0, dur: run ? 0.8 : 0.62, bomb: b, dir };

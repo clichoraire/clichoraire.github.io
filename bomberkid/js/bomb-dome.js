@@ -14,7 +14,7 @@ W.domeCells=function(b,c,r){
   if(!clear(x,y))continue;
   // Bloc de métal : seule sa face en bois cède, quand le feu arrive dessus (face opposée à sa direction) ; il ne traverse pas.
   if(this.cell(x,y)===BK.METAL){const di=Math.abs(x-c)>=Math.abs(y-r)?(x>c?3:1):(y>r?0:2);if((this.metal[this.idx(x,y)]+2)%4===di)cells.push({c:x,r:y,distance,wood:true});continue;}
-  if(wall(x,y)){if(['chest','mailbox','beehive'].includes(this.deco[this.idx(x,y)]))cells.push({c:x,r:y,distance});continue;}   // un coffre au bord du souffle éclate quand même
+  if(wall(x,y)){if(['chest','mailbox','beehive'].includes(this.deco[this.idx(x,y)])||BK.GNOME_HOUSES.has(this.deco[this.idx(x,y)]))cells.push({c:x,r:y,distance});continue;}   // un coffre au bord du souffle éclate quand même
   cells.push({c:x,r:y,distance});
  }
  return cells;
@@ -23,7 +23,7 @@ W.explodeDome=function(b,c,r){
  const cells=this.domeCells(b,c,r),chains=[];this.domeBursts=this.domeBursts||[];this.domeBursts.push({c,r,radius:b.fire,z:this.hAt(c,r),level:b.level||1,t:0,duration:BK.flameLife(b.level||1),cells:new Set(cells.filter(q=>![BK.HARD,BK.GATE,BK.SEALED,BK.METAL].includes(this.cell(q.c,q.r))).map(q=>q.c+','+q.r))});
  for(const q of cells){const x=q.c,y=q.r,v=this.cell(x,y),kind=this.deco[this.idx(x,y)];
   if(this.hitBridgeColumn?.(x,y,b))continue;
-  if(this.hitBlastDrawbridge?.(x,y,b))continue;
+  if(this.hitBlastDrawbridge?.(x,y,b)||this.hitGnomeHouse(x,y,b,c,r))continue;
   if(v===BK.METAL){if(!q.wood)continue;this.destroyMetal(x,y,b.owner);}
   else if([BK.HARD,BK.GATE,BK.SEALED].includes(v)){
    if(kind==='chest')this.destroyChest(x,y,b.owner);else if(kind==='mailbox')this.destroyMailbox(x,y,b.owner);else if(kind==='beehive')this.destroyHive(x,y,b.owner);else continue;

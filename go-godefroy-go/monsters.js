@@ -14,7 +14,7 @@ function bouncePose(age,variant){const t=Math.max(0,Math.min(1,age/.95)),ease=t*
 function sweep(ax,ay,bx,by,rx,ry){ax/=rx;ay/=ry;const dx=bx/rx-ax,dy=by/ry-ay,a=dx*dx+dy*dy,b=2*(ax*dx+ay*dy),c=ax*ax+ay*ay-1,d=b*b-4*a*c;if(c<=0)return 0;if(a===0||d<0)return Infinity;const t=(-b-Math.sqrt(d))/(2*a);return t>=0&&t<=1?t:Infinity;}
 function feedback(f,rating,label,x=f.x,y=f.y){f.feedback={rating,label,x,y,at:f.monsterTime};if(rating==='hurt'){f.message=label;f.messageTime=1.7;}else{f.message='';f.messageTime=0;}}
 function event(f,m,speed,type,rating){const e={x:f.x,y:f.y,kind:m.kind,speed,type,rating};f.monsterEvents.push(e);if(f.monsterEvents.length>8)f.monsterEvents.shift();return e;}
-function rating(f){const age=f.monsterTime-(f.timingPress??-Infinity);return age<=.28?'perfect':age<=.75?'good':'miss';}
+function rating(){return 'perfect';}
 function hurt(f,m,type){const speed=Math.hypot(f.vx,f.vy);f.vx*=.55;f.vy=Math.min(-22,f.vy-45);f.monsterCooldown=.65;f.hitFlash=.35;f.monsterReaction=null;feedback(f,'hurt',type==='weapon'?'AÏE ! · MASSUE !':'OUCH ! · GOBELIN ARMÉ !');return event(f,m,speed,type,'hurt');}
 function attacks(f,px,py,dt){
  f.orcs??=new Map();f.projectiles??=[];
@@ -57,9 +57,9 @@ function collide(f,px,py,dt,input={}){
  f.vy=Math.min(arcLimit*(grade==='perfect'?1:grade==='good'?.8:.65),fadingLimit,Math.sqrt(Math.max(0,out*out-f.vx*f.vx))*(grade==='perfect'?1:grade==='good'?.92:.82));f.lastMonsterHop=f.vy;
  f.manualGlide=0;f.pitch=.35;f.stalled=false;f.stall=0;f.monsterCooldown=.2;f.monsterBounces=(f.monsterBounces||0)+1;f.monsterReaction={at:f.monsterTime,variant:1,boing:true,rating:grade,speed,impactX:m.x,impactY:m.y+(m.height-m.lane)/.85};
  // A squashed goblin/orc pays once; slimes remain bounce pads.
- if(m.kind<6){f.goldEnemies??=new Set();if(!f.goldEnemies.has(m.id)){const gold=m.kind===5?12:5;f.goldEnemies.add(m.id);f.collectedGold=(f.collectedGold||0)+gold;f.goldEffects??=[];f.goldEffects.push({x:f.x,y:f.y,at:f.time||0,value:gold});f.monsterEvents.push({x:f.x,y:f.y,type:'gold',gold});}}
+ if(m.kind<6){f.goldEnemies??=new Set();if(!f.goldEnemies.has(m.id)){const gold=m.kind===5?12:5;f.goldEnemies.add(m.id);f.collectedGold=(f.collectedGold||0)+gold;f.goldEffects??=[];f.goldEffects.push({x:f.x,y:f.y,at:f.time||0,value:gold});f.monsterEvents.push({x:f.x,y:f.y,type:'gold',gold});combo(f,f.x,f.y);}}
  for(const id of f.goldEnemies||[])if(at(id,f.monsterTime).x<f.x-800)f.goldEnemies.delete(id);
- feedback(f,grade,grade==='perfect'?'★★★ PARFAIT !':grade==='good'?'★★ RÉUSSI !':'RATÉ · PETIT REBOND');return event(f,m,speed,'bounce',grade);
+ feedback(f,grade,'');return event(f,m,speed,'bounce',grade);
 }
 function boingPose(pressAge,hitAge,grade='miss'){
  const press=pressAge>=0&&pressAge<.35?Math.sin(Math.PI*pressAge/.35):0;
@@ -67,5 +67,8 @@ function boingPose(pressAge,hitAge,grade='miss'){
  const wave=hitAge>=0&&hitAge<.9?Math.sin(hitAge/.9*Math.PI*3)*Math.exp(-hitAge*3)*strength:0;
  return {sx:1+press*.09-wave*.15,sy:1-press*.10+wave*.19,glow:Math.max(press,Math.abs(wave))};
 }
-const api={boingPose,hash,hop,sweep,rating,stride,walkFrame,WALK_RATE,WALK_SPEED,SPACING,at,nearby,collide,retention,bouncePose};if(typeof module!=='undefined')module.exports=api;else root.GGMonsters=api;
+// Destruction combo: each squashed monster, shattered tower, cannon… pays a little more than the one before (10, 15, 25, 35…).
+function comboGold(n){return n<=1?10:n*10-5;}
+function combo(f,x,y){f.combo=(f.combo||0)+1;const gold=comboGold(f.combo);f.comboGold=(f.comboGold||0)+gold;f.comboEffects??=[];f.comboEffects.push({x,y,at:f.time||0,n:f.combo,gold});if(f.comboEffects.length>5)f.comboEffects.shift();f.monsterEvents??=[];f.monsterEvents.push({x,y,type:'combo',n:f.combo,gold});return gold;}
+const api={combo,comboGold,boingPose,hash,hop,sweep,rating,stride,walkFrame,WALK_RATE,WALK_SPEED,SPACING,at,nearby,collide,retention,bouncePose};if(typeof module!=='undefined')module.exports=api;else root.GGMonsters=api;
 })(typeof window!=='undefined'?window:globalThis);

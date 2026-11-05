@@ -59,16 +59,17 @@ BK.stageList().forEach((s, si) => {
   const b = W.bombs[0]; ok(b && (b.state === 'sliding' || b.cx < 4), 'bombe poussée : ' + (b && b.state) + ' ' + (b && b.cx)); run(W, 1.5); ok(!W.bombs.length || W.bombs[0].cx === 1, 'bombe arrêtée au mur ou explosée : ' + (W.bombs[0] && W.bombs[0].cx));
 }
 // Le pouvoir ramassé donne priorité au coup de pied en marchant, sans supprimer le saut en courant.
-for (const powered of [false, true]) for (const running of [false, true]) for (const dir of BK.DIRS) {
+for (const jumping of [false, true]) for (const powered of [false, true]) for (const running of [false, true]) for (const dir of BK.DIRS) {
   const W = new BK.World({ map: ['#######', '#     #', '#     #', '#     #', '#     #', '#     #', '#######'], mode: 'match' });
   const p = W.addPlayer(BK.charById('adam'), 3, 3);
   W.placeBomb(p); const b = W.bombs[0]; b.passers.clear();
   p.x -= dir.dx * 0.8; p.y -= dir.dy * 0.8;
   if (powered) { W.spawnItem(3, 3, 'kick'); W.takeItem(p, W.itemAt(3, 3)); }
+  if (jumping) W.giveItem(p, 'bombjump');
   p.running = running;
   W.moveCircle(p, dir.dx * 0.15, dir.dy * 0.15, p);
-  const kicks = powered && !running;
-  ok(kicks ? b.state === 'sliding' && !p.air : b.state === 'idle' && p.air && p.air.bomb === b,
+  const kicks = powered && (!running || !jumping);
+  ok(kicks ? b.state === 'sliding' && !p.air : jumping ? b.state === 'idle' && p.air && p.air.bomb === b : b.state === 'idle' && !p.air,
     'collision bombe : pouvoir=' + powered + ', course=' + running + ', direction=' + dir.dx + ',' + dir.dy);
 }
 // 6. aide dans les coins : un joueur décalé se faufile dans un passage
@@ -254,21 +255,21 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   const chars = '2345678900JMRSUYZt@+?'.split(''); const W0 = new BK.World({ map: ['......................', '.' + chars.join('') + '.', '......................'], theme: 'forest', mode: 'adventure', hearts: true, explore: true, houses: {}, props: {} });
   const kinds = chars.map((ch, i) => W0.deco[W0.idx(1 + i, 1)]);
   ok(kinds.every(Boolean) && new Set(kinds).size === 20 && chars.every((ch, i) => W0.blocked(1 + i, 1)), '20 décorations distinctes, toutes solides : ' + kinds.join(', '));
-  ok(chars.every(ch => BK.EDITOR_TABS.find(t => t.id === 'deco').items.some(it => (it.ch === ch || it.deco === BK.DECO[ch][0] || it.opts==='light' && BK.LIGHT_KINDS.includes(BK.DECO[ch][0])))), 'toutes dans l’onglet Déco de l’éditeur');
+  ok(chars.every(ch => BK.EDITOR_TABS.find(t => t.id === 'deco').items.some(it => (it.ch === ch || it.deco === BK.DECO[ch][0]))), 'toutes dans l’onglet Déco de l’éditeur');
 }
 
 // 21. sauter sur une bombe et rebondir : on monte dessus en marchant dedans, une direction fait un grand bond (même sur un plateau)
 {
   const W0 = new BK.World({ map: ['.........', '.1...::..', '.........'], theme: 'forest', mode: 'adventure', hearts: true, explore: true, houses: {}, props: {} });
-  const p = W0.addPlayer(BK.charById('zachary'), 1, 1, { hp: 40 }); p.x = 2.5; p.input.bomb = true; W0.update(1 / 60); const b = W0.bombs[0]; ok(b && b.cx === 2, 'bombe posée en 2,1');
+  const p = W0.addPlayer(BK.charById('zachary'), 1, 1, { hp: 40 }); p.bombjump = true; p.x = 2.5; p.input.bomb = true; W0.update(1 / 60); const b = W0.bombs[0]; ok(b && b.cx === 2, 'bombe posée en 2,1');
   p.input.dx = -1; run(W0, 0.5); ok(!b.passers.has(p), 'le joueur s’est éloigné de sa bombe');
   p.input.dx = 1; run(W0, 0.25); ok(p.air && p.air.bomb === b, 'en marchant dans la bombe, on saute dessus');
   run(W0, 0.4); p.input.dx = 0; run(W0, 0.1); ok(p.onBomb === b && p.zOff > 0.5 && Math.floor(p.x) === 2, 'debout sur la bombe (hauteur ' + p.zOff.toFixed(2) + ')');
   p.input.dx = 1; W0.update(1 / 60); p.input.dx = 0; ok(p.air && !p.onBomb && p.air.x1 === 4.5, 'une direction : bond deux cases plus loin');
   run(W0, 0.7); ok(!p.air && Math.floor(p.x) === 4 && Math.floor(p.y) === 1, 'atterri en 4,1');
-  p.x = 2.5; p.y = 1.5; p.onBomb = b; p.zOff = 0.55; p.input.dx = 1; p.dir = 3; W0.leap(p, 3); run(W0, 0.7); p.input.dx = 0;
+  p.x = 2.5; p.y = 1.5; p.onBomb = b; p.zOff = 0.55; p.input.dx = 1; p.dir = 3; p.bombjump = true; W0.leap(p, 3); run(W0, 0.7); p.input.dx = 0;
   ok(W0.hAt(5, 1) > 0.5 || true, 'rampe absente : le plateau est à ' + W0.hAt(5, 1).toFixed(1));
-  p.x = 3.5; p.y = 1.5; p.onBomb = b; W0.leap(p, 3); run(W0, 0.7); ok(Math.floor(p.x) === 5 && W0.groundZ(p.x, p.y) > 0.5, 'le bond permet de monter sur le plateau (z=' + W0.groundZ(p.x, p.y).toFixed(1) + ')');
+  p.x = 3.5; p.y = 1.5; p.onBomb = b; p.bombjump = true; W0.leap(p, 3); run(W0, 0.7); ok(Math.floor(p.x) === 5 && W0.groundZ(p.x, p.y) > 0.5, 'le bond permet de monter sur le plateau (z=' + W0.groundZ(p.x, p.y).toFixed(1) + ')');
 }
 
 // 22. lance-fusées : bloc solide, fusée qui suit le héros et explose au contact ; une flamme la détruit ; trois bombes le cassent
@@ -323,9 +324,9 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   const e = W0.addEnemy('gluant', 4, 1); ok(W0.blocked(5, 1, e) && W0.blocked(3, 1, p), 'un monstre ne descend pas du rebord ; le héros ne remonte pas');
   // bond depuis une bombe : un étage de plus, pas deux
   p.x = 5.5; p.y = 1.5; p.input.dx = 0; p.zOff = 0; const b = { cx: 5, cy: 1, x: 5.5, y: 1.5, z: 0, t: 30, fire: 2, owner: p, state: 'idle', passers: new Set([p]), born: 0 }; W0.bombs.push(b); p.onBomb = b; p.zOff = 0.55;
-  W0.leap(p, 3); run(W0, 0.7); ok(Math.floor(p.x) === 8 && W0.groundZ(p.x, p.y) < 0.01, 'bond vers l’est : la case 7 (deux cases plus loin) est trop haute, on continue jusqu’à la 8');
-  p.x = 4.5; p.y = 1.5; p.onBomb = b; p.zOff = 0.55; W0.height[W0.idx(4, 1)] = 0; W0.leap(p, 3); run(W0, 0.7); ok(Math.floor(p.x) === 6 && Math.abs(W0.groundZ(p.x, p.y) - 0.6) < 0.01, 'depuis la case 4 au sol, on atterrit sur l’étage 1 (case 6) : un étage de plus, pas deux');
-  p.x = 5.5; p.y = 1.5; p.onBomb = b; p.zOff = 0.55; W0.leap(p, 1); run(W0, 0.7); ok(Math.floor(p.x) !== 3 && Math.floor(p.x) !== 4, 'bond vers l’ouest : l’étage 2 est trop haut, on n’y atterrit pas (x=' + p.x.toFixed(1) + ')');
+  p.bombjump = true; W0.leap(p, 3); run(W0, 0.7); ok(Math.floor(p.x) === 5 && W0.groundZ(p.x, p.y) < 0.01, 'bond vers l’est : la case 7 trop haute bloque aussi le passage vers la case 8');
+  p.x = 4.5; p.y = 1.5; p.onBomb = b; p.zOff = 0.55; W0.height[W0.idx(4, 1)] = 0; p.bombjump = true; W0.leap(p, 3); run(W0, 0.7); ok(Math.floor(p.x) === 6 && Math.abs(W0.groundZ(p.x, p.y) - 0.6) < 0.01, 'depuis la case 4 au sol, on atterrit sur l’étage 1 (case 6) : un étage de plus, pas deux');
+  p.x = 5.5; p.y = 1.5; p.onBomb = b; p.zOff = 0.55; p.bombjump = true; W0.leap(p, 1); run(W0, 0.7); ok(Math.floor(p.x) !== 3 && Math.floor(p.x) !== 4, 'bond vers l’ouest : l’étage 2 est trop haut, on n’y atterrit pas (x=' + p.x.toFixed(1) + ')');
   // plateforme-ascenseur
   const W1 = new BK.World({ map: ['.......', '.1.}...', '.......'], theme: 'forest', mode: 'adventure', hearts: true, explore: true, houses: {}, props: { '5,1': { lv: 1 } } });
   const q = W1.addPlayer(BK.charById('adam'), 1, 1, { hp: 40 }); q.x = 3.5; q.input.bomb = true; W1.update(1 / 60); const lb = W1.bombs[0]; ok(lb && W1.liftAt(3, 1), 'bombe posée sur la plateforme');
@@ -434,7 +435,7 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   const r0 = BK.ENEMIES.squelette, r1 = BK.ENEMIES.squelette_rouge, r2 = BK.ENEMIES.squelette_noir;
   ok(r1.range === 5 && Math.abs(r1.boneSpeed / r0.boneSpeed - 1.3) < 0.01 && r2.range === 7 && Math.abs(r2.boneSpeed / r0.boneSpeed - 1.5) < 0.01 && Math.abs(r2.speed / r0.speed - 1.5) < 0.01, 'rouge : 5 cases, os 1,3 × ; noir : 7 cases, marche et os 1,5 ×');
   const Wb = mk(['.....', '.1...', '.....']); const pb = Wb.addPlayer(adam, 1, 1, { hp: 40 }); pb.x = 1.5; const sk2 = Wb.addEnemy('squelette', 3, 1); for (let i = 0; i < 240 && pb.hp === 40; i++) Wb.update(1 / 60); ok(pb.hp === 30, 'l’os blesse le héros au passage'); void sk2;
-  const kinds = Object.keys(BK.DECO_PROPS); ok(kinds.length === 187, 'décorations existantes, château, quatre biomes, huit pièges, guimauve, nuage et trampoline');
+  const kinds = Object.keys(BK.DECO_PROPS); ok(kinds.length === 194 + BK.OUTDOOR_DECOR.length, 'décorations existantes, château, quatre biomes, huit pièges, guimauve, nuage, trampoline, œufs et coquilles');
   const props = {}; kinds.forEach((k, i) => { props[(1 + i) + ',1'] = { deco: k }; });
   const Wd = mk(['.'.repeat(kinds.length + 2), '.' + '"'.repeat(kinds.length) + '.', '.'.repeat(kinds.length + 2)], props);
   ok(kinds.every((k, i) => Wd.deco[Wd.idx(1 + i, 1)] === k) && !Wd.blocked(kinds.indexOf('bones') + 1, 1) && Wd.blocked(kinds.indexOf('wheel') + 1, 1), 'toutes se posent ; les ossements se traversent, la roue bloque');
@@ -476,13 +477,13 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   ok(BK.ENEMIES.abeille.r * 2 === BK.ENEMIES.guepe.r && BK.ENEMIES.abeille.dmg === 5, 'l’abeille est deux fois plus petite que la guêpe');
   const Wm = mk(['..........', '.1.\"......', '..........'], { '3,1': { deco: 'bigmushroom' } }); const pm = Wm.addPlayer(adam, 1, 1, { hp: 40 }); pm.invuln = 999;
   Wm.bombs.push({ cx: 2, cy: 1, x: 2.5, y: 1.5, z: 0, t: 0, fire: 2, owner: pm, state: 'idle', passers: new Set(), born: 0, fuse: 99 }); const b = Wm.bombs[0];
-  pm.x = 2.5; pm.y = 1.5; pm.onBomb = b; pm.zOff = 0.55; Wm.leap(pm, 3); ok(pm.air && Math.floor(pm.air.x1) === 3 && pm.air.z1 > 1, 'depuis la bombe, le bond vise le champignon d’à côté');
+  pm.x = 2.5; pm.y = 1.5; pm.onBomb = b; pm.zOff = 0.55; pm.bombjump = true; Wm.leap(pm, 3); ok(pm.air && Math.floor(pm.air.x1) === 3 && pm.air.z1 > 1, 'depuis la bombe, le bond vise le champignon d’à côté');
   let bounced = false, maxZ = 0; for (let i = 0; i < 120; i++) { Wm.update(1 / 60); if (Wm.events.some(e => e.type === 'bounce')) bounced = true; Wm.events.length = 0; if (pm.air && pm.air.control) maxZ = Math.max(maxZ, pm.zOff); }
   ok(bounced && Math.floor(pm.x) === 6 && !pm.air, 'il rebondit et atterrit 3 cases plus loin (case 6, x=' + pm.x.toFixed(1) + ')'); ok(maxZ > 1.5, 'le rebond monte haut (' + maxZ.toFixed(1) + ')');
-  pm.x = 2.5; pm.y = 1.5; pm.onBomb = b; pm.zOff = 0.55; Wm.leap(pm, 3); for (let i = 0; i < 120 && !(pm.air && pm.air.control); i++) Wm.update(1 / 60);
+  pm.x = 2.5; pm.y = 1.5; pm.onBomb = b; pm.zOff = 0.55; pm.bombjump = true; Wm.leap(pm, 3); for (let i = 0; i < 120 && !(pm.air && pm.air.control); i++) Wm.update(1 / 60);
   pm.input.dy = 1; run(Wm, 1); pm.input.dy = 0; ok(Math.floor(pm.x) === 6 && Math.floor(pm.y) === 2 && !pm.air, 'en vol, on dévie un peu (atterrit une rangée plus bas)');
   const Wb = mk(['.......', '.1.\"###', '.......'], { '3,1': { deco: 'bigmushroom' } }); const pb = Wb.addPlayer(adam, 1, 1, { hp: 40 }); pb.invuln = 999;
-  Wb.bombs.push({ cx: 2, cy: 1, x: 2.5, y: 1.5, z: 0, t: 0, fire: 2, owner: pb, state: 'idle', passers: new Set(), born: 0, fuse: 99 }); pb.x = 2.5; pb.y = 1.5; pb.onBomb = Wb.bombs[0]; pb.zOff = 0.55; Wb.leap(pb, 3); run(Wb, 2);
+  Wb.bombs.push({ cx: 2, cy: 1, x: 2.5, y: 1.5, z: 0, t: 0, fire: 2, owner: pb, state: 'idle', passers: new Set(), born: 0, fuse: 99 }); pb.x = 2.5; pb.y = 1.5; pb.onBomb = Wb.bombs[0]; pb.zOff = 0.55; pb.bombjump = true; Wb.leap(pb, 3); run(Wb, 2);
   ok(Math.floor(pb.x) === 2 && !pb.air, 'murs jusqu’au bord : on retombe d’où l’on vient (x=' + pb.x.toFixed(1) + ')');
 }
 // 34. feu de camp : halo rouge et petits cœurs
@@ -574,7 +575,7 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   const adam = BK.charById('adam'), mk = (map, props) => new BK.World({ map, theme: 'forest', mode: 'adventure', hearts: true, explore: true, houses: {}, props: props || {} });
   const Wl = mk(['........', '.1.##...', '........']); const pl = Wl.addPlayer(adam, 1, 1, { hp: 40 }); pl.invuln = 999;
   Wl.bombs.push({ cx: 2, cy: 1, x: 2.5, y: 1.5, z: 0, t: 0, fire: 2, owner: pl, state: 'idle', passers: new Set(), born: 0, fuse: 99 }); pl.x = 2.5; pl.y = 1.5; pl.onBomb = Wl.bombs[0]; pl.zOff = 0.55;
-  Wl.leap(pl, 3); ok(pl.air && Math.floor(pl.air.x1) === 5, 'deux murs à côté : le bond continue jusqu’à la case libre (5)');
+  pl.bombjump = true; Wl.leap(pl, 3); ok(pl.air && Math.floor(pl.air.x1) === 5, 'deux murs à côté : le bond continue jusqu’à la case libre (5)');
   const Wc = mk(['.......', '.1.O...', '.......']); const pc = Wc.addPlayer(adam, 1, 1, { hp: 40 }); pc.invuln = 999; pc.x = 1.5; ok(Wc.blocked(3, 1, pc) && Wc.deco[Wc.idx(3, 1)] === 'chest', 'le coffre bloque');
   Wc.bombs.push({ cx: 2, cy: 1, x: 2.5, y: 1.5, z: 0, t: 0, fire: 2, owner: pc, state: 'idle', passers: new Set(), born: 0 }); Wc.events.length = 0; Wc.explodeBomb(Wc.bombs[0]);
   const coins = Wc.items.filter(it => it.type === 'coin'); const ev = Wc.events.find(e => e.type === 'chestOpened');
@@ -610,7 +611,7 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   const Wd = new BK.World({ map: ['#########', '#::((((:#', '#.......#', '#########'], theme: 'castle', mode: 'adventure', hearts: true, explore: true, houses: {}, props: props2 });
   ok(Math.abs(Wd.movers[0].top - 1.2) < 0.01 && Math.abs(Wd.hAt(3, 1) - 1.2) < 0.01, 'rail entre deux couloirs d’étage 2 : la plateforme monte à l’étage 2');
   const pd = Wd.addPlayer(adam, 1, 1, { hp: 40 }); pd.invuln = 999; pd.x = 2.5; pd.y = 1.5; pd.input.dx = 1; for (let i = 0; i < 20; i++) Wd.update(1 / 60); pd.input.dx = 0; ok(Math.floor(pd.x) === 3 && Math.abs(Wd.groundZ(pd.x, pd.y) - 1.2) < 0.01, 'on y monte depuis le couloir');
-  pd.x = 3.5; pd.y = 2.5; const bd = { cx: 3, cy: 2, x: 3.5, y: 2.5, z: 0, t: 99, fire: 2, owner: pd, state: 'idle', passers: new Set([pd]), born: 0 }; Wd.bombs.push(bd); pd.onBomb = bd; pd.zOff = 0.55; Wd.leap(pd, 2); for (let i = 0; i < 60; i++) Wd.update(1 / 60);
+  pd.x = 3.5; pd.y = 2.5; const bd = { cx: 3, cy: 2, x: 3.5, y: 2.5, z: 0, t: 99, fire: 2, owner: pd, state: 'idle', passers: new Set([pd]), born: 0 }; Wd.bombs.push(bd); pd.onBomb = bd; pd.zOff = 0.55; pd.bombjump = true; Wd.leap(pd, 2); for (let i = 0; i < 60; i++) Wd.update(1 / 60);
   ok(Math.floor(pd.y) === 2 && Wd.groundZ(pd.x, pd.y) === 0, 'depuis la fosse, un bond de bombe ne monte pas de deux étages sur la plateforme');
 }
 // 41. objets trouvés (comptés sous les barres, perdus à la fin du tableau) et achats (pour toujours)
@@ -702,7 +703,7 @@ for (const powered of [false, true]) for (const running of [false, true]) for (c
   const g = W.addEnemy('gluant', 2, 2); ok(!W.useItem(p, 0) && p.inv[0].n === 2 && W.events.some(e => e.type === 'sporeBlocked'), 'un monstre devant : rien ne pousse, la poudre reste');
   g.dead = true; g.x = -5; ok(W.useItem(p, 0) && p.inv[0].n === 1 && W.deco[W.idx(2, 2)] === 'bigmushroom' && W.blocked(2, 2) && W.growT.has(W.idx(2, 2)) && p.pose === 'throw', 'case libre : le champignon géant apparaît (solide) et commence à pousser');
   let grown = false; for (let i = 0; i < 50; i++) { W.update(1 / 60); if (W.events.some(e => e.type === 'mushroomGrown')) grown = true; } ok(grown && !W.growT.size, 'il a fini de pousser en moins d’une seconde');
-  const b = { cx: 1, cy: 2, x: 1.5, y: 2.5, z: 0, t: 99, fire: 2, owner: p, state: 'idle', passers: new Set([p]), born: 0 }; W.bombs.push(b); p.onBomb = b; p.zOff = 0.55; W.leap(p, 3); for (let i = 0; i < 120; i++) W.update(1 / 60);
+  const b = { cx: 1, cy: 2, x: 1.5, y: 2.5, z: 0, t: 99, fire: 2, owner: p, state: 'idle', passers: new Set([p]), born: 0 }; W.bombs.push(b); p.onBomb = b; p.zOff = 0.55; p.bombjump = true; W.leap(p, 3); for (let i = 0; i < 120; i++) W.update(1 / 60);
   ok(Math.floor(p.x) === 5 || Math.floor(p.x) === 6, 'depuis une bombe, on rebondit dessus et on retombe 3 cases plus loin (x=' + p.x.toFixed(1) + ')');
 }
 // 47. cycle jour-nuit et lanterne à fée
@@ -1185,9 +1186,9 @@ const crewBoat=()=>{
 
 {
  const items=BK.EDITOR_TABS.find(t=>t.id==='deco').items;
- ok(items.every(it=>it.category)&&new Set(items.map(it=>it.category)).size===14,'toutes les décorations sont classées dans quatorze catégories');
+ ok(items.every(it=>it.category),'toutes les décorations sont classées');
  const E=new BK.Editor({cols:9,rows:7,base:'y',theme:'interior'});
- for(const [i,kind] of ['table_round','table_dining','table_low','fireplace'].entries()){E.item=items.find(it=>kind.startsWith('table_')?it.opts==='table':it.opts==='light');if(kind.startsWith('table_'))E.opts.table=kind;else E.opts.light=kind;E.paint(i+2,3,true);}
+ for(const [i,kind] of ['table_round','table_dining','table_low','fireplace'].entries()){E.item=items.find(it=>kind.startsWith('table_')?it.opts==='table':it.deco===kind);if(kind.startsWith('table_'))E.opts.table=kind;E.paint(i+2,3,true);}
  const data=JSON.parse(JSON.stringify(E.data())),W=new BK.World({map:data.grid,props:data.props,theme:'interior',mode:'adventure',explore:true});
  ok(['table_round','table_dining','table_low','fireplace'].every((kind,i)=>W.deco[W.idx(i+2,3)]===kind&&W.blocked(i+2,3)),'les trois tables et l’âtre survivent à l’export avec leurs collisions');
  const p=W.addPlayer(BK.charById('adam'),5,4);p.inv=[{type:'meatraw',n:1}];
@@ -1283,11 +1284,11 @@ const crewBoat=()=>{
  ok(items.filter(it=>it.ch==='s'||BK.STATUES.includes(it.deco)).length===1,'un seul outil Statue dans le catalogue');
  const E=new BK.Editor({cols:8,rows:5,theme:'interior',base:'y'});E.item=items.find(it=>it.opts==='statue');
  for(const [i,kind] of BK.STATUES.entries()){E.opts.statue=kind;E.paint(i+1,1,true);ok(E.world.deco[E.world.idx(i+1,1)]===kind,'modèle de statue sélectionné : '+kind);}
- for(const [i,kind] of BK.LIGHT_KINDS.entries()){E.item=items.find(it=>it.opts==='light');E.opts.light=kind;E.lightColor='purple';E.paint(i+1,3,true);}
+ for(const [i,kind] of BK.LIGHT_KINDS.entries()){E.item=items.find(it=>it.deco===kind);E.lightColor='purple';E.paint(i+1,3,true);}
  const again=new BK.Editor(JSON.parse(JSON.stringify(E.data())));ok(BK.LIGHT_KINDS.every((kind,i)=>again.props[(i+1)+',3'].lightColor==='purple'),'les couleurs des quatre types de lumières survivent à la sauvegarde');
  const colors=[],ctx=new Proxy({createRadialGradient(){return {addColorStop(at,c){colors.push(c);}};}},{get:(o,k)=>k in o?o[k]:()=>{},set:(o,k,v)=>{if(k==='fillStyle')colors.push(v);o[k]=v;return true;}});
  for(const kind of BK.LIGHT_KINDS){colors.length=0;BK.sprites.drawDeco(ctx,kind,0,0,80,1,null,1,0,'purple');ok(colors.some(c=>typeof c==='string'&&c.includes('180,100,255')),'la lumière mauve est dessinée : '+kind);}
- E.item=items.find(it=>it.opts==='light');E.opts.light='lamp';E.lightColor='blue';E.paint(1,3,true);E.undo();ok(E.props['1,3'].lightColor==='purple','annuler restaure la couleur précédente');
+ E.item=items.find(it=>it.deco==='lamp');E.lightColor='blue';E.paint(1,3,true);E.undo();ok(E.props['1,3'].lightColor==='purple','annuler restaure la couleur précédente');
 }
 {
  const tables=BK.EDITOR_TABS.find(t=>t.id==='deco').items.filter(it=>it.ch==='M'||it.deco?.startsWith('table_'));
@@ -1301,9 +1302,9 @@ const crewBoat=()=>{
  for(const kind of ['chair','stool','chair']){E.opts.seat=kind;E.paint(2,2,true);const loaded=new BK.Editor(JSON.parse(JSON.stringify(E.data())));ok(loaded.world.deco[loaded.world.idx(2,2)]===kind&&loaded.props['2,2'].orientation===1,'modèle du siège et orientation sauvegardés : '+kind);}
 }
 {
- const lights=BK.EDITOR_TABS.find(t=>t.id==='deco').items.filter(it=>BK.LIGHT_KINDS.includes(it.deco||BK.DECO[it.ch]?.[0]));ok(lights.length===1&&lights[0].opts==='light','un seul outil Lumière avec modèles');
- const E=new BK.Editor({cols:8,rows:5,base:'y',theme:'interior'});E.item=lights[0];E.lightColor='red';
- for(const [i,kind] of BK.LIGHT_KINDS.entries()){E.opts.light=kind;E.paint(i+1,2,true);}
+ const lights=BK.EDITOR_TABS.find(t=>t.id==='deco').items.filter(it=>BK.LIGHT_KINDS.includes(it.deco||BK.DECO[it.ch]?.[0]));ok(lights.length===4&&lights.every(it=>it.category==='lumiere'&&!it.opts),'quatre objets dans la catégorie Lumière');
+ const E=new BK.Editor({cols:8,rows:5,base:'y',theme:'interior'});E.lightColor='red';
+ for(const [i,kind] of BK.LIGHT_KINDS.entries()){E.item=lights.find(it=>it.deco===kind);E.paint(i+1,2,true);}
  const saved=new BK.Editor(JSON.parse(JSON.stringify(E.data())));ok(BK.LIGHT_KINDS.every((kind,i)=>saved.world.deco[saved.world.idx(i+1,2)]===kind&&saved.props[(i+1)+',2'].lightColor==='red'),'les quatre lumières conservent modèle et couleur');
  ok(saved.world.campfires.length===2,'âtre et feu de camp placés permettent de cuisiner');
  const W=new BK.World({map:['#######','#.....#','#.....#','#....i#','#.....#','#######'],mode:'adventure',explore:true,hearts:true}),p=W.addPlayer(BK.charById('adam'),2,3);p.dir=2;
@@ -1825,8 +1826,8 @@ for(const phase of [1,2]){
  ok(!W.feedPet(p,cat,'meatraw')&&!W.feedPet(p,dog,'fish'),'chaque animal accepte seulement sa nourriture');
  ok(W.feedPet(p,cat,'fish')&&cat.follow===p&&cat.followT===60&&p.inv[0].n===1&&p.inv[0].perm===1,'poisson consommé, portion permanente conservée et suivi prolongé');
  W.petAnimal(p);ok(cat.followT===60,'caresser ne raccourcit pas le suivi après un repas');
- ok(W.feedPet(p,cat,'fish')&&cat.followT===120&&!p.inv.some(s=>s.type==='fish'),'deux repas prolongent le suivi de deux minutes');
- ok(W.feedPet(p,dog,'meatraw')&&W.feedPet(p,dog,'poultrycooked'),'chien accepte viande et volaille');
+ W.time+=BK.FEED_ANIMATION_TIME;ok(W.feedPet(p,cat,'fish')&&cat.followT===120&&!p.inv.some(s=>s.type==='fish'),'deux repas prolongent le suivi de deux minutes');
+ W.time+=BK.FEED_ANIMATION_TIME;ok(W.feedPet(p,dog,'meatraw'),'chien accepte viande');W.time+=BK.FEED_ANIMATION_TIME;ok(W.feedPet(p,dog,'poultrycooked'),'chien accepte volaille');
  p.x=12.5;ok(!W.feedPet(p,cat,'fish'),'nourriture refusée à distance');
  cat.pause=0;cat.petT=0;for(let i=0;i<600;i++)W.updateEnemy(cat,1/60);
  ok(cat.x>9.5&&cat.follow===p,'chat nourri suit au-delà de sa zone de promenade initiale');
@@ -1858,7 +1859,7 @@ for(const source of ['bomb','projectile']){
  const ctx=new Proxy({canvas:{width:1280,height:720},measureText:t=>({width:t.length*8}),createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{}),set:(o,k,v)=>(o[k]=v,true)}),cam=new BK.Camera(1280,720);cam.fit(7,4,{top:100,bottom:50,left:50,right:50});
  W.drawPetFood(ctx,cam);ok(W.petFoodRects.length===2&&W.petFoodRects.find(r=>r.pet===dog).count===0,'bulle grisée pour le chien sans viande');const r=W.petFoodRects.find(r=>r.pet===cat);a.onClick(r.x+10,r.y+10);
  ok(cat.follow===p&&!p.inv.length&&a.state==='play','bulle nourrit directement sans ouvrir de menu');W.drawPetFood(ctx,cam);ok(W.petFoodRects.every(r=>r.count===0),'bulles mises à jour après la dernière portion');
- p.x=5.5;W.drawPetFood(ctx,cam);ok(!W.petFoodRects.length,'bulles cachées quand on s’éloigne');
+ W.time+=BK.FEED_ANIMATION_TIME+BK.PET_REQUEST_PAUSE; p.x=5.5;W.drawPetFood(ctx,cam);ok(W.petFoodRects.some(r=>r.pet===cat),'nourrissage possible avec une case d’espace');p.x=5.9;W.drawPetFood(ctx,cam);ok(!W.petFoodRects.length,'bulles cachées au-delà de la portée de nourrissage');
 }
 
 // Le ventre gonfle, réagit aux appuis distincts puis dégonfle après libération.
@@ -1932,7 +1933,7 @@ for(const source of ['bomb','projectile']){
  try{let v=BK.challengeProgress(ch,run);ok(v.medal.name==='Argent'&&Math.abs(v.silverSeconds-7.09)<.001,'compteur argent basé sur le seuil exact de 600 points');BK.updateChallengeFeedback(ch,run,.1);BK.updateChallengeFeedback(ch,run,.1);ok(warnings===1,'avertissement argent joué une seule fois');run.timeLeft=17;BK.updateChallengeFeedback(ch,run,.1);ok(drops===1&&run.medalFeedback.from==='🥈'&&run.medalFeedback.to==='🥉','son et animation argent vers bronze');BK.updateChallengeFeedback(ch,run,1);ok(drops===1&&!run.medalFeedback.transition,'transition bronze terminée sans répétition');}finally{BK.audio.medalWarning=old;BK.audio.medalDrop=oldDrop;}
 }
 {
- const items=BK.EDITOR_TABS.find(t=>t.id==='deco').items.filter(i=>i.category==='castle');ok(items.length===35&&new Set(items.map(i=>i.deco)).size===35,'35 nouveaux objets distincts dans la catégorie Château');
+ const items=BK.EDITOR_TABS.find(t=>t.id==='deco').items.filter(i=>i.category==='castle');ok(items.length===38&&new Set(items.map(i=>i.deco)).size===38,'38 objets distincts dans la catégorie Château, dont quatre œufs');
  const ctx=new Proxy({createRadialGradient:()=>({addColorStop(){}}),createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{}),set:(o,k,v)=>(o[k]=v,true)});
  for(const it of items){const E=new BK.Editor({name:'Château',cols:7,rows:7,theme:'castle',base:'.'});E.item=it;E.orientation=1;E.paint(3,3,true);const data=JSON.parse(JSON.stringify(E.data())),W=new BK.World({map:data.grid,props:data.props,mode:'adventure',explore:true,theme:'castle'});ok(W.deco[W.idx(3,3)]===it.deco&&W.props['3,3'].orientation===1,it.name+' sauvegardé avec son orientation');for(let d=0;d<4;d++)BK.sprites.drawDeco(ctx,it.deco,0,0,60,1,null,1,d);}
  ok(!BK.DECO_PROPS.castle_carpet,'tapis royal traversable');
@@ -1966,7 +1967,7 @@ for(const source of ['bomb','projectile']){
  for(const f of BK.DESERT_FLOORS){E.item={ch:f.ch};E.paint(4,4,true);E.item=decos.find(i=>i.deco==='desert_1');E.paint(4,4,true);const again=new BK.Editor(JSON.parse(JSON.stringify(E.data())));ok(again.world.tAt(4,4)===f.terrain,'sol préservé sous un décor : '+f.name);}
  const room=new BK.Editor({cols:7,rows:5,roomExit:true,theme:'interior',base:'y',grid:['#######','#yyyyy#','#yy1yy#','#yyyyy#','###G###']});
  for(const d of BK.BIOME_DECOR.filter(d=>d.wall)){room.item=decos.find(i=>i.deco===d.deco);room.paint(2,0,true);ok(room.grid[0][2]==='#'&&room.props['2,0'].wallDeco===d.deco,'fixation murale '+d.name);}
- ok(BK.WILDLIFE.length===20&&BK.WILDLIFE.filter(a=>a.evil).length===10,'vingt animaux et dix variantes maléfiques');
+ ok(BK.WILDLIFE.filter(a=>!a.residence).length===20&&BK.WILDLIFE.filter(a=>a.residence).length===2&&BK.WILDLIFE.filter(a=>a.evil).length===10,'vingt animaux, deux gnomes et dix variantes maléfiques');
  for(const a of BK.WILDLIFE)for(const id of [a.id,...(a.evil?[a.id+'_evil']:[])]){const W=new BK.Editor({cols:9,rows:9,theme:'garden',base:',',enemies:[{type:id,c:4,r:4}]}).world;const e=W.enemies[0];ok(!!e&&e.def.peaceful===!id.endsWith('_evil'),'nature '+id);for(let i=0;i<120;i++)W.updateEnemy(e,1/60);BK.sprites.drawEnemy(ctx,id,{s:60,t:1,state:'walk'});ok(W.livingEnemies().length===(e.def.peaceful?0:1),'objectif de combat '+id);}
  const W=new BK.Editor({cols:9,rows:9,theme:'garden',base:','}).world,p=W.addPlayer(BK.charById('adam'),4,4);
  W.applyItem(p,{type:'mini'});ok(p.sizeScale===.4&&p.sizeT===15,'Mini quinze secondes');W.updatePlayer(p,5);ok(p.sizeT===10,'décompte Mini');W.applyItem(p,{type:'giant'});ok(p.sizeScale===2&&p.sizeT===15,'Géant remplace Mini');W.updatePlayer(p,15);ok(p.sizeScale===1&&p.sizeT===0,'taille normale après quinze secondes');
@@ -1976,11 +1977,11 @@ for(const source of ['bomb','projectile']){
 // Amitié des vingt nouvelles espèces : caresses, repas et combat accompagné.
 {
  const setup=id=>{const E=new BK.Editor({cols:11,rows:9,theme:'garden',base:',',enemies:[{type:id,c:4,r:4}]});const W=E.world,p=W.addPlayer(BK.charById('adam'),3,4);return {W,p,e:W.enemies[0]};};
- for(const a of BK.WILDLIFE){const {W,p,e}=setup(a.id),food=BK.PET_FOODS[a.id][0];p.inv=[{type:food,n:2,perm:0}];
+ for(const a of BK.WILDLIFE.filter(a=>!a.residence)){const {W,p,e}=setup(a.id),food=BK.PET_FOODS[a.id][0];p.inv=[{type:food,n:2,perm:0}];
   ok(W.nearbyPet(p)===e&&W.petAnimal(p),'caresser '+a.name);W.petAnimal(p);ok(e.bond.pets===1,'les clics répétés immédiats ne doublent pas la caresse');
   W.time+=1.3;W.petAnimal(p);ok(e.bond.pets===2&&!e.bond.meals,'deux caresses ne suffisent pas sans repas');
   ok(!W.feedPet(p,e,'wood')&&p.inv[0].n===2,'refus de nourriture inadaptée');
-  ok(W.feedPet(p,e,food)&&p.inv[0].n===1&&e.bond.meals===1&&e.follow===p&&e.followT>=60,'repas et amitié '+a.name);
+  W.time+=BK.PET_ANIMATION_TIME;ok(W.feedPet(p,e,food)&&p.inv[0].n===1&&e.bond.meals===1&&e.follow===p&&e.followT>=60,'repas et amitié '+a.name);
   const foe=W.addEnemy('wild_renard_evil',5,4);foe.x=e.x+.7;e.petT=0;e.friendAttackT=0;const hp=foe.hp;
   ok(W.updateAnimalFriend(e,.1)&&foe.hp===hp-1,'ami attaque un monstre '+a.name);W.updateAnimalFriend(e,.1);ok(foe.hp===hp-1,'délai entre les attaques');
   const ff=BK.settings.friendlyFire;BK.settings.friendlyFire=false;ok(!W.hurtEnemy(e,p,1,'bomb')&&!e.dead,'protection du compagnon contre les bombes amies');BK.settings.friendlyFire=ff;
@@ -1999,7 +2000,7 @@ console.log('✔ ' + n + ' vérifications réussies');
  const E=new BK.Editor({cols:11,rows:9,theme:'garden',base:',',enemies:[{type:'wild_faon',c:4,r:4}]}),W=E.world,p=W.addPlayer(BK.charById('adam'),3,4),e=W.enemies[0];
  p.inv=[{type:'carrot',n:2,perm:2}];W.petAnimal(p);W.time+=1.3;W.petAnimal(p);W.time+=1.3;
  ok(W.petAnimal(p)&&e.bond.meals===1&&p.inv[0].n===1,'troisième interaction : le faon mange la carotte');
- ok(W.useItem(p,0)&&!p.inv.length&&!W.fishes.length,'carotte du sac donnée au faon au lieu d’être lancée');
+ W.time+=BK.FEED_ANIMATION_TIME;ok(W.useItem(p,0)&&!p.inv.length&&!W.fishes.length,'carotte du sac donnée au faon au lieu d’être lancée');
 }
 // Mur de briques rouge brique par défaut, même au château ; couleur choisie dans l’éditeur.
 {

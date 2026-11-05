@@ -1,10 +1,11 @@
-// Musique de fond : des pistes MP3 (Kevin MacLeod, incompetech.com, CC BY 4.0) selon l'écran.
+// Musique de fond : des pistes MP3 selon l'écran et le décor.
 // La lecture automatique est bloquée tant que le joueur n'a pas touché la page : on réessaie au premier geste.
 // M ou le bouton du menu coupe ou remet la musique (mémorisé dans bk.music).
 (function (BK) {
   'use strict';
   const TRACKS = { menu: 'pixelland', worlds: 'pixelland', stage: 'bitquest', boss: 'dungeonboss', hub: 'fluffing', editor: 'fluffing' };
-  const LIST = [{ id: 'pixelland', name: 'Pixelland' }, { id: 'bitquest', name: 'Bit Quest' }, { id: 'dungeonboss', name: '8bit Dungeon Boss' }, { id: 'fluffing', name: 'Fluffing a Duck' }];   // pistes qu'on peut choisir pour une pièce
+  const LIST = [{ id: 'pixelland', name: 'Pixelland' }, { id: 'bitquest', name: 'Bit Quest' }, { id: 'dungeonboss', name: '8bit Dungeon Boss' }, { id: 'fluffing', name: 'Fluffing a Duck' }, { id: 'grass-world', name: 'Grass World' }];   // pistes qu'on peut choisir pour une pièce
+  const grassTheme = theme => theme === 'garden' || theme === 'forest';
   const VOLUME = 0.4;
   let cur = null, curName = null, enabled = true;
   try { enabled = localStorage.getItem('bk.music') !== 'off'; } catch (e) { }
@@ -17,7 +18,7 @@
   const report=(a,blocked)=>{if(a===cur&&M.onPlayback)M.onPlayback(blocked&&enabled);};
   const tryPlay = a => { try { const p = a.play(); if (p && p.then) p.then(()=>report(a,false)).catch(()=>report(a,true));else report(a,false); } catch (e) { report(a,true); } };
   const M = BK.music = {
-    TRACKS, LIST,
+    TRACKS, LIST, grassTheme,
     get enabled() { return enabled; },
     get current() { return curName; },
     play(name) {

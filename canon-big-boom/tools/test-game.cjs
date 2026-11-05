@@ -6,6 +6,8 @@ const path = require('path');
 global.window = {};
 for (const f of ['config', 'save', 'game', 'map']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const CB = window.CB, S = CB.Save;
+// Les simulations historiques isolent les mécaniques de combat des bonus et du démarrage progressif, testé dans test-missions.cjs.
+const CombatWave = CB.Wave; CB.Wave = class extends CombatWave { constructor(options) { super(options); delete this.def.opening; this.nextGoldCoin = Infinity; if (!this.swarm) this.nextBomb = Infinity; } };
 let n = 0; const ok = (c, m) => { assert.ok(c, m); n++; };
 const seeded = seed => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 const memory = () => { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); } }; };
@@ -81,24 +83,24 @@ ok(profile.nightKills === CB.ENDLESS.unlockKills + w.kills && !S.waveUnlocked(pr
   ok(CB.DINOS.length === 20 && CB.DINOS.every(k => CB.ENEMIES[k] && CB.ENEMIES[k].variant), 'vingt dinosaures définis avec leur variante');
   ok(d.seen.length >= 2 && d.seen.every(k => CB.DINOS.includes(k)) && !d.enemies.some(e => e.def.chest), 'seuls des dinosaures arrivent, sans coffre (' + d.seen.join(', ') + ')');
   ok(d.news[0] && /PASSÉ/.test(d.news[0].text), 'bienvenue dans le passé'); }
-// Tableau 1-2 « La nuée de chauves-souris » : que des chauves-souris 5 minutes, de plus en plus éparpillées, bombes magiques à désamorcer.
-{ const q = S.blank('n2'); q.upgrades = { cadence: 4, degats: 4, armure: 4 }; const n = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: q, player, random: seeded(8) });
-  ok(n.def.type === 'swarm' && n.swarm && n.def.seconds === 300 && n.swarm.ramp && n.openEnded && n.timeLeft === null && !/secondes/.test(n.def.text), 'tableau 1-2 : nuée de 5 minutes sans compte à rebours affiché');
+// Tableau 1-2 « La nuée de chauves-souris » : que des chauves-souris 150 secondes, de plus en plus éparpillées, bombes magiques à désamorcer.
+{ const q = S.blank('n2'); q.upgrades = { cadence: 4, degats: 4, armure: 4 }; const n = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: q, player, random: seeded(8) }); n.def = { type: 'swarm', seconds: 150, density: 1, text: '', swarm: CB.SWARM_DEFAULT }; n.swarm = CB.SWARM_DEFAULT; n.nextBomb = 15; n.nextEvent = Infinity;
+  ok(n.def.type === 'swarm' && n.swarm && n.def.seconds === 150 && n.swarm.ramp && n.openEnded && n.timeLeft === 150 && !/secondes/.test(n.def.text), 'tableau 1-2 : nuée de 150 secondes avec compte à rebours affiché');
   n.intro = 0; for (let i = 0; i < 60 * 20 && !n.over; i++) { if (n.choice) n.pickCard(0); if (n.enemies.length) { const e = n.enemies.reduce((a, b) => a.z < b.z ? a : b); Object.assign(n.aim, CB.project(e)); } n.fire(); n.update(1 / 60); }
   ok(n.enemies.concat().every(e => e.type === 'bat' || e.type === 'bombeMagique') && n.kills > 0 && n.bombs >= 1, 'que des chauves-souris, et une bombe magique est apparue (' + n.bombs + ')');
-  const early = n.spawnEnemy('bat'); n.time = 299; const late = []; for (let i = 0; i < 40; i++) late.push(Math.abs(n.spawnEnemy('bat').x)); n.time = 1; const soon = []; for (let i = 0; i < 40; i++) soon.push(Math.abs(n.spawnEnemy('bat').x));
+  const early = n.spawnEnemy('bat'); n.time = 149; const late = []; for (let i = 0; i < 40; i++) late.push(Math.abs(n.spawnEnemy('bat').x)); n.time = 1; const soon = []; for (let i = 0; i < 40; i++) soon.push(Math.abs(n.spawnEnemy('bat').x));
   ok(Math.max(...late) > Math.max(...soon) * 1.5, 'les chauves-souris s’éparpillent de plus en plus (' + Math.max(...soon).toFixed(1) + ' → ' + Math.max(...late).toFixed(1) + ')');
   n.shield = 0; const bomb = n.spawnEnemy('bombeMagique'); const hp0 = n.hp + n.armor; ok(bomb.fuse === 3 && bomb.speed === 0 && bomb.z >= 26, 'la bombe magique attend, proche, avec 3 s de mèche');
   for (let i = 0; i < 60 * 3.2 && !bomb.dead; i++) n.update(1 / 60); ok(bomb.dead && n.bombsExploded >= 1 && n.hp + n.armor < hp0 && n.texts.some(t => /BOUM/.test(t.text)), 'sans tir, elle explose et enlève de l’armure ou des vies');
   const bomb2 = n.spawnEnemy('bombeMagique'); const hp1 = n.hp, k0 = n.kills, d0 = n.bombsDefused; n.applyDamage(bomb2, 99); ok(bomb2.dead && n.bombsDefused === d0 + 1 && n.hp === hp1 && n.kills === k0 && n.texts.some(t => /POUF/.test(t.text)), 'tirée dans le cercle, elle disparaît en pouf sans compter comme un monstre');
-  n.time = 5; const s5 = n.spawnEnemy('bat', null, false).speed, i5 = n.spawnInterval(); n.time = 295; const s295 = n.spawnEnemy('bat', null, false).speed, i295 = n.spawnInterval(); let reds = 0, golds = 0; for (let i = 0; i < 300; i++) { const t = n.swarmTier(); if (t === 1) reds++; if (t === 2) golds++; } n.time = 50; let early0 = 0; for (let i = 0; i < 100; i++) if (n.swarmTier()) early0++;
-  ok(s295 > s5 * 1.3 && i295 < i5 * .4 && reds > 60 && golds > 20 && early0 === 0, 'la nuée se corse : plus vite (' + s5.toFixed(1) + ' → ' + s295.toFixed(1) + '), plus dense, chauves-souris rouges et dorées à la fin seulement (' + reds + '/' + golds + ')');
-  { n.time = 290; let bigs = 0; for (let i = 0; i < 200; i++) { const b = n.spawnEnemy('bat'); if (b.big) { bigs++; if (i === 199 || bigs === 1) ok(b.size === 2 && Math.abs(b.maxHp - 2 * CB.hpScale(0) * n.hpMult() * CB.TIERS[b.tier].hp) < 1e-9 && /Grosse/.test(b.name), 'grosse chauve-souris : 2× plus grosse, 2× plus résistante'); } } ok(bigs > 20 && bigs < 80, 'des grosses chauves-souris de temps en temps (' + bigs + ' / 200)');
-    const n2 = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: q, player, random: seeded(5) }); n2.intro = 0; n2.nextBox = Infinity; n2.time = n2.def.seconds; for (let i = 0; i < 6; i++) n2.spawnEnemy('bat', { x: -20 + i * 8, y: 6, z: 40 }); n2.spawnEnemy('bombeMagique'); const k0 = n2.kills, e0 = n2.enemies.length;
-    n2.update(1 / 60); ok(n2.outro && !n2.over && n2.texts.some(t => /DRAGON/.test(t.text)) && !n2.enemies.some(e => !e.dead && e.def.hazard), 'à 300 s, le méga dragon arrive et les bombes s’éteignent');
+  n.time = 5; const s5 = n.spawnEnemy('bat', null, false).speed, i5 = n.spawnInterval(); n.time = 147.5; const s295 = n.spawnEnemy('bat', null, false).speed, i295 = n.spawnInterval(); let reds = 0, golds = 0; for (let i = 0; i < 300; i++) { const t = n.swarmTier(); if (t === 1) reds++; if (t === 2) golds++; } n.time = 25; let early0 = 0; for (let i = 0; i < 100; i++) if (n.swarmTier()) early0++;
+  ok(s295 > s5 * 1.3 && i295 < i5 * .4 && i295 >= .30 && reds > 60 && golds > 20 && early0 === 0, 'la nuée se corse : plus vite (' + s5.toFixed(1) + ' → ' + s295.toFixed(1) + '), plus dense, chauves-souris rouges et dorées à la fin seulement (' + reds + '/' + golds + ')');
+  { n.time = 145; let bigs = 0; for (let i = 0; i < 200; i++) { const b = n.spawnEnemy('bat'); if (b.big) { bigs++; if (i === 199 || bigs === 1) ok(b.size === 2 && Math.abs(b.maxHp - 2 * CB.hpScale(0) * n.hpMult() * CB.TIERS[b.tier].hp) < 1e-9 && /Grosse/.test(b.name), 'grosse chauve-souris : 2× plus grosse, 2× plus résistante'); } } ok(bigs > 20 && bigs < 80, 'des grosses chauves-souris de temps en temps (' + bigs + ' / 200)');
+    const n2 = new CB.Wave({ worldIndex: 0, waveIndex: 3, profile: q, player, random: seeded(5) }); n2.intro = 0; n2.spawn = Infinity; n2.nextBox = Infinity; n2.time = n2.def.seconds; for (let i = 0; i < 6; i++) n2.spawnEnemy('bat', { x: -20 + i * 8, y: 6, z: 40 }); n2.spawnEnemy('bombeMagique'); const k0 = n2.kills, e0 = n2.enemies.length;
+    n2.update(1 / 60); ok(n2.outro && !n2.over && n2.texts.some(t => /DRAGON/.test(t.text)) && !n2.enemies.some(e => !e.dead && e.def.hazard), 'à 240 s, le méga dragon arrive et les bombes s’éteignent');
     for (let i = 0; i < 60 * 2 && !n2.over; i++) n2.update(1 / 60); ok(!n2.over && n2.enemies.some(e => e.flee) && n2.enemies.length <= e0, 'les chauves-souris fuient devant lui');
-    for (let i = 0; i < 60 * 10 && !n2.over; i++) n2.update(1 / 60); ok(n2.over && n2.won && n2.stars === 3 && n2.reason === 'nuee' && n2.kills === k0 && !n2.enemies.some(e => !e.dead && !e.escaped && !n2.isDecor(e)), 'tout le monde est sorti de l’écran : fin du tableau, 3 étoiles, sans compter comme des victimes'); }
-  { const bq = S.blank('bl'); bq.upgrades = { degats: 10 }; bq.specialLevel = 3; const bw = new CB.Wave({ worldIndex: 0, waveIndex: 4, profile: bq, player: CB.playerById('mickael'), random: seeded(4) }); bw.intro = 0; bw.damage = () => false; bw.spawnBoss(); bw.boss.hp = bw.boss.maxHp /= CB.BOSS_HP; const boss = bw.boss, h0 = boss.hp;   // PV d'avant le ×3, pour que le laser touche le plafond
+    for (let i = 0; i < 60 * 10 && !n2.over; i++) n2.update(1 / 60); ok(n2.over && n2.won && n2.reason === 'gagne' && n2.kills === k0 && !n2.enemies.some(e => !e.dead && !e.escaped && !n2.isDecor(e)), 'tout le monde est sorti de l’écran : fin du tableau, 3 étoiles, sans compter comme des victimes'); }
+  { const bq = S.blank('bl'); bq.upgrades = { degats: 10 }; bq.specialLevel = 3; const bw = new CB.Wave({ worldIndex: 0, waveIndex: 4, profile: bq, player: CB.playerById('mickael'), random: seeded(4) }); bw.intro = 0; bw.damage = () => false; bw.spawnBoss(); bw.bossAttack = () => {}; bw.nextBox = Infinity; bw.boss.hp = bw.boss.maxHp /= CB.BOSS_HP; const boss = bw.boss, h0 = boss.hp;   // PV d'avant le ×3, pour que le laser touche le plafond
     Object.assign(bw.aim, CB.project(boss)); bw.charge = 1; bw.useSpecial(); for (let i = 0; i < 60 * 20; i++) { Object.assign(bw.aim, CB.project(boss)); bw.update(1 / 60); if (bw.choice) bw.pickCard(0); }
     ok(bw.fx.laser === 0 && boss.act === 0 && !boss.leaving && h0 - boss.hp > 0 && h0 - boss.hp <= boss.maxHp * CB.BOSS_SPECIAL.budget + 1e-9 && bw.bossHint != null, 'le boss résiste au laser : au plus 12 % de ses PV par lancer (' + (h0 - boss.hp).toFixed(1) + ' / ' + boss.maxHp + ')');
     bw.charge = 1; bw.useSpecial(); ok(bw.spBossDealt === 0, 'le plafond repart à zéro au lancer suivant'); }
@@ -121,7 +123,7 @@ ok(profile.nightKills === CB.ENDLESS.unlockKills + w.kills && !S.waveUnlocked(pr
     for (let i = 0; i < 10; i++) { dw.kill(dw.spawnEnemy('owl', { x: 0, y: 6, z: 30 })); if (dw.choice) dw.pickCard(0); } ok(dw.charge2 === 1 && Math.abs(dw.charge - Math.min(1, 10 / dw.special.kills)) < 1e-9 && dw.special2Ready, 'la jauge du deuxième pouvoir se remplit avec ses propres 10 ennemis');
     const c1 = dw.charge; ok(dw.useSpecial2() && dw.fx.pika > 0 && dw.charge2 === 0 && dw.charge === c1 && dw.lastSpecial === 'adam' && !dw.useSpecial2(), 'touche C : Pikachu part, la jauge principale reste intacte');
     const dw3 = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: Object.assign(S.blank('zachary'), { slot2: false, special2: 'adam' }), player: CB.playerById('zachary'), random: seeded(2) }); ok(!dw3.special2, 'sans la case, pas de deuxième pouvoir'); }
-{ const rp = S.blank('adam'); const rw = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: rp, player: CB.playerById('adam'), random: seeded(2) }); rw.intro = 0; const kill = n => { for (let i = 0; i < n; i++) { rw.kill(rw.spawnEnemy('owl', { x: 0, y: 6, z: 30 })); if (rw.choice) rw.pickCard(0); } };
+{ const rp = S.blank('adam'); const rw = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: rp, player: CB.playerById('adam'), random: seeded(2) }); rw.intro = 0; rw.spawn = Infinity; rw.nextEvent = Infinity; rw.nextBox = Infinity; const kill = n => { for (let i = 0; i < n; i++) { rw.kill(rw.spawnEnemy('owl', { x: 0, y: 6, z: 30 })); if (rw.choice) rw.pickCard(0); } };
     kill(10); ok(rw.charge === 1 && rw.spNeed(rw.special, 0) === 10 * CB.xpPerKill(0), 'Adam : 10 monstres ordinaires remplissent la première jauge'); rw.useSpecial(); for (let i = 0; i < 60 * 4; i++) { rw.update(1 / 60); if (rw.choice) rw.pickCard(0); }
     kill(10); ok(rw.charge < 1 && Math.abs(rw.charge - 1 / CB.SPECIAL_RAMP) < 1e-6, 'deuxième lancer : 35 % plus long à charger (' + rw.charge.toFixed(2) + ' après 10 monstres)'); kill(4); ok(rw.charge === 1, '14 monstres cette fois');
     rw.useSpecial(); for (let i = 0; i < 60 * 4; i++) { rw.update(1 / 60); if (rw.choice) rw.pickCard(0); } const e5 = rw.spawnEnemy('owl', { x: 0, y: 6, z: 30 }, true); rw.kill(e5); ok(Math.abs(rw.charge - 5 / rw.spNeed(rw.special, 2) * CB.xpPerKill(0)) < 1e-6 && rw.spUses === 2, 'une élite compte pour cinq monstres');
@@ -142,9 +144,9 @@ ok(profile.nightKills === CB.ENDLESS.unlockKills + w.kills && !S.waveUnlocked(pr
     ok(fw.familyBuff && !fw2.familyBuff && Math.abs(fw.stats.rate / fw2.stats.rate - 1.1) < 1e-9 && fw.texts.some(t => /BONUS FAMILLE/.test(t.text)), 'bonus famille : Mickael + Marie + Adam (Les Bibi) tirent 10 % plus vite ; avec Josée, pas de bonus');
     fw.intro = 0; fw2.intro = 0; fw.spawnEnemy('owl', { x: 0, y: 6, z: 30 }); fw2.spawnEnemy('owl', { x: 0, y: 6, z: 30 }); const after = w => { let n = w.ally.shots; for (let i = 0; i < 300; i++) { w.update(1 / 60); if (w.ally.shots > n) return w.ally.cooldown; } return null; }; const c1 = after(fw), c2 = after(fw2); ok(c1 && c2 && Math.abs(c2 / c1 - 1.1) < 1e-6, 'les coéquipiers aussi rechargent 10 % plus vite'); }
 { const pq = S.blank('pirate'); pq.nightKills = 100; pq.progress.foret = [1, 1]; ok(!S.waveUnlocked(pq, 0, 8), 'le bateau pirate attend le secret du bateau volant (pas les étoiles du tableau 2)'); pq.boatSecret = true; ok(S.waveUnlocked(pq, 0, 8), 'secret trouvé : bateau pirate ouvert');
-    const pw = new CB.Wave({ worldIndex: 0, waveIndex: 8, profile: pq, player: CB.playerById('zachary'), random: seeded(3) }); pw.intro = 0; ok(pw.def.boat && pw.scenery && pw.scenery.scene === 'mer' && pw.def.type === 'survive' && pw.def.seconds === 300 && pw.def.reward === 'world:pirates', 'tableau 1-9 : sur la mer, en bateau, survivre 300 s (ouvre le monde caché)');
+    const pw = new CB.Wave({ worldIndex: 0, waveIndex: 8, profile: pq, player: CB.playerById('zachary'), random: seeded(3) }); pw.intro = 0; ok(pw.def.boat && pw.scenery && pw.scenery.scene === 'mer' && pw.def.type === 'survive' && pw.def.seconds === 180 && pw.def.reward === 'world:pirates', 'tableau 1-9 : sur la mer, en bateau, traversée de trois minutes (ouvre le monde caché)');
     for (let i = 0; i < 60 * 14; i++) { pw.update(1 / 60); if (pw.choice) pw.pickCard(0); } const seen = pw.enemies.filter(e => !pw.isDecor(e));
-    ok(seen.length >= 3 && seen.every(e => pw.def.roster.includes(e.type)) && seen.some(e => e.def.swim), 'seuls des monstres marins (et des chauves-souris) arrivent (' + [...new Set(seen.map(e => e.type))].join(', ') + ')');
+    ok(seen.length >= 1 && seen.length <= pw.def.maxAlive && seen.every(e => pw.def.roster.includes(e.type)) && seen.some(e => e.def.swim), 'seuls des monstres marins (et des chauves-souris) arrivent (' + [...new Set(seen.map(e => e.type))].join(', ') + ')');
     ok(seen.filter(e => e.def.swim).every(e => e.baseY <= 3.6) && seen.filter(e => e.type === 'bat').every(e => e.baseY >= 9), 'les nageurs sont à la ligne d’eau, les chauves-souris dans les airs');
     { require(path.join(__dirname, '..', 'js', 'map.js')); ok(CB.Map.hangarAt(770, 485) && !CB.Map.hangarAt(500, 300) && CB.Map.nodes(0).length === 9 && CB.Map.prev(0, 8) === 1, 'le hangar est sur l’île et cliquable ; neuf cases sur la carte, le bateau relié au tableau 2'); }
     // le bateau volant de la nuée : passe à 40 s, dix coups le brisent (2026-10-31, avant trois), le secret ouvre le tableau 1-9
@@ -153,8 +155,8 @@ ok(profile.nightKills === CB.ENDLESS.unlockKills + w.kills && !S.waveUnlocked(pr
     const bx = boat.x; for (let i = 0; i < 30; i++) w2.update(1 / 60); ok(boat.x > bx + 2 && !boat.dead, 'il avance de gauche à droite');
     for (let i = 0; i < 9; i++) w2.applyDamage(boat, 999, true, null); ok(!boat.dead && boat.hp === 1 && w2.texts.some(t => /9 \/ 10/.test(t.text)), 'chaque boulet compte pour un coup, peu importe les dégâts');
     w2.applyDamage(boat, 1, false, null); ok(boat.dead && w2.boatSecret && w2.news.some(n => /NOUVEAU SECRET/.test(n.text)) && w2.kills === 0, 'dixième coup : il se brise, un nouveau secret est annoncé (pas un monstre abattu)');
-    w2.finish(false, 'detruit'); const r2 = CB.claim(b2, w2); ok(b2.boatSecret && r2.newNodes >= 1 && S.waveUnlocked(b2, 0, 8), 'même en perdant, le secret est gardé et révèle le bateau pirate sur la carte');
-    const w3 = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: b2, player: CB.playerById('zachary'), random: seeded(5) }); w3.intro = 0; w3.time = 39.5; for (let i = 0; i < 120; i++) w3.update(1 / 60); ok(!w3.enemies.some(e => e.def.secretBoat), 'secret déjà trouvé : le bateau ne repasse plus');
+    w2.finish(false, 'detruit'); const r2 = CB.claim(b2, w2); ok(!b2.boatSecret && r2.newNodes === 0 && !S.waveUnlocked(b2, 0, 8), 'en perdant, le secret ne révèle pas le bateau pirate');
+    const w3 = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: b2, player: CB.playerById('zachary'), random: seeded(5) }); w3.intro = 0; w3.time = 39.5; for (let i = 0; i < 120; i++) w3.update(1 / 60); ok(w3.enemies.some(e => e.def.secretBoat), 'après une défaite, le bateau revient pour retenter le secret');
     // survivre 300 s sur la mer : le pouvoir pirate est gagné ; au hangar on peut l'utiliser à la place du sien et le monter de niveau
     pw.hp = pw.maxHp; pw.finish(true); const r3 = CB.claim(pq, pw); ok(pw.pirateWorldWon && pq.pirateWorld && !pq.pirate && !r3.newPower && pw.texts.some(t => /MER DES PIRATES/.test(t.text)), 'tableau 1-9 réussi : le chemin vers la Mer des pirates s’ouvre'); pq.pirate = true;
     ok(!S.togglePirate(S.blank('np')) && S.togglePirate(pq) && pq.usePirate && CB.PIRATE.max === 5, 'au hangar : le pouvoir pirate peut remplacer le sien (seulement une fois gagné)');
@@ -167,7 +169,7 @@ ok(profile.nightKills === CB.ENDLESS.unlockKills + w.kills && !S.waveUnlocked(pr
   { const old = S.load({ getItem() { return JSON.stringify({ profiles: { z: Object.assign(S.blank('z'), { ball: 'planete', balls: ['fer', 'planete'] }) } }); } }).profiles.z; ok(old.ball === 'galaxie' && old.balls.includes('galaxie') && !old.balls.includes('planete'), 'une ancienne sauvegarde avec la Petite planète passe à la Galaxie'); }
   ok(CB.ENDLESS.firstAt[1] === 45 && CB.ENDLESS.firstAt[2] === 90 && CB.ENDLESS.firstAt.length === CB.HALLOWEEN.length, 'nuit sans fin : un nouveau monstre toutes les 45 s');
   ok(CB.roman(1) === 'I' && CB.roman(2) === 'II' && CB.roman(4) === 'IV' && CB.roman(9) === 'IX', 'chiffres romains des cartes : Gel II, Nova I');
-  n.time = 200; n.finish(false, 'detruit'); ok(n.over && n.won && n.stars === 2 && n.bonusGold === 17, 'détruit après 200 s : deux étoiles quand même'); }
+  n.time = 100; n.finish(false, 'detruit'); ok(n.over && !n.won && n.stars === 0 && n.bonusGold === 8, 'détruit après 100 s : défaite sans étoile'); }
 // Musique : une piste pour les menus, le boss, chaque monde et la vallée des dinosaures, fichiers présents et crédités.
 { const fs = require('fs'); const keys = ['menu', 'boss', 'prehistoire'].concat(CB.WORLDS.map(w => w.id));
   const files = [...new Set(Object.values(CB.MUSIC).flat())];
@@ -180,7 +182,8 @@ ok(profile.nightKills === CB.ENDLESS.unlockKills + w.kills && !S.waveUnlocked(pr
 // Tableau 1-3 : trois cibles passent ; les trois détruites (cumulées) ouvrent le mini-jeu 1-7 des cibles volantes, avec médailles.
 { const q = S.blank('tireur'); q.nightKills = 100; q.progress.foret = [1, 1]; ok(CB.wavesOf(0) === 9 && CB.waveDef(0, 2).targets && CB.waveDef(0, 6).type === 'cibles' && CB.waveDef(0, 7).type === 'brigands' && CB.waveDef(0, 8).scene === 'mer', 'le monde 1 a neuf tableaux : trois cibles au 3, mini-jeux au 7 et au 8, bateau pirate au 9');
   const w3 = new CB.Wave({ worldIndex: 0, waveIndex: 2, profile: q, player: CB.playerById('zachary'), random: seeded(4) }); w3.intro = 0;
-  for (let i = 0; i < 13 * 60; i++) { w3.update(1 / 60); if (w3.choice) w3.pickCard(0); } const cible = w3.enemies.find(e => e.type === 'cible'); ok(cible && w3.enemies.filter(e => e.type === 'cible').length === 1 && !(w3.seenBy.cible), 'à 12 s, une première cible passe (pas un monstre du bestiaire)');
+  w3.time=80; w3.kills=23; w3.update(.01); ok(!w3.enemies.some(e=>e.type==='cible'), '23 abattus : aucune cible prématurée');
+  w3.kills=24; w3.update(.01); const cible=w3.enemies.find(e=>e.type==='cible'); ok(cible && w3.targetTimes.join() === '60,96', 'première cible à 24 abattus, suivantes à 60 et 96');
   w3.kill(cible); ok(w3.targetsHit === 1 && w3.texts.some(t => /CIBLE 1 \/ 3/.test(t.text)), 'cible détruite : 1 / 3'); w3.finish(true); CB.claim(q, w3); ok(q.targetsHit === 1, 'la cible se garde dans le profil');
   q.targetsHit = 2; const w4 = new CB.Wave({ worldIndex: 0, waveIndex: 2, profile: q, player: CB.playerById('zachary'), random: seeded(4) }); w4.intro = 0; w4.kill(w4.spawnEnemy('cible', { x: 0, y: 6, z: 40 })); ok(!w4.news.some(n => /MINI-JEU/.test(n.text)) && w4.texts.some(x => /CIBLE 1 \/ 3/.test(x.text)), 'une seule cible dans cette partie : 1 / 3, pas de mini-jeu'); w4.finish(true); CB.claim(q, w4); ok(q.targetsHit === 2 && !S.waveUnlocked(q, 0, 6), 'le profil garde son meilleur résultat (2 sur 3), rien ne s’ouvre');
   const w5 = new CB.Wave({ worldIndex: 0, waveIndex: 2, profile: q, player: CB.playerById('zachary'), random: seeded(4) }); w5.intro = 0; for (let i = 0; i < 3; i++) w5.kill(w5.spawnEnemy('cible', { x: 0, y: 6, z: 40 })); ok(w5.news.some(n => /MINI-JEU/.test(n.text)) && w5.texts.some(x => /CIBLE 3 \/ 3/.test(x.text)), 'la troisième cible de la même partie annonce le mini-jeu'); w5.finish(true); const r5 = CB.claim(q, w5); ok(q.targetsHit === 3 && r5.newNodes === 1 && S.waveUnlocked(q, 0, 6), 'les trois cibles dans une même partie ouvrent le tableau 1-7');
@@ -206,7 +209,7 @@ ok(profile.nightKills === CB.ENDLESS.unlockKills + w.kills && !S.waveUnlocked(pr
     const ab = { x: orbs[0].x, y: orbs[0].y, z: orbs[0].z - 3, dmg: 1, ally: true, hitIds: new Set(), size: 1, vx: 0, vy: 0, vz: 60, age: 0, trail: [] }; const n1 = w3.puzzleFails, nx = w3.puzzle.next; w3.balls.push(ab); for (let i = 0; i < 20 && w3.balls.includes(ab); i++) w3.update(1 / 60); ok(w3.puzzleFails === n1 && w3.puzzle.next === nx && w3.puzzle, 'un boulet allié traverse les orbes sans toucher au puzzle'); }
   const ball = { dmg: 1, ally: false, hitIds: new Set() }; w3.hitEnemy(orbs.find(o => o.num === 2), ball); ok(w3.puzzle.next === 1 && w3.puzzleFails === 1 && w3.texts.some(t => /OUPS/.test(t.text)), 'mauvais ordre : on recommence');
   const g0 = w3.gold; for (const n of [1, 2, 3]) w3.hitEnemy(orbs.find(o => o.num === n), ball); ok(!w3.puzzle && w3.puzzlesSolved === 1 && w3.gold > g0 && orbs.every(o => o.dead) && w3.texts.some(t => /PUZZLE RÉUSSI/.test(t.text)), '1, 2, 3 : puzzle réussi, récompense');
-  const w4 = mk(); w4.triggerEvent('puzzle', 'ordre'); for (let i = 0; i < 15 * 60; i++) w4.update(1 / 60); ok(!w4.puzzle && w4.texts.some(t => /TROP TARD/.test(t.text)), 'puzzle non résolu en 14 s : trop tard');
+  const w4 = mk(); w4.triggerEvent('puzzle', 'ordre'); const deadline = w4.puzzle.duration; for (let i = 0; i < (deadline + .2) * 60; i++) w4.update(1 / 60); ok(deadline < 10 && !w4.puzzle && w4.texts.some(t => /TROP TARD/.test(t.text)), 'le puzzle court expire dès la fin du chrono');
   // choc électrique et glace : taper vite pour se libérer
   const w5 = mk(1, 1); w5.shield = 0; const clown = w5.spawnEnemy('clownChoc', { x: 0, y: 5, z: 2.5 }); const hp5 = w5.hp; w5.update(1 / 60); ok(w5.stun && w5.stun.kind === 'shock' && w5.hp === hp5 && !w5.fire(), 'le clown électrique étourdit sans enlever de vie : impossible de tirer');
   for (let i = 0; i < CB.STUN.shock.need; i++) w5.mash(); ok(!w5.stun && w5.texts.some(t => t.text === 'LIBRE !'), 'taper vite ' + CB.STUN.shock.need + ' fois libère'); w5.cooldown = 0; ok(w5.fire(), 'puis on retire');
@@ -282,7 +285,7 @@ ok(CB.PLAYERS.every(pl => CB.SPECIALS[pl.id] && CB.SPECIALS[pl.id].kills > 0 && 
   ok(!CB.CARDS.potion && CB.CARDS.soin, 'Plus de Potion de vie (doublon) : seule la Trousse de soins reste');
   { const r = tryAll('matthieu'); const n0 = r.w.balls.length; r.w.cooldown = 0; r.w.fire(); ok(r.w.fx.cheat >= 0 && r.w.balls.length - n0 >= r.w.stats.shots, 'Matthieu : tir normal après l’explosion tir pendant le code de triche'); }
   { const r = tryAll('milo'); r.w.cooldown = 0; r.w.fire(); ok(r.w.fx.slowmo > 7 && Math.abs(r.w.cooldown - CB.BASE_COOLDOWN / r.w.stats.rate / 2.5) < 1e-9 && r.w.zoomFx.k === 1 && r.w.specialBusy, 'Milo : cadence ×2,5 au ralenti, focus actif, jauge bloquée'); }
-  { const r = tryAll('eliott'), w2 = r.w; w2.cooldown = 0; w2.fire(); const b = w2.balls[w2.balls.length - 1]; ok(w2.fx.ghost > 7 && b.pierce && b.ghost && w2.damage(10) === false && w2.spirits.length === 3, 'Eliott : fantôme 8 s, boulets fantômes perforants, invulnérable, trois esprits'); for (let i = 0; i < 3 * 60; i++) { w2.update(1 / 60); if (w2.choice) w2.pickCard(0); } ok(w2.spirits.some(sp => sp.spooks > 0) && w2.texts.some(t => t.text === 'BOUH !'), 'les esprits font fuir les monstres'); }
+  { const r = tryAll('eliott'), w2 = r.w; w2.cooldown=0; w2.fire(); const b=w2.balls.at(-1); ok(w2.fx.soccer>11.4 && b.soccer && !b.pierce && !w2.spirits, 'Eliott : 12 secondes de soccer, sans fantômes'); }
   { const r = tryAll('josue'); ok(r.w.fx.rally > 29 && r.foes.every(e => e.frozen > 0 || e.dead), 'Josué : tout fige, puis dégâts doublés 30 s'); }
   { const r = tryAll('marie'), w2 = r.w; ok(w2.shield >= 4 && w2.fx.protect > 11, 'Marie : 4 boucliers et bulle d’amour 12 s'); while (w2.choice) w2.pickCard(0); const near = w2.spawnEnemy('owl', { x: 0, y: 5, z: 10 }); w2.hp = 30; w2.update(1 / 60); ok(near.z > 30 && near.hp < near.maxHp && w2.hp > 30 && w2.bursts.some(b => b.kind === 'hearts'), 'la bulle repousse le monstre qui s’approche et soigne'); } }
 // La vallée des dinosaures : cadeaux étoilés, puis le Mégaoiseau du temps après 10 minutes, en deux stades.
@@ -306,11 +309,11 @@ ok(CB.PLAYERS.every(pl => CB.SPECIALS[pl.id] && CB.SPECIALS[pl.id].kills > 0 && 
 // Pouvoir d'un allié : seul son canon en profite (boulets du vétéran), le joueur garde sa jauge libre
 { const mk = id => { const w = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: S.blank(id), player: CB.playerById(id), random: seeded(3) }); w.intro = 0; w.nextEvent = Infinity; w.nextBox = Infinity; return w; }; const w = mk('matthieu'); w.castSpecial(Object.assign({ id: 'richard', name: 'x', icon: '•' }, CB.SPECIALS.richard), 5, true); ok(w.fx.veteran > 0 && w.fxBy.veteran === 'ally' && !w.fxMine('veteran') && w.fxMine('veteran', true), 'Richard allié lance son pouvoir : effet marqué « allié »');
   w.launch(0, { x: 0, y: 5, z: 30, t: 1 }, 1, false); w.launch(5, { x: 0, y: 5, z: 30, t: 1 }, 1, true); const mine = w.balls.find(b => !b.ally), his = w.balls.find(b => b.ally); ok(mine && !mine.veteran && his && his.veteran, 'mes boulets restent normaux, les siens sont du vétéran');
-  const w2 = mk('eliott'); w2.castSpecial(Object.assign({ id: 'eliott', name: 'x', icon: '•' }, CB.SPECIALS.eliott), 0, true); ok(w2.fx.ghost > 0 && !w2.specialBusy && w2.damage(10) === true, 'un allié fantôme ne bloque pas ma jauge et ne me rend pas invulnérable'); }
+  const w2 = mk('eliott'); w2.castSpecial(Object.assign({ id: 'eliott', name: 'x', icon: '•' }, CB.SPECIALS.eliott), 0, true); ok(w2.fx.soccer > 0 && !w2.specialBusy && w2.damage(10) === true, 'un allié soccer ne bloque pas ma jauge et ne me rend pas invulnérable'); }
 // Paliers de couleur : même style, plus fort, plus payant
 { const t2 = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: S.blank('t'), player, random: seeded(1) }); const e = t2.spawnEnemy('bat', null, false, 2);
   ok(e.tier === 2 && e.name === 'Chauve-souris doré' && e.color === CB.TIERS[2].color && Math.abs(e.maxHp - CB.ENEMIES.bat.hp * 6) < 1e-9, 'palier doré : ×6 PV, couleur et nom du palier');
-  const g0 = t2.gold; t2.kill(e); ok(t2.gold - g0 >= CB.TIERS[2].gold * (CB.goldBase(0) + 0) - 1e-9 && CB.TIERS[2].gold === 4 && CB.comboMult(100) === 1.5 && CB.upgradeCost('portee', 0) === 50 && CB.upgradeCost('portee', 8) === Math.round(50 * Math.pow(1.65, 8)), 'palier doré : or ×4 ; combos ×1,5 max ; améliorations deux fois plus chères');
+  const g0 = t2.gold; t2.kill(e); ok(t2.gold - g0 >= CB.TIERS[2].gold * (CB.goldBase(0) + 0) - 1e-9 && CB.TIERS[2].gold === 4 && CB.comboMult(100) === 1.5 && CB.upgradeCost('portee', 0) === 250 && CB.upgradeCost('portee', 8) === Math.round(1500 * Math.pow(2.4, 6)), 'palier doré : or ×4 ; combos ×1,5 max ; améliorations adaptées à l’or des tableaux');
   ok(CB.HALLOWEEN.length === 20 && CB.HALLOWEEN.every(k => CB.ENEMIES[k] && CB.ENEMIES[k].variant), '20 styles d\'Halloween avec variante spéciale'); }
 // Un tableau classique « abats N » (monde 2)
 { const kp = Object.assign(S.blank('k'), { upgrades: { degats: 10, armure: 10, cadence: 10, portee: 6 }, level: 15, talents: { degats: 8, cadence: 8, vie: 10 } }); const k = new CB.Wave({ worldIndex: 1, waveIndex: 0, profile: kp, player, random: seeded(2) }); k.nextEvent = Infinity; k.nextBox = Infinity; play(k, 300);   // graine 2 : le bot gagne avec 8 graines sur 12 (le tableau est voulu serré) ; un canon bien amélioré : le 2-1 (150 à abattre, de plus en plus forts) est pensé pour après le monde 1 ; sans événements loufoques (le bot ne sait pas viser les boucliers)
@@ -327,7 +330,7 @@ const tank = Object.assign(S.blank('richard'), { upgrades: { armure: 10, degats:
 w = new CB.Wave({ worldIndex: 0, waveIndex: 3, profile: tank, player: CB.playerById('richard'), random: seeded(11) }); // 1-4 « Cent secondes » : survie de 100 s, dense
 ok(w.maxHp === CB.BASE_HP && w.maxArmor === CB.cannonArmor('classique') + 100, 'amélioration d’armure : +10 par niveau ; la vie reste celle du personnage');
 ok(w.stats.damage > 2.5 && w.stats.damage * (1 / 1.12) < 2.6, 'dégâts ×2.5 avec 10 améliorations (+ talent de Richard)');
-w.damage = () => false; play(w, 115); ok(w.over && w.won && w.time >= w.def.seconds - .1, 'survie gagnée à la fin du chrono (canon invulnérable : le tableau 4 est dur)');
+w.damage = () => false; play(w, 270); ok(w.over && w.won && w.time >= w.def.seconds - .1, 'survie gagnée à la fin du chrono (canon invulnérable : le tableau 4 est dur)');
 ok(w.timeLeft === 0, 'chrono épuisé');
 
 // Contre la montre : échec quand le temps est écoulé sans assez d'ennemis.
@@ -336,51 +339,52 @@ w.fire = () => false; for (let t = 0; t < 120 && !w.over; t += 1 / 60) w.update(
 ok(w.over && !w.won && (w.reason === 'temps' || w.reason === 'detruit'), 'contre la montre perdu');
 
 // Boss : seul devant nous dès le début (pas de monstres), un seul combat en trois phases (2/3, 1/3 des PV) ; boîtes bonus « ? » = +1 niveau ; on peut esquiver
+Object.assign(S.cannonUp(tank), tank.upgrades, { movement: true });
 w = new CB.Wave({ worldIndex: 0, waveIndex: 4, profile: tank, player: CB.playerById('richard'), random: seeded(21) });
 ok(w.canDodge && w.nextBox === CB.BOXES.first && !w.boss, 'tableau de boss : esquive ◀ ▶ permise, une boîte bonus est prévue, le boss n’est pas encore là');
 play(w, 2.5); ok(!w.boss && !w.enemies.some(e => !e.boss && !w.isDecor(e)), 'pendant l’intro : aucun monstre'); play(w, 1.2);
-ok(w.boss && w.boss.act === 0 && w.boss.full && w.enemies.every(e => e.boss || w.isDecor(e)) && w.news.some(n => n.kind === 'boss' && /BOSS : LE ROI/.test(n.text)), 'une seconde après l’intro : le boss sort, seul (kills=' + w.kills + ')');
+ok(w.boss && w.boss.act === 0 && w.boss.full && w.enemies.every(e => e.boss || w.isDecor(e)) && w.news.some(n => n.kind === 'boss' && /BOSS : LE DRAGON ROUGE/.test(n.text)), 'une seconde après l’intro : le boss sort, seul (kills=' + w.kills + ')');
 ok(CB.xpPerKill(0) * CB.BOSS_XP === 12, 'l’XP par monstre est multipliée dans un tableau de boss');
-{ const b = w.boss, maxHp = b.maxHp; ok(b.target === -1 && b.powers.join() === 'bolt,boulet' && Math.abs(maxHp - 600 * CB.BOSS_HP) < 1e-9, 'phase 1 : tir rapide et boulet lourd, 600 PV × 3');
-  play(w, 16); ok(w.kills === 0 && !w.enemies.some(e => !e.boss && !w.isDecor(e)) && (b.attacks > 0 || w.enemies.some(e => e.def.shot)), 'toujours aucun monstre ; le boss attaque (' + b.attacks + ' attaques)');
+{ const b = w.boss, maxHp = b.maxHp; w.hp = w.maxHp = 10000; ok(b.target === -1 && b.powers.join() === 'feu,boulet' && Math.abs(maxHp - 600 * CB.BOSS_HP) < 1e-9, 'phase 1 : tir rapide et boulet lourd, 600 PV × 3');
+  for (let i = 0; i < 60 * 16; i++) w.update(1 / 60); ok(w.kills === 0 && !w.enemies.some(e => !e.boss && !w.isDecor(e)) && (b.attacks > 0 || w.enemies.some(e => e.def.shot)), 'toujours aucun monstre ; le boss attaque (' + b.attacks + ' attaques)');
   ok(w.boxes >= 1 && CB.ENEMIES.boite.box && w.isDecor({ def: CB.ENEMIES.boite }), 'une boîte bonus « ? » est apparue (' + w.boxes + ')');
-  const box = w.spawnBox(), lvl = w.runLevel, ch = w.charge; w.applyDamage(box, 1); ok(box.dead && w.boxesHit === 1 && w.runLevel === lvl + 1 && w.cardFly && !w.choice && w.charge > ch, 'tirer la boîte : explosion, +1 niveau, la carte jaillit, un bout de jauge'); for (let i = 0; i < 40 && !w.choice; i++) w.update(1 / 60); ok(!w.cardFly && w.choice && w.choice.length === 3, 'après ' + CB.CARD_FLY + ' s de vol, les trois cartes'); w.pickCard(0);
+  const box = w.spawnBox(), lvl = w.runLevel, ch = w.charge, priorBoxes = w.boxesHit; w.applyDamage(box, 1); ok(box.dead && w.boxesHit === priorBoxes + 1 && w.runLevel === lvl + 1 && w.cardFly && !w.choice && w.charge > ch, 'tirer la boîte : explosion, +1 niveau, la carte jaillit, un bout de jauge'); for (let i = 0; i < 40 && !w.choice; i++) w.update(1 / 60); ok(!w.cardFly && w.choice && w.choice.length === 3, 'après ' + CB.CARD_FLY + ' s de vol, les trois cartes'); w.pickCard(0);
   w.balls = []; w.guest = null; for (const k in w.fx) w.fx[k] = 0; const box2 = w.spawnBox(); for (let i = 0; i < 60 * 7 && !box2.escaped; i++) { w.update(1 / 60); if (w.choice) w.pickCard(0); } ok(box2.escaped && !box2.dead && w.texts.some(t => t.text === 'POUF…'), 'une boîte ignorée disparaît après ' + CB.BOXES.life + ' s');
   const c0 = w.charge; w.applyDamage(b, 60, false, null); ok(w.charge > c0, 'frapper le boss remplit la jauge spéciale');
-  w.applyDamage(b, b.hp - maxHp * 2 / 3 + 1, false, null); ok(!b.leaving && !b.dead && b.act === 1 && w.boss === b && b.powers.includes('salve') && b.powers.includes('bombe') && w.plane && w.plane.text === 'PHASE 2' && !w.news.some(n => /PHASE 2/.test(n.text)), 'à 2/3 des PV : phase 2 (avion « PHASE 2 », sans bandeau), il ne s’enfuit pas, nouveaux pouvoirs (salve, bombe)');
+  w.applyDamage(b, b.hp - maxHp * 2 / 3 + 1, false, null); ok(!b.leaving && !b.dead && b.act === 1 && w.boss === b && b.powers.includes('salve') && b.powers.includes('eventail') && w.plane && w.plane.text === 'PHASE 2' && !w.news.some(n => /PHASE 2/.test(n.text)), 'à 2/3 des PV : phase 2 (avion « PHASE 2 », sans bandeau), il ne s’enfuit pas, nouveaux pouvoirs (salve, bombe)');
   w.bossAttack(b, 'salve'); ok(w.enemies.filter(e => e.type === 'bolt').length >= 5, 'la salve lance cinq tirs'); w.bossAttack(b, 'eventail'); ok(w.enemies.filter(e => e.type === 'bolt').length >= 8, 'l’éventail lance trois tirs');
   const bomb = w.spawnEnemy('bombe', { x: 0, y: 6, z: 40 }); w.shield = 0; const hp0 = w.hp; for (let i = 0; i < 60 * 6 && !bomb.dead; i++) { w.update(1 / 60); if (w.choice) w.pickCard(0); } ok(bomb.dead && Math.abs(bomb.z - CB.ENEMIES.bombe.hold) < 1 && w.hp < hp0, 'la bombe s’arrête, compte à rebours, puis explose sur nous si on ne la désamorce pas');
   const bomb2 = w.spawnEnemy('bombe', { x: 0, y: 6, z: 40 }); w.applyDamage(bomb2, 99); ok(bomb2.dead && w.texts.some(t => /DÉSAMORCÉ/.test(t.text)) && w.kills === 0, 'une bombe abattue est désamorcée sans compter comme un monstre');
   w.px = 0; w.bossAttack(b, 'mur'); const wall = w.enemies.filter(e => e.type === 'boulet'); ok(wall.length === 4 && wall.every(e => Math.abs(e.tx - (w.px + 5.5)) > 2.5 || Math.abs(e.tx - (w.px - 5.5)) > 2.5) && w.texts.some(t => /TROUVE LE TROU/.test(t.text)), 'mur de boulets : quatre boulets et un trou pour se tasser');
   w.bossAttack(b, 'pluie'); ok(w.enemies.filter(e => e.type === 'boulet').length >= 8 && w.enemies.some(e => e.type === 'boulet' && e.y > b.y + 6), 'pluie : des boulets tombent du ciel');
-  w.applyDamage(b, b.hp - maxHp / 3 + 1, false, null); ok(b.act === 2 && b.powers.includes('faisceau') && b.powers.includes('mur') && w.bossPhases === 2 && w.plane && w.plane.text === 'PHASE 3', 'à 1/3 des PV : phase 3 avec le faisceau et le mur');
+  w.applyDamage(b, b.hp - maxHp / 3 + 1, false, null); ok(b.act === 2 && b.powers.includes('feu') && b.powers.includes('mur') && w.bossPhases === 2 && w.plane && w.plane.text === 'PHASE 3', 'à 1/3 des PV : phase 3 avec le faisceau et le mur');
   b.boltTimer = 99; w.px = 0; w.bossAttack(b, 'faisceau'); ok(w.beam && w.beam.x === 0 && w.beam.color, 'le faisceau vise là où est le canon'); w.px = 6; for (let i = 0; i < 60 * 2.2; i++) { w.update(1 / 60); if (w.choice) w.pickCard(0); } ok(!w.beam && w.dodged >= 1, 'tassé : le faisceau est esquivé');
   for (let i = 0; i < 60 * 5 && b.retreat; i++) { w.update(1 / 60); if (w.choice) w.pickCard(0); } ok(!b.retreat, 'sa retraite de phase 3 est finie');
   w.applyDamage(b, maxHp); ok(w.over && w.won && b.dead && w.texts.some(t => /BOSS VAINCU/.test(t.text)), 'boss vaincu en phase 3 (temps=' + Math.round(w.time) + 's)'); }
 // Mise en scène des boss : grande entrée, retraite entre les phases (rouge puis doré), distance variable, esquive, rafales, nuée, couronne ; boîtes devant le boss ; claquement de Matthieu
 { const mk = () => ({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 40, straight: true, trail: [], dmg: 5, size: 1, pierce: false, splash: 0, chain: false, freeze: false, effect: null, hitIds: new Set(), bounced: false, age: 0 });
   const bw = new CB.Wave({ worldIndex: 0, waveIndex: 4, profile: tank, player: CB.playerById('matthieu'), random: seeded(9) }); bw.intro = 0; let hurt = 0; bw.damage = () => { hurt++; return false; }; const b = bw.spawnBoss(), A = CB.BOSS_ANIM;
-  ok(b.intro && b.z > 100 && b.y > 20 && b.def.agile && b.def.weak, 'grande entrée : le Roi des chauves-souris plonge du ciel ; il est agile et sa couronne est son point faible');
+  ok(b.intro && b.z > 100 && b.y > 20 && b.def.agile && b.def.weak, 'grande entrée : le Dragon rouge plonge du ciel ; il est agile et sa couronne est son point faible');
   for (let i = 0; i < 60 * 3; i++) bw.update(1 / 60); ok(!b.intro && b.arrived && Math.abs(b.z - b.hover) < 8 && bw.texts.some(t => /GRAAAH/.test(t.text)), 'après ' + A.intro + ' s il est en place et rugit');
   bw.enemies = bw.enemies.filter(e => e.boss); bw.spawnEnemy('bolt', { x: 0, y: 5, z: 20 }); bw.spawnEnemy('bombe', { x: 0, y: 5, z: 30 }); bw.beam = { x: 0, from: { x: 0, y: 9, z: 30 }, t: 0, charge: 1, fire: .5 }; const hp0 = b.hp; bw.charge = 1;
   ok(bw.special && bw.special.id === 'matthieu' && bw.useSpecial(), 'Matthieu claque des doigts'); ok(Math.abs(hp0 - b.hp - b.maxHp * CB.BOSS_SPECIAL.flat.triche) < 1e-6 && !bw.enemies.some(e => !e.dead && e.def.shot) && !bw.beam && bw.portrait && bw.portrait.id === 'matthieu', 'claquement : 15 % du boss, tous les tirs et bombes effacés, son vrai visage apparaît');
   b.boltTimer = 999; b.hover = b.z; b.hoverT = 999; b.dodgeCd = 99; bw.px = 0; bw.enemies = bw.enemies.filter(e => e.boss); const box = bw.spawnEnemy('boite', { x: b.x, y: b.y, z: b.z - 6 }); box.life = 99; const hp1 = b.hp;
   bw.balls.push(Object.assign(mk(), { x: b.x, y: b.y, z: b.z - 12 })); for (let i = 0; i < 20 && !box.dead; i++) bw.update(1 / 60); ok(box.dead && b.hp === hp1 && bw.cardFly, 'une boîte devant le boss encaisse le boulet, pas lui'); bw.cardFly = null; bw.pendingLevels = 0;
   const es = 1.3 * CB.BOSS_SCALE, wk = b.def.weak, hp2 = b.hp; bw.enemies = bw.enemies.filter(e => e.boss); bw.balls = [Object.assign(mk(), { x: b.x + wk.x * es, y: b.y - wk.y * es, z: b.z - 3 })]; for (let i = 0; i < 12 && bw.balls.length; i++) bw.update(1 / 60);
-  ok(bw.weakHits === 1 && hp2 - b.hp >= 5 * A.weak - 1e-9 && b.weakFlash > 0 && bw.texts.some(t => /COURONNE/.test(t.text)), 'en pleine couronne : dégâts ×' + A.weak + ' et le rubis flashe');
-  const hp3 = b.hp; bw.balls = [Object.assign(mk(), { x: b.x, y: b.y - 4, z: b.z - 3 })]; for (let i = 0; i < 12 && bw.balls.length; i++) bw.update(1 / 60); ok(bw.weakHits === 1 && hp3 - b.hp > 0, 'ailleurs sur le corps : dégâts normaux');
+  ok(bw.weakHits === 1 && hp2 - b.hp >= 5 * A.weak - 1e-9 && b.weakFlash > 0 && bw.texts.some(t => /ÉCAILLE/.test(t.text)), 'en pleine couronne : dégâts ×' + A.weak + ' et le rubis flashe');
+  const hp3 = b.hp; bw.balls = [Object.assign(mk(), { x: b.x, y: b.y + 4, z: b.z - 3 })]; for (let i = 0; i < 12 && bw.balls.length; i++) bw.update(1 / 60); ok(bw.weakHits === 1 && hp3 - b.hp > 0, 'ailleurs sur le corps : dégâts normaux');
   let salvo = false; for (let k = 0; k < 12 && !salvo; k++) { bw.bossAttack(b, 'bolt'); if (b.salvo) salvo = true; b.salvo = null; } ok(salvo, 'les boules rouges partent parfois en rafale de ' + A.burst[0] + ' à ' + A.burst[1]);
   bw.enemies = bw.enemies.filter(e => e.boss); b.salvo = { power: 'bolt', left: 3, gap: A.gap, t: A.gap }; for (let i = 0; i < 40; i++) bw.update(1 / 60); ok(bw.enemies.filter(e => e.type === 'bolt').length === 3 && !b.salvo, 'les tirs de la rafale partent l’un derrière l’autre');
   bw.enemies = bw.enemies.filter(e => e.boss); bw.bossAttack(b, 'nuee'); for (let i = 0; i < 60; i++) bw.update(1 / 60); const bats = bw.enemies.filter(e => e.type === 'bat'); ok(bats.length >= 4 && bats.length <= 8 && !b.salvo && bats.every(e => e.speed > CB.ENEMIES.bat.speed), 'nuée : 4 à 8 chauves-souris rapides en rafale (' + bats.length + ')');
-  const seq = []; for (let i = 0; i < 14; i++) { b.boltTimer = 0; b.salvo = null; bw.enemies = bw.enemies.filter(e => e.boss); bw.update(1 / 60); seq.push(b.lastPower); } ok(seq.every(p => p === 'bolt' || p === 'boulet') && seq.includes('bolt') && seq.includes('boulet') && b.boltTimer > 0 && b.boltTimer < b.def.boltEvery * 1.4, 'phase 1 : seulement boule rouge et boulet lourd, au hasard, à des intervalles variés (' + seq.join(' ') + ')');
+  const seq = []; for (let i = 0; i < 14; i++) { b.boltTimer = 0; b.salvo = null; bw.enemies = bw.enemies.filter(e => e.boss); bw.update(1 / 60); seq.push(b.lastPower); } ok(seq.every(p => p === 'feu' || p === 'boulet') && seq.includes('feu') && seq.includes('boulet') && b.boltTimer > 0 && b.boltTimer < b.def.boltEvery * 1.4, 'phase 1 : seulement boule rouge et boulet lourd, au hasard, à des intervalles variés (' + seq.join(' ') + ')');
   const z0 = b.hover; b.hoverT = 0; bw.update(1 / 60); ok(b.hover !== z0 && b.hover >= b.hover0 + A.hover[0] && b.hover <= b.hover0 + A.hover[1], 'il change de distance de temps en temps (' + z0 + ' → ' + b.hover.toFixed(1) + ')');
-  b.boltTimer = 999; let dodged = false; for (let k = 0; k < 40 && !dodged; k++) { b.dodgeCd = 0; b.dodge = null; bw.balls = [Object.assign(mk(), { x: b.x, y: b.y, z: b.z - 15 })]; bw.update(1 / 60); if (b.dodge) dodged = true; } bw.balls = []; ok(dodged && b.dodges >= 1 && bw.texts.some(t => t.text === 'HOP !'), 'le Roi des chauves-souris esquive parfois nos boulets');
+  b.boltTimer = 999; let dodged = false; for (let k = 0; k < 40 && !dodged; k++) { b.dodgeCd = 0; b.dodge = null; bw.balls = [Object.assign(mk(), { x: b.x, y: b.y, z: b.z - 15 })]; bw.update(1 / 60); if (b.dodge) dodged = true; } bw.balls = []; ok(dodged && b.dodges >= 1 && bw.texts.some(t => t.text === 'HOP !'), 'le Dragon rouge esquive parfois nos boulets');
   for (let i = 0; i < 15; i++) bw.update(1 / 60); ok(Math.abs(b.sideOff) > 1, 'il se tasse de côté pendant l’esquive'); b.dodge = null; b.dodgeCd = 99;
   bw.enemies = bw.enemies.filter(e => e.boss); const bomb = bw.spawnEnemy('bombe', { x: 0, y: 6, z: 40 }); bw.px = 12; hurt = 0; for (let i = 0; i < 60 * 6 && !bomb.dead; i++) bw.update(1 / 60); ok(bomb.dead && hurt === 1 && bw.texts.some(t => t.text === 'BOUM !!!'), 'la bombe 3… 2… 1… nous fait mal même si on est loin'); bw.px = 0;
   bw.applyDamage(b, b.hp - b.maxHp * 2 / 3 + 1); ok(b.act === 1 && b.retreat && bw.texts.some(t => /AÏE/.test(t.text)), 'phase 2 : il a mal et s’enfuit'); const hp4 = b.hp; bw.applyDamage(b, 50); ok(b.hp === hp4, 'intouchable pendant sa retraite');
-  for (let i = 0; i < 60 * (A.hurt + A.flee + A.gone + .3); i++) bw.update(1 / 60); ok(b.retreat && b.retreat.back && b.color === A.colors[0] && b.size > b.def.size && bw.texts.some(t => /PLUS FÂCHÉ/.test(t.text)), 'il revient tout rouge, un peu plus gros, encore plus fâché');
+  for (let i = 0; i < 60 * (A.hurt + A.flee + A.gone + .3); i++) bw.update(1 / 60); ok(b.retreat && b.retreat.back && b.color === b.def.phaseColors[0] && b.size > b.def.size && bw.texts.some(t => /PLUS FÂCHÉ/.test(t.text)), 'il revient tout rouge, un peu plus gros, encore plus fâché');
   for (let i = 0; i < 60 * 1.6; i++) bw.update(1 / 60); ok(!b.retreat && b.alpha === 1 && b.z < 80, 'et le combat reprend');
-  bw.applyDamage(b, b.hp - b.maxHp / 3 + 1); for (let i = 0; i < 60 * 4.2; i++) bw.update(1 / 60); ok(b.act === 2 && b.color === A.colors[1] && !b.retreat, 'phase 3 : il revient en or'); }
+  bw.applyDamage(b, b.hp - b.maxHp / 3 + 1); for (let i = 0; i < 60 * 4.2; i++) bw.update(1 / 60); ok(b.act === 2 && b.color === b.def.phaseColors[1] && !b.retreat, 'phase 3 : il revient rouge incandescent'); }
 // Cheats (or, invincible, tous les objets), Trio de choc (troisième coéquipier en réserve, échange en plein tableau), chemins de la carte
 { const cp = S.blank('matthieu'); ok(CB.CHEATS.length >= 7 && CB.CHEATS.some(c => c.id === 'god') && CB.CHEATS.some(c => c.gold === 10000) && CB.ITEMS.trio && CB.ITEMS.trio.needsAlly2, 'liste des cheats et objet « Trio de choc »');
   ok(S.cheatGod(cp) === true && cp.cheats.god && S.cheatGod(cp) === false, 'invincibilité : un interrupteur');
@@ -435,8 +439,8 @@ w = new CB.Wave({ profile: stars, player, random: () => 0 }); w.fire(); ok(w.bal
 const twin = Object.assign(S.blank('zachary'), { cannon: 'jumeau' }); w = new CB.Wave({ profile: twin, player, random: () => .99 }); w.fire(); ok(w.balls.length === 2, 'canon jumeau : deux boulets');
 
 // Boutique et niveaux
-const p = S.blank('alexie'); p.gold = 1000;
-ok(S.buyUpgrade(p, 'cadence') && S.cannonUp(p).cadence === 1 && p.gold === 1000 - CB.upgradeCost('cadence', 0, 'classique'), 'achat d\'une amélioration (niveau rangé sur le canon équipé)');
+const p = S.blank('alexie'); p.gold = 10000;
+ok(S.buyUpgrade(p, 'cadence') && S.cannonUp(p).cadence === 1 && p.gold === 10000 - CB.upgradeCost('cadence', 0, 'classique'), 'achat d\'une amélioration (niveau rangé sur le canon équipé)');
 ok(CB.stats(S.blank('x'), CB.playerById('matthieu')).auto && !CB.UPGRADES.auto, 'le tir en continu est toujours permis, rien à acheter');
 { const old = S.load({ getItem() { return JSON.stringify({ profiles: { z: Object.assign(S.blank('z'), { gold: 5, cannon: 'classique', upgrades: { auto: 1, cadence: 2 } }) } }); } }).profiles.z; ok(!S.cannonUp(old, 'classique').auto && S.cannonUp(old, 'classique').cadence === 2 && old.gold === 65 && !Object.keys(old.upgrades).length, 'ancien profil : tir automatique remboursé, niveaux déplacés sur le canon équipé'); }
 { const w = new CB.Wave({ worldIndex: 0, waveIndex: 0, profile: S.blank('y'), player: CB.playerById('matthieu'), random: seeded(3) }); const r0 = w.stats.rate; w.choice = ['rafale']; w.pickCard(0); ok(Math.abs(w.stats.rate - r0 * 2) < 1e-9 && CB.CARDS.rafale.max === 1, 'Gâchette folle : cadence doublée, une seule fois'); w.choice = null; w.offerCards(); ok(!w.choice.includes('rafale'), 'elle n\'est plus proposée ensuite'); }
@@ -553,8 +557,8 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
   ok(!none.enemies.some(e => e.def.chest) && !none.portalSpawned, 'sans réglage : aucun coffre');
   for (let i = 0; i < 10; i++) w.kill(w.spawnEnemy('bat', { x: 0, y: 5, z: 40 })); ok(w.secretFound && !w.news.some(nw => /NOUVEAU TABLEAU/.test(nw.text)), '100 abattus au tableau 1-1 (même personnalisé) : le tableau 2 se révèle, sans bandeau');
   require(path.join(__dirname, '..', 'js', 'custom-waves.js')); const d = CB.waveDef(0, 0), cw = CB.CUSTOM_WAVES['foret-1'];
-  ok(cw && d.custom && d.type === 'kill' && d.goal === 100 && d.name === 'Niveau 1-1' && cw.sequence.length === 6 && cw.sequence[4].kinds.some(k => k.type === 'ghost') && cw.portalAt === 45 && cw.chestEvery === 35, 'le tableau 1-1 relié : « Niveau 1-1 », 100 à abattre, 6 groupes (fantômes au 5e), portail à 45 s');
-  const w1 = new CB.Wave({ worldIndex: 0, waveIndex: 0, profile: q, player: CB.playerById('zachary'), random: seeded(2) }); ok(w1.custom === cw && w1.sequence.length === 6 && !w1.endless && w1.def.goal === 100, 'sans custom explicite, la vague 1-1 charge le tableau relié');
+  ok(cw && d.custom && d.goal === 100 && d.name === 'Les Premiers Pas' && cw.sequence.length === 10 && cw.portalKills === 0 && cw.portalAt === 0 && cw.sequence[1].kinds[0].elite, 'nouveau 1-1 : dix groupes importés, élites conservées et aucun portail automatique');
+  const w1 = new CB.Wave({ worldIndex: 0, waveIndex: 0, profile: q, player: CB.playerById('zachary'), random: seeded(2) }); ok(w1.custom === cw && w1.sequence.length === 10 && !w1.endless && w1.def.goal === 100, 'sans custom explicite, la vague 1-1 charge le tableau relié');
   const q2 = S.blank('fin11'); const w2 = new CB.Wave({ worldIndex: 0, waveIndex: 0, profile: q2, player: CB.playerById('zachary'), random: seeded(2) }); w2.intro = 0; for (let i = 0; i < 100; i++) w2.kill(w2.spawnEnemy('bat', { x: 0, y: 5, z: 40 })); for (let i = 0; i < 30; i++) { if (w2.choice) w2.pickCard(0); w2.update(1 / 60); }
   ok(w2.over && w2.won, '100 abattus : le 1-1 est terminé'); const r2 = CB.claim(q2, w2); ok(q2.nightKills === 100 && S.revealed(q2) >= 1 && S.waveUnlocked(q2, 0, 1) && r2.newNodes >= 1, 'après le 1-1 terminé, le tableau 2 est révélé et ouvert'); }
 
@@ -574,27 +578,27 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
 // La mer des monstres : jamais plus de 4 monstres en même temps (maxAlive), pareil dans l'éditeur
 { const sp = S.blank('calme'); sp.boatSecret = true; const sw = new CB.Wave({ worldIndex: 0, waveIndex: 8, profile: sp, player: CB.playerById('zachary'), random: seeded(11) }); sw.intro = 0; let most = 0;
   for (let i = 0; i < 60 * 40; i++) { sw.update(1 / 60); if (sw.choice) sw.pickCard(0); most = Math.max(most, sw.enemies.filter(e => !e.dead && !e.escaped && !sw.isDecor(e)).length); }
-  ok(sw.def.maxAlive === 4 && most <= 4 && most >= 3, 'la mer : 3 à 4 monstres à l’écran, jamais plus (' + most + ')');
+  ok(sw.def.maxAlive === 12 && most === 12, 'la mer : douze monstres à l’écran au maximum (' + most + ')');
   const cw = new CB.Wave({ worldIndex: 0, waveIndex: 0, profile: sp, player: CB.playerById('zachary'), random: seeded(11), custom: { type: 'survive', seconds: 300, density: 3, maxAlive: 2, random: { enabled: true, enemies: ['bat'] }, sequence: [] } }); cw.intro = 0; let most2 = 0;
   for (let i = 0; i < 60 * 20; i++) { cw.update(1 / 60); if (cw.choice) cw.pickCard(0); most2 = Math.max(most2, cw.enemies.filter(e => !e.dead && !e.escaped).length); } ok(most2 === 2, 'éditeur : max à l’écran = 2'); }
 
 // Monde 1 : tableau 3 = 200 à abattre, 16 chauves-souris d'un coup puis de plus en plus forts ; tableau 4 = survivre 100 s, dur ; boss ×10 de PV
-{ const q = S.blank('m1'); const d3 = CB.waveDef(0, 2), d4 = CB.waveDef(0, 3); ok(d3.type === 'kill' && d3.goal === 200 && d3.targets.at.length === 3 && d3.sequence && d3.ramp && d4.type === 'survive' && d4.seconds === 100 && d4.ramp, 'définitions des tableaux 3 et 4');
+{ const q = S.blank('m1'); const d3 = CB.waveDef(0, 2), d4 = CB.waveDef(0, 3); ok(d3.type === 'kill' && d3.goal === 120 && d3.targets.kills.length === 3 && d3.sequence && d3.ramp && d4.type === 'survive' && d4.seconds === 240 && d4.dragonOutro && d4.ramp, 'définitions des tableaux 3 et 4');
   const w3 = new CB.Wave({ worldIndex: 0, waveIndex: 2, profile: q, player: CB.playerById('zachary'), random: seeded(4) }); w3.intro = 0; for (let i = 0; i < 60 * 7; i++) { w3.update(1 / 60); if (w3.choice) w3.pickCard(0); }
   { const alive = w3.enemies.filter(e => !e.dead && !e.escaped && !w3.isDecor(e)).length; ok(w3.sequence && w3.sequence.length === 1 && w3.enemies.some(e => e.type === 'bat') && alive >= 3 && alive <= 9 && !w3.custom, 'première vague calme (2026-10-31) : 3 à 9 monstres en 7 s sans tirer (' + alive + ')'); }
   ok(w3.spawnInterval() > 1.8 * (1.3 - w3.time * .006) / d3.density, 'au départ, les arrivées au hasard du 1-3 sont plus de 1,8 fois plus lentes');
   const at = { x: 0, y: 5, z: 40 }, hp0 = w3.spawnEnemy('bat', at).hp; w3.time = 85; const hp1 = w3.spawnEnemy('bat', at).hp; ok(Math.abs(hp1 / hp0 - 1.25) < 1e-9, 'à 85 s, les monstres ont +25 % de PV (un palier de 45 s)');
   const w4 = new CB.Wave({ worldIndex: 0, waveIndex: 3, profile: q, player: CB.playerById('zachary'), random: seeded(4) }); w4.intro = 0; let most = 0; for (let i = 0; i < 60 * 30; i++) { w4.update(1 / 60); if (w4.choice) w4.pickCard(0); most = Math.max(most, w4.enemies.length); }
   ok(most >= 12 && w4.timeLeft > 60, 'tableau 4 : ça arrive dense (' + most + ' à l’écran en 30 s)');
-  ok(CB.BOSSES.batking.hp === 600 && Object.values(CB.BOSSES).every(bd => !bd.mini && !bd.angry ? bd.powers && bd.powers.length === 3 && bd.powers.every(l => l.every(p => CB.BOSS_POWER_NAMES[p])) : true), 'le Roi des chauves-souris a 600 PV ; chaque boss a trois phases de pouvoirs nommés'); }
+  ok(CB.BOSSES.batking.hp === 600 && Object.values(CB.BOSSES).every(bd => !bd.mini && !bd.angry ? bd.powers && bd.powers.length === 3 && bd.powers.every(l => l.every(p => CB.BOSS_POWER_NAMES[p])) : true), 'le Dragon rouge a 600 PV ; chaque boss a trois phases de pouvoirs nommés'); }
 
 // Monde caché des pirates : ouvert par le bateau 1-9 ; bateaux ennemis ancrés qui canonnent ; esquive ◀ ▶ ; couler ; boss à deux étapes ; pouvoir pirate
 { const PW = CB.WORLDS.findIndex(w => w.id === 'pirates'), q = S.blank('corsaire'); q.nightKills = 100; q.boatSecret = true;
   ok(PW === 6 && CB.WORLDS[PW].hidden && !S.worldUnlocked(q, PW) && CB.tierOf(PW) === 1.2 && CB.hpScale(PW) < CB.hpScale(2), 'le monde caché est fermé au départ et vaut un monde 2 en difficulté');
-  const sea = new CB.Wave({ worldIndex: 0, waveIndex: 8, profile: q, player: CB.playerById('zachary'), random: seeded(3) }); sea.intro = 0; sea.time = 300; sea.update(1 / 60); ok(sea.over && sea.won && sea.pirateWorldWon && !sea.pirateWon, 'réussir 1-9 ouvre le chemin (plus le pouvoir)');
+  const sea = new CB.Wave({ worldIndex: 0, waveIndex: 8, profile: q, player: CB.playerById('zachary'), random: seeded(3) }); sea.intro = 0; sea.time = sea.def.seconds; sea.update(1 / 60); ok(sea.over && sea.won && sea.pirateWorldWon && !sea.pirateWon, 'réussir 1-9 ouvre le chemin (plus le pouvoir)');
   const r9 = CB.claim(q, sea); ok(q.pirateWorld && !q.pirate && S.worldUnlocked(q, PW) && r9.newNodes >= 1, 'le monde caché est débloqué, le pouvoir pirate pas encore');
   for (let vi = 0; vi < 5; vi++) { const d = CB.waveDef(PW, vi); ok(d.scene === 'mer' && d.boat && d.ships && d.ships.kinds.every(k => CB.ENEMIES[k] && CB.ENEMIES[k].ship), 'tableau pirate ' + (vi + 1) + ' : mer, bateau, bateaux ennemis (' + d.type + ')'); }
-  const w1 = new CB.Wave({ worldIndex: PW, waveIndex: 0, profile: q, player: CB.playerById('zachary'), random: seeded(4) }); w1.intro = 0; ok(w1.canDodge && w1.sea && w1.px === 0, 'on peut se tasser sur la mer des pirates');
+  Object.assign(S.cannonUp(q), q.upgrades, { movement: true }); const w1 = new CB.Wave({ worldIndex: PW, waveIndex: 0, profile: q, player: CB.playerById('zachary'), random: seeded(4) }); w1.intro = 0; ok(w1.canDodge && w1.sea && w1.px === 0, 'on peut se tasser sur la mer des pirates');
   w1.move(1, .5); ok(w1.px > 6, '◀ ▶ déplacent le canon'); w1.move(-1, 1); ok(w1.px < 0, '… dans les deux sens');
   const ch = w1.spawnEnemy('chaloupe'); ch.z = 50; let shots = 0; for (let i = 0; i < 60 * 8; i++) { w1.update(1 / 60); if (w1.choice) w1.pickCard(0); shots = Math.max(shots, w1.enemies.filter(e => e.type === 'bouletCanon').length); }
   ok(!ch.dead && !ch.escaped && ch.z === ch.def.anchor && !ch.bite && shots >= 1, 'la chaloupe jette l’ancre à ' + ch.def.anchor + ' et canonne (' + shots + ' boulet(s) vus)');
@@ -626,9 +630,9 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
   const w3 = new CB.Wave({ worldIndex: 1, waveIndex: 2, profile: q, player: CB.playerById('zachary'), random: seeded(5) }); w3.intro = 0; w3.time = 60; for (let i = 0; i < 30; i++) { w3.update(1 / 60); if (w3.choice) w3.pickCard(0); }
   const chest = w3.enemies.find(e => e.def.portal); ok(chest && !w3.portalSeen, 'à 60 s, le coffre doré passe dans le 2-3'); w3.kill(chest); for (let i = 0; i < 60 * 4 && !w3.over; i++) w3.update(1 / 60);
   ok(w3.over && w3.won && w3.reason === 'portail' && w3.portalDone && w3.stars === 0, 'le coffre doré ouvre le portail : on voyage sans étoile'); const r = CB.claim(q, w3); ok(S.portalFound(q, 'manoir') && !q.portal && S.waveUnlocked(q, 1, 5) && r.newNodes >= 1, 'le portail du manoir révèle le 2-6 (pas celui du monde 1)');
-  const ws = new CB.Wave({ worldIndex: 1, waveIndex: 5, profile: q, player: CB.playerById('zachary'), random: seeded(5), carry: { cards: [], runLevel: 3, runXp: 0, hpRatio: .5 } }); ws.intro = 0;
+  Object.assign(S.cannonUp(q), q.upgrades, { movement: true }); const ws = new CB.Wave({ worldIndex: 1, waveIndex: 5, profile: q, player: CB.playerById('zachary'), random: seeded(5), carry: { cards: [], runLevel: 3, runXp: 0, hpRatio: .5 } }); ws.intro = 0;
   ok(ws.under && !ws.sea && ws.canDodge && ws.scenery && ws.scenery.scene === 'abysses' && ws.def.type === 'survive' && ws.runLevel === 3 && ws.news.some(nw => /TABLEAU SECRET/.test(nw.text)), '2-6 : sous l’eau, en sous-marin (◀ ▶), on garde ses cartes et son niveau');
-  const AB = CB.WORLDS.findIndex(w => w.id === 'abysses'); ok(!S.worldUnlocked(q, AB), 'les Abysses sont fermées'); ws.time = 120; ws.update(1 / 60); ok(ws.over && ws.won && ws.worldWon === 'abysses' && !ws.pirateWorldWon, 'survivre 120 s ouvre le chemin'); const r2 = CB.claim(q, ws); ok(S.hiddenOpen(q, 'abysses') && S.worldUnlocked(q, AB) && !q.pirateWorld && r2.newNodes >= 1, 'les Abysses sont ouvertes (pas la Mer des pirates)');
+  const AB = CB.WORLDS.findIndex(w => w.id === 'abysses'); ok(!S.worldUnlocked(q, AB), 'les Abysses sont fermées'); ws.time = ws.def.seconds; ws.update(1 / 60); ok(ws.over && ws.won && ws.worldWon === 'abysses' && !ws.pirateWorldWon, 'survivre jusqu’au nouveau chrono ouvre le chemin'); const r2 = CB.claim(q, ws); ok(S.hiddenOpen(q, 'abysses') && S.worldUnlocked(q, AB) && !q.pirateWorld && r2.newNodes >= 1, 'les Abysses sont ouvertes (pas la Mer des pirates)');
   // aliens à vaisseau : le vaisseau encaisse d'abord
   const GA = CB.WORLDS.findIndex(w => w.id === 'galaxie'), wg = new CB.Wave({ worldIndex: GA, waveIndex: 0, profile: q, player: CB.playerById('zachary'), random: seeded(5) }); wg.intro = 0; const al = wg.spawnEnemy('alienVert', { x: 0, y: 6, z: 40 }), sh0 = al.shield, hp0 = al.hp, sp0 = al.speed; ok(sh0 > 0 && al.shieldMax === sh0, 'l’alien arrive dans un petit vaisseau (shield)');
   wg.applyDamage(al, sh0 - 1, false, null); ok(al.hp === hp0 && Math.abs(al.shield - 1) < 1e-9 && !al.dead, 'les coups cassent le vaisseau, pas l’alien'); wg.applyDamage(al, 5, false, null); ok(al.shield === 0 && al.hp === hp0 && al.speed > sp0 && wg.texts.some(t => /VAISSEAU DÉTRUIT/.test(t.text)) && wg.shipsBroken === 1, 'vaisseau détruit : l’alien à nu est plus vif'); wg.applyDamage(al, 999, false, null); ok(al.dead && wg.kills === 1, 'puis l’alien tombe');
@@ -649,7 +653,7 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
   ok(S.buyUpgrade(h, 'degats') && S.cannonUp(h, 'classique').degats === 1, 'niveau de dégâts sur le canon classique');
   const base = CB.stats(h, CB.playerById('zachary')).damage;
   ok(S.buyCannon(h, 'pirate') && h.cannon === 'pirate' && S.upgradeLevel(h, 'degats') === 0 && S.upgradeLevel(h, 'degats', 'classique') === 1, 'changer de canon : ses niveaux repartent de zéro, ceux du classique restent');
-  ok(CB.upgradeCost('degats', 0, 'pirate') === Math.round(CB.upgradeCost('degats', 0, 'classique') * 1.4) && CB.cannonBoost('pirate').power === 1.25 && CB.cannonBoost('jumeau').power === 2.5, 'palier : +40 % de prix et +25 % de force par palier');
+  ok(CB.upgradeCost('degats', 0, 'pirate') === Math.round(CB.UPGRADE_PRICES.degats * 1.4) && CB.cannonBoost('pirate').power === 1.25 && CB.cannonBoost('jumeau').power === 2.5, 'palier : +40 % de prix et +25 % de force par palier');
   ok(S.buyUpgrade(h, 'degats') && Math.abs(CB.stats(h, CB.playerById('zachary')).damage - (1 + CB.STAT_PER.degats.upgrade * 1.25) * 1.2) < 1e-9, 'sur le canon de pirate, un niveau de dégâts vaut 1,25 × plus');
   void base;
   ok(!S.buyUnique(h, 'cadeaux') && S.buyUnique(h, 'flotte') && S.uniqueLevel(h, 'flotte') === 1 && S.buyUnique(h, 'abordage'), 'spécialités : seulement celles du canon équipé');
@@ -705,6 +709,10 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
   w.applyDamage(owl, 2); ok(owl.hp < owl.maxHp && !w.texts.some(t => /CASSE LES BOUCLIERS/.test(t.text)), 'les monstres derrière ne sont plus protégés');
   const V = CB.VIEW, ballAt = sx => { const u = CB.unproject(sx, V.horizon * .55, CB.WALL.z - 2); return { x: u.x, y: u.y, z: CB.WALL.z - 2, vx: 0, vy: 0, vz: 120, trail: [], dmg: 1, size: 1, hitIds: new Set(), age: 0, variant: 0 }; };
   const wall0 = walls.find(e => e.wall.i === 0), hp0 = wall0.hp; w.balls = [ballAt(V.w / n * .5)]; w.update(1 / 60); ok(wall0.hp < hp0 && w.balls.length === 0 && w.wallHits === 1 && w.bursts.some(b => b.kind === 'ice'), 'un boulet qui traverse la bande d’un mur s’y écrase');
+  w.profile.gold = 950;
+  ok(S.buyWallBreaker(w.profile) && S.buyWallBreaker(w.profile) && !S.buyWallBreaker(w.profile), 'Brise-mur : prix par niveau et achat refusé sans or');
+  const hitWall = (ally, dmg) => { const hp = wall0.hp; w.balls = [{ ...ballAt(V.w / n * .5), ally, dmg }]; w.update(1 / 60); return hp - wall0.hp; };
+  ok(hitWall(false, 99) === 3 && hitWall(true, 99) === 1 && w.wallHits === 3, 'Brise-mur II ajoute deux dégâts au boulet du héros sans augmenter les impacts comptés ni les dégâts des aides');
   for (const e of walls) if (e !== wall0) w.kill(e); const hp1 = wall0.hp; w.balls = [ballAt(V.w / n * 1.5)]; w.update(1 / 60); ok(wall0.hp === hp1 && w.balls.length === 1, 'dans une bande sans mur (cassé), le boulet passe');
   w.balls = []; w.kill(wall0); ok(w.shieldsBroken === n && w.texts.some(t => /PLUS DE MURS/.test(t.text)) && !w.enemies.some(e => e.wall && !e.dead), 'tous les murs brisés');
 }
@@ -714,7 +722,7 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
   r.balls = []; for (let i = 0; i < 60 * 10.5; i++) { r.update(1 / 60); if (r.choice) r.pickCard(0); } r.cooldown = 0; r.fire(); ok(r.fx.veteran === 0 && !r.specialBusy && !r.balls[r.balls.length - 1].veteran && r.balls[r.balls.length - 1].size === r.stats.size, 'après 10 s, retour aux boulets normaux');
   const a = mk('adam'); a.spawnEnemy('owl', { x: 0, y: 6, z: 30 }); a.charge = 1; a.useSpecial(); ok(a.fx.pika > 0 && !a.texts.some(t => /CHUU|PI…|KA…/.test(t.text)) && a.texts.some(t => /ÉLECTROCUTÉS/.test(t.text) && !t.big), 'Adam : l’éclair reste, plus de gros texte Pikachu');
   // puzzle raté : un quart de la vie, l'armure n'y peut rien
-  const p = mk('zachary'); p.triggerEvent('puzzle', 'ordre'); const hpP = p.hp; for (let i = 0; i < 15 * 60; i++) p.update(1 / 60); ok(!p.puzzle && p.hp === hpP - Math.round(p.maxHp * CB.PUZZLE_FAIL) && p.armor === p.maxArmor && p.texts.some(t => /TROP TARD/.test(t.text)), 'puzzle raté : −25 % de vie, directement');
+  const p = mk('zachary'); p.triggerEvent('puzzle', 'ordre'); const hpP = p.hp; for (let i = 0; i < 15 * 60 && p.puzzle; i++) p.update(1 / 60); ok(!p.puzzle && p.hp === hpP - Math.round(p.maxHp * CB.PUZZLE_FAIL) && p.armor === p.maxArmor && p.texts.some(t => /TROP TARD/.test(t.text)), 'puzzle raté : −25 % de vie, directement');
   // jauge remplie par une carte pendant un pouvoir : pleine dès qu'il se termine
   const j = mk('milo'); j.charge = 1; j.useSpecial(); ok(j.fx.slowmo > 0 && j.charge === 0, 'Milo lance son zoom'); ok(j.fillCharge() && j.refillAfter && j.charge === 0, 'la carte Coup spécial pendant le zoom : rien tout de suite…'); for (let i = 0; i < 60 * 9; i++) { j.update(1 / 60); if (j.choice) j.pickCard(0); } ok(j.fx.slowmo === 0 && j.charge === 1 && !j.refillAfter && j.specialReady, '… mais la jauge est pleine dès la fin du zoom');
   const j2 = mk('milo'); ok(j2.fillCharge() && j2.charge === 1 && !j2.refillAfter, 'sans pouvoir en cours, la carte remplit tout de suite');
@@ -740,12 +748,12 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
 }
 { const z = CB.playerById('zachary'), w = new CB.Wave({ worldIndex: 1, waveIndex: 1, profile: S.blank('cd'), player: z, random: seeded(3) }); w.intro = 0; w.nextEvent = Infinity; w.nextBox = Infinity; w.god = true; ok(w.def.type === 'survive' && w.timeLeft === w.def.seconds, '2-2 : survie avec compte à rebours'); w.time = w.def.seconds - 3.05; const seen = []; for (let i = 0; i < 60 * 3.5 && !w.over; i++) { w.update(1 / 60); if (w.countdown && !seen.includes(w.countdown.n)) seen.push(w.countdown.n); if (w.choice) w.pickCard(0); }
   ok(seen.join() === '3,2,1,win' && w.over && w.won, 'les trois dernières secondes : 3, 2, 1, puis GAGNÉ');
-  const k = CB.waveDef(1, 0), s2 = CB.waveDef(1, 1), g = CB.waveDef(0, 2); ok(k.goal === 150 && k.density > 1.2 && s2.seconds === 115 && CB.waveDef(1, 3).seconds === 145 && g.goal === 200 && g.density === 1.1 && g.sequence[0].kinds[0].count === 5 && g.warmup.seconds === 50, 'monde 2 plus long et plus dense ; 1-3 plus doux au départ');
+  const k = CB.waveDef(1, 0), s2 = CB.waveDef(1, 1), g = CB.waveDef(0, 2); ok(k.goal === 150 && k.density > 1.2 && s2.seconds === 195 && CB.waveDef(1, 3).seconds === 205 && g.goal === 120 && g.density === 1.1 && g.sequence[0].kinds[0].count === 5 && g.warmup.seconds === 50, 'monde 2 plus long et plus dense ; 1-3 plus doux au départ');
   const p = S.blank('x'); p.progress.foret = [1, 1, 1]; ok(!S.worldUnlocked(p, 1), 'trois tableaux du monde 1 : le monde 2 reste fermé sans le boss'); p.progress.foret = [1, 1, 1, 0, 1]; ok(S.worldUnlocked(p, 1), 'boss du monde 1 battu : le monde 2 s’ouvre'); }
 // ---------- Liste du 2026-10-31 ----------
 { const mk2 = (wi = 1, vi = 1, who = 'matthieu', seed = 3) => { const w = new CB.Wave({ worldIndex: wi, waveIndex: vi, profile: S.blank('liste'), player: CB.playerById(who), random: seeded(seed) }); w.intro = 0; w.nextEvent = Infinity; w.nextBox = Infinity; w.nextRider = Infinity; return w; };
   // murs : 20 coups, peu importe la force
-  { const w = mk2(); w.triggerEvent('boucliers'); const wall = w.enemies.find(e => e.wall); ok(wall.maxHp === CB.WALL.hits && CB.WALL.hits === 20, 'un mur magique tient 20 coups'); for (let i = 0; i < 19; i++) w.applyDamage(wall, 999, true, null); ok(!wall.dead && wall.hp === 1, '19 gros boulets : le mur tient encore'); w.applyDamage(wall, 999, true, null); ok(wall.dead, 'le 20e coup le casse'); }
+  { const w = mk2(); w.triggerEvent('boucliers'); const wall = w.enemies.find(e => e.wall); ok(wall.maxHp === CB.wallHits(1) && CB.wallHits(1) === 15, 'un mur du monde 2 tient 15 coups'); for (let i = 0; i < 14; i++) w.applyDamage(wall, 999, true, null); ok(!wall.dead && wall.hp === 1, '14 gros boulets : le mur tient encore'); w.applyDamage(wall, 999, true, null); ok(wall.dead, 'le 15e coup le casse'); }
   // fusée de Zachary : grand rayon, aussi devant et derrière
   { const w = mk2(1, 1, 'zachary'); const ring = [[0, 0], [18, 0], [-18, 0], [0, 22], [0, -20], [14, 14]].map(([dx, dz]) => w.spawnEnemy('owl', { x: dx, y: 6, z: 50 + dz })); w.kaboom({ x: 0, y: 6, z: 50, dmg: 1, hit: false }); ok(ring.every(e => e.hp < e.maxHp || e.dead), 'KABOOM : touche aussi les monstres à 18 de côté et 20 devant ou derrière'); }
   // prix : coéquipiers et canons au moins ×10
@@ -757,7 +765,49 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
   { const w = mk2(2, 4); w.spawnBoss(); ok(CB.BOSS_HP === 3 && Math.abs(w.boss.maxHp - CB.BOSSES.clown.hp * CB.hpScale(2) * 3) < 1e-6, 'les boss ont 3 fois plus de vie'); }
   // touché : secousse et écran rouge
   { const w = mk2(); w.shield = 0; w.stats.dodge = 0; w.damage(5); ok(w.hitFx === 1 && w.shake > .5, 'armure touchée : secousse et gros écran rouge'); for (let i = 0; i < 60; i++) w.update(1 / 60); ok(w.hitFx === 0, 'l’écran rouge s’efface'); }
+  // Les bonus de tirs multiples restent actifs au combat, mais pas dans les puzzles.
+  for (const kind of ['ordre', 'couleur', 'simon', 'bonneteau']) {
+    const w = mk2(); Object.assign(w.stats, { shots: 3, triple: 1, burst: 1, fan: true });
+    w.fx.cheat = 10; w.rollEffect = () => 'etoiles';
+    w.startPuzzle(kind); const target = w.puzzle.orbs[0];
+    Object.assign(w.aim, CB.project(target)); const aim = w.target();
+    w.fire();
+    ok(w.balls.length === 1 && Math.abs(w.balls[0].vx * aim.t + w.px - aim.x) < 1e-9, kind + ' : un seul boulet centré malgré tous les bonus');
+    w.endPuzzle(false); w.balls = []; w.cooldown = 0; w.fire();
+    ok(w.balls.length === 8, kind + ' : les tirs multiples reviennent après le puzzle');
+  }
   // puzzle : pas de ricochet vers un autre orbe
+  for (const kind of ['ordre', 'couleur', 'simon', 'bonneteau']) {
+    const w = mk2(); w.fire(); w.startPuzzle(kind);
+    ok(w.balls.length === 0, kind + ' : aucun ancien projectile dans le puzzle');
+    const p = w.puzzle;
+    Object.assign(w.stats, { size: 8, homing: 3, blackhole: 3, splash: 20, pierceLeft: 5, bounces: 3 });
+    Object.assign(w.fx, { ghost: 10, veteran: 10, soccer: 10, licorne: 10, laser: 10, pika: 10 });
+    for (const o of p.orbs) w.applyDamage(o, 1e9, true, 'feu');
+    const positions = p.orbs.map(o => [o.x, o.y, o.z]);
+    w.charge = 1; const charge = w.charge;
+    ok(!w.useSpecial() && w.charge === charge, kind + ' : pouvoir suspendu sans consommer de charge');
+    w.update(.05);
+    ok(p.orbs.every(o => !o.dead) && w.puzzleFails === 0, kind + ' : laser et dégâts de zone ne détruisent pas les cibles');
+    if (kind === 'ordre') ok(p.orbs.every((o,i) => o.x === positions[i][0] && o.z === positions[i][2]), 'attraction sans effet sur les orbes');
+    if (kind === 'simon') p.phase = 'play';
+    if (kind === 'bonneteau') p.phase = 'choose';
+    const target = w.puzzleTarget(); Object.assign(w.aim, CB.project(target));
+    w.cooldown = 0; w.fire(); const b = w.balls.find(b => b.puzzleShot);
+    ok(b && b.size === 1 && !b.soccer && !b.pierce && !b.splash && !b.effect, kind + ' : projectile sans effets de pouvoir');
+    let guided = false; w.homeBall = () => { guided = true; };
+    for (let i = 0; i < 40 && w.puzzle; i++) w.update(1 / 60);
+    ok(!guided && w.puzzleFails === 0, kind + ' : le tir correct reste correct avec les pouvoirs actifs');
+    ok(w.puzzlesSolved > 0 || p.got > 0 || p.step > 0, kind + ' : le bon choix est bien enregistré');
+  }
+  for (const [id, special] of Object.entries(CB.SPECIALS)) {
+    const w = mk2();
+    w.castSpecial({ ...special, id, name: id, icon: '★' });
+    w.startPuzzle('ordre'); const p = w.puzzle;
+    const positions = p.orbs.map(o => [o.x, o.y, o.z]);
+    for (let i = 0; i < 120; i++) w.update(1 / 60);
+    ok(w.puzzle === p && !w.puzzleFails && p.step === 0 && p.orbs.every((o,i) => !o.dead && o.x === positions[i][0] && o.y === positions[i][1] && o.z === positions[i][2]), id + ' : pouvoir déjà actif sans effet sur les choix du puzzle');
+  }
   { const w = mk2(); w.triggerEvent('puzzle', 'ordre'); w.stats.bounces = 3; const o1 = w.puzzle.orbs.find(o => o.num === 1); Object.assign(w.aim, CB.project(o1)); w.fire(); let bounced = false; for (let i = 0; i < 90; i++) { w.update(1 / 60); if (w.balls.some(b => b.bounced)) bounced = true; } ok(!bounced, 'pendant le puzzle, le ricochet ne va pas chercher un autre orbe'); }
   // éditeur : un groupe part quand il reste N ennemis du groupe d'avant
   { const w = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: S.blank('ed'), player, random: seeded(2), custom: { type: 'survive', seconds: 300, random: { enabled: false, enemies: [] }, sequence: [{ kinds: [{ type: 'owl', count: 6 }], every: .1 }, { kinds: [{ type: 'bat', count: 3 }], every: .1, left: 4 }] } }); w.intro = 0; w.nextEvent = Infinity; w.nextBox = Infinity; w.god = true;
@@ -780,7 +830,7 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
 { ok(CB.ENEMIES.bateauVolant.hits === 10, 'le bateau volant du 1-2 a 10 cœurs');
   ok(CB.xpForLevel(1) === 210 && [1, 2, 3, 4, 5, 6, 7].reduce((a, l) => a + CB.xpForLevel(l), 0) === 7600, 'il faut 7 600 XP pour le niveau 8 (avant : 3 400)');
   global.localStorage = { getItem: () => null, setItem: () => {} }; require(path.join(__dirname, '..', 'js', 'debug.js')); const D = CB.Debug;
-  const s2 = D.fromSlot(0, 1); ok(s2.official === true && s2.type === 'swarm' && s2.swarm && s2.swarm.boatAt === 40, 'Debug du 1-2 : le vrai tableau (la nuée), pas une copie approximative');
+  const s2 = D.fromSlot(0, 1); ok(s2.official === true && s2.type === 'kill' && !s2.swarm && s2.random.enemies.includes('ghost'), 'Debug du 1-2 : combat normal et bestiaire des bois hantés');
   ok(D.fromSlot(0, 0).official === undefined && D.blank(0, 1).official === false, 'un tableau relié ou un tableau vide passe par l’éditeur');
   const cw = { slot: 'foret-2', world: 'foret', type: 'swarm', seconds: 30, random: { enabled: true, enemies: ['bat'] }, sequence: [], sky: ['#000', '#111', '#222'], ground: '#030' };
   const w = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: S.blank('n'), player, custom: cw, random: seeded(3) }); w.god = true; for (let t = 0; t < 45 && !w.over; t += 1 / 60) { w.update(1 / 60); if (w.choice) w.pickCard(0); }
@@ -799,8 +849,8 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
   { const w = mkL(1); w.pendingLevels = 1; w.offerCards(); ok(w.choice.length === 3 && !w.reroll(), 'niveau 1 : trois cartes, pas de rebrasser'); }
   // cartes verrouillées / cartes de pouvoir
   { const seen = new Set(); for (let sd = 1; sd < 150; sd++) { const w = mkL(1, null, 1, 2, sd); w.pendingLevels = 1; w.offerCards(); for (const k of w.choice) seen.add(k); }
-    ok(!['double', 'horloge', 'renfort', 'surprise', 'chercheuse', 'glu', 'meteore', 'deChance'].some(k => seen.has(k)) && seen.has('rapide'), 'niveau 1 : les cartes verrouillées ne sortent jamais'); }
-  { const q = Object.assign(S.blank('pw'), { level: 13, gold: 0 }); ok(!S.cardAllowed(q, 'glu') && !S.buyCardPower(q, 'glu'), 'Bille gluante débloquée au niveau 13 mais pas encore achetée'); q.gold = 5000; ok(S.buyCardPower(q, 'glu') && S.cardAllowed(q, 'glu') && q.gold === 5000 - S.disc(q, CB.POWER_CARD_PRICES.glu) && !S.buyCardPower(q, 'glu'), 'achetée au hangar : elle entre dans le tirage'); ok(!S.buyCardPower(q, 'meteore'), 'la Pluie de météores attend le niveau 23');
+    ok(!['double', 'horloge', 'renfort', 'surprise', 'chercheuse', 'tresor', 'meteore', 'deChance'].some(k => seen.has(k)) && seen.has('rapide') && seen.has('glu'), 'niveau 1 : les cartes verrouillées ne sortent jamais'); }
+  { const q = Object.assign(S.blank('pw'), { level: 15, gold: 0 }); ok(S.cardAllowed(q, 'glu') && !S.buyCardPower(q, 'glu'), 'Bille gluante gratuite sans achat'); ok(!S.cardAllowed(q, 'perforant'), 'Tir perforant attend son achat'); q.gold = 5000; ok(S.buyCardPower(q, 'perforant') && S.cardAllowed(q, 'perforant') && q.gold === 5000 - S.disc(q, CB.POWER_CARD_PRICES.perforant) && !S.buyCardPower(q, 'perforant'), 'achetée au hangar : elle entre dans le tirage'); ok(!S.buyCardPower(q, 'meteore'), 'la Pluie de météores attend le niveau 23');
     const all = Object.values(CB.LEVEL_REWARDS).filter(r => r.power).map(r => r.power).sort().join(); ok(all === Object.keys(CB.POWER_CARD_PRICES).sort().join() && Object.keys(CB.LEVEL_REWARDS).length === 49, 'chaque carte de pouvoir a son niveau ; une récompense par niveau, du 2 au 50'); }
   // effets des cartes de pouvoir
   { const w = mkL(30, { cheatCards: true }); const e = w.spawnEnemy('owl', { x: 0, y: 6, z: 30 }), o2 = w.spawnEnemy('owl', { x: 2, y: 6, z: 31 }), o3 = w.spawnEnemy('owl', { x: -2, y: 6, z: 32 }); for (const o of [e, o2, o3]) o.hp = o.maxHp = 1e6;
@@ -832,5 +882,215 @@ ok(S.load(memory()).current === null && Object.keys(S.load(memory()).profiles).l
     const w6 = mkL(1, null, 5, 3); w6.startPuzzle('bonneteau'); ok(w6.puzzle.orbs.length === 4, 'au dernier monde : quatre coffres'); }
   // licorne d'Alexie lancée par un coéquipier : l'arc-en-ciel se base sur SA durée
   { const w = mkL(1); w.special = Object.assign({}, w.special, { seconds: 2.5 }); w.castSpecial(Object.assign({ id: 'alexie', name: 'x', icon: 'x' }, CB.SPECIALS.alexie, { seconds: 15 }), 0, true); ok(w.licorneTotal === 15 && w.fx.licorne === 15, 'la licorne garde sa propre durée (l’arc-en-ciel apparaît dès le départ)'); }
+}
+
+// Environ 130 pièces au premier tableau : deux passages permettent le premier achat.
+{ const q = S.blank('economy'); q.gold = 130;
+  ok(!S.buyUpgrade(q, 'degats'), '130 pièces ne suffisent pas au premier achat'); q.gold = 260;
+  ok(S.buyUpgrade(q, 'degats') && q.gold === 10 && !S.buyUpgrade(q, 'cadence'), '260 pièces : une amélioration de dégâts et 10 pièces restantes');
+  q.gold = 260; const before = S.upgradeLevel(q, 'cadence');
+  ok(S.buyUpgrade(q, 'cadence') && !S.buyUpgrade(q, 'cadence') && S.upgradeLevel(q, 'cadence') === before + 1, 'deux tableaux ne suffisent pas à enchaîner les niveaux de cadence');
+  ok(Object.keys(CB.UPGRADES).every(k => [250, 600, 1500, 3600].every((price, level) => CB.upgradeCost(k, level, 'classique') === price)), 'premier canon : 250, 600, 1500 puis 3600 pièces');
+}
+
+{ const w=new CB.Wave({worldIndex:0,waveIndex:2,profile:S.blank('zachary'),player:CB.playerById('zachary'),random:seeded(2)});w.intro=0;w.nextEvent=Infinity;
+  for(const k of [23,24,59,60,95,96]){w.kills=k;w.update(.01);ok(w.enemies.filter(e=>e.type==='cible').length===[24,60,96].filter(x=>x<=k).length,'cibles espacées à '+k+' abattus');}
+  for(const level of [1,2,3]){const p=S.blank('eliott');p.specialLevel=level;const w=new CB.Wave({profile:p,player:CB.playerById('eliott')});ok(w.special.seconds===12,'soccer reste à 12 s au niveau '+level);}
+}
+// Le 1-1 ne déclenche plus de coffre-portail automatique ; placement manuel dans les groupes.
+{ const w=new CB.Wave({worldIndex:0,waveIndex:0,profile:S.blank('portal-manuel'),player:CB.playerById('zachary'),random:seeded(4)});w.intro=0;w.nextBox=Infinity;
+  for(const kills of [79,80,99]) { w.time=500;w.kills=kills;w.update(.01);ok(!w.portalSpawned && !w.enemies.some(e=>e.type==='coffreOr'),'aucun coffre automatique à '+kills+' éliminations'); }
+}
+{ const w=new CB.Wave({profile:S.blank('heal'),player:CB.playerById('eliott')});w.hp=20;w.stats.lifesteal=2;w.kill(w.spawnEnemy('bat'));ok(w.hp===22 && w.healFx>0,'Vampire : soin et animation verte');w.healFx=0;w.hp=w.maxHp;w.kill(w.spawnEnemy('bat'));ok(w.healFx===0,'pas de faux soin quand la vie est pleine'); }
+// Régression soccer : viser un monstre ne doit pas recalculer le tir à la profondeur du but.
+{ for(const [width,height] of [[390,844],[1280,900]]) for(const pos of [{x:8,y:12,z:15},{x:-9,y:14,z:30},{x:6,y:6,z:65}]) {
+  CB.setView(width,height);const w=new CB.Wave({profile:S.blank('eliott'),player:CB.playerById('eliott'),random:seeded(19),custom:{type:'kill',goal:100,random:{enabled:false,enemies:[]},sequence:[]}});
+  w.intro=0;w.nextBox=Infinity;w.nextEvent=Infinity;w.castSpecial(w.special);
+  const e=w.spawnEnemy('cible',pos);e.speed=0;e.hp=e.maxHp=100;Object.assign(w.aim,CB.project(e));w.fire();
+  for(let n=0;n<100;n++)w.update(1/60);
+  ok(e.hp<100,'soccer touche la cible à '+pos.z+' de profondeur sur '+width+' px');
+} CB.setView(960,640); }
+// Ordre individuel des groupes, sans perdre les badges répétés ni les élites.
+{ const kinds=[{type:'bat',count:10},{type:'bat',count:1,elite:true},{type:'ghost',count:2},{type:'bat',count:1}];
+  const mk=shuffle=>{const w=new CB.Wave({profile:S.blank('group'),random:seeded(42),custom:{type:'kill',goal:100,random:{enabled:false,enemies:[]},sequence:[{kinds,shuffle,every:0}]}});w.intro=0;w.time=1;w.update(.01);return w;};
+  const ordered=mk(false),mixed=mk(true),signature=w=>w.sequence[0].spawned.map(e=>e.type+(e.elite?'*':'')).join(',');
+  ok(signature(ordered)==='bat,bat,bat,bat,bat,bat,bat,bat,bat,bat,bat*,ghost,ghost,bat','ordre des badges conservé sans mélange');
+  ok(signature(mixed)!==signature(ordered),'case cochée : ordre individuel mélangé');
+  ok(mixed.sequence[0].spawned.length===14 && mixed.sequence[0].spawned.filter(e=>e.type==='ghost').length===2 && mixed.sequence[0].spawned.filter(e=>e.elite).length===1,'mélange conserve les quantités et l’élite');
+  const w=new CB.Wave({profile:S.blank('event'),random:seeded(8),custom:{type:'kill',goal:100,random:{enabled:false,enemies:[]},sequence:[{kinds:[{type:'bombeMagique',count:1}],every:0}]}});w.intro=0;w.time=1;w.update(.01);const bomb=w.enemies.find(e=>e.type==='bombeMagique');ok(bomb&&bomb.fuse>0,'événement : bombe avec mèche');for(let n=0;n<200;n++)w.update(1/60);ok(bomb.dead||bomb.escaped,'la bombe du groupe explose au terme de sa mèche');
+}
+
+{ const w = new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: S.blank('shield-feedback'), player, random: seeded(3) });
+  w.intro = 0; w.shield = 0; w.stats.dodge = 0; w.choice = ['bouclier']; w.pickCard(0);
+  ok(w.shield === 3 && w.shieldNotice.time > 0, 'carte bouclier : trois coups et annonce visible');
+  const hp = w.hp, armor = w.armor;
+  w.damage(10); w.stunBy('ice'); w.afflict('poison');
+  ok(w.shield === 0 && w.hp === hp && w.armor === armor && !w.stun && !w.poison && w.shieldFx === 1 && /DERNIER/.test(w.shieldNotice.text), 'trois impacts bloqués, protection épuisée annoncée sans perdre de vie');
+  w.damage(10); ok(w.hp + w.armor < hp + armor && w.hitFx === 1, 'le quatrième impact touche le canon');
+}
+
+// Tableau 2 : aucune sortie anticipée ne débloque la suite.
+for (const [time, won, reason, complete] of [[100, false, 'detruit', false], [149.9, false, 'arret', false], [149.9, true, 'nuee', false], [150, true, 'nuee', true]]) {
+  const p = S.blank('gate'); p.nightKills = 100;
+  const w = new CB.Wave({worldIndex: 0, waveIndex: 1, custom: {type:'swarm',seconds:150,swarm:CB.SWARM_DEFAULT}, profile: p, player, random: seeded(3)});
+  w.time = time; w.boatSecret = true; w.finish(won, reason); CB.claim(p, w);
+  ok(S.waveUnlocked(p, 0, 2) === complete && S.waveUnlocked(p, 0, 8) === complete, 'tableau 3 et bateau : réussite complète requise à ' + time + ' s');
+}
+{ const p = S.blank('repair'); p.progress.foret = [3, 2]; p.boatSecret = true; p.shown = 2; p.gold = 130; p.level = 2;
+  const loaded = S.load({getItem: () => JSON.stringify({profiles: {repair: p}})}).profiles.repair;
+  ok(loaded.progress.foret[1] === 0 && !loaded.boatSecret && loaded.shown === 1 && loaded.gold === 130 && loaded.level === 2, 'ancienne défaite : déblocages corrigés, or et niveau conservés');
+  p.progress.foret[1] = 3;
+  const cleared = S.load({getItem: () => JSON.stringify({profiles: {repair: p}})}).profiles.repair;
+  ok(cleared.progress.foret[1] === 3 && cleared.boatSecret, 'ancienne victoire complète conservée');
+}
+{ const w = new CB.Wave({worldIndex: 0, waveIndex: 1, custom: {type:'swarm',seconds:150,swarm:CB.SWARM_DEFAULT}, profile: S.blank('pace'), player});
+  w.time = 100; const at100 = w.spawnInterval(); w.time = 150;
+  ok(Math.abs(at100 - .37) < 1e-9 && w.spawnInterval() > .30, 'rythme inchangé à 100 s, environ moitié moins d’arrivées à 150 s');
+}
+
+{ const p = S.blank('boat-easier'), w = new CB.Wave({worldIndex: 0, waveIndex: 8, profile: p, player, random: seeded(3)});
+  w.intro = 0; w.nextEvent = Infinity; w.nextBox = Infinity;
+  ok(w.def.voyage && w.def.maxAlive === 12 && w.def.density === 1.35 && w.timeLeft === 180, 'bateau : traversée de 180 secondes, douze monstres maximum, rythme renforcé');
+  w.triggerEvent('boucliers'); const walls = w.enemies.filter(e => e.wall);
+  ok(walls.length >= 2 && walls.every(e => e.hp === 10 && e.maxHp === 10), 'bateau : grands boucliers à 10');
+  w.kills = 32; w.update(1 / 60); ok(!w.over, '32 monstres ne terminent pas le bateau');
+  w.kills = 33; w.update(1 / 60); ok(!w.over, '33 monstres ne raccourcissent pas le voyage'); w.time=180; w.update(1/60); ok(w.over && w.won && w.pirateWorldWon, 'l’arrivée termine le bateau et ouvre les pirates');
+  const land = new CB.Wave({worldIndex: 0, waveIndex: 0, profile: p, player}); land.triggerEvent('boucliers');
+  ok(land.enemies.filter(e => e.wall).every(e => e.hp === CB.WALL.hits), 'les boucliers des autres tableaux gardent leur résistance');
+  const swarm = new CB.Wave({worldIndex: 0, waveIndex: 1, custom: {type:'swarm',seconds:150,swarm:CB.SWARM_DEFAULT}, profile: p, player});
+  for (const [time, left] of [[0, 150], [100, 50], [149, 1], [150, 0], [155, 0]]) { swarm.time = time; ok(swarm.timeLeft === left, 'temps restant de la nuée à ' + time + ' s'); }
+}
+
+{ const w = new CB.Wave({worldIndex: 0, waveIndex: 2, profile: S.blank('120'), player, random: seeded(2)});
+  w.intro = 0; w.nextEvent = Infinity; w.nextBox = Infinity;
+  for (const t of [0, 50, 100, 200, 400]) { w.time = t; const slow = w.spawnInterval(); w.def.spawnIntervalScale = 1; const original = w.spawnInterval(); w.def.spawnIntervalScale = 2; ok(Math.abs(slow - 2 * original) < 1e-9, 'tableau 3 : deux fois moins d’arrivées à ' + t + ' s'); }
+  ok(w.sequence[0].every === 2.2 && w.def.targets.kills.every(k => k < 120), 'ouverture espacée et trois cibles accessibles avant 120 monstres');
+  w.kills = 119; w.update(.01); ok(!w.over, '119 monstres : tableau 3 en cours'); w.kills = 120; w.update(.01); ok(w.over && w.won, '120 monstres : tableau 3 gagné');
+}
+
+{ const p = S.blank('codex');
+  ok(S.cardAllowed(p, 'glu') && !S.cardAllowed(p, 'tresor'), 'niveau 1 : glu disponible, trésor verrouillé');
+  p.level = 9; ok(!S.cardAllowed(p, 'tresor') && /10/.test(S.cardUnlockHint(p, 'tresor')), 'Trésor attend le niveau 10');
+  p.level = 10; ok(S.cardAllowed(p, 'tresor') && S.itemUnlocked(p, 'sphere'), 'niveau 10 : Trésor et sphère disponibles');
+  ok(CB.rewardText(CB.LEVEL_REWARDS[10]).includes('Trésor') && CB.rewardText(CB.LEVEL_REWARDS[10]).includes(CB.ITEMS.sphere.name), 'les deux récompenses sont annoncées');
+  ok(!S.cardDiscovered(p, 'deluge') && !S.cardUnlockHint(p, 'deluge').includes('double'), 'combo inédit : caché sans recette');
+  const w = new CB.Wave({profile: p, player, random: seeded(3)}); w.choice = ['deluge'];
+  ok(!S.cardDiscovered(p, 'deluge'), 'proposer un combo ne le découvre pas'); w.pickCard(0);
+  ok(S.cardDiscovered(p, 'deluge') && !S.cardDiscovered(p, 'midas'), 'seul le combo choisi est découvert');
+  const storage = memory(), data = S.fresh(); data.profiles.codex = p; S.store(data, storage);
+  ok(S.cardDiscovered(S.load(storage).profiles.codex, 'deluge'), 'la découverte persiste dans la sauvegarde');
+  const fresh = S.blank('old'); ok(!S.cardDiscovered(fresh, 'deluge'), 'anciens profils sans historique : combos cachés');
+}
+
+// Soccer : un seul ballon, passes alternées, remplacement d’un seul membre du duo.
+function soccerRun(hps) {
+  const w = new CB.Wave({profile: S.blank('eliott'), player: CB.playerById('eliott'), random: seeded(3), custom: {type:'kill',goal:100,random:{enabled:false,enemies:[]},sequence:[]}});
+  w.intro = 0; w.nextEvent = w.nextBox = Infinity; w.stats.crit = 0; w.stats.damage = .5; w.gainXp = () => {};
+  const foes = hps.map((hp, i) => { const e = w.spawnEnemy('owl', {x: -12 + i * 20, y: 8, z: 30 + i * 8}); e.hp = e.maxHp = hp; e.speed = 0; e.frozen = 999; return e; });
+  const trace = [], hit = w.hitEnemy.bind(w); w.hitEnemy = (e, b) => { trace.push(foes.indexOf(e) + 1); hit(e, b); };
+  w.castSpecial(w.special); Object.assign(w.aim, CB.project(foes[0])); w.fire();
+  return {w, foes, trace};
+}
+{ const {w, foes, trace} = soccerRun([2, 4, 2, 20]); let maxBalls = 0;
+  for (let i = 0; i < 1200 && w.balls.length; i++) { maxBalls = Math.max(maxBalls, w.balls.length); w.update(1/60); }
+  ok(trace.join() === '1,2,1,2,3,2,3,2', 'soccer : exemple exact 1 → 2 → 1 → 2 → 3 → 2 → 3 → 2');
+  ok(maxBalls === 1 && w.balls.length === 0 && foes[3].hp === 20 && foes.slice(0,3).every(e => e.dead), 'les deux derniers morts arrêtent le ballon sans attaquer le quatrième');
+}
+{ const {w, foes, trace} = soccerRun([2, 5, 2, 2, 20]);
+  for (let i = 0; i < 1800 && w.balls.length; i++) w.update(1/60);
+  ok(trace.join() === '1,2,1,2,3,2,3,2,4,2,4' && foes[4].hp === 20 && !w.balls.length, 'soccer : le survivant continue avec le quatrième, puis arrêt du duo');
+}
+{ const {w, foes} = soccerRun([100, 100, 100]);
+  while (!w.balls[0]?.soccerTarget && w.balls.length) w.update(1/60);
+  const b = w.balls[0]; foes[1].dead = true; w.update(1/60);
+  ok(b.soccerTarget === foes[2] && !b.hit, 'cible tuée par un autre tir : remplacement avec le survivant');
+  foes[0].dead = true; foes[2].dead = true; w.update(1/60); ok(!w.balls.length, 'duo disparu en vol : arrêt');
+}
+{ const {w, foes} = soccerRun([100,100]);
+  while (!w.balls[0]?.soccerTarget && w.balls.length) w.update(1/60);
+  const b = w.balls[0]; w.fx.soccer = 0; w.update(1/60); ok(w.balls.includes(b), 'un ballon lancé finit ses passes après les 12 secondes');
+  w.startPuzzle('ordre'); w.update(1/60); ok(!w.balls.includes(b), 'un ricochet ne frappe pas les orbes d’un puzzle');
+}
+{ const {w, trace} = soccerRun([100]); for(let i=0;i<120 && w.balls.length;i++)w.update(1/60); ok(trace.join() === '1' && !w.balls.length, 'un monstre seul : un impact, puis arrêt'); }
+
+{ const {w, foes, trace} = soccerRun([2, 5, 2, 3, 1, 20]);
+  for (let i = 0; i < 1800 && w.balls.length; i++) w.update(1/60);
+  ok(trace.join() === '1,2,1,2,3,2,3,2,4,2,4,5,4' && foes[5].hp === 20 && !w.balls.length, 'soccer : le quatrième survivant passe au cinquième, puis le duo termine');
+}
+{ const {w, foes} = soccerRun([100,100]); const chest = w.spawnEnemy('coffre', {x:foes[0].x+1,y:8,z:30});
+  ok(w.soccerNext(foes[0]) === foes[1], 'les coffres ne remplacent pas un membre du duo');
+  foes[1].escaped = true; ok(w.soccerNext(foes[0]) === null, 'les ennemis échappés ne remplacent pas un membre du duo');
+}
+{ const p = S.blank('zachary'), w = new CB.Wave({profile:p,player:CB.playerById('zachary')});
+  w.castSpecial(Object.assign({id:'eliott',name:'Soccer étoile',icon:'⚽'}, CB.SPECIALS.eliott), 0, true);
+  const target = {x:0,y:6,z:30,t:.5}; w.launch(0,target,1,false); const normal = w.balls.at(-1); w.launch(8,target,1,true);
+  ok(!normal.soccer && w.balls.at(-1).soccer, 'soccer allié : seuls les ballons du coéquipier ricochent');
+}
+// Réserve de pouvoirs : achats, sauvegarde, jauges entières et consommation indépendante.
+{
+  const q = S.blank('matthieu');
+  ok(S.chargeCapacity(q) === 1 && !S.buyPowerReserve(q), 'réserve : une charge par défaut, achat refusé sans or');
+  q.gold = 10000;
+  ok(S.buyPowerReserve(q) && S.chargeCapacity(q) === 2 && q.gold === 8800, 'réserve : premier achat donne deux emplacements');
+  const make = () => new CB.Wave({ worldIndex: 0, waveIndex: 1, profile: q, player: CB.playerById(q.id), random: seeded(3) });
+  const a = make();
+  const need = a.spNeed(a.special, 0) / CB.xpPerKill(0);
+  for (let i = 0; i < need * 2 - 1; i++) a.kill(a.spawnEnemy('bat'));
+  ok(a.charge >= 1 && a.charge < 2, 'réserve : la deuxième charge demande elle aussi une jauge complète');
+  a.kill(a.spawnEnemy('bat'));
+  ok(a.charge === 2, 'réserve : deux jauges complètes donnent deux charges');
+  a.kill(a.spawnEnemy('bat'));
+  ok(a.charge === 2, 'réserve : aucun dépassement du maximum');
+  a.choice = null; a.pendingLevels = 0;
+  ok(a.useSpecial() && a.charge === 1 && a.useSpecial() && a.charge === 0 && !a.useSpecial(), 'réserve : exactement deux activations disponibles');
+  ok(S.buyPowerReserve(q) && S.chargeCapacity(q) === 3 && q.gold === 6400 && !S.buyPowerReserve(q), 'réserve : amélioration à trois puis achat bloqué');
+  const storage = memory(), data = S.fresh(); data.profiles[q.id] = q; S.store(data, storage);
+  ok(S.chargeCapacity(S.load(storage).profiles[q.id]) === 3, 'réserve : amélioration sauvegardée');
+  ok(S.chargeCapacity(S.load({getItem: () => JSON.stringify({profiles: {old: {id: 'old'}}})}).profiles.old) === 1, 'réserve : ancien profil compatible');
+  q.slot2 = true; q.special2 = 'richard'; q.items.jaugePleine = true;
+  const b = make();
+  ok(b.charge === 1 && b.charge2 === 1, 'réserve : objet Jauge pleine offre une seule charge initiale');
+  b.charge = 2.4; b.charge2 = 2.6;
+  ok(b.useSpecial() && Math.abs(b.charge - 1.4) < 1e-9 && b.charge2 === 2.6, 'réserve : garde la fraction et la jauge du deuxième pouvoir');
+  ok(b.useSpecial2() && Math.abs(b.charge2 - 1.6) < 1e-9 && !b.useSpecial2(), 'réserve : deuxième pouvoir consomme une charge, attend la fin de son effet');
+  b.fillCharge();
+  ok(b.charge === 2 && b.refillAfter2, 'réserve : bonus complète la prochaine charge, recharge différée pendant un effet');
+  b.fx[CB.SPECIAL_FX.richard] = 0; b.intro = 0; b.update(.01);
+  ok(b.charge2 === 2, 'réserve : recharge différée préserve les charges existantes');
+  b.fillCharge(); b.fillCharge();
+  ok(b.charge === 3 && b.charge2 === 3, 'réserve : bonus plafonné à trois charges');
+  ok(b.chargeProgress(2.5) === .5 && b.chargeProgress(3) === 1, 'réserve : affichage de la prochaine jauge et du maximum');
+}
+// Améliorations permanentes, tirages et relances consommables.
+{
+  const q = S.blank('matthieu'); q.gold = 1e9; q.level = 7;
+  ok(!S.buyCardTraining(q, 'rapide'), 'améliorations interdites avant le niveau 8');
+  q.level = 8; const gold = q.gold;
+  ok(S.buyCardTraining(q, 'rapide') && q.gold === gold - 5000, 'niveau 8 : première amélioration à 5000 pièces');
+  ok(CB.cardTrainingCost(q, 'rapide') === 8500 && !S.buyCardTraining(q, 'venin'), 'prix croissant et carte non acquise refusée');
+  const make = carry => new CB.Wave({worldIndex: 0, waveIndex: 1, profile: q, player: CB.playerById(q.id), carry, random: seeded(12)});
+  const a = make(), base = a.stats.rate;
+  for (let i = 0; i < 3; i++) { a.choice = ['rapide']; a.pickCard(0); }
+  ok(Math.abs(a.stats.rate / base - 1.63) < 1e-9, 'trois Gâchettes améliorées donnent +63 %');
+  const portal = make({cards: ['rapide','rapide','rapide'], hpRatio: 1});
+  ok(Math.abs(portal.stats.rate / base - 1.63) < 1e-9, 'bonus permanent préservé au portail');
+  q.gold = 1e12; q.cardTraining.rapide = 25; ok(S.buyCardTraining(q, 'rapide') && q.cardTraining.rapide === 26, 'aucune limite de niveau d’amélioration');
+  ok(S.buyChoice(q) && S.choiceCount(q) === 4 && S.buyChoice(q) && S.choiceCount(q) === 5 && S.buyChoice(q) && S.choiceCount(q) === 6 && !S.buyChoice(q), 'achats de choix : quatre, cinq, six puis maximum');
+  q.level = 50; ok(S.choiceCount(q) === 6, 'récompenses de niveau ne dépassent jamais six choix'); q.level = 8;
+  for (let i = 0; i < 3; i++) ok(S.buyReroll(q), 'une relance achetée à la fois');
+  ok(!S.buyReroll(q) && S.rerollStock(q) === 3, 'stock de relances plafonné à trois');
+  const b = make(); b.pendingLevels = 1; b.offerCards();
+  ok(b.choice.length === 6 && new Set(b.choice).size === 6, 'six cartes distinctes par tirage');
+  ok(b.reroll() && q.rerollStock === 3, 'récompense gratuite utilisée avant le stock acheté');
+  for (let i = 0; i < 3; i++) ok(b.reroll() && b.choice.length === 6, 'relance achetée renouvelle six cartes');
+  ok(q.rerollStock === 0 && !b.reroll(), 'relances épuisées sans stock négatif');
+  S.buyReroll(q); const mem = memory(), data = S.fresh(); data.profiles[q.id] = q; S.store(data, mem); const loaded = S.load(mem).profiles[q.id];
+  ok(loaded.rerollStock === 1 && loaded.cardTraining.rapide === 26 && S.choiceCount(loaded) === 6, 'achats et stock persistants');
+  ok(!CB.rewardText({power: 'froid'}).includes('à acheter') && CB.rewardText(CB.LEVEL_REWARDS[8]).includes('Amélioration'), 'textes des récompenses corrigés');
+  for (const [key, ball] of Object.entries(CB.BALLS)) ok(ball.desc.trim().split(/\s+/).length <= 8, 'description de boulet limitée à huit mots : ' + key);
+  q.cardTraining = {glu: 1, froid: 1, braise: 1, venin: 1}; const c = make(); c.random = () => 0; c.stats.damage = 10;
+  for (const key of ['glu','froid','braise','venin']) { c.choice = [key]; c.pickCard(0); }
+  const foe = c.spawnEnemy('bat'); c.cardEffects(foe);
+  ok(foe.glue === 6.1 && foe.chill === 4.1 && foe.burn.dps > 6 && foe.venom.dps > 5, 'les améliorations des effets changent les durées et dégâts réels');
 }
 console.log('✔ ' + n + ' vérifications réussies');

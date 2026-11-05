@@ -49,14 +49,14 @@ function create(ctx){
  const master=ctx.createGain(),compressor=ctx.createDynamicsCompressor();master.gain.value=0;compressor.threshold.value=-14;compressor.knee.value=16;compressor.ratio.value=5;compressor.attack.value=.003;compressor.release.value=.18;master.connect(compressor);compressor.connect(ctx.destination);
  const effects=ctx.createGain(),music=ctx.createGain();effects.gain.value=.8;music.gain.value=.55;effects.connect(master);music.connect(master);let tracks=null,fanfare=null,lastVictoryStage=0;
  const clips={
-  click:['app click','ui-sound','ui-sound-2'],deep:['ui-click-deep'],
+  click:['app click'],deep:['app click'],
   audience:['audience-reaction','audience-reaction-2','audience-reaction-3'],
   pop:['balloon-pop','balloon-pop-2'],bounce:['boingg','boingg-2'],
   crash:['crash'],results:['end-course-see-stats'],pickup:['get-gold-coin'],
   victory:['next-level-wall-passed'],swoosh:Array.from({length:7},(_,i)=>'swoosh-'+(i+1))
  };
- const musicFiles={shop:['magasin-music-1'],flight:['retro-arcade-music-in-game','music-in-game-2-synth','in-game-1','in-game-2','in-game-3','in-game-4','in-game-5']};
- const decoded=new Map(),clipIndex={},lastSample={};
+ const musicFiles={title:['in-game-1'],shop:['magasin-music-1'],flight:['retro-arcade-music-in-game','music-in-game-2-synth','in-game-1','in-game-2','in-game-3','in-game-4','in-game-5']};
+ const decoded=new Map(),clipIndex={},lastSample={},lastVoice={};
  let flightTrack=-1;
  const browserAudio=typeof window!=='undefined';
  const loading=new Set();
@@ -64,6 +64,21 @@ function create(ctx){
  const localVoices=new Set();
  let localMusic=null,localMusicName='';
  let localEffectsVolume=.8,localMusicVolume=.55;
+ // While the choir of a new stage sings, the main music fades out gently; it comes back when the choir ends.
+ let choirHold=null,hushMix=1,hushAt=null;
+ function holdMusic(voice,fallback=10.6){
+  const hold={until:ctx.currentTime+Math.max(.5,(voice?.duration||fallback)-.5)};choirHold=hold;
+  const media=voice?.media;if(!media)return;
+  const done=()=>{if(choirHold===hold)choirHold=null;};media.addEventListener('ended',done);media.addEventListener('error',done);
+  const measure=()=>{if(choirHold===hold&&Number.isFinite(media.duration))hold.until=ctx.currentTime+Math.max(.5,media.duration-media.currentTime-.5);};
+  media.addEventListener('loadedmetadata',measure);media.addEventListener('playing',measure);measure();
+ }
+ function hushLevel(){
+  const now=ctx.currentTime,dt=hushAt===null?0:Math.max(0,Math.min(1,now-hushAt));hushAt=now;
+  if(choirHold&&now>=choirHold.until)choirHold=null;
+  hushMix+=((choirHold?0:1)-hushMix)*(1-Math.exp(-dt/(choirHold?.8:.7)));if(Math.abs((choirHold?0:1)-hushMix)<.004)hushMix=choirHold?0:1;
+  return hushMix;
+ }
  function audioPath(folder,name){return 'assets/'+folder+'/mixed/'+encodeURIComponent(name)+'.mp3';}
  function localSample(name,volume,delay){
   if(localVoices.size>=18){const oldest=localVoices.values().next().value;clearTimeout(oldest.timer);oldest.media.pause();localVoices.delete(oldest);}
@@ -74,15 +89,16 @@ function create(ctx){
   media.onended=release;media.onerror=release;
   const play=()=>media.play().catch(release);
   if(delay)voice.timer=setTimeout(play,delay*1000);else play();
+  return {media,fade(seconds){const steps=12,start=media.volume;let i=0;clearTimeout(voice.timer);const timer=setInterval(()=>{i++;media.volume=Math.max(0,start*(1-i/steps));if(i>=steps){clearInterval(timer);media.pause();release();}},seconds*1000/steps);}};
  }
- function localMusicUpdate(theme,paused){
-  const name=musicFiles[theme]?.[theme==='flight'?flightTrack:0]||'';
+ function localMusicUpdate(theme,paused,hush=1){
+  const name=musicFiles[theme]?.[theme==='flight'?Math.max(0,flightTrack):0]||'';
   if(name!==localMusicName){
    localMusic?.pause();localMusicName=name;
    localMusic=name?new Audio(audioPath('music',name)):null;
    if(localMusic){localMusic.loop=true;localMusic.volume=0;localMusic.play().catch(()=>{});}
   }
-  if(localMusic){const target=localMusicVolume*.72*(paused?.35:1);localMusic.volume+=(target-localMusic.volume)*.06;}
+  if(localMusic){const target=localMusicVolume*.72*(paused?.35:1)*hush;localMusic.volume=Math.max(0,Math.min(1,localMusic.volume+(target-localMusic.volume)*.06));}
  }
  function load(folder,name){
   if(loading.has(name)||decoded.has(name))return;loading.add(name);
@@ -92,7 +108,7 @@ function create(ctx){
  }
  if(!localFiles&&typeof window!=='undefined'&&typeof ctx.decodeAudioData==='function'){
   for(const name of Object.values(clips).flat())load('audio',name);
-  load('music',musicFiles.shop[0]);load('music',musicFiles.flight[0]);
+  load('music',musicFiles.title[0]);load('music',musicFiles.shop[0]);load('music',musicFiles.flight[0]);
  }
  function sample(kind,volume=.5,delay=0){
   const available=(clips[kind]||[]).filter(name=>localFiles||decoded.has(name));
@@ -102,21 +118,22 @@ function create(ctx){
   lastSample[kind]=ctx.currentTime;
   const index=clipIndex[kind]||0;clipIndex[kind]=index+1;
   const name=available[index%available.length];
-  if(localFiles)localSample(name,volume,delay);else playBuffer(decoded.get(name),volume,1,delay);
+  lastVoice[kind]=localFiles?localSample(name,volume,delay):playBuffer(decoded.get(name),volume,1,delay);
   return true;
  }
  function musicUpdate(state){const theme=Music.themeFor(state),intensity=Music.tensionFor(state);
-  if(localFiles){localMusicUpdate(theme,state.paused);return;}
-  if(theme&&browserAudio)load('music',musicFiles[theme][theme==='flight'?flightTrack:0]);
-  const imported={shop:decoded.get(musicFiles.shop[0]),flight:decoded.get(musicFiles.flight[flightTrack])};
+  const hush=hushLevel();
+  if(localFiles){localMusicUpdate(theme,state.paused,hush);return;}
+  if(theme&&browserAudio)load('music',musicFiles[theme][theme==='flight'?Math.max(0,flightTrack):0]);
+  const imported={title:decoded.get(musicFiles.title[0]),shop:decoded.get(musicFiles.shop[0]),flight:decoded.get(musicFiles.flight[Math.max(0,flightTrack)])};
   if(tracks&&theme&&imported[theme]&&tracks[theme].source.buffer!==imported[theme]){
    const old=tracks[theme].source,source=ctx.createBufferSource();
    old.stop();old.disconnect();tracks[theme].gain.gain.cancelScheduledValues(ctx.currentTime);tracks[theme].gain.gain.value=0;source.buffer=imported[theme];source.loop=true;
    source.connect(tracks[theme].gain);source.start();tracks[theme].source=source;
   }
-  if(!tracks&&theme&&(!browserAudio||imported[theme])){tracks={};const prepared={};for(const name of ['flight','shop','tension']){if(imported[name]){prepared[name]=imported[name];continue;}const data=name==='tension'?Music.renderAccent(name):browserAudio?new Float32Array(24000):Music.render(name),buffer=ctx.createBuffer(1,data.length,24000);buffer.copyToChannel(data,0);prepared[name]=buffer;}const start=ctx.currentTime+.02;for(const [name,buffer] of Object.entries(prepared)){const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.loop=true;gain.gain.value=0;source.connect(gain);gain.connect(music);source.start(start);tracks[name]={source,gain};}}
+  if(!tracks&&theme&&(!browserAudio||imported[theme])){tracks={};const prepared={};for(const name of ['flight','shop','title','tension']){if(imported[name]){prepared[name]=imported[name];continue;}const data=name==='tension'?Music.renderAccent(name):browserAudio?new Float32Array(24000):Music.render(name==='title'?'flight':name),buffer=ctx.createBuffer(1,data.length,24000);buffer.copyToChannel(data,0);prepared[name]=buffer;}const start=ctx.currentTime+.02;for(const [name,buffer] of Object.entries(prepared)){const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.loop=true;gain.gain.value=0;source.connect(gain);gain.connect(music);source.start(start);tracks[name]={source,gain};}}
   const duck=fanfare?.25:1,pause=state.paused?.35:1;
-  if(tracks)for(const [name,track] of Object.entries(tracks)){const target=name==='tension'?(theme==='flight'&&!fanfare?intensity*.24:0):name===theme&&(!browserAudio||imported[theme]===track.source.buffer)?(1+(name==='flight'?intensity*.10:0))*duck:0;track.gain.gain.setTargetAtTime(target*pause,ctx.currentTime,.28);}
+  if(tracks)for(const [name,track] of Object.entries(tracks)){const target=name==='tension'?(theme==='flight'&&!fanfare?intensity*.24:0):name===theme&&(!browserAudio||imported[theme]===track.source.buffer)?(1+(name==='flight'?intensity*.10:0))*duck:0;track.gain.gain.setTargetAtTime(target*pause*hush,ctx.currentTime,.28);}
   if(fanfare)fanfare.gain.gain.setTargetAtTime(pause,ctx.currentTime,.05);
  }
  function stopFanfare(){if(!fanfare)return;const old=fanfare;fanfare=null;old.source.stop();old.source.disconnect();old.gain.disconnect();}
@@ -126,15 +143,20 @@ function create(ctx){
  function stopBeds(){if(!beds)return;for(const bed of Object.values(beds)){bed.source.stop();bed.source.disconnect();bed.filter.disconnect();bed.gain.disconnect();}beds=null;}
  let rampSurface='ramp';
  function startBeds(surface){if(beds)return;rampSurface=surface;beds={};for(const kind of ['ramp','wind','booster']){const source=ctx.createBufferSource(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();source.buffer=loopBuffers[kind==='ramp'?surface:kind];source.loop=true;gain.gain.value=0;filter.type='lowpass';filter.frequency.value=kind==='ramp'?3500:1500;source.connect(filter);filter.connect(gain);gain.connect(effects);source.start();beds[kind]={source,gain,filter};}}
- function clear(){for(const voice of localVoices){clearTimeout(voice.timer);voice.media.pause();}localVoices.clear();stopBeds();for(const source of voices){try{source.stop();}catch{}}voices.clear();}
+ function clear(){choirHold=null;for(const voice of localVoices){clearTimeout(voice.timer);voice.media.pause();}localVoices.clear();stopBeds();for(const source of voices){try{source.stop();}catch{}}voices.clear();}
  function play(kind,volume,pitch=1,delay=0){if(enabled)playBuffer(buffers[kind][sequence++%4],volume*.5,pitch,delay);}
- function playBuffer(buffer,volume,pitch,delay){while(voices.size>=18){const old=voices.values().next().value;old.stop();voices.delete(old);}const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.playbackRate.value=pitch;gain.gain.value=volume;source.connect(gain);gain.connect(effects);voices.add(source);source.onended=()=>{voices.delete(source);source.disconnect();gain.disconnect();};source.start(ctx.currentTime+delay);}
+ function playBuffer(buffer,volume,pitch,delay){while(voices.size>=18){const old=voices.values().next().value;old.stop();voices.delete(old);}const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.playbackRate.value=pitch;gain.gain.value=volume;source.connect(gain);gain.connect(effects);voices.add(source);source.onended=()=>{voices.delete(source);source.disconnect();gain.disconnect();};source.start(ctx.currentTime+delay);
+  return {duration:(buffer.duration||0)/pitch+delay,fade(seconds){const now=ctx.currentTime;gain.gain.cancelScheduledValues(now);gain.gain.setValueAtTime(gain.gain.value,now);gain.gain.linearRampToValueAtTime(0,now+seconds);try{source.stop(now+seconds+.02);}catch{}}};}
  return {
   output:effects,
   sample,
+  // Quick but smooth fade of the last clip of a kind (e.g. the results jingle when leaving the bilan).
+  fade(kind,seconds=.45){const voice=lastVoice[kind];if(!voice)return false;lastVoice[kind]=null;voice.fade(seconds);return true;},
   coin(final=false,row=0){if(final){play('coin',.5,1);play('coin',.42,1.25,.08);play('coin',.38,1.5,.16);}else play('coin',.28,1+Math.min(8,row)*.035);},
-  beginFlight(){flightTrack=(flightTrack+1)%musicFiles.flight.length;if(!localFiles&&browserAudio)load('music',musicFiles.flight[flightTrack]);lastVictoryStage=0;stopFanfare();if(tracks?.flight){tracks.flight.gain.gain.cancelScheduledValues(ctx.currentTime);tracks.flight.gain.gain.value=0;}},
-  fanfare(stage){if(!Number.isInteger(stage)||stage<=lastVictoryStage)return;lastVictoryStage=stage;if(!enabled)return;stopFanfare();if(sample('victory',.62))return;const data=Music.renderAccent('fanfare'),buffer=ctx.createBuffer(1,data.length,24000),source=ctx.createBufferSource(),gain=ctx.createGain();buffer.copyToChannel(data,0);source.buffer=buffer;gain.gain.value=1;source.connect(gain);gain.connect(music);const current={source,gain};fanfare=current;source.onended=()=>{if(fanfare===current)fanfare=null;source.disconnect();gain.disconnect();};source.start();},
+  beginFlight(){flightTrack=(flightTrack+1)%musicFiles.flight.length;if(!localFiles&&browserAudio)load('music',musicFiles.flight[flightTrack]);lastVictoryStage=0;choirHold=null;stopFanfare();if(tracks?.flight){tracks.flight.gain.gain.cancelScheduledValues(ctx.currentTime);tracks.flight.gain.gain.value=0;}},
+  fanfare(stage){if(!Number.isInteger(stage)||stage<=lastVictoryStage)return;lastVictoryStage=stage;if(!enabled)return;stopFanfare();if(sample('victory',.62)){holdMusic(lastVoice.victory);return;}const data=Music.renderAccent('fanfare');holdMusic(null,data.length/24000);const buffer=ctx.createBuffer(1,data.length,24000),source=ctx.createBufferSource(),gain=ctx.createGain();buffer.copyToChannel(data,0);source.buffer=buffer;gain.gain.value=1;source.connect(gain);gain.connect(music);const current={source,gain};fanfare=current;source.onended=()=>{if(fanfare===current)fanfare=null;source.disconnect();gain.disconnect();};source.start();},
+  // 0 while the choir holds the music back, 1 otherwise (eased in between).
+  musicHush(){return hushMix;},
   setVolumes(values){
    if(Number.isFinite(values.effects)){localEffectsVolume=clamp(values.effects,0,1);for(const v of localVoices)v.media.volume=Math.min(1,v.volume*localEffectsVolume*.72);}
    if(Number.isFinite(values.music))localMusicVolume=clamp(values.music,0,1);

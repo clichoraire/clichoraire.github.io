@@ -20,6 +20,7 @@
       for (const st of W.starts) for (const [dc, dr] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) { const c = st.c + dc, r = st.r + dr; if (W.inside(c, r) && W.cell(c, r) === BK.SOFT) W.cells[W.idx(c, r)] = 0; }
       this.players = this.o.players.map((pd, i) => { const st = W.starts[i]; const p = W.addPlayer(BK.charById(pd.charId), st.c, st.r, { hp: BK.MATCH_HEARTS * 10, bombs: 1, fire: 2, bot: pd.human == null ? { level: pd.level || 'moyen' } : null }); p.humanMap = pd.human; p.wins = this.wins[i]; return p; });
       this.state = 'countdown'; this.stateT = 0; W.frozen = true; this.timer = BK.SUDDEN_DEATH; this.rainStarted = false; this.endT = 0; this.lastCount = 4; this.winner = null;
+      if (BK.music) BK.music.play(theme === 'arena' || BK.music.grassTheme(theme) ? 'grass-world' : 'stage');
     }
     update(dt) {
       const W = this.world, K = BK.input; this.stateT += dt;

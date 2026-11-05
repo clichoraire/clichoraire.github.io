@@ -10,6 +10,9 @@ hockey-boisjoli/  copie du projet HockeyBoisjoli (tel quel, aucun build)
 snow-kids/        copie du projet SnowKids (tel quel, aucun build)
 ballon-chasseur/  copie du projet BallonChasseur (tel quel, aucun build)
 canon-big-boom/   copie du projet CanonBigBoom (tel quel, aucun build)
+bomberkid/        copie du projet Bomberkid (tel quel, aucun build)
+go-godefroy-go/   copie du projet go-godefroy-go : le code et seulement les images, sons et musiques que le jeu charge
+                  (version dans go-godefroy-go/VERSION, à augmenter à chaque mise en ligne)
 sosaria/          index.html = dist/sosaria.html du projet sosaria, + assets/ chargés à l'exécution
 banque/           la banque : tout l'or gagné dans les jeux (lu dans le navigateur), par personnage, dans un coffre-fort animé
 families/         atelier des familles (ajout/retrait de personnages via family-service) et fiches des membres

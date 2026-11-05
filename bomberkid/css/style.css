@@ -408,3 +408,16 @@ body.touch #screen-game.active #touch { display: block; }
 #overlay .stage-table .acts{text-align:right}
 #overlay .stage-table .acts button{padding:5px 10px;font-size:13px;border-radius:9px;margin-left:4px}
 #overlay .stage-table .empty{text-align:center;color:#60769e;padding:16px}
+
+/* Cartes de la palette déplaçables à la souris, au stylet et au doigt. */
+#editor-panel .draggable-item { cursor: grab; touch-action: none; user-select: none; }
+#editor-panel .draggable-item.dragging { cursor: grabbing; opacity: .55; }
+.editor-drag-preview { position: fixed; z-index: 10000; pointer-events: none; max-width: 240px; padding: 9px 13px; border: 2px solid #c9cbd2; border-radius: 12px; background: #20283e; color: white; box-shadow: 0 5px 20px #0006; font-weight: bold; }
+.editor-drag-preview.valid { border-color: #ffd54a; }
+
+.editor-shortcuts { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
+.editor-shortcut { position: absolute; width: 104px; pointer-events: auto; }
+#editor-panel .shortcut-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 94px; min-height: 64px; padding: 6px 12px; font-size: 12px; border: 2px solid #ffd54a; border-radius: 12px; background: #20283e; color: #fff; box-shadow: 0 4px 14px #0006; cursor: grab; touch-action: none; user-select: none; }
+#editor-panel .shortcut-item .ic { font-size: 24px; }
+#editor-panel .shortcut-item.dragging { opacity: .5; cursor: grabbing; }
+#editor-panel .shortcut-close { position: absolute; right: 0; top: -6px; width: 22px; height: 22px; padding: 0; border-radius: 50%; background: #654353; color: #fff; font-size: 17px; line-height: 22px; }

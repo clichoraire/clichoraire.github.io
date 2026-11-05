@@ -1,7 +1,7 @@
 // Bomberkid — constantes, personnages, objets, ennemis et thèmes.
 // Tout est dans l'espace de noms BK. Fonctionne dans le navigateur et dans Node (tools/headless.js).
 window.BK = window.BK || {};
-window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée dans le menu)
+window.BK.VERSION = '0.35';   // à augmenter à chaque mise en ligne (affichée dans le menu)
 (function (BK) {
   'use strict';
   BK.MAX_ALLIES = 2;
@@ -33,10 +33,14 @@ window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée
   BK.RUN_COST = 22;                   // stamina dépensée par seconde de course
   BK.DOUBLE_TAP = 0.3;                // délai max entre deux appuis pour partir à la course
   BK.STATS = { hpMax: { name: 'Gros cœur', fun: 'Encaisse plus de coups avant de tomber', icon: '❤️', step: 10, base: 40, unit: '' }, fireRegen: { name: 'Chaleur du feu de camp', fun: 'Tu guéris plus vite près d’un feu', icon: '🔥', step: 1, base: 2, unit: ' vie / s' }, staminaMax: { name: 'Grand souffle', fun: 'Cours plus longtemps sans t’arrêter', icon: '💨', step: 20, base: 100, unit: '' }, regen: { name: 'Pause éclair', fun: 'Ton souffle revient plus vite', icon: '⚡', step: 2, base: 8, unit: ' % / s' } };
+  BK.MAX_TERRAIN_LEVEL = 10;
+  BK.MAX_LIFT_RISE = 5;
   BK.LEVEL_HP = 5;   // chaque niveau gagné ajoute 5 points de vie max
   BK.defaultStats = () => ({ hpMax: BK.STATS.hpMax.base, fireRegen: BK.STATS.fireRegen.base, staminaMax: BK.STATS.staminaMax.base, regen: BK.STATS.regen.base });
   // Cibles et portes : huit couleurs (clé interne A-H, portes a-h) ; une cible ouvre les portes de sa couleur.
   BK.TARGET_COLORS = [{ key: 'A', name: 'rouge', color: '#e53935' }, { key: 'B', name: 'bleue', color: '#1e88e5' }, { key: 'C', name: 'verte', color: '#43a047' }, { key: 'D', name: 'jaune', color: '#fdd835' }, { key: 'E', name: 'mauve', color: '#8e24aa' }, { key: 'F', name: 'orange', color: '#fb8c00' }, { key: 'G', name: 'cyan', color: '#00acc1' }, { key: 'H', name: 'rose', color: '#ec407a' }];
+  BK.magicBeaconCount = value => Math.max(1,Math.min(99,Math.round(Number(value)||1)));
+  BK.magicBeaconColor = value => BK.TARGET_COLORS.find(t=>t.key===value)?.key||'A';
   BK.targetColor = L => { const t = BK.TARGET_COLORS.find(x => x.key === String(L || 'A').toUpperCase()); return t ? t.color : '#ffd54a'; };
   BK.targetName = L => { const t = BK.TARGET_COLORS.find(x => x.key === String(L || 'A').toUpperCase()); return t ? t.name : ''; };
   BK.DAY_CYCLE = 240;                 // durée du cycle jour-nuit en secondes (jour ~100 s, crépuscule 30 s, nuit 70 s, aube 30 s)
@@ -71,9 +75,12 @@ window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée
   BK.speedOf = stars => BK.BASE_SPEED + (stars - 3) * 0.22;
 
   // Objets ramassés dans les blocs. chance : poids relatif. match/adventure : disponible dans ce mode.
-  BK.ALLY_FOOD_HEAL = {pumpkinpiece:5,marshmallow:5,meatcooked:10,fishcooked:20,poultrycooked:15};
+  BK.ALLY_FOOD_HEAL = {maplesyrup:5,pumpkinpiece:5,marshmallow:5,meatcooked:10,fishcooked:20,poultrycooked:15};
   BK.COOKABLE = {fish:'fishcooked',meatraw:'meatcooked',poultryraw:'poultrycooked'};
   BK.BRICK_COLOR = '#b34a2a';   // couleur par défaut des murs de briques, dans tous les thèmes
+  BK.PET_ANIMATION_TIME = 1.2;
+  BK.FEED_ANIMATION_TIME = 1.6;
+  BK.PET_REQUEST_PAUSE = 2.4;
   BK.PET_FOODS = {chat:['fish','fishcooked'],chien:['meatraw','meatcooked','poultryraw','poultrycooked']};
   BK.ITEMS = {
     poultryraw:{name:'Volaille crue',icon:'🥩',color:'#e99da4',weight:0,adventureOnly:true,usable:true,desc:'À faire cuire au feu de camp. Peut aussi nourrir un chien.'},
@@ -81,7 +88,8 @@ window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée
     bomb:   { name: 'Bombe en plus',  icon: '💣', color: '#3f9cff', weight: 5, desc: 'Une bombe de plus à poser en même temps.' },
     fire:   { name: 'Grande flamme',  icon: '🔥', color: '#ff6a1f', weight: 5, desc: 'Les explosions vont plus loin.' },
     speed:  { name: 'Patins',         icon: '⚡', color: '#ffd54a', weight: 3, desc: 'Court plus vite.' },
-    kick:   { name: 'Coup de pied',   icon: '🦵', color: '#49e26a', weight: 2, desc: 'Marche pour pousser une bombe, cours pour sauter dessus.' },
+    bombjump: { name: 'Saut sur bombe', icon: '🦘', color: '#69c9ff', weight: 2, desc: 'Monte sur une bombe puis choisis une direction pour bondir. Avec Coup de pied, cours pour monter dessus.' },
+    kick:   { name: 'Coup de pied',   icon: '🦵', color: '#49e26a', weight: 2, desc: 'Pousse les bombes d’un coup de pied. Avec Saut sur bombe, cours pour sauter dessus.' },
     antidote: {name:'Antidote',icon:'🧪',color:'#84d6e2',weight:2,usable:true,adventureOnly:true,desc:'Guérit le poison, la diarrhée de bombes et la mèche courte en une dose. Sur la ceinture : utilisé automatiquement en cas de poison.'},
     bombdiarrhea: { name: 'Diarrhée de bombes', icon: '💣', color: '#a6ba45', weight: 1, desc: 'Malus : pendant 15 secondes, pose automatiquement des bombes en avançant.', adventureOnly: true },
     shortfuse: { name: 'Mèche courte', icon: '⏱️', color: '#ef7155', weight: 1, desc: 'Malus : pendant 20 secondes, les nouvelles bombes explosent deux fois plus vite.', adventureOnly: true },
@@ -96,6 +104,8 @@ window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée
     heart:  { name: 'Cœur',           icon: '❤️', color: '#ff4d6d', weight: 2, desc: 'Redonne 5, 10 ou 20 points de vie.', adventureOnly: true },
     coin:   { name: 'Pièce d’or',      icon: '🟡', color: '#ffd54a', weight: 0, desc: 'Des pièces pour le magasin.', adventureOnly: true },
     card:   { name: 'Carte d’or',      icon: '🃏', color: '#ffd54a', weight: 0, desc: 'Une carte d’or à collectionner.', adventureOnly: true },
+    waterwalk: { name: 'Marche sur l’eau', icon: '💧', color: '#51cee4', weight: 0, desc: 'Traverse l’eau à pied jusqu’à la fin du tableau.', adventureOnly: true },
+    heavyboots: { name: 'Botte lourde', icon: '🥾', color: '#90969e', weight: 0, desc: 'Des bottes de pierre : résiste aux bombes bottées et traverse les jets d’eau.', adventureOnly: true },
     gloves: { name: 'Gants de force',  icon: '🧤', color: '#c98f4f', weight: 0, desc: 'Soulève les roches et les lance comme des bombes : deux fois plus de dégâts, et la roche rebondit une case de plus.', adventureOnly: true },
     rod:    { name: 'Canne à pêche',  icon: '🎣', color: '#4a86c8', weight: 0, desc: 'Q ou W au bord de l’eau : on pêche un poisson.', adventureOnly: true, usable: true, unique: true },
     fish:   { name: 'Poisson',        icon: '🐟', color: '#5e9ad8', weight: 0, desc: 'Q ou W : lancé deux cases plus loin (2-3 points aux monstres). Entrée près d’un feu de camp : on le fait cuire.', adventureOnly: true, usable: true },
@@ -106,6 +116,7 @@ window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée
     axe: { name: 'Hache', icon: '🪓', color: '#8da9ad', weight: 1, desc: 'Face à un arbre, utilise la hache pour l’abattre. Réutilisable.', adventureOnly: true, usable: true, unique: true },
     meatraw: { name: 'Viande crue', icon: '🥩', color: '#d86f77', weight: 0, desc: 'À cuire au feu de camp : approche-toi et utilise cet objet ou appuie sur Entrée.', adventureOnly: true, usable: true },
     meatcooked: { name: 'Viande cuite', icon: '🍗', color: '#bd773f', weight: 0, desc: 'Manger pour récupérer 10 points de vie.', adventureOnly: true, usable: true },
+    maplesyrup: { name: 'Sirop d’érable', icon: '🍁', color: '#dc9c38', weight: 0, adventureOnly: true, usable: true, desc: 'Récolté près d’un érable à sucre toutes les 5 minutes de jeu. Redonne 5 points de vie ou nourrit un petit compagnon à proximité.' },
     marshmallow: { name: 'Guimauve', icon: '🍥', color: '#ffd1e3', weight: 0, desc: 'Q ou W : manger pour récupérer 5 points de vie. Tombe d’un bloc de guimauve cassé.', adventureOnly: true, usable: true },
     pumpkinpiece: { name: 'Morceau de citrouille', icon: '🎃', color: '#ff8a1f', weight: 0, desc: 'Q ou W : manger pour récupérer 5 points de vie.', adventureOnly: true, usable: true },
     carrot: { name: 'Carotte',         icon: '🥕', color: '#ff8a1f', weight: 0, desc: 'Q ou W : lancée deux cases devant toi. Un lapin maléfique qui la voit court la manger… et devient tout doux.', adventureOnly: true, usable: true },
@@ -144,7 +155,7 @@ window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée
   BK.setFriendlyFire = value => { BK.settings.friendlyFire=!!value; try {localStorage.setItem('bk.settings',JSON.stringify(BK.settings));} catch (_) {} };
   // Ajoute un seuil extérieur aux anciennes pièces dont la sortie était dans le mur du bas.
   BK.roomMap = (grid, preserve) => { if(preserve)return grid.slice(); const rows=grid.slice(), last=rows.length-1, c=rows[last].indexOf('G'); if(c>=0 && grid.join('').split('G').length===2 && !/^ *G *$/.test(rows[last])) {rows[last]=rows[last].slice(0,c)+'y'+rows[last].slice(c+1);rows.push(' '.repeat(c)+'G'+' '.repeat(rows[0].length-c-1));} return rows; };
-  BK.BOMB_POWERS = ['inflate', 'longthrow', 'bomb2', 'safeitems', 'fusion', 'dome'];
+  BK.BOMB_POWERS = ['bombjump', 'inflate', 'longthrow', 'bomb2', 'safeitems', 'fusion', 'dome'];
   BK.ITEM_SCORE = 50; BK.BLOCK_SCORE = 10;
 
   // Ennemis : speed en cases/s, hp = nombre de flammes à prendre, score à la mort. Comportements dans world.js.
@@ -196,6 +207,7 @@ window.BK.VERSION = '0.34';   // à augmenter à chaque mise en ligne (affichée
     lava:   { rock: '#4a4340', rockTop: '#6b625e', rockDark: '#2a2523', name: 'Volcan', bush: '#7a4a3a', floor: '#5a4a44', floor2: '#4e403b', soft: '#c84b2b', softMortar: '#6b2412', hard: '#3e3835', hardTop: '#5b5350', hardDark: '#241f1d', sky: ['#3a1b1b', '#c95a2a'], mountain: '#4a2424', fog: '#2a1010' },
     garden: { rock: '#8f98a3', rockTop: '#b8c0c9', rockDark: '#5f6771', name: 'Jardin vert', floor: '#b9b4ac', floor2: '#aaa49b', grass: '#5fb84a', grass2: '#55a842', water: '#2f6fd6', water2: '#3f84ec', cliff: '#8a6a4a', cliffDark: '#5e4731', soft: '#3f9a3a', softMortar: '#2b6b28', hard: '#b34a2a', hardTop: '#d16a45', hardDark: '#7a2f18', sky: ['#4f8be8', '#bfe3ff'], mountain: '#6a7fb8', fog: '#2f6fd6' },
     winter: { rock: '#8a98a8', rockTop: '#e6eef6', rockDark: '#5f6c7a', name: 'Hiver', bush: '#9fc0dc', floor: '#dfe8f2', floor2: '#d1dce8', grass: '#f2f7fd', grass2: '#e4edf7', water: '#4a86c8', water2: '#5e9ad8', cliff: '#7d8794', cliffDark: '#55606c', soft: '#a8c4dc', softMortar: '#6b8aa6', hard: '#8a98a8', hardTop: '#e6eef6', hardDark: '#5f6c7a', sky: ['#8fb0d4', '#eaf3fc'], mountain: '#b9c8d8', fog: '#c9d8e6' },
+    cave: { name:'Grotte', rock:'#4b505d', rockTop:'#696979', rockDark:'#333844', floor:'#53545d', floor2:'#4b4d57', water:'#2d6977', water2:'#377e88', cliff:'#4b505c', cliffDark:'#343842', soft:'#767483', softMortar:'#51515f', hard:'#4b505d', hardTop:'#696979', hardDark:'#333844', sky:['#1c202a','#30323e'], mountain:'#242833', fog:'#232733' },
     interior: { name: 'Intérieur', rock: '#6b4a2a', rockTop: '#8a6a4a', rockDark: '#4a3018', bush: '#3f9a3a', floor: '#b07a3e', floor2: '#a66f35', grass: '#5fb84a', grass2: '#55a842', water: '#2f6fd6', water2: '#3f84ec', cliff: '#6b4a2a', cliffDark: '#4a3018', soft: '#c8743a', softMortar: '#8a4a22', hard: '#7a4f24', hardTop: '#a0703a', hardDark: '#4a3018', sky: ['#2a1a10', '#3b2412'], mountain: '#2a1a10', fog: '#2a1a10' },
     arena:  { rock: '#a09a8c', rockTop: '#cbc4b4', rockDark: '#6c675b', name: 'Arène', floor: '#e0c98f', floor2: '#d3bb80', soft: '#4f8ad8', softMortar: '#2b5590', hard: '#a09a8c', hardTop: '#cbc4b4', hardDark: '#6c675b', sky: ['#4a86e8', '#bfe3ff'], mountain: '#6a7fb8', fog: '#4a6a90' },
   };

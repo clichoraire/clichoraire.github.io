@@ -90,7 +90,7 @@ body[data-suspended=true] *,body[data-suspended=true] *::before,body[data-suspen
 .result-mode #inspection-controls{display:none}
 @media(max-width:580px){#inspection-controls{left:12px;top:118px;gap:4px;padding:6px;max-width:calc(100% - 24px)}#inspection-controls>span{display:none}#inspection-controls button{font-size:10px;padding:6px;min-width:35px}#inspection-controls #inspection-pause{min-width:80px}.in-flight #inspection-controls{top:174px}}
 
-#preview-item{font:700 15px/1.4 sans-serif;background:#fff5d9;color:#26353b;padding:10px 16px;border:2px solid #72583a;border-radius:8px;max-width:90%;margin:0 auto 12px}
+
 .test-launch-button{background:#ddad50!important;margin-bottom:10px;width:100%}
 #test-controls{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:90;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;width:max-content;max-width:96vw;padding:10px 14px;background:#fff4d9;border:3px solid #26353b;border-radius:10px;box-shadow:0 3px 12px #0004;color:#26353b}
 #test-controls[hidden]{display:none}#test-controls button{font-size:11px;padding:8px}#test-controls select{max-width:280px;font:600 13px sans-serif;padding:8px;color:#26353b;background:white}#test-controls strong{font-size:12px}#test-controls small{font-size:10px;width:100%;text-align:center}
@@ -160,9 +160,354 @@ canvas.launch-illustration{background:none;object-fit:contain}.forge-feature can
 
 .afford-dot{display:inline-block!important;width:11px;height:11px;margin-left:9px;border-radius:50%;background:#ffd33e;border:2px solid #7b571e;box-shadow:0 0 0 3px #fff0a477;vertical-align:middle}.evolution-item.can-afford,.collectible.can-afford{position:relative;outline:3px solid #e9ac2b;outline-offset:2px}.afford-badge{display:block;position:absolute;left:0;right:0;top:0;background:#ffdb65;color:#503c1e;padding:4px 2px;font-size:9px;font-weight:900;text-align:center;letter-spacing:.03em;z-index:2}.evolution-item.can-afford canvas{margin-top:23px!important}.collectible.can-afford .upgrade-art{margin-top:14px}.family-shelf .can-afford{outline:2px solid #e9ac2b;outline-offset:2px}
 
-.magic-shop{margin:10px 0;padding:12px 16px;background:#f2deef;color:#392345;border:2px solid #64436f;border-radius:12px}
-.magic-shop header{display:flex;align-items:center;gap:12px}
-.magic-shop h2,.magic-shop p{margin:4px 0}
-.magic-bombs{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-top:8px}
-.magic-bombs button{display:grid;justify-items:center;gap:4px;padding:8px;background:#fff3ff;color:#392345}
-.magic-bombs i{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 34% 28%,#ffffff88,transparent 44%),var(--bomb-color);border:2px solid #353140}
+.magic-shop{margin:10px 0;padding:14px 18px 16px;background:linear-gradient(180deg,#2b1b3a,#3d2452);color:#f5e6ff;border:3px solid #7a4e92;border-radius:16px;box-shadow:0 6px 0 #1d1228,inset 0 0 60px #000a}
+.magic-shop header{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.magic-shop header canvas{width:280px;max-width:100%;height:auto;flex:0 0 auto;filter:drop-shadow(0 6px 4px #0008)}
+.witch-words{flex:1 1 220px}
+.magic-shop h2{margin:0 0 6px;font-size:26px;color:#d8ff8a;text-shadow:0 2px 0 #1d1228}
+.magic-shop p{margin:4px 0;font-size:14px;line-height:1.4}
+.witch-note{color:#ffd9a8}
+.magic-bombs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
+.magic-bombs button{display:grid;justify-items:center;gap:3px;padding:10px 8px 12px;background:#f8ecff;color:#392345;border:3px solid #6a4a86;border-radius:14px;box-shadow:0 4px 0 #3b2650}
+.magic-bombs button.armed{background:#fff6cf;border-color:#c48a1c}
+.magic-bombs button:disabled{opacity:.72}
+.magic-bombs .bomb-art{width:74px;height:74px}
+.bomb-spark{transform-origin:center;transform-box:fill-box;animation:bomb-spark .5s steps(2) infinite}
+@keyframes bomb-spark{0%{transform:translate(60px,10px) scale(1) rotate(0)}100%{transform:translate(60px,10px) scale(1.4) rotate(45deg)}}
+.magic-bombs strong{font-size:14px}
+.magic-bombs small{font-size:11px;opacity:.8}
+.magic-bombs span{font-weight:800;color:#7a3f9c;margin-top:2px}
+/* Spell scrolls sold by the witch. */
+.spell-shop{margin-top:16px;padding-top:12px;border-top:2px dashed #7a4e92}
+.spell-shop h3{margin:0 0 4px;font-size:21px;color:#ffe16b}
+.spell-shop header p{font-size:13px;color:#e8d8f5}
+.spell-cards{display:grid;gap:12px;margin-top:10px}
+.spell-card{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;padding:10px 12px;background:#f8ecff;color:#392345;border:3px solid #6a4a86;border-radius:14px;box-shadow:0 4px 0 #3b2650}
+.spell-card.owned{background:#fff6cf;border-color:#c48a1c}
+.spell-card .spell-icon{width:92px;height:92px;filter:drop-shadow(0 3px 2px #0004)}
+.spell-card strong{font-size:17px}
+.spell-card p{margin:3px 0;font-size:13px;line-height:1.35}
+.spell-card small{display:block;font-size:11px;opacity:.8}
+.spell-card .buy-happy{margin-top:8px}
+.spell-keys{display:flex;align-items:center;gap:6px;margin-top:8px}
+.spell-keys span{font:800 11px/1 'Nunito',sans-serif;letter-spacing:.06em;color:#6a4a86}
+.spell-keys button{width:36px;height:36px;padding:0;border-radius:9px;background:#f3e2b3;color:#3b2a1a;border:3px solid #8b6b3a;font:900 15px 'Barlow Condensed',Impact,sans-serif}
+.spell-keys button.active{background:#2b1b3a;color:#ffe16b;border-color:#2b1b3a}
+.spell-card.passive{background:#efe4ff}
+.spell-card.passive.owned{background:#e4f3ff;border-color:#4a7fb0}
+.passive-tag{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:8px;background:#6a4a86;color:#fff;font:800 10px/1.2 'Nunito',sans-serif;letter-spacing:.06em;vertical-align:middle}
+.passive-pips{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px}
+.passive-pips i{width:18px;height:18px;border-radius:50%;border:3px solid #6a4a86;background:#fff}
+.passive-pips i.on{background:#f3a53a;border-color:#2c2a4a}
+.passive-max{display:block;margin-top:8px;color:#4a7fb0;font-weight:800}
+/* Unlock celebration: a big tilted card with confetti raining behind it. */
+#unlock-banner{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#1d122855;cursor:pointer}
+#unlock-banner[hidden]{display:none}
+#unlock-banner .card{position:relative;text-align:center;padding:26px 44px 20px;background:linear-gradient(180deg,#fff6c8,#ffd86b);border:5px solid #7a3f17;border-radius:24px;box-shadow:0 10px 0 #7a3f17,0 20px 50px #0007;transform:rotate(-3deg);animation:unlock-pop .7s cubic-bezier(.2,1.6,.4,1);max-width:min(90vw,640px)}
+#unlock-banner .kicker{display:block;font:900 20px 'Barlow Condensed',Impact,sans-serif;letter-spacing:.18em;color:#b4431c}
+#unlock-banner h2{margin:8px 0;font:900 clamp(34px,6vw,66px)/1.05 'Barlow Condensed',Impact,sans-serif;color:#3b2a1a;text-shadow:3px 3px 0 #ffb347;text-transform:uppercase}
+#unlock-banner p{margin:4px 0 0;font-weight:800;font-size:17px;color:#5a3d22}
+#unlock-banner small{display:block;margin-top:10px;font-size:11px;color:#8a5a1a;letter-spacing:.08em}
+#unlock-banner .confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+#unlock-banner .confetti i{position:absolute;top:-24px;width:10px;height:16px;border-radius:2px;animation:confetti-fall 2.8s linear infinite}
+@keyframes unlock-pop{0%{transform:scale(.3) rotate(-15deg);opacity:0}100%{transform:scale(1) rotate(-3deg);opacity:1}}
+@keyframes confetti-fall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(110vh) rotate(720deg)}}
+/* ---- Kids batch 2: no-scroll forge, one-tap upgrade cards, the witch sprite and her hut. */
+#forge{overflow:hidden}
+.magic-tab .hero-card canvas,.magic-tab .hero-card h2,.magic-tab .hero-card p,.magic-tab .hero-card .stamp{display:none}
+.witch-sprite{width:256px;height:341px;background:url('assets/witch-sheet.png?v=3') 0 0/1024px 1024px no-repeat;animation:witch-stir 1.6s steps(1) infinite;filter:drop-shadow(0 8px 6px #0007)}
+.witch-sprite.big{--k:1.35;width:calc(256px*var(--k));height:calc(341px*var(--k));background-size:calc(1024px*var(--k)) calc(1024px*var(--k));margin-top:auto}
+.witch-sprite.huge{--k:1.55;width:calc(256px*var(--k));height:calc(341px*var(--k));background-size:calc(1024px*var(--k)) calc(1024px*var(--k))}
+@keyframes witch-stir{0%{background-position:0 0}8.33%{background-position:-25% 0}16.66%{background-position:-50% 0}25%{background-position:-75% 0}33.33%{background-position:0 -50%}41.66%{background-position:-25% -50%}50%{background-position:-50% -50%}58.33%{background-position:-75% -50%}66.66%{background-position:0 -100%}75%{background-position:-25% -100%}83.33%{background-position:-50% -100%}91.66%{background-position:-75% -100%}}
+.witch-sprite.big,.witch-sprite.huge{background-position-x:0}
+@keyframes witch-stir-big{0%{background-position:0 0}8.33%{background-position:33.333% 0}16.66%{background-position:66.666% 0}25%{background-position:100% 0}33.33%{background-position:0 50%}41.66%{background-position:33.333% 50%}50%{background-position:66.666% 50%}58.33%{background-position:100% 50%}66.66%{background-position:0 100%}75%{background-position:33.333% 100%}83.33%{background-position:66.666% 100%}91.66%{background-position:100% 100%}}
+.witch-sprite{animation-name:witch-stir-big}
+@media(prefers-reduced-motion:reduce){.witch-sprite{animation:none}}
+.magic-shop header{align-items:flex-start}
+.magic-shop .witch-words{flex:1}
+.forge-tabs button.locked{opacity:.55;filter:grayscale(.6);cursor:not-allowed}
+.kid-upgrades{padding:12px 14px}
+.kid-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.kid-card{display:grid;justify-items:center;gap:4px;padding:10px 8px 9px;background:linear-gradient(180deg,#3f7fa6,#2f6388);border:3px solid #1d3f57;border-radius:14px;box-shadow:0 4px 0 #1d3f57;color:#fff;text-align:center;min-width:0}
+.kid-card.can-afford{background:linear-gradient(180deg,#ffe8a3,#ffd36a);border-color:#8a5a1a;box-shadow:0 4px 0 #8a5a1a;color:#3b2a1a}
+.kid-card.maxed{background:linear-gradient(180deg,#8fd17a,#5fae4a);border-color:#2c6a31;box-shadow:0 4px 0 #2c6a31}
+.kid-card svg,.kid-card .stat-icon{width:46px;height:46px}
+.kid-card strong{font:900 13px/1.15 'Nunito',sans-serif}
+.kid-card .kid-benefit{font-size:10px;line-height:1.2;opacity:.9}
+.kid-card .kid-benefit b{color:inherit;font-weight:900}
+.kid-card .tiny-progress{display:block;width:100%;height:7px;background:#0003;border-radius:4px;overflow:hidden}
+.kid-card .tiny-progress i{display:block;height:100%;background:#ffd23a;border-radius:4px}
+.kid-card.maxed .tiny-progress i{background:#fff}
+.kid-card small{font-size:10px;font-weight:800;opacity:.85}
+.kid-card .buy-happy.small{width:100%;padding:7px 4px;font-size:13px;margin:2px 0 0;border-radius:10px}
+.kid-card .buy-happy.small .gold-coin{width:14px;height:14px}
+.magic-locked{display:flex;gap:18px;align-items:center;margin:10px 0;padding:14px 18px;background:linear-gradient(180deg,#2b1b3a,#3d2452);color:#f5e6ff;border:3px solid #7a4e92;border-radius:16px}
+.magic-locked img{width:170px;height:170px;object-fit:contain;filter:drop-shadow(0 6px 4px #0008)}
+.magic-locked h2{margin:4px 0 6px;font-size:24px;color:#d8ff8a}
+#witch-intro{position:fixed;inset:0;z-index:70;background:#120a1cd9;display:flex;align-items:flex-end;justify-content:center}
+#witch-intro[hidden]{display:none}
+.witch-stage{display:flex;align-items:flex-end;gap:10px;max-width:min(96vw,1100px);padding:0 16px}
+.witch-stage .witch-sprite{flex:0 0 auto;animation-duration:1.4s}
+.witch-bubble{position:relative;margin-bottom:120px;padding:22px 28px;background:#fff7dc;color:#3b2a1a;border:4px solid #3b2a1a;border-radius:22px;box-shadow:0 8px 0 #3b2a1a66;max-width:520px;animation:unlock-pop .6s cubic-bezier(.2,1.6,.4,1)}
+.witch-bubble:before{content:'';position:absolute;left:-26px;bottom:34px;border:14px solid transparent;border-right-color:#3b2a1a}
+.witch-bubble .tag{color:#7a3fa8}
+.witch-bubble h2{margin:6px 0 8px;font:900 34px/1.05 'Barlow Condensed',Impact,sans-serif;color:#5b2d84}
+.witch-bubble p{margin:0 0 14px;font-size:16px;line-height:1.4;font-weight:700}
+@media(max-width:900px){.kid-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.witch-stage .witch-sprite.huge{--k:.9}.witch-bubble{margin-bottom:40px;padding:14px}}
+@media(max-height:760px){.kid-grid{gap:7px}.kid-card{padding:7px 6px 7px;gap:3px}.kid-card svg,.kid-card .stat-icon{width:36px;height:36px}.kid-card strong{font-size:12px}.witch-sprite.big{--k:1.1}}
+/* Compact, one-screen forge for kids (no page scroll at 1400×800). */
+.forge-tabs{margin-bottom:10px}
+.forge-tabs button{padding:9px 10px;font-size:13px}
+.kid-upgrades{padding:10px 12px}
+.kid-grid{gap:8px}
+.kid-card{padding:7px 6px 7px;gap:3px;border-width:2.5px}
+.kid-card svg,.kid-card .stat-icon{width:34px;height:34px}
+.kid-card strong{font-size:12px}
+.kid-card .kid-benefit{font-size:9.5px}
+.kid-card small{display:none}
+.kid-card .tiny-progress{height:6px}
+.kid-card .buy-happy.small{padding:6px 4px;font-size:12px;margin-top:1px}
+.magic-shop{margin:6px 0 0;padding:10px 14px 12px}
+.magic-shop header{gap:10px}
+.magic-shop h2{font-size:20px;margin-bottom:2px}
+.magic-shop p{font-size:12px;margin:2px 0}
+.magic-bombs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.magic-bombs button{padding:6px 6px 8px;gap:2px;font-size:12px}
+.bomb-art{width:44px;height:44px}
+.magic-bombs button small{font-size:10px}
+.spell-shop{margin-top:8px;padding-top:6px}
+.spell-shop h3{margin:0 0 4px;font-size:16px}
+.spell-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:4px}
+.spell-card{grid-template-columns:62px 1fr;gap:8px;padding:6px 8px}
+.spell-card .spell-icon{width:58px;height:58px}
+.spell-card p{font-size:11px;line-height:1.25;margin:2px 0}
+.spell-card strong{font-size:13px}
+.spell-card .buy-happy{padding:6px 8px;font-size:12px}
+.spell-card .buy-happy small{font-size:9px}
+.forge-feature{align-items:start}
+.gear-visual figure{max-height:190px}
+.gear-visual figure canvas,.gear-visual figure img,.gear-visual figure svg{max-height:150px}
+.hero-card .witch-sprite.big{margin-bottom:-6px}
+@media(min-width:1200px){.kid-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}.kid-card strong{font-size:11.5px}.kid-card .buy-happy.small{font-size:11.5px;padding:5px 3px}}
+.magic-shop .witch-words p:first-of-type{display:none}
+.evolution-strip,.evolution-carousel,.evolution-heading{display:none}
+/* One-screen forge: scroll only as a last resort, hero and panels sized to a ~650 px tall viewport. */
+#forge{overflow:hidden auto;padding-top:118px;padding-bottom:8px}
+#forge .hero-card{min-height:0;padding-top:0;align-self:end}
+#forge .hero-card>p,#forge .hero-card .stamp{display:none}
+#forge .hero-card canvas{max-height:300px;width:auto;max-width:100%}
+#forge .hero-card .witch-sprite.big{--k:1.25}
+#shop-message{margin:2px 0 0;min-height:0;font-size:12px}
+.family-shelf{gap:6px;margin-bottom:8px}
+.family-shelf button{padding:5px 6px;font-size:11px;border-radius:11px;box-shadow:0 3px #78502d}
+.family-shelf button span{font-size:15px}
+.happy-gear{padding:12px 16px!important;margin-bottom:0!important}
+.gear-visual header{margin:0 0 6px!important}
+.gear-visual header h2{font-size:clamp(20px,1.8vw,26px)!important;margin:2px 0}
+.gear-visual header p{margin:2px 0;font-size:12px}
+.gear-visual figure{max-height:150px;overflow:hidden}
+.gear-visual figure canvas,.gear-visual figure img,.gear-visual figure svg{max-height:112px;width:auto}
+.fun-bars{gap:7px!important;padding:2px 0 8px!important}
+.forge-purchase{flex-direction:row!important;gap:10px!important;margin-top:4px!important;flex-wrap:wrap}
+.forge-purchase>button{flex:1 1 45%;width:auto!important}
+.forge-purchase .buy-happy{font-size:17px!important;padding:8px 10px!important}
+.forge-purchase .try-happy{font-size:15px!important;padding:8px!important}
+.forge-purchase>small{flex:1 1 100%;margin-top:0!important}
+.magic-bombs button{grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;justify-items:start;column-gap:8px;text-align:left;padding:5px 8px}
+.magic-bombs button .bomb-art{grid-row:1/4;width:40px;height:40px;align-self:center}
+.spell-shop>p{display:none}
+.spell-card.passive .buy-happy{padding:5px 8px;font-size:13px}
+.spell-card.passive .buy-happy small{display:inline;margin-left:6px;font-size:9px}
+.spell-card.passive .buy-happy .gold-coin{width:14px;height:14px}
+.passive-pips{margin:3px 0}
+.spell-keys{margin-top:3px}
+#forge .hero-card canvas{max-height:262px}
+.magic-shop{padding:8px 12px 10px}
+.magic-shop .witch-note{display:none}
+.spell-shop{margin-top:6px;padding-top:4px}
+.spell-card{grid-template-columns:50px 1fr;padding:5px 8px}
+.spell-card .spell-icon{width:46px;height:46px}
+.spell-card p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:10.5px}
+.magic-tab .gear-visual figure{max-height:104px}
+.magic-tab .gear-visual figure img,.magic-tab .gear-visual figure svg,.magic-tab .gear-visual figure canvas{max-height:80px}
+.magic-tab .gear-visual header p{display:none}
+#forge .forge-layout .hero-card{min-height:0!important;padding-top:0!important;align-self:end}
+#forge{padding-bottom:0}
+.spell-shop header p,.spell-shop>p,.spell-shop .spell-intro{display:none}
+.spell-shop header{margin:0}
+.spell-shop h3,.spell-shop h2{margin:0 0 3px;font-size:15px}
+.spell-card.passive .buy-happy{width:auto;display:inline-flex;align-items:center;gap:4px;margin-top:2px}
+.spell-card strong{font-size:12.5px}
+.spell-card p{-webkit-line-clamp:1}
+.spell-card small{font-size:10px}
+.magic-tab .happy-gear{padding:8px 14px!important;margin-top:6px}
+.magic-tab .fun-bars{gap:3px!important;padding:0 0 4px!important}
+.magic-tab .gear-visual figure{max-height:84px}
+.magic-tab .gear-visual figure img,.magic-tab .gear-visual figure svg,.magic-tab .gear-visual figure canvas{max-height:62px}
+.magic-tab .gear-visual header h2{font-size:19px!important}
+.forge-layout{min-height:calc(100dvh - 126px);align-items:start}
+.kid-card .buy-happy.small{display:flex;align-items:center;justify-content:center;gap:5px}
+/* Hero preview may grow past its box for big wings; it never blocks clicks and stays behind the shop panel. */
+#gear-preview{pointer-events:none}
+#forge .upgrades{position:relative;z-index:2}
+/* Wallet: a little pile of gold coins, then the number. */
+.wallet{display:inline-flex;align-items:center;gap:8px}
+.wallet .coins{display:inline-flex;align-items:center}
+.wallet .gold-coin{width:17px;height:17px;margin:0 0 0 -8px;vertical-align:0}
+.wallet .gold-coin:first-child{margin-left:0}
+.wallet .gold-coin:nth-child(2){transform:translateY(-3px)}
+/* Two big red arrows on the sides of the gear panel: previous / next item. */
+.happy-gear{position:relative;padding-left:46px!important;padding-right:46px!important}
+.gear-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:66px;height:66px;padding:0;display:grid;place-items:center;border-radius:50%;background:linear-gradient(#ff6f58,#d7352a);border:4px solid #7a1a12;box-shadow:0 5px 0 #7a1a12;color:#fff8e0;cursor:pointer}
+.gear-arrow.prev{left:-30px}
+.gear-arrow.next{right:-30px}
+.gear-arrow svg{width:36px;height:36px;display:block}
+.gear-arrow:hover:not(:disabled){filter:brightness(1.1)}
+.gear-arrow:active:not(:disabled){transform:translateY(calc(-50% + 4px));box-shadow:0 1px 0 #7a1a12}
+.gear-arrow:disabled{opacity:.35;filter:grayscale(1);cursor:default}
+@media(max-width:900px){.gear-arrow{width:48px;height:48px}.gear-arrow svg{width:26px;height:26px}.gear-arrow.prev{left:-8px}.gear-arrow.next{right:-8px}}
+/* Arrows: centred without transform so the generic button hover/active transforms cannot move them. */
+.gear-arrow{top:calc(50% - 35px);transform:none!important}
+.gear-arrow:hover,.gear-arrow:focus{transform:none!important}
+.gear-arrow:active:not(:disabled){transform:none!important;top:calc(50% - 31px);box-shadow:0 1px 0 #7a1a12}
+/* Hero sits right under the shop sign instead of at the bottom of the column. */
+#forge .forge-layout .hero-card{align-self:start!important;margin-top:clamp(0px,calc(100dvh - 500px),185px)}
+
+/* Flight bill: the list of gains scrolls inside a fixed-height box, the total stays in view. */
+#result .result-stats{overflow:visible}
+#result .earnings-scroll{max-height:min(42dvh,300px);overflow-y:auto;overscroll-behavior:contain;border:3px solid #35444b;border-radius:6px;background:#fffbe9;scrollbar-width:auto;scrollbar-color:#e0a52c #35444b22;scroll-behavior:smooth}
+#result .earnings-scroll::-webkit-scrollbar{width:14px}
+#result .earnings-scroll::-webkit-scrollbar-track{background:#35444b22}
+#result .earnings-scroll::-webkit-scrollbar-thumb{background:#e0a52c;border:2px solid #8a5d12;border-radius:8px}
+#result .earnings-scroll .earnings-table{border:0;border-radius:0;overflow:visible}
+#result .earnings-scroll thead th{position:sticky;top:0;z-index:2;background:#35444b}
+#result .earn-combo th{color:#c8371f}
+#result .earn-combo td:last-child{background:#ffe9c9}
+@media(max-height:640px){#result .earnings-scroll{max-height:36dvh}}
+@media(prefers-reduced-motion:reduce){#result .earnings-scroll{scroll-behavior:auto}}
+
+/* Red gear arrows: the generic button hover used to wash them out. Sharp states, no movement. */
+#forge .gear-arrow,#forge .gear-arrow:hover,#forge .gear-arrow:focus,#forge .gear-arrow:active{color:#fff!important;transition:none}
+#forge .gear-arrow:hover:not(:disabled),#forge .gear-arrow:focus-visible:not(:disabled){background:linear-gradient(#ff3b2a,#c8160f)!important;filter:none;border-color:#fff;color:#ffe45c!important;box-shadow:0 5px 0 #7a1a12,0 0 0 5px #ffd34d,0 5px 0 5px #7a1a12,0 0 24px 10px #ffd34daa;top:calc(50% - 35px)}
+#forge .gear-arrow:active:not(:disabled){background:linear-gradient(#a3120c,#7a0d08)!important;border-color:#ffe45c;color:#fff!important;box-shadow:0 0 0 4px #4d0f0a,inset 0 5px 10px #0008;top:calc(50% - 35px)}
+#forge .gear-arrow svg{pointer-events:none}
+#forge .gear-arrow:hover:not(:disabled) svg{filter:drop-shadow(0 2px 0 #7a1a12)}
+#forge .gear-arrow:disabled,#forge .gear-arrow:disabled:hover{background:linear-gradient(#b9b3a6,#8f897c)!important;border-color:#5d584f;box-shadow:0 5px 0 #5d584f;color:#f1ece0!important;opacity:.45;filter:none}
+
+/* Witch intro: short and visual. The gift (her first booster) is shown, the witch says one simple line. */
+.witch-bubble h2{margin:0 0 10px}
+.witch-gift{display:flex;align-items:center;gap:14px;margin:0 0 12px;padding:10px 16px 10px 10px;background:#f1e3ff;border:3px solid #5b2d84;border-radius:18px}
+.witch-gift canvas{width:118px;height:118px;flex:0 0 auto;filter:drop-shadow(0 4px 3px #0005);animation:gift-bob 1.4s ease-in-out infinite alternate}
+.witch-gift strong{display:block;font:900 27px/1.05 'Barlow Condensed',Impact,sans-serif;color:#3b2a1a;margin:2px 0 4px}
+.witch-gift small{display:block;font:800 13px/1.2 'Nunito',Arial,sans-serif;color:#5b2d84}
+.witch-bubble p{font-size:20px;font-weight:800;margin:0 0 14px}
+@keyframes gift-bob{from{transform:translateY(3px) rotate(-4deg)}to{transform:translateY(-5px) rotate(4deg)}}
+@media(prefers-reduced-motion:reduce){.witch-gift canvas{animation:none}}
+
+/* Four- and five-digit prices stay inside their card. */
+.kid-card .buy-happy.small.long{font-size:18px!important;gap:3px;letter-spacing:-.3px}
+.kid-card .buy-happy.small.xlong{font-size:15px!important;gap:2px;letter-spacing:-.4px}
+.kid-card .buy-happy.small.long .gold-coin,.kid-card .buy-happy.small.xlong .gold-coin{width:12px;height:12px;flex:none}
+
+/* Ending screen: fireworks behind a parchment card. */
+#ending{position:absolute;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:radial-gradient(circle at 50% 35%,#4a2f9e 0%,#24135c 55%,#0f0830 100%);animation:ending-in .8s ease-out both}
+#ending[hidden]{display:none}
+#ending-sky{position:absolute;inset:0;width:100%;height:100%}
+.ending-card{position:relative;max-width:min(620px,92vw);padding:26px 30px 24px;text-align:center;background:#fff4d6;border:5px solid #3d2590;border-radius:22px;box-shadow:0 10px 0 #1d1350,0 0 60px #ffe98a66;color:#3b2a1a;animation:ending-pop .7s .25s cubic-bezier(.2,1.5,.4,1) both}
+.ending-kicker{margin:0;font:900 14px/1.2 'Nunito',sans-serif;letter-spacing:.14em;color:#7a4fd6}
+.ending-card h1{margin:4px 0 10px;font:900 clamp(46px,9vw,84px)/1 'Barlow Condensed',Impact,sans-serif;color:#d8362b;text-shadow:0 4px 0 #ffd952,0 8px 0 #7a1a12}
+#ending-text{margin:0 0 14px;font:800 16px/1.45 'Nunito',sans-serif}
+#ending-stats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px}
+#ending-stats span{padding:7px 12px;background:#ffe8a3;border:3px solid #8a5a1a;border-radius:12px;font:800 13px/1.2 'Nunito',sans-serif}
+#ending-stats b{display:block;font:900 22px/1 'Barlow Condensed',Impact,sans-serif;color:#3d2590}
+.ending-fin{margin:6px 0 0;font:900 28px/1 'Barlow Condensed',Impact,sans-serif;letter-spacing:.2em;color:#3d2590}
+.ending-thanks{margin:2px 0 14px;font:800 14px/1.3 'Nunito',sans-serif;opacity:.8}
+@keyframes ending-in{from{opacity:0}to{opacity:1}}
+@keyframes ending-pop{from{opacity:0;transform:scale(.6) translateY(30px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#ending,.ending-card{animation:none}}
+
+/* ---- Header: one MENU button. Sound, help, full screen and the way home are in the menu overlay; in flight the note and the
+   question mark stay (the MENU button is hidden there). */
+.top-right>#fullscreen{display:none!important}
+body:not(.in-flight) .top-right>#audio-settings,body:not(.in-flight) .top-right>#help{display:none}
+#menu-panel{z-index:70}#menu-panel[hidden]{display:none}
+.menu-paper{display:grid;gap:10px;min-width:min(360px,88vw)!important;text-align:center}
+.menu-paper h2{margin:0 0 4px}
+.menu-paper button{padding:14px 12px;font-size:16px}
+/* ---- Forge on phones (`phone-ui`): no shop sign, no big preview, four tabs on one line, compact panels. */
+.phone-ui #forge{padding:112px 10px 14px!important}
+.phone-ui #forge .shop-sign,.phone-ui #forge .forge-layout .hero-card{display:none!important}
+.phone-ui #forge .forge-layout{display:block!important;min-height:0!important;max-width:none!important}
+.phone-ui .forge-tabs{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px!important;margin-bottom:8px!important}
+.phone-ui .forge-tabs button{flex:none!important;min-width:0;padding:10px 1px!important;font-size:9.5px!important;letter-spacing:-.2px;border-radius:10px!important;white-space:nowrap;overflow:hidden}
+.phone-ui .forge-tabs button .afford-dot,.phone-ui .forge-tabs button i{margin-left:2px}
+/* Upgrades: one big card, two big arrows. */
+.kid-carousel{position:relative;padding:14px 48px 8px!important}
+.kid-carousel .kid-grid{display:block!important}
+.kid-carousel .kid-card{padding:16px 14px 14px!important;gap:8px!important;border-width:4px!important;border-radius:18px}
+.kid-carousel .kid-card svg,.kid-carousel .kid-card .stat-icon{width:min(120px,30vw)!important;height:min(120px,30vw)!important}
+.kid-carousel .kid-card strong{font-size:23px!important}
+.kid-carousel .kid-card .kid-benefit{font-size:14px!important}
+.kid-carousel .kid-card small{display:block!important;font-size:13px!important}
+.kid-carousel .kid-card .tiny-progress{height:10px!important}
+.kid-carousel .kid-card .buy-happy.small{font-size:25px!important;padding:12px 8px!important;margin-top:4px!important}
+.kid-carousel .kid-card .buy-happy.small .gold-coin{width:20px!important;height:20px!important}
+.kid-carousel .gear-arrow{width:62px;height:62px}
+.kid-carousel .gear-arrow.prev{left:-9px}.kid-carousel .gear-arrow.next{right:-9px}
+.kid-count{margin:8px 0 0;text-align:center;font:900 13px 'Nunito',Arial,sans-serif;color:#5a4630}
+@media(max-height:520px){.kid-carousel{padding:8px 60px 4px!important}.kid-carousel .kid-card{grid-template-columns:auto 1fr;justify-items:start!important;column-gap:16px;padding:10px 14px!important;text-align:left}.kid-carousel .kid-card svg,.kid-carousel .kid-card .stat-icon{grid-row:1 / span 5;width:96px!important;height:96px!important;align-self:center}.kid-carousel .kid-card strong{font-size:20px!important}.kid-carousel .kid-card .buy-happy.small{font-size:20px!important;padding:8px!important}.kid-count{margin-top:4px}}
+/* Gear tabs: short picture, bars on one line each, small family shelf. */
+.phone-ui .family-shelf{gap:6px!important;margin-bottom:8px!important}
+.phone-ui .family-shelf button{flex:0 0 84px!important;padding:5px 4px!important;font-size:9px!important}
+.phone-ui .family-shelf button>span{font-size:17px!important;margin-bottom:1px!important}
+.phone-ui .happy-gear{padding:10px 44px 12px!important}
+.phone-ui .happy-gear .forge-feature{display:block!important}
+.phone-ui .gear-visual header .tag{font-size:9px!important}
+.phone-ui .gear-visual header h2{font-size:18px!important;margin:2px 0!important}
+.phone-ui .gear-visual header p{display:none!important}
+.phone-ui .gear-visual figure{margin:4px 0 6px!important;padding:4px!important;min-height:0!important;max-height:none!important}
+.phone-ui .gear-visual figure canvas,.phone-ui .gear-visual figure img,.phone-ui .gear-visual figure svg{height:96px!important;max-height:96px!important;width:auto!important;max-width:100%!important}
+.phone-ui .gear-visual figcaption{font-size:9px!important}
+.phone-ui .fun-bars{gap:3px!important;padding:0!important;margin:0!important}
+.phone-ui .fun-stat{display:grid!important;grid-template-columns:104px minmax(0,1fr);align-items:center;column-gap:6px;margin:0!important}
+.phone-ui .fun-stat b{font-size:10.5px!important;margin:0!important;white-space:nowrap}
+.phone-ui .forge-purchase{margin-top:8px!important;gap:8px!important}
+.phone-ui .forge-purchase .buy-happy,.phone-ui .forge-purchase .try-happy{font-size:15px!important;padding:9px 8px!important}
+.phone-ui .happy-gear .gear-arrow{width:54px;height:54px}
+.phone-ui .happy-gear .gear-arrow.prev{left:-8px}.phone-ui .happy-gear .gear-arrow.next{right:-8px}
+/* The witch's shop: bombs on one line, one spell per row, nothing wider than the screen. */
+.phone-ui .magic-shop{padding:10px!important;margin-bottom:8px!important}
+.phone-ui .magic-shop header h2{font-size:18px!important;margin:0 0 4px!important}
+.phone-ui .witch-words p:not(.witch-note){display:none!important}
+.phone-ui .witch-note{font-size:11px!important;margin:0 0 6px!important}
+.phone-ui .magic-bombs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+.phone-ui .magic-bombs button{display:grid!important;grid-template-columns:1fr!important;justify-items:center;text-align:center;padding:6px 3px!important;gap:1px!important;min-width:0!important}
+.phone-ui .magic-bombs .bomb-art{width:36px!important;height:36px!important}
+.phone-ui .magic-bombs strong{font-size:12px!important}.phone-ui .magic-bombs small{font-size:9px!important}.phone-ui .magic-bombs span{font-size:11px!important}
+.phone-ui .spell-shop header p{display:none!important}
+.phone-ui .spell-shop header h3{margin:6px 0!important;font-size:14px!important}
+@media(max-width:1000px){
+ .spell-cards{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+ .spell-card{min-width:0!important}
+ .spell-card>div{min-width:0}
+ .spell-card p{white-space:normal!important;overflow:visible!important;display:block!important}
+ .spell-card.passive .buy-happy{white-space:normal;max-width:100%}
+ .spell-card.passive .passive-pips{flex-wrap:wrap}
+}
+.phone-ui .spell-card{padding:8px!important;gap:8px!important}
+.phone-ui .spell-card .spell-icon{width:44px!important;height:44px!important;flex:none}
+.phone-ui .spell-card strong{font-size:13px!important}
+.phone-ui .spell-card .buy-happy{width:100%!important;margin-top:6px!important;font-size:15px!important;padding:8px!important}
+.phone-ui .spell-keys button{width:38px;height:36px}
+.phone-ui .magic-tab .gear-visual figure img,.phone-ui .magic-tab .gear-visual figure svg{height:60px!important;max-height:60px!important}
+/* Landscape phones: picture on the left, bars and buttons on the right. */
+@media(max-height:520px){
+ .phone-ui #forge{padding-top:96px!important}
+ .phone-ui .family-shelf button{flex:0 0 76px!important;padding:3px 4px!important}
+ .phone-ui .family-shelf button>span{display:none!important}
+ .phone-ui .happy-gear{padding:8px 56px 10px!important}
+ .phone-ui .happy-gear .forge-feature{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px;align-items:center}
+ .phone-ui .gear-visual figure canvas,.phone-ui .gear-visual figure img,.phone-ui .gear-visual figure svg{height:72px!important;max-height:72px!important}
+ .phone-ui .magic-bombs button{grid-template-columns:auto 1fr!important;justify-items:start!important;text-align:left!important;column-gap:8px!important}
+ .phone-ui .magic-bombs .bomb-art{grid-row:1 / span 3}
+}

@@ -25,21 +25,27 @@
   M.nodes = wi => NODES[wi] || NODES[0];
   // Points spéciaux du chemin : 'exit' (après le boss, vers le monde suivant), 'entry' (avant le tableau 1, depuis le monde d'avant ou le monde parent), 'gate' (la passerelle du monde caché)
   M.EXIT = [935, 250]; M.ENTRY = [22, 470];
-  M.pos = (wi, key) => key === 'exit' ? M.EXIT : key === 'entry' ? M.ENTRY : key === 'gate' ? (M.GATES[(CB.WORLDS[wi] || {}).id] || M.EXIT) : M.nodes(wi)[key];
+  M.pos = (wi, key) => key === 'hangar' ? M.HANGAR : key === 'exit' ? M.EXIT : key === 'entry' ? M.ENTRY : key === 'gate' ? (M.GATES[(CB.WORLDS[wi] || {}).id] || M.EXIT) : M.nodes(wi)[key];
   // Une case est visible (dessinée, atteignable) : monde 1 selon ce qui a été révélé ; ailleurs le tableau secret N-6 après le portail
   M.visible = (wi, profile, vi) => { const w = CB.WORLDS[wi] || {}, sec = w.secret, ext = w.extra, ex2 = w.extra2, ex3 = w.extra3, shown = wi === 0 ? Math.min(CB.WAVES_PER_WORLD - 1, (profile.shown || 0)) : CB.WAVES_PER_WORLD - 1;
     return sec && vi === sec.vi ? CB.Save.portalShown(profile, w.id) : ext && vi === ext.vi ? !!profile.targetsShown : ex2 && vi === ex2.vi ? !!profile.brigandsShown : ex3 && vi === ex3.vi ? !!profile.boatShown : vi <= shown; };
   // Voisins d'une case sur le chemin (numéro de tableau, ou 'gate' / 'exit' / 'entry') : le chemin principal, les embranchements, la passerelle, la sortie et l'entrée du monde
   M.neighbors = (wi, cur, gateOn) => { const w = CB.WORLDS[wi] || {}, out = [], add = (a, b) => { if (a === cur) out.push(b); else if (b === cur) out.push(a); };
-    for (let i = 1; i < CB.WAVES_PER_WORLD; i++) add(i - 1, i); for (const k of ['secret', 'extra', 'extra2', 'extra3']) if (w[k]) add(w[k].from, w[k].vi);
+    for (let i = 1; i < CB.WAVES_PER_WORLD; i++) add(i - 1, i); for (const k of ['secret', 'extra', 'extra2', 'extra3', 'sniper', 'comboTrial']) if (w[k]) add(w[k].from, w[k].vi);
     if (gateOn && w.gate != null) add(w.gate, 'gate'); if (!w.hidden) add(CB.WAVES_PER_WORLD - 1, 'exit'); if (wi > 0) add(0, 'entry'); return out; };
   // Le tableau secret part du tableau 1 (world.secret.from) et non du précédent.
-  M.prev = (wi, vi) => { const w = CB.WORLDS[wi] || {}, sec = w.secret, ext = w.extra, ex2 = w.extra2, ex3 = w.extra3; return sec && sec.vi === vi ? sec.from : ext && ext.vi === vi ? ext.from : ex2 && ex2.vi === vi ? ex2.from : ex3 && ex3.vi === vi ? ex3.from : vi - 1; };
-  M.HANGAR = [770, 485];   // le hangar dessiné sur l'île : cliquer dessus ouvre la boutique
+  M.prev = (wi, vi) => {
+    const w = CB.WORLDS[wi] || {};
+    return [w.secret, w.extra, w.extra2, w.extra3, w.sniper, w.comboTrial].find(node => node?.vi === vi)?.from ?? vi - 1;
+  };
+  M.HANGAR = [770, 485];   // destination sélectionnable sur l’île
   M.hangarAt = (x, y) => Math.abs(x - M.HANGAR[0]) < 60 && Math.abs(y - M.HANGAR[1]) < 46;
-  M.nodeAt = (wi, x, y) => M.nodes(wi).findIndex(([nx, ny]) => Math.hypot(nx - x, ny - y) < 34);
+  M.nodeAt = (wi, x, y) => M.nodes(wi).findIndex(([nx, ny]) => Math.hypot(nx - x, ny - y) < 26);
   // Point sur le chemin entre deux tableaux (0 ≤ k ≤ 1), même courbe que le tracé.
-  M.pathPoint = (wi, from, to, k) => { const a = M.pos(wi, from), b = M.pos(wi, to), mx = (a[0] + b[0]) / 2, my = Math.min(a[1], b[1]) - 40; const u = 1 - k; return [u * u * a[0] + 2 * u * k * mx + k * k * b[0], u * u * a[1] + 2 * u * k * my + k * k * b[1]]; };
+  M.pathPoint = (wi, from, to, k) => { const a = M.pos(wi, from), b = M.pos(wi, to), mx = (a[0] + b[0]) / 2;
+    const my = from==='hangar'||to==='hangar' ? (a[1]+b[1])/2 + Math.min(60,Math.hypot(b[0]-a[0],b[1]-a[1])*.16) : Math.min(a[1], b[1]) - 40;
+    const u=1-k; return [u*u*a[0]+2*u*k*mx+k*k*b[0],u*u*a[1]+2*u*k*my+k*k*b[1]];
+  };
   const DECOR = {
     foret(c, x, y, i) { c.fillStyle = i % 2 ? '#1f6b3a' : '#17552d'; c.beginPath(); c.moveTo(x - 14, y); c.lineTo(x + 14, y); c.lineTo(x, y - 34); c.fill(); c.fillStyle = '#5a3a21'; c.fillRect(x - 3, y, 6, 8); },
     manoir(c, x, y, i) { if (i % 3 === 0) { c.fillStyle = '#5a4a7a'; c.beginPath(); c.roundRect(x - 9, y - 22, 18, 24, 7); c.fill(); c.fillStyle = '#3a2a55'; c.fillRect(x - 5, y - 14, 10, 3); } else { c.fillStyle = '#2a1f45'; c.beginPath(); c.moveTo(x - 12, y); c.lineTo(x + 12, y); c.lineTo(x + 6, y - 26); c.lineTo(x, y - 14); c.lineTo(x - 6, y - 30); c.fill(); } },
@@ -72,11 +78,13 @@
     galaxie(c, t) { circle(c, 0, 10, 42, 'rgba(0,0,0,.35)'); for (let i = 0; i < 3; i++) { c.save(); c.translate(0, 4); c.rotate(t * (.8 + i * .5) + i); c.strokeStyle = ['#c47dff', '#7fd4ff', '#fff'][i]; c.lineWidth = 4 - i; c.shadowColor = '#c47dff'; c.shadowBlur = 10; c.beginPath(); c.ellipse(0, 0, 40 - i * 8, 16 - i * 3, 0, 0, TAU * .8); c.stroke(); c.restore(); } circle(c, 0, 4, 16, '#050310'); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(0, 4, 17, 0, TAU); c.stroke(); for (let i = 0; i < 6; i++) star(c, Math.cos(t + i) * 44, 4 + Math.sin(t * 1.3 + i * 2) * 18, 3, i % 2 ? '#ffd23f' : '#fff'); },
   };
   // Le hangar sur l'île : toit arrondi de tôle, grande porte, enseigne « HANGAR » avec une clé, lumière qui clignote
-  M.hangar = (c, x, y, t) => {
+  M.hangar = (c, x, y, t, opening = 0) => {
     c.save(); circle(c, x, y + 22, 52, 'rgba(0,0,0,.3)');
     c.fillStyle = '#5b6b80'; c.beginPath(); c.moveTo(x - 50, y + 24); c.lineTo(x - 50, y - 6); c.quadraticCurveTo(x, y - 54, x + 50, y - 6); c.lineTo(x + 50, y + 24); c.closePath(); c.fill();
     c.strokeStyle = '#3f4c5e'; c.lineWidth = 2; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(x - 50 + k * 1, y - 6 + k * 7); c.quadraticCurveTo(x, y - 54 + k * 7, x + 50 - k * 1, y - 6 + k * 7); c.stroke(); }
-    c.fillStyle = '#243040'; c.fillRect(x - 24, y - 8, 48, 32); c.fillStyle = '#ffd23f'; c.fillRect(x - 24, y - 8, 48, 4); c.fillStyle = '#9fb4cc'; for (let k = 0; k < 3; k++) c.fillRect(x - 22, y + k * 10, 44, 2);
+    c.fillStyle = '#081526'; c.fillRect(x - 24, y - 8, 48, 32);
+    if(opening>0) { const glow=c.createLinearGradient(x,y-8,x,y+24); glow.addColorStop(0,'#b67727');glow.addColorStop(1,'#352a26');c.fillStyle=glow;c.fillRect(x-22,y-6,44,30);c.fillStyle='#ffe6a0';c.fillRect(x-8,y-4,16,2); c.save();c.globalAlpha=opening*.3;c.fillStyle='#ffdb71';c.beginPath();c.moveTo(x-23,y+24);c.lineTo(x+23,y+24);c.lineTo(x+55,y+63);c.lineTo(x-55,y+63);c.fill();c.restore(); }
+    c.save();c.beginPath();c.rect(x-24,y-8,48,32);c.clip();c.translate(0,-32*opening);c.fillStyle='#243040';c.fillRect(x-24,y-8,48,32);c.fillStyle='#9fb4cc';for(let k=0;k<3;k++)c.fillRect(x-22,y+k*10,44,2);c.fillStyle='#ffd23f';c.fillRect(x-24,y+21,48,3);c.restore();
     c.fillStyle = '#fff'; c.beginPath(); c.roundRect(x - 34, y - 26, 68, 16, 4); c.fill(); c.fillStyle = '#0b2452'; c.font = 'bold 11px "Arial Rounded MT Bold", Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🔧 HANGAR', x, y - 18);
     circle(c, x + 42, y - 2, 4, Math.sin(t * 4) > 0 ? '#ff5a5a' : '#5a1a1a'); c.restore();
   };
@@ -91,7 +99,7 @@
   // marker = { vi, from, k } : personnage sur le tableau vi (ou en chemin de from vers vi, avancement k).
   // view (optionnel, voir Render.fitCanvas) : le ciel remplit toute la fenêtre, l'île reste centrée en 960×640.
   // Monde 1 : seuls les tableaux révélés (profile.shown) sont dessinés ; reveal = { vi, k } anime le chemin (k 0→1) puis la case (k 1→1.5).
-  M.draw = (c, { wi, profile, selected, t = 0, playerId, marker, view, reveal, cheer, gate, exit, entry }) => {
+  M.draw = (c, { wi, profile, selected, t = 0, playerId, marker, view, reveal, unlock, hangarEntry, hangarFrom = 0, cheer, gate, exit, entry }) => {
     const sec = (CB.WORLDS[wi] || {}).secret, ext = (CB.WORLDS[wi] || {}).extra, ex2 = (CB.WORLDS[wi] || {}).extra2, ex3 = (CB.WORLDS[wi] || {}).extra3;
     const visible = vi => (reveal && vi === reveal.vi) || M.visible(wi, profile, vi);
     const w = CB.WORLDS[wi], S = CB.Save, n = M.nodes(wi), R = CB.Render, lw = view ? view.lw : 960, lh = view ? view.lh : 640;
@@ -121,15 +129,25 @@
     // passerelle vers le monde caché : chemin lumineux depuis le tableau secret (1-9 pour les pirates, N-6 ailleurs), petite île dessinée selon le monde (GATE_ICONS)
     if (gate && gate.on && gate.from != null && n[gate.from] && M.GATES[w.id]) { const k = Math.min(1, gate.k), from = n[gate.from], [gx, gy] = M.GATES[w.id], mx = (from[0] + gx) / 2, my = Math.min(from[1], gy) - 50, col = GATE_COLORS[gate.id] || '#9fe0ff'; c.setLineDash([4, 10]); c.lineDashOffset = -t * 40; c.strokeStyle = col; c.lineWidth = 5; c.shadowColor = col; c.shadowBlur = 12; c.beginPath(); c.moveTo(from[0], from[1]); for (let j = 1; j <= 24; j++) { const q = k * j / 24, u = 1 - q; c.lineTo(u * u * from[0] + 2 * u * q * mx + q * q * gx, u * u * from[1] + 2 * u * q * my + q * q * gy); } c.stroke(); c.shadowBlur = 0; c.setLineDash([]);
       if (gate.k >= 1) { const pop = gate.k < 1.4 ? 1 + (gate.k - 1) * .8 : 1.32 - Math.min(.32, (gate.k - 1.4) * 1.6); c.save(); c.translate(gx, gy); c.scale(pop, pop); (GATE_ICONS[gate.id] || GATE_ICONS.pirates)(c, t); c.fillStyle = '#fff'; c.font = 'bold 11px "Arial Rounded MT Bold", Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(((CB.worldById(gate.id) || {}).icon || '') + ' MONDE CACHÉ', 0, 44); c.restore(); } }
-    M.hangar(c, M.HANGAR[0], M.HANGAR[1], t);
+    const hangarTime=hangarEntry ? (hangarEntry.exiting ? Math.max(0,1.9-hangarEntry.age) : hangarEntry.age) : 0;
+    M.hangar(c, M.HANGAR[0], M.HANGAR[1], t, hangarEntry ? Math.min(1,hangarTime/.65) : 0);
     // chemin brun en pointillé vers le mini-jeu du brigand
     if (ex2 && visible(ex2.vi)) { const k = reveal && reveal.vi === ex2.vi ? Math.min(1, reveal.k) : 1; c.setLineDash([4, 10]); c.lineDashOffset = -t * 40; c.strokeStyle = '#d9a066'; c.lineWidth = 5; c.shadowColor = '#ffb347'; c.shadowBlur = 12; c.beginPath(); c.moveTo(n[ex2.from][0], n[ex2.from][1]); for (let j = 1; j <= 24; j++) { const [px, py] = M.pathPoint(wi, ex2.from, ex2.vi, k * j / 24); c.lineTo(px, py); } c.stroke(); c.shadowBlur = 0; c.setLineDash([]); }
     if (reveal && reveal.k < 1) { const [px, py] = M.pathPoint(wi, M.prev(wi, reveal.vi), reveal.vi, reveal.k), portal = sec && reveal.vi === sec.vi; circle(c, px, py, 10 + Math.sin(t * 20) * 3, portal ? '#8fd6ff' : '#fff'); for (let i = 0; i < 6; i++) star(c, px + Math.cos(t * 7 + i) * 26, py + Math.sin(t * 9 + i * 2) * 18, 5, i % 2 ? (portal ? '#3f8fff' : '#ffd23f') : '#fff'); }
+    for (const node of [w.sniper, w.comboTrial]) {
+      if (!node || !visible(node.vi)) continue;
+      const k = reveal?.vi === node.vi ? Math.min(1, reveal.k) : 1;
+      c.save(); c.setLineDash([5, 8]); c.strokeStyle = '#a9e8ff'; c.lineWidth = 4;
+      c.beginPath(); c.moveTo(...n[node.from]);
+      for (let i = 1; i <= 20; i++) c.lineTo(...M.pathPoint(wi, node.from, node.vi, k * i / 20));
+      c.stroke(); c.restore();
+    }
     // tableaux
     n.forEach(([x, y], vi) => {
       if (!visible(vi)) return;
       const stars = S.stars(profile, w.id, vi), open = S.waveUnlocked(profile, wi, vi), boss = vi === CB.WAVES_PER_WORLD - 1, secret = sec && vi === sec.vi, extra = ext && vi === ext.vi, extra2 = ex2 && vi === ex2.vi, extra3 = ex3 && vi === ex3.vi;
-      c.save();
+      const challenge = [w.sniper, w.comboTrial].find(node => node?.vi === vi);
+      c.save(); c.translate(x,y); c.scale(.78,.78); c.translate(-x,-y);
       if (reveal && vi === reveal.vi) { const k = Math.max(0, Math.min(1, (reveal.k - 1) * 2)); if (k <= 0) { c.restore(); return; } const pop = k < .7 ? k / .7 * 1.35 : 1.35 - (k - .7) / .3 * .35; c.translate(x, y); c.scale(pop, pop); c.translate(-x, -y); for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + t * 2, r = 40 + k * 30; star(c, x + Math.cos(a) * r, y + Math.sin(a) * r, 6, i % 2 ? '#ffd23f' : '#fff'); } }
       circle(c, x, y + 6, 26, 'rgba(0,0,0,.35)');
       if (selected === vi) { c.strokeStyle = '#ffd23f'; c.lineWidth = 4; c.globalAlpha = .6 + .4 * Math.sin(t * 6); c.beginPath(); c.arc(x, y, 34 + Math.sin(t * 6) * 3, 0, TAU); c.stroke(); c.globalAlpha = 1; }
@@ -145,20 +163,32 @@
         c.fillStyle = '#6b4a2a'; c.fillRect(x - 3, y + 10, 6, 22); c.fillStyle = open ? '#b9834a' : '#6b768a'; c.beginPath(); c.roundRect(x - 28, y - 24, 56, 44, 6); c.fill(); c.strokeStyle = open ? '#7a5230' : '#4a5468'; c.lineWidth = 2; c.stroke(); if (open) { circle(c, x, y - 6, 10, '#e8b089'); c.fillStyle = '#1b1b1b'; c.fillRect(x - 11, y - 10, 22, 6); c.fillStyle = '#3b2a1e'; c.fillRect(x - 13, y - 19, 26, 4); c.fillRect(x - 8, y - 26, 16, 8); c.fillStyle = '#c8322a'; c.fillRect(x - 9, y + 4, 18, 12); if (stars) circle(c, x + 20, y + 12, 6, '#7dff9a'); }
       } else { circle(c, x, y, 26, open ? (stars ? '#2fa84f' : '#ffd23f') : '#4a5468'); circle(c, x, y, 20, open ? (stars ? '#7dff9a' : '#fff3a0') : '#6b768a'); }
       c.fillStyle = open ? '#1b2436' : '#2a3140'; c.font = 'bold 18px "Arial Rounded MT Bold", Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      if (secret) { c.font = '16px Arial'; c.fillText(wi === 0 ? '🦖' : (CB.WORLDS[CB.hiddenFrom(wi)] || {}).icon || '🌀', x, y + 1); } else if (extra || extra2 || extra3) { if (!open) { c.font = '18px Arial'; c.fillText('🔒', x, y + 1); } } else if (boss) { c.font = '22px Arial'; c.fillText(open ? '💀' : '🔒', x, y + 1); } else c.fillText(open ? String(vi + 1) : '🔒', x, y + 1);
+      if (secret) { c.font = '16px Arial'; c.fillText(wi === 0 ? '🦖' : (CB.WORLDS[CB.hiddenFrom(wi)] || {}).icon || '🌀', x, y + 1); } else if (extra || extra2 || extra3) { if (!open) { c.font = '18px Arial'; c.fillText('🔒', x, y + 1); } } else if (challenge) { c.fillText(challenge.icon, x, y); } else if (boss) { c.font = '22px Arial'; c.fillText(open ? '💀' : '🔒', x, y + 1); } else c.fillText(open ? String(vi + 1) : '🔒', x, y + 1);
+      if (!open && S.canUnlockStage?.(profile, wi, vi)) { c.strokeStyle = '#ffd23f'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 32 + Math.sin(t * 4) * 2, 0, TAU); c.stroke(); c.fillStyle = '#123b61'; c.strokeStyle = '#6cdaff'; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x + 17, y - 43, 72, 23, 11); c.fill(); c.stroke(); c.font = 'bold 11px Arial'; c.fillStyle = '#d4f7ff'; c.fillText('🔓 ' + (S.stageStarRequirement?.(vi,wi) || 2) + ' × ★', x + 53, y - 31); }
+      if (unlock && unlock.vi === vi && unlock.wi === wi) {
+        const k = Math.min(1, unlock.k), required = S.stageStarRequirement?.(vi,wi) || 2; c.save(); c.fillStyle = '#ffd23f'; c.font = 'bold 23px Arial';
+        for (let j = 0; j < required; j++) { const q = Math.max(0, Math.min(1, (k - j / required * .55) * 3)); if (q > 0) { c.globalAlpha = 1 - q * .5; c.fillText('★', x + (j % 2 ? 1 : -1) * 48 * (1 - q), y - 45 * (1 - q)); } }
+        c.globalAlpha = 1; c.font = 'bold 14px Arial'; c.fillText(Math.min(required, Math.floor(k * required / .8)) + ' / ' + required + ' ★', x, y - 52);
+        if (k > .55) { c.globalAlpha = (1 - k) / .45; c.font = '28px Arial'; c.fillText('🔓', x, y - (k - .55) * 90); } c.restore();
+      }
       if (stars) { const ns = Math.max(3, stars); for (let s = 0; s < ns; s++) { c.font = '14px Arial'; c.fillStyle = s < stars ? (stars >= 4 ? '#9fe8ff' : '#ffd23f') : 'rgba(255,255,255,.35)'; c.fillText(stars >= 4 ? '✦' : '★', x - 16 - (ns - 3) * 8 + s * 16, y + 38); } }   // 4 : diamant
+      if (challenge) { c.fillStyle = '#fff'; c.font = 'bold 13px Arial'; c.fillText(challenge.label, x, y - 40); }
       if (secret && wi !== 0) { c.font = 'bold 11px "Arial Rounded MT Bold", Arial'; c.fillStyle = '#fff'; c.fillText('🌀 SECRET', x, y - 44); }
-      if (wi === 0 && (vi === 0 || secret || extra || extra2 || extra3)) { c.font = 'bold 11px "Arial Rounded MT Bold", Arial'; c.fillStyle = '#fff'; c.fillText(secret ? '∞ · LE PASSÉ' : extra ? '🎯 MINI-JEU' : extra2 ? '🤠 MINI-JEU' : extra3 ? '🏴‍☠️ BATEAU' : '∞', x, secret || extra || extra2 || extra3 ? y - 44 : y - 36); } // au-dessus du portail : les étoiles sont en dessous
+      if ((wi === 0 && vi === 0) || secret || extra || extra2 || extra3) { c.font = 'bold 11px "Arial Rounded MT Bold", Arial'; c.fillStyle = '#fff'; c.fillText(secret ? '∞ · LE PASSÉ' : extra ? '🎯 MINI-JEU' : extra2 ? '🤠 MINI-JEU' : extra3 ? '🏴‍☠️ BATEAU' : '∞', x, secret || extra || extra2 || extra3 ? y - 44 : y - 36); } // au-dessus du portail : les étoiles sont en dessous
       c.restore();
     });
     // fête sur le tableau qu'on vient de réussir : ondes, étoiles qui s'envolent, « RÉUSSI ! »
     if (cheer && n[cheer.vi]) { const [x, y] = n[cheer.vi], k = Math.min(1, cheer.k), e = 1 - Math.pow(1 - k, 3); c.save(); for (let i = 0; i < 3; i++) { const kk = Math.max(0, Math.min(1, k * 1.6 - i * .2)); c.globalAlpha = (1 - kk) * .9; c.strokeStyle = i % 2 ? '#fff' : '#ffd23f'; c.lineWidth = 6 * (1 - kk) + 1; c.beginPath(); c.arc(x, y, 30 + kk * 120, 0, TAU); c.stroke(); } c.globalAlpha = 1 - Math.max(0, (k - .7) / .3); for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + k * 3, d = 40 + e * 90; star(c, x + Math.cos(a) * d, y + Math.sin(a) * d * .7 - e * 20, 6 + (i % 3) * 3, i % 2 ? '#ffd23f' : '#fff'); } const pop = k < .25 ? k / .25 * 1.3 : 1.3 - Math.min(.3, (k - .25) * .6); c.translate(x, y - 70 - e * 20); c.scale(pop, pop); c.font = 'bold 24px "Arial Rounded MT Bold", Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 6; c.strokeStyle = '#8a5a00'; c.strokeText('RÉUSSI !', 0, 0); c.fillStyle = '#ffd23f'; c.fillText('RÉUSSI !', 0, 0); c.restore(); }
-    if (typeof selected === 'string') { const [sx, sy] = M.pos(wi, selected); c.save(); c.strokeStyle = '#ffd23f'; c.lineWidth = 4; c.globalAlpha = .6 + .4 * Math.sin(t * 6); c.beginPath(); c.arc(sx, sy, 40 + Math.sin(t * 6) * 3, 0, TAU); c.stroke(); c.restore(); }   // on est sur la passerelle, la sortie ou l'entrée
+    if (typeof selected === 'string' && !hangarEntry) { const [sx, sy] = M.pos(wi, selected); c.save(); c.strokeStyle = '#ffd23f'; c.lineWidth = 4; c.globalAlpha = .6 + .4 * Math.sin(t * 6); c.beginPath(); c.arc(sx, sy, 40 + Math.sin(t * 6) * 3, 0, TAU); c.stroke(); c.restore(); }   // on est sur la passerelle, la sortie ou l'entrée
     // personnage
     if (marker) {
       let x, y; if (marker.from != null && marker.k < 1) [x, y] = M.pathPoint(wi, marker.from, marker.vi, marker.k); else [x, y] = M.pos(wi, marker.vi);
       const bob = Math.sin(t * 8) * (marker.k < 1 ? 3 : 1), dir = marker.k < 1 && M.pos(wi, marker.from)[0] > M.pos(wi, marker.vi)[0] ? -1 : 1;
-      R.battleCannon(c, x, y - 30 + bob, 22, playerId, profile.cannon || 'classique', dir, 0);
+      if(marker.vi==='hangar' && marker.k>=1) {
+        const k=hangarEntry?Math.max(0,Math.min(1,(hangarTime-.65)/1.1)):0, ease=k*k*(3-2*k);
+        c.save();c.globalAlpha=1-Math.max(0,(k-.7)/.3);
+        R.battleCannon(c,x-24*(1-ease),y+48-27*ease+(k>0&&k<1?Math.sin(t*35):0),16-9*ease,playerId,profile.cannon||'classique',1,0);c.restore();
+      } else R.battleCannon(c, x, y - 30 + bob, 22, playerId, profile.cannon || 'classique', dir, 0);
     }
     c.restore();
   };

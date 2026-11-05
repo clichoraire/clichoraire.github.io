@@ -103,7 +103,7 @@
       p.found = []; p.inv = (this.save.inv || []).filter(s => s.n > 0).map(s => ({ type: s.type, n: s.n, perm: s.n, ...(s.snails?{snails:s.snails.map(sn=>({...sn}))}:{}) })); p.bagSlots = (this.save.bagSlots || []).slice(); p.quickSlots = (this.save.quickSlots || []).slice(); void prev; void keepPowers;
       if(this.challenge?.kind==='timing'){p.kick=true;this.timingHits=0;this.timingNext=0;W.timingTarget={c:this.challenge.target,r:3};}
       this.deliverBossLoot();
-      for (const en of s.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor, catColor:en.catColor});
+      for (const en of s.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor, catColor:en.catColor,gnomeFoods:en.gnomeFoods});
       if (BK.music) BK.music.play(s.music && BK.hasInstrument(W) ? s.music : this.stageMusic());
       if (s.custom || (s.npcs && s.npcs.length) || (s.shop && s.shop.length)) this.setupShop(W, s, 'map:' + (s.mapId || s.name));
       for (const sp of W.spawns) { const type = ENEMY_CODES[sp.code]; if (!type) continue; const e = W.addEnemy(type, sp.c, sp.r); if (e.boss && s.bossHp) { e.hp = e.maxHp = s.bossHp; } if (e.boss && s.bossName) e.name = s.bossName; if (s.id === '2-3') e.fast = true; }
@@ -176,6 +176,10 @@
         if (p.input.action && (W.displays && W.displays.length || W.players.some(n => n.npc))) { const d = this.displayNear(p); if (d) { p.input.action = false; this.buy(d); } else if (W.talkTo(p)) p.input.action = false; }
         p.nearDisplay = null; if (W.displays && W.displays.length) { const near = this.displayNear(p); p.nearDisplay = near; for (const d of W.displays) { d.active = d === near; d.affordable = (this.save.gold || 0) >= d.price; } }
         W.update(dt); BK.audio.events(W.events);
+        if(!this.outer&&p.nearDoor?.cave&&p.alive&&!p.falling&&!p.air&&!p.swallowedBy&&
+          p.input.dy<-.2&&Math.abs(p.x-p.nearDoor.c-.5)<.38&&p.y<p.nearDoor.r+1.38){
+          this.enterHouse(p.nearDoor);return;
+        }
         if(W.events.some(e=>e.type==='cured'&&e.player===p)){this.syncInv();BK.saveAdventure(this.charId,this.save);this.toast('Remède utilisé : effet supprimé !',2);}
         if (this.outer) {   // dans une maison : la porte du bas ramène dehors
           for (const e of W.events) { if (e.type === 'exit') { this.leaveHouse(); return; } if (e.type === 'playerDied' && e.player === p) { this.state = 'dying'; this.stateT = 0; } }
@@ -239,7 +243,7 @@
           if (e.type === 'blast') BK.audio.boss();
           if (e.type === 'sealedOpened') { BK.audio.door(); this.toast('La porte scellée vole en éclats !', 3); }
           if (e.type === 'metalBroken') { BK.audio.block(); this.toast('Le bloc de métal cède par sa face en bois !', 2.5); }
-          if (e.type === 'itemTaken' && [...BK.BOMB_POWERS,'bombdiarrhea','shortfuse'].includes(e.item) && e.player === p) this.toast(BK.ITEMS[e.item].icon+' '+BK.ITEMS[e.item].name+' : '+BK.ITEMS[e.item].desc,5);
+          if (e.type === 'itemTaken' && [...BK.BOMB_POWERS,'bombdiarrhea','shortfuse','heavyboots','waterwalk'].includes(e.item) && e.player === p) this.toast(BK.ITEMS[e.item].icon+' '+BK.ITEMS[e.item].name+' : '+BK.ITEMS[e.item].desc,5);
           if (e.type === 'itemTaken' && e.item === 'card') { this.toast('Carte d’or ' + p.cards + ' / ' + W.cardsTotal, 2.5); }
           if (e.type === 'itemTaken' && e.item === 'coin') { this.save.gold = (this.save.gold || 0) + 1; this.goldDirty = true; }
           if (e.type === 'honeyUsed') this.syncInv();
@@ -254,7 +258,7 @@
           if (e.type === 'shamanHeal') this.toast('Le shaman soigne son orque. Occupe-toi du shaman !', 2.5);
           if(e.type==='snailGrown')this.toast('🐌 Ton escargot est devenu adulte !',4);
           if(e.type==='snailBorn')this.toast('🐌 Un tout petit bébé escargot est né dans le terrarium !',4);
-          if (e.type === 'petFed' && e.player === p) { this.syncInv(); BK.saveAdventure(this.charId, this.save); this.toast('Miam ! ' + e.animal.def.name + ' a mangé : ' + BK.ITEMS[e.food].name.toLowerCase() + '.', 2); }
+          if (e.type === 'petFed' && e.player === p) { this.syncInv(); BK.saveAdventure(this.charId, this.save); this.toast(e.animal.def.residence?e.animal.def.name+' rejoint ton équipe !':'Miam ! ' + e.animal.def.name + ' a mangé : ' + BK.ITEMS[e.food].name.toLowerCase() + '.', 2); }
           if (e.type === 'carrotPicked' && e.player === p) this.toast('Une carotte ! Q ou W pour la lancer devant un lapin.', 3);
         }
         BK.playTime = (BK.playTime || 0) + dt; this.saveT = (this.saveT || 0) + dt; if (this.saveT > 5) { this.saveT = 0; try { localStorage.setItem('bk.playtime', String(Math.round(BK.playTime))); } catch (err) { } if (this.goldDirty) { this.goldDirty = false; BK.saveAdventure(this.charId, this.save); } }
@@ -366,7 +370,7 @@
       W.displays.push({c:record.c,r:record.r,ally:true,waiting:true,npc:p,id:p.id,price:0,lives:p.lives,key:record.key,affordable:true});return p;
     }
     parkAlly(p,d) {
-      const fields=['id','name','hp','maxHp','lives','alive','deadT','speed','speedUp','bombsMax','fire','kick','shield','gloves','lantern','stamina','staminaMax','staminaRegen','poison','poisonTick','diarrheaT','shortfuseT','recruitKey',...BK.BOMB_POWERS];
+      const fields=['id','name','hp','maxHp','lives','alive','deadT','speed','speedUp','bombsMax','fire','kick','shield','gloves','lantern','stamina','staminaMax','staminaRegen','poison','poisonTick','diarrheaT','shortfuseT','recruitKey','heavyboots','stoneSword','waterwalk',...BK.BOMB_POWERS];
       const member=Object.fromEntries(fields.filter(k=>p[k]!==undefined).map(k=>[k,p[k]]));
       const key=p.reserveKey||'waiting:'+(this.save.allyReserveSerial=(this.save.allyReserveSerial||0)+1);
       member.reserveKey=key;
@@ -452,6 +456,7 @@
     // l'article d'à côté, cuire le poisson, boire à la fontaine. Vrai si le monde a changé (on arrête la mise à jour).
     pressEnter() {
       const W = this.world, p = this.player; if (!p.alive||p.swallowedBy) return false;
+      if(W.takeStoneSword(p)){BK.audio.item();this.toast('Épée retirée ! Dégâts des bombes ×2.',4);return false;}
       if(W.nearbyPipe(p)){W.usePipe(p);return false;}
       const terrarium=W.nearbyTerrarium(p);if(terrarium){this.showTerrarium(terrarium);return false;}
       if(W.useSnail(p)) return false;
@@ -513,8 +518,9 @@
       const portrait=(this.allyPortraitRects||[]).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h);if(portrait){this.showAllyFood(portrait.ally);return;}
       const pager=this.allyPanelPager;if(pager&&x>=pager.x&&x<=pager.x+pager.w&&y>=pager.y&&y<=pager.y+pager.h){this.allyPanelPage=(this.allyPanelPage+1)%pager.pages;return;}
       const foodBubble=(this.world.allyFoodRects||[]).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h&&this.world.canCareForAlly(this.player,r.ally)&&this.world.allyCareNeeds(r.ally).includes(r.careType));if(foodBubble){if(foodBubble.careType==='food')this.showAllyFood(foodBubble.ally);else if(this.world.cureAlly(this.player,foodBubble.ally,foodBubble.careType)){this.syncInv();BK.saveAdventure(this.charId,this.save);BK.inventoryLayout(this.player);this.toast(foodBubble.ally.name+' : '+'poison et malus guéris !',2);}else this.toast('Il te manque un '+BK.ITEMS[foodBubble.careType].name.toLowerCase()+' dans ton sac.',2);return;}
+      const whistle=this.whistleRect;if(whistle&&this.world.followersOf(this.player).length&&x>=whistle.x&&x<=whistle.x+whistle.w&&y>=whistle.y&&y<=whistle.y+whistle.h){const n=this.world.whistleFollowers(this.player);if(n>=0){BK.audio.whistle();this.toast(n?n+' compagnon'+(n>1?'s':'')+' rappelé'+(n>1?'s':'')+' !':'Personne à rappeler.',2);}else this.toast('Pose-toi sur un sol sûr pour siffler.',2);return;}
       const petBubble=(this.world.petFoodRects||[]).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h);
-      if(petBubble){const e=petBubble.pet,type=this.world.petFood(this.player,e);if(type&&this.world.feedPet(this.player,e,type)){this.syncInv();BK.saveAdventure(this.charId,this.save);BK.inventoryLayout(this.player);this.toast('Miam ! Ton ami te suit plus longtemps.',2);}else this.toast(type?'Approche-toi de ton ami.':'Il te faut : '+(BK.PET_FOODS[e.type]||[]).map(k=>BK.ITEMS[k].name).join(', ')+'.',2);return;}
+      if(petBubble){const e=petBubble.pet;if(this.world.time<(e.petRequestAt||0))return;const need=this.world.petNeed(this.player,e);if(!need)return;if(need==='pet'){this.world.petAnimal(this.player,e);return;}const type=this.world.petFood(this.player,e);if(type&&this.world.feedPet(this.player,e,type)){this.syncInv();BK.saveAdventure(this.charId,this.save);BK.inventoryLayout(this.player);this.toast(e.def.residence?e.def.name+' rejoint ton équipe !':'Miam ! Ton ami te suit plus longtemps.',2);}else this.toast(type?'Approche-toi de ton ami.':'Il te faut : '+this.world.petFoods(e).map(k=>BK.ITEMS[k].name).join(', ')+'.',2);return;}
       const stow=this.world.stowSnailRect;if(stow&&x>=stow.x&&x<=stow.x+stow.w&&y>=stow.y&&y<=stow.y+stow.h){if(this.world.stowSnail(this.player)){this.syncInv();BK.saveAdventure(this.charId,this.save);this.toast('Escargot rangé dans le sac !',2);}else this.toast('Ton sac est plein.',2);return;}
       const snail=this.world.snailRect;if(snail&&x>=snail.x&&x<=snail.x+snail.w&&y>=snail.y&&y<=snail.y+snail.h){this.world.useSnail(this.player);return;}
       const fuel=this.world.fuelRect;if(fuel&&x>=fuel.x&&x<=fuel.x+fuel.w&&y>=fuel.y&&y<=fuel.y+fuel.h){if(this.world.addWoodToFire(this.player)){this.syncInv();BK.saveAdventure(this.charId,this.save);this.toast('Bois ajouté : +15 secondes !',2);}return;}
@@ -523,33 +529,40 @@
       if (sr && x >= sr.x - 10 && x <= sr.x + sr.w + 10 && y >= sr.y - 10 && y <= sr.y + sr.h + 16) { this.pressEnter(); return; }
       if (!this.invRects) return; for (const r of this.invRects) if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) BK.useQuickItem(this.world, this.player, r.i);
     }
-    stageMusic() { return this.stage.objective === 'boss' ? 'boss' : 'stage'; }
+    stageMusic() {
+      if (this.stage.objective === 'boss') return 'boss';
+      const biome = this.stage.preview || this.stage.theme || this.stage.world?.theme;
+      return BK.music?.grassTheme(biome) ? 'grass-world' : 'stage';
+    }
     enterHouse(door) {
       this.world.releaseSnail(this.player);
       const key = door.c + ',' + door.r, hp = this.world.houses[key]; if (!hp || !hp.interior) return;
       const it = hp.interior; BK.audio.door();
       this.outer = { world: this.world, player: this.player, cam: this.cam, follow: this.follow, viewCols: this.viewCols, viewRows: this.viewRows, door };
       const W = this.world = new BK.World({ map: BK.roomMap(it.grid,it.roomExit), theme: it.theme || 'interior', mode: 'adventure', hearts: true, explore: true, itemChance: 0.25, softChance: 0.75, coins: true, houses: {}, props: it.props || {}, exitKind: 'door' });
+      for(const k of this.outer.world.stoneSwordRooms?.[key]||[])if(W.props[k]?.deco==='outdoor_sword')W.props[k]={...W.props[k],swordTaken:true};
       const savedTerrariums=this.outer.world.terrariumRooms?.[key];if(savedTerrariums)for(const [k,state] of Object.entries(savedTerrariums))if(W.props[k]?.deco==='terrarium'){W.props[k].snails=state.snails.map(s=>({...s}));W.props[k].snailFood=state.food?JSON.parse(JSON.stringify(state.food)):null;W.props[k].snailSatiety=state.satiety||0;}
       W.ensureRoomExit();
-      for (const en of it.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor, catColor:en.catColor});
+      for (const en of it.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor, catColor:en.catColor,gnomeFoods:en.gnomeFoods});
       const residents=this.outer.world.snailResidents?.[key];if(residents){W.enemies=W.enemies.filter(e=>e.type!=='escargot');for(const sn of residents)W.addEnemy('escargot',Math.floor(sn.x),Math.floor(sn.y),{...sn,home:{c:Math.floor(sn.x),r:Math.floor(sn.y)}});}
       this.setupShop(W, it, 'house:' + (this.stage.mapId || this.stage.id) + ':' + key);
       const st = W.starts[0] || { c: 1, r: 1 }, o = this.outer.player, p = this.player = W.addPlayer(this.def, st.c, st.r, { hp: o.maxHp });
       Object.assign(p, { bombsMax: o.bombsMax, fire: o.fire, speed: o.speed, speedUp: o.speedUp, kick: o.kick, gloves: o.gloves, lantern: o.lantern, inv: o.inv, bagSlots: o.bagSlots, quickSlots: o.quickSlots, found: o.found, feastT: o.feastT, feastBase: o.feastBase, maxHp: o.maxHp, hp: o.hp, score: o.score, cards: o.cards, gold: o.gold, staminaMax: o.staminaMax, stamina: o.stamina, staminaRegen: o.staminaRegen, dir: 2, invuln: 1 });
-      for (const key of [...BK.BOMB_POWERS, 'shield', 'diarrheaT', 'shortfuseT', 'poison', 'poisonTick']) p[key] = o[key];
+      for (const key of [...BK.BOMB_POWERS, 'shield', 'diarrheaT', 'shortfuseT', 'poison', 'poisonTick', 'heavyboots', 'stoneSword', 'waterwalk']) p[key] = o[key];
       this.transferAllies(this.outer.world,W,p);
-      this.cam = new BK.Camera(BK.W, BK.H); this.fitCamera(); this.toast('Tu entres dans la maison. Marche sur la case SORTIE pour ressortir.', 3);
+      this.cam = new BK.Camera(BK.W, BK.H); this.fitCamera(); this.toast(hp.kind==='cave'?'Tu entres dans la grotte. Marche sur la case SORTIE pour ressortir.':'Tu entres dans la maison. Marche sur la case SORTIE pour ressortir.', 3);
       if (BK.music && it.music && BK.hasInstrument(W)) BK.music.play(it.music);   // la musique de la pièce, s'il y a un instrument pour la jouer
     }
     leaveHouse() {
       this.world.releaseSnail(this.player);
       const o = this.outer; if (!o) return; const inner = this.player, innerWorld=this.world; this.outer = null; BK.audio.door();
+      const takenSwords=Object.keys(innerWorld.props).filter(k=>innerWorld.props[k].swordTaken);
+      if(takenSwords.length)(o.world.stoneSwordRooms||={})[o.door.c+','+o.door.r]=takenSwords;
       o.world.snailResidents=o.world.snailResidents||{};o.world.snailResidents[o.door.c+','+o.door.r]=innerWorld.enemies.filter(e=>e.type==='escargot'&&!e.dead).map(e=>({x:e.x,y:e.y,shellColor:e.shellColor,color:e.color,nickname:e.nickname,baby:!!e.baby,growth:e.growth||0,perm:!!e.perm,shell:e.shell||0}));
       o.world.terrariumRooms=o.world.terrariumRooms||{};o.world.terrariumRooms[o.door.c+','+o.door.r]=Object.fromEntries(Object.entries(innerWorld.props).filter(([k,pr])=>pr.deco==='terrarium').map(([k,pr])=>[k,{snails:(pr.snails||[]).map(s=>({...s})),food:pr.snailFood?JSON.parse(JSON.stringify(pr.snailFood)):null,satiety:pr.snailSatiety||0}]));
       this.world = o.world; this.player = o.player; this.cam = o.cam; this.follow = o.follow; this.viewCols = o.viewCols; this.viewRows = o.viewRows;
       Object.assign(this.player, { bombsMax: inner.bombsMax, fire: inner.fire, speed: inner.speed, speedUp: inner.speedUp, kick: inner.kick, gloves: inner.gloves, lantern: inner.lantern, inv: inner.inv, bagSlots: inner.bagSlots, quickSlots: inner.quickSlots, found: inner.found, feastT: inner.feastT, feastBase: inner.feastBase, maxHp: inner.maxHp, hp: inner.hp, score: inner.score, cards: inner.cards, gold: inner.gold, stamina: inner.stamina, bombsOut: 0, carrying: null, dir: 0, invuln: 1 });
-      for (const key of [...BK.BOMB_POWERS, 'shield', 'diarrheaT', 'shortfuseT', 'poison', 'poisonTick']) this.player[key] = inner[key];
+      for (const key of [...BK.BOMB_POWERS, 'shield', 'diarrheaT', 'shortfuseT', 'poison', 'poisonTick', 'heavyboots', 'stoneSword', 'waterwalk']) this.player[key] = inner[key];
       this.player.x = o.door.c + 0.5; this.player.y = o.door.r + 1.5; this.world.frozen = false; this.state = 'play';this.transferAllies(innerWorld,this.world,this.player);
       if (BK.music) BK.music.play(this.stage.music && BK.hasInstrument(this.world) ? this.stage.music : this.stageMusic());
     }
@@ -604,7 +617,7 @@
     }
     saveCompanionsFor(destination,team) {
       if(this.custom||this.challenge)return;
-      const fields=['id','name','hp','maxHp','lives','speed','speedUp','bombsMax','fire','kick','shield','staminaMax','staminaRegen','recruitKey','reserveKey',...BK.BOMB_POWERS];
+      const fields=['id','name','hp','maxHp','lives','speed','speedUp','bombsMax','fire','kick','shield','staminaMax','staminaRegen','recruitKey','reserveKey','heavyboots','stoneSword','waterwalk',...BK.BOMB_POWERS];
       this.save.bossCompanions={destination,members:team.filter(p=>p.ally&&p.lives>0).slice(0,BK.MAX_ALLIES).map(p=>({
         ...Object.fromEntries(fields.map(k=>[k,p[k]])),
         // La vie a déjà été décomptée à la mort : terminer la réapparition sans en enlever une autre.
@@ -784,6 +797,13 @@
       this.drawAllyPanel(ctx);
       this.drawBossHealth(ctx);
       if(p.swallowedBy||p.tongueSlow>0){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#49325f';BK.sprites.rr(ctx,BK.W/2-240,BK.H-185,480,p.swallowedBy?82:66,16);ctx.fill();ctx.fillStyle='#fff0a3';ctx.font='900 20px Nunito,sans-serif';ctx.fillText(p.swallowedBy?'🐸 Avalé ! Tapote vite 💣 / Espace !':'🐸 Langue collante : vitesse −80 %',BK.W/2,BK.H-162);ctx.font='bold 16px Nunito,sans-serif';ctx.fillStyle='#fff';ctx.fillText(p.swallowedBy?'Libération dans '+Math.ceil(p.swallowT)+' s · Chaque appui aide !':Math.ceil(p.tongueSlow)+' s restantes',BK.W/2,BK.H-137);if(p.swallowedBy){const bw=400,ratio=Math.max(0,Math.min(1,p.swallowT/(p.swallowMax||6)));ctx.fillStyle='#241b36';BK.sprites.rr(ctx,BK.W/2-bw/2,BK.H-121,bw,9,5);ctx.fill();if(ratio>0){ctx.fillStyle='#82e3b0';BK.sprites.rr(ctx,BK.W/2-bw/2,BK.H-121,bw*ratio,9,5);ctx.fill();}}ctx.restore();}
+      this.whistleRect=null;
+      if(W.followersOf(p).length){
+      this.whistleRect={x:BK.W-184,y:BK.H-76,w:166,h:56};
+      BK.sprites.uiPanel(ctx,this.whistleRect.x,this.whistleRect.y,166,56,{r:14});
+      ctx.font='bold 20px Nunito,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=BK.sprites.UI.text;
+      ctx.fillText('📣 Siffler',this.whistleRect.x+83,this.whistleRect.y+28);
+      }
       BK.inventoryLayout(p); this.invRects = []; for (let i = 0; i < BK.QUICK_SIZE; i++) {   // huit raccourcis, touches 1–8 (Q/W pour les deux premiers)
         const x = BK.W / 2 - 252 + i * 64, y = BK.H - 76, sz = 56, slot = (p.inv || []).find(s => s.type === p.quickSlots[i]); this.invRects.push({ x, y, w: sz, h: sz, i });
         ctx.fillStyle = slot ? 'rgba(234,246,255,0.93)' : 'rgba(234,246,255,0.4)'; BK.sprites.rr(ctx, x, y, sz, sz, 14); ctx.fill(); ctx.strokeStyle = slot ? '#ffc53f' : 'rgba(255,255,255,0.75)'; ctx.lineWidth = 3; BK.sprites.rr(ctx, x, y, sz, sz, 14); ctx.stroke();

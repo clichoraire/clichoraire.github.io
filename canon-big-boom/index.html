@@ -41,18 +41,16 @@
     <div class="map-frame">
       <canvas id="map-canvas" width="960" height="640" aria-label="Carte du monde"></canvas>
       <div class="hud-top">
-        <div class="badge" id="map-badge"></div>
+        <button type="button" class="badge" id="map-badge" title="Fiche du personnage" aria-label="Ouvrir la fiche du personnage"></button>
         <div class="world-nav"><button id="world-prev" class="world-arrow" aria-label="Monde précédent"><b>L</b> ◀</button><div class="world-title" id="world-title"></div><button id="world-next" class="world-arrow" aria-label="Monde suivant">▶ <b>R</b></button></div>
-        <div class="gold-pill" id="map-gold"></div>
+        <div class="map-wallet"><div class="gold-pill star-pill" id="map-stars" title="Toutes tes étoiles gagnées"></div><div class="gold-pill" id="map-gold"></div></div>
       </div>
+      <div class="objective map-mission-panel" id="map-objective"></div>
       <div class="map-bottom">
-        <div class="objective" id="map-objective"></div>
         <div class="map-actions">
-          <button id="btn-worlds" class="lego">🌍 Mondes</button>
-          <button id="btn-codex" class="lego">📖 Encyclopédie</button>
-          <button id="btn-level" class="lego">📊 Fiche</button>
-          <button class="lego" data-back><b class="btn-badge">B</b> Retour</button>
-          <button id="btn-shop" class="lego">🔧 Hangar</button>
+          <button id="btn-worlds" class="lego map-icon-button" title="Mondes" aria-label="Mondes">🌍</button>
+          <button id="btn-codex" class="lego map-icon-button" title="Encyclopédie" aria-label="Encyclopédie">📖</button>
+          <button id="btn-map-menu" class="lego"><b class="btn-badge">B</b> Menu</button>
           <button id="btn-world-go" class="lego hidden">▶ Monde suivant</button>
           <button id="btn-start" class="lego primary"><b class="btn-badge">A</b> Jouer</button>
           <button id="btn-debug" class="lego small dev hidden" title="Lance ce tableau en mode debug (Matthieu seulement)">🐞 Debug</button>
@@ -79,20 +77,25 @@
           <progress id="shop-xp" max="100" value="0"></progress>
           <p id="shop-cannon" class="sheet-cannon"></p>
           <div id="shop-stats" class="stat-list compact"></div>
+          <details id="shop-stat-sheet" class="hero-stat-sheet"><summary>⚔ Stats du personnage</summary><div id="shop-stat-details"></div></details>
         </aside>
         <div class="shop-main">
           <p class="shop-intro" id="shop-intro"></p>
+          <div id="cannon-strip" class="cannon-strip hidden" aria-label="Choisir un canon"><h3>Choisis ton canon</h3><div class="strip-inner"></div></div>
           <div id="shop-list" class="shop-list"></div>
         </div>
       </div>
     </div>
-    <div id="cannon-strip" class="cannon-strip hidden" aria-label="Mes canons"><div class="strip-inner"></div></div>
   </section>
 
   <section id="screen-wave" class="screen hidden">
     <div class="wave-frame">
       <canvas id="wave-canvas" width="960" height="640" aria-label="Vise avec la souris ou le doigt"></canvas>
       <div class="hud">
+        <div id="puzzle-clock" class="puzzle-clock hidden">
+          <div><strong id="puzzle-instruction"></strong><b id="puzzle-seconds"></b></div>
+          <progress id="puzzle-progress" aria-label="Temps restant pour le puzzle"></progress>
+        </div>
         <div class="badge" id="wave-badge"></div>
         <div class="gold-pill" id="wave-gold"></div>
         <div class="run-level" id="wave-level"><b id="wave-level-n">NIV. 1</b><div class="xpbar"><i id="wave-level-bar"></i></div></div>
@@ -107,6 +110,7 @@
             <div class="obj-timer hidden" id="wave-obj-timer"></div>
           </div>
           <div class="objective-text hidden" id="wave-text"></div>
+          <div id="wave-missions" class="wave-missions"></div>
         </div>
         <div class="right-hud">
           <div class="combo" id="wave-combo">x0</div>
@@ -114,7 +118,7 @@
             <div class="meter-col"><div class="hp-meter" title="Points de vie"><i id="wave-hp"></i></div><b class="meter-num" id="wave-hp-text"></b><small>❤️ VIE</small></div>
             <div class="meter-col"><div class="hp-meter armor" title="Armure du canon"><i id="wave-armor"></i></div><b class="meter-num" id="wave-armor-text"></b><small>🛡️ ARMURE</small></div>
           </div>
-          <div class="shield-text hidden" id="wave-shield-text"></div>
+          <div class="shield-text hidden" id="wave-shield-text" role="img" aria-label="Aucune protection"></div>
         </div>
         <div class="timer" id="wave-timer"></div>
         <div class="cards-owned" id="wave-cards"></div>
@@ -122,9 +126,10 @@
         <div class="tutorial hidden" id="wave-tutorial"><div class="tut-head">TUTORIEL <span>?</span></div><div class="tut-body" id="wave-tutorial-text"></div></div>
         <button id="btn-fire" class="fire-btn" aria-label="Tirer">💥</button>
         <div id="dodge-btns" class="dodge-btns hidden"><button type="button" data-d="-1" aria-label="Se tasser à gauche">◀</button><button type="button" data-d="1" aria-label="Se tasser à droite">▶</button></div>
-        <button id="btn-special" class="special-btn" aria-label="Attaque spéciale" title="Attaque spéciale (Maj, X ou bouton X de la manette)"><span class="ico"></span><small>MAJ</small></button>
-        <button id="btn-special2" class="special-btn second hidden" aria-label="Deuxième pouvoir" title="Deuxième pouvoir (C ou bouton Y de la manette)"><span class="ico"></span><small>C</small></button>
+        <button id="btn-special" class="special-btn" aria-label="Attaque spéciale" title="Attaque spéciale (Maj, X ou bouton X de la manette)"><span class="ico"></span><span class="charge-count hidden"></span><small>MAJ</small></button>
+        <button id="btn-special2" class="special-btn second hidden" aria-label="Deuxième pouvoir" title="Deuxième pouvoir (C ou bouton Y de la manette)"><span class="ico"></span><span class="charge-count hidden"></span><small>C</small></button>
         <button id="btn-pause" class="pause-btn" aria-label="Pause">❚❚</button>
+        <div id="mission-celebration" class="mission-celebration hidden" role="status" aria-live="polite"></div>
         <div class="rotate-hint">📱 Tourne ton appareil pour voir plus grand !</div>
       </div>
       <div id="overlay-pause" class="overlay hidden">
@@ -139,8 +144,8 @@
       <div id="overlay-cards" class="overlay hidden">
         <div class="cards-box">
           <div class="cards-kicker" id="cards-kicker">NIVEAU SUPÉRIEUR !</div>
-          <h2>Choisis une carte</h2>
-          <p>Son pouvoir dure jusqu’à la fin de ce tableau.</p>
+          <h2 id="cards-title">Choisis une carte</h2>
+          <p id="cards-note">Son pouvoir dure jusqu’à la fin de ce tableau.</p>
           <div class="cards-lock" id="cards-lock"><i></i><span class="wait">Regarde bien…</span><span class="go">Choisis une carte !</span></div>
           <div class="cards" id="card-list"></div>
           <button id="btn-reroll" class="lego small reroll hidden" type="button">🔄 Rebrasser</button>
@@ -186,13 +191,23 @@
     </div>
     <p class="level-intro">Glisse les barres pour régler chaque volume. Le petit bouton coupe ou remet le son d’un coup.</p>
     <div class="setting">
-      <label><span class="ico">✨</span> Effets visuels <b id="fx-val">Auto</b></label>
-      <div class="setting-row"><button type="button" id="btn-fx" class="lego small">✨ Changer</button><small id="fx-hint">Auto : le jeu allège les effets tout seul si ça rame.</small></div>
+      <label for="select-fx"><span class="ico">✨</span> Qualité visuelle</label>
+      <div class="setting-quality"><select id="select-fx"><option value="auto">Automatique</option><option value="rich">Tous les effets</option><option value="lite">Mode léger</option></select><small id="fx-hint"></small></div>
     </div>
+    <div class="setting comfort-settings">
+      <h3>👀 Confort et aides</h3>
+      <label class="setting-toggle"><span>Secousses de l’écran<small>Quand ça explose ou que tu es touché.</small></span><input id="opt-shake" type="checkbox"></label>
+      <label class="setting-toggle"><span>Flashs lumineux<small>Grands éclairs blancs et rouges à l’écran.</small></span><input id="opt-flashes" type="checkbox"></label>
+      <label class="setting-toggle"><span>Conseils de jeu<small>Rappels des commandes au début du tableau.</small></span><input id="opt-tutorial" type="checkbox"></label>
+      <label class="setting-toggle"><span>Petits textes de combat<small>Les annonces importantes restent visibles.</small></span><input id="opt-combatText" type="checkbox"></label>
+      <label class="setting-toggle"><span>Grand viseur<small>Plus facile à repérer.</small></span><input id="opt-largeAim" type="checkbox"></label>
+    </div>
+    <details class="settings-data"><summary>🗃 Données de la famille</summary>
     <div class="setting danger-zone">
       <label><span class="ico">🗑️</span> Données du jeu</label>
       <div class="setting-row"><button type="button" id="btn-wipe" class="lego small danger">🗑️ Tout effacer</button><small>Profils, or, niveaux et étoiles de toute la famille.</small></div>
     </div>
+    </details>
     <form method="dialog" class="sheet-footer"><button class="lego primary"><b class="btn-badge">A</b> OK</button></form>
   </dialog>
 
@@ -253,6 +268,9 @@
 <script src="js/input.js"></script>
 <script src="js/custom-waves.js"></script>
 <script src="js/debug.js"></script>
+<script src="js/missions.js"></script>
+<script src="js/campaign.js"></script>
+<script src="js/campaign-art.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

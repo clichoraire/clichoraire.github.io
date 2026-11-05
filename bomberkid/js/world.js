@@ -9,7 +9,7 @@
     2: ['signpost', 1], 3: ['cask', 1], 4: ['hay', 1], 5: ['scarecrow', 1], 6: ['flowerpot', 2], 7: ['mailbox', 1], 8: ['stump', 1], 9: ['cactus', 1], 0: ['cart', 1], J: ['fountain', 1],
     M: ['table', 1], R: ['chair', 1], S: ['bed', 1], U: ['bookshelf', 1], Y: ['fireplace', 1], Z: ['cauldron', 1], t: ['plant', 1], '@': ['piano', 1], '+': ['candelabra', 1], '?': ['anvil', 1] };
   // Décorations supplémentaires : caractère " et props["c,r"].deco = genre (0 : on marche dessus, 1 : solide)
-  const DECO_PROPS = { waterjet:1, firebar:1, terrarium:1, aquarium:1, fishing_basket:1, fish_trout:1, fish_bass:1, fish_pike:1, antlers_moose:1, antlers_deer:1, fly_frame:1, lumber_saw:1, trophy_cup:1, trophy_star:1, trophy_shield:1, table_round:1, table_dining:1, table_low:1, fireplace:1, chair:1, stool:1, statue_mermaid: 1, statue_thinker: 1, statue_dancer: 1, statue_guardian: 1, wheel: 1, trough: 1, banner: 1, market: 1, beehive: 1, mossrock: 1, logpile: 1, bigmushroom: 1, bones: 0, skullpile: 1,
+  const DECO_PROPS = { waterjet:1, firebar:1, terrarium:1, aquarium:1, fishing_basket:1, fish_trout:1, fish_bass:1, fish_pike:1, antlers_moose:1, antlers_deer:1, fly_frame:1, lumber_saw:1, trophy_cup:1, trophy_star:1, trophy_shield:1, table_round:1, table_dining:1, table_low:1, fireplace:1, chair:1, stool:1, statue_mermaid: 1, statue_thinker: 1, statue_dancer: 1, statue_guardian: 1, wheel: 1, trough: 1, banner: 1, market: 2, beehive: 1, mossrock: 1, logpile: 1, bigmushroom: 1, bones: 0, skullpile: 1,
     snowman: 1, snowpine: 1, baretree: 1, icerock: 1, icecrystal: 1, igloo: 1, sled: 1, skis: 1, snowpile: 0, snowballs: 1,   // hiver
     jukebox: 1, guitar: 1, drum: 1, rock: 1,   // rock : la roche que les gants de force soulèvent
     carrot: 0, melon: 2, cheese: 2, gift: 2, dirtblock: 2,   // carotte à cueillir ; blocs cubiques (style Minecraft) qui se cassent avec une bombe
@@ -33,6 +33,8 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
+  BK.GNOME_HOUSES = new Set(['enchanted_1','outdoor_shelter']);
+  BK.FACE_DECOR = new Set(['ladder','climbingIvy']);
   class World {
     // o : { map: [lignes], theme, mode: 'match'|'adventure', hearts: bool, itemChance, itemPool, softChance }
     constructor(o) {
@@ -41,6 +43,9 @@
       this.itemPool = o.itemPool || Object.keys(BK.ITEMS).filter(k => BK.ITEMS[k].weight > 0 && (this.hearts || !BK.ITEMS[k].adventureOnly));
       this.rows = o.map.length; this.cols = o.map[0].length;
       this.cells = new Uint8Array(this.cols * this.rows);
+      this.wallTiles = new Set();
+      this.gnomeHouseHits = new Map();
+      this.magicGroups = new Map();
       this.special = new Map();   // "c,r" → { type: 'exit'|'switch', open|on }
       this.starts = [];           // positions de départ (chiffres dans la carte)
       this.spawns = [];           // ennemis (lettres)
@@ -64,6 +69,7 @@
       this.players = []; this.bombs = []; this.flames = []; this.items = []; this.enemies = []; this.particles = []; this.falling = []; this.floaters = [];
       this.flameAt = new Map(); this.events = []; this.time = 0; this.frozen = false; this.rain = null; this.shake = 0;
       for (const it of this.pendingItems) this.spawnItem(it.c, it.r, it.type);
+      this.updateMagicDoors(false);
       this.clouds = Array.from({ length: 6 }, (_, i) => ({ x: Math.random() * 1400 - 100, y: 40 + i * 28 + Math.random() * 30, s: 0.6 + Math.random() * 0.8, v: 4 + Math.random() * 6 }));
     }
     // Cartes d'exploration : ~ eau, . pierre, , gazon, : pierre haute, ; gazon haut, / rampe, = pont, # roc, W brique,
@@ -78,11 +84,11 @@
         const ch = map[r][c], i = r * this.cols + c; let t = T_STONE, h = 0, cell = 0;
         if (ch === '~') t = T_WATER; else if (ch === BK.DEEP_WATER_CH) { t = T_WATER; this.deepWater.add(i); } else if (ch === ' ') t = T_VOID; else if (FLOORS[ch] != null) t = FLOORS[ch];
         else if (ch === ',') t = T_GRASS; else if (ch === ':') h = LEVEL; else if (ch === ';') { t = T_GRASS; h = LEVEL; }
-        else if (ch === '=') t = T_BRIDGE; else if (ch === '/') { this.ramp[i] = 1; h = LEVEL / 2; }
+        else if (ch === '=') t = T_BRIDGE; else if (ch === '/') { this.ramp[i] = 1; h = LEVEL / 2; const floor = this.props[c+','+r]?.rampFloor; if (floor != null) t = BK.terrainForChar(floor); }
         else if (ch === '}') this.lifts.push({ c, r, lv: 0, t: 1, moving: false });
         else if (ch === '{') this.elevators.push({ c, r, state: 'rest', t: 0 });
         else if (ch === '(') { this.rails.push({ c, r }); const f = this.props[c + ',' + r]?.platformFloor; if (f != null && !this.props[c + ',' + r].platformPit) t = BK.terrainForChar(f) === T_VOID || BK.terrainForChar(f) === T_WATER ? T_STONE : BK.terrainForChar(f); }   // rail : une plateforme mobile y glisse (voir buildMovers)
-        else if (ch === '#') cell = HARD; else if (ch === 'W') { cell = SOFT; this.special.set(c + ',' + r, { type: 'brick' }); }   // mur de briques : se casse avec une bombe
+        else if (ch === '#') { cell = HARD; this.wallTiles.add(i); } else if (ch === 'W') { cell = SOFT; this.special.set(c + ',' + r, { type: 'brick' }); }   // mur de briques : se casse avec une bombe
         else if (ch === 'x') cell = SOFT; else if (ch === 'X') { cell = SOFT; h = LEVEL; }
         else if (ch === 'T') { cell = HARD; this.trees.push({ c, r }); t = T_GRASS; }
         else if (ch === 'r') { cell = HARD; this.rocks.push({ c, r }); }
@@ -94,15 +100,24 @@
         else if (ch === '|') { this.exit = { c, r, open: true, kind: 'diamond', x: c + 0.5, y: r + 0.5 }; this.special.set(c + ',' + r, { type: 'exit' }); }
         else if (ch === 'h') this.pendingItems.push({ c, r, type: 'heart' });
         else if (ch === '$') this.pendingItems.push({ c, r, type: 'coin' });
-        else if (ch === 'H') { const hp = this.houses[c + ',' + r]; this.doors.push({ c, r, enterable: !!(hp && hp.interior) }); this.special.set(c + ',' + r, { type: 'door' }); cell = HARD; }
+        else if (ch === 'H') { const hp = this.houses[c + ',' + r]; this.doors.push({ c, r, enterable: !!(hp && hp.interior), cave:hp?.kind==='cave' }); this.special.set(c + ',' + r, { type: 'door' }); cell = HARD; }
         else if (ch === 'P') cell = BARREL; else if (ch === 'p') this.trail[i] = 1; else if (ch === 'Q') cell = SEALED;
         else if (METAL_WOOD[ch] != null) { cell = METAL; this.metal[i] = METAL_WOOD[ch]; }
+        else if(ch==='"'&&['magicBeacon','magicIronDoor'].includes(this.props[c+','+r]?.deco)){
+          const pr=this.props[c+','+r],color=BK.magicBeaconColor(pr.magicColor),type=pr.deco;
+          if(!this.magicGroups.has(color))this.magicGroups.set(color,{beacons:[],doors:[]});
+          const group=this.magicGroups.get(color),part={type,c,r,color};
+          if(type==='magicBeacon'){part.on=!!pr.magicInitiallyOn;group.beacons.push(part);}
+          else{part.count=BK.magicBeaconCount(pr.magicCount??2);part.open=false;group.doors.push(part);cell=HARD;}
+          this.special.set(c+','+r,part);
+        }
         else if (ch === '"' && BK.ITEMS[(this.props[c + ',' + r] || {}).item]) { this.pendingItems.push({c, r, type:this.props[c + ',' + r].item}); }
         else if (ch === '"') { const kind = (this.props[c + ',' + r] || {}).deco || 'bones', solid = DECO_PROPS[kind] == null ? 1 : DECO_PROPS[kind]; this.deco[i] = kind; if(kind==='firebar')this.firebars.push({c,r,angle:0}); if(kind==='fireplace'||kind==='campfire')this.campfires.push({c,r}); if (kind === 'volcano') this.volcanoes.push({ c, r, t: 0, cool: 3 + Math.random() * 4, erupt: 0 }); cell = solid === 2 ? SOFT : solid === 1 ? HARD : 0; if (kind === 'beehive') this.hives.push({ c, r, cool: 0 }); }
         else if (DECO[ch]) { const [kind, solid] = DECO[ch]; this.deco[i] = kind; cell = solid === 2 ? SOFT : solid === 1 ? HARD : 0; if (kind === 'mushrooms' || kind === 'grass') t = T_GRASS; if (kind === 'campfire' || kind === 'fireplace') this.campfires.push({ c, r }); }
         else if (ch === 'k') { this.pendingItems.push({ c, r, type: 'card' }); this.cardsTotal++; }
         const plv = this.props[c + ',' + r]; if (plv?.trail) this.trail[i] = 1;   // traînée de poudre cachée sous un objet
-        if (plv && plv.lv != null && t !== T_WATER && t !== T_VOID) h = (plv.lv + (ch==='/'?.5:0)) * LEVEL;   // étage choisi dans l'éditeur (0 à 4)
+        if (plv?.ramp && t !== T_VOID && t !== T_WATER) { this.ramp[i] = 1; h += LEVEL / 2; }
+        if (plv && plv.lv != null && t !== T_WATER && t !== T_VOID) h = (plv.lv + (this.ramp[i]?.5:0)) * LEVEL;   // étage choisi dans l'éditeur (0 à 4)
         this.terrain[i] = t; this.height[i] = h; this.cells[i] = cell;
       }
       // Niveau des objets posés sur un plateau : d'après props (éditeur), sinon d'après les voisines.
@@ -110,8 +125,8 @@
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
         const ch = map[r][c], i = r * this.cols + c; if (TERRAIN.includes(ch)) continue;
         const pr = this.props[c + ',' + r];
-        if (pr?.floor === '~' && pr.lv == null) { this.terrain[i] = T_WATER; continue; }   // objet posé sur l'eau (éditeur) : l'eau reste
-        if (pr && (pr.lv != null || pr.h != null)) { this.height[i] = pr.lv != null ? pr.lv * LEVEL : (pr.h ? LEVEL : 0); if (pr.floor === 'grass' || pr.floor === ',' || pr.floor === ';') this.terrain[i] = T_GRASS; else if (pr.floor === 'stone' || pr.floor === '.' || pr.floor === ':') this.terrain[i] = T_STONE; else if (pr.floor === '=') this.terrain[i] = T_BRIDGE; else if (FLOORS[pr.floor] != null) this.terrain[i] = FLOORS[pr.floor]; continue; }
+        if (pr?.floor === '~' && (pr.lv == null || pr.lv===0)) { this.terrain[i] = BK.WATER_STEPS?.has(this.deco[i])?T_BRIDGE:T_WATER;this.height[i]=0; continue; }   // objet posé sur l'eau (éditeur) : l'eau reste
+        if (pr && (pr.lv != null || pr.h != null)) { this.height[i] = pr.lv != null ? pr.lv * LEVEL : (pr.h ? LEVEL : 0); if (pr.floor === 'grass' || pr.floor === ',' || pr.floor === ';') this.terrain[i] = T_GRASS; else if (pr.floor === 'stone' || pr.floor === '.' || pr.floor === ':') this.terrain[i] = T_STONE; else if (pr.floor === '=') this.terrain[i] = T_BRIDGE; else if (FLOORS[pr.floor] != null) this.terrain[i] = FLOORS[pr.floor]; if(pr.floor!=null)continue; }
         // étage et sol d'après les voisines qui sont de vrais sols (majorité ; à égalité, l'étage le plus bas)
         // (voisines directes d'abord, puis de plus en plus loin : une case entourée d'objets prend le sol des alentours)
         const lvVotes = {}, votes = {};
@@ -121,14 +136,22 @@
           const w = ring === 1 && dc && dr ? 1 : 2, lv = Math.round(this.height[j] / LEVEL); lvVotes[lv] = (lvVotes[lv] || 0) + w; const key = lv + ':' + this.terrain[j]; votes[key] = (votes[key] || 0) + w;
         }
         let bestLv = 0, bn = 0; for (const [lv, n2] of Object.entries(lvVotes)) if (n2 > bn || (n2 === bn && +lv < bestLv)) { bn = n2; bestLv = +lv; }
-        if (ch === 'X') bestLv = 1; this.height[i] = bestLv * LEVEL;
+        if(pr?.lv!=null||pr?.h!=null)bestLv=Math.round(this.height[i]/LEVEL);else if (ch === 'X') bestLv = 1; this.height[i] = bestLv * LEVEL;
         let best = null; bn = 0; for (const [key, n2] of Object.entries(votes)) if (key.startsWith(bestLv + ':') && n2 > bn) { bn = n2; best = +key.split(':')[1]; }
+        if(best==null&&pr?.floor==null){const totals={};for(const [key,n] of Object.entries(votes)){const terrain=key.split(':')[1];totals[terrain]=(totals[terrain]||0)+n;}const first=Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];if(first)best=+first[0];}
         if (best != null && (pr == null || pr.floor == null)) this.terrain[i] = best;
       }
       for (const L of this.lifts) { L.lv = Math.round(this.hAt(L.c, L.r) / LEVEL); }
       // ascenseur : plateau au repos un peu au-dessus de son sol (une bombe tient dessous), sommet deux étages plus haut
       this.buildMovers();
-      for (const E of this.elevators) { const i = this.idx(E.c, E.r); E.base = this.height[i]; E.rest = E.base + 0.35; E.top = E.base + LEVEL * 2; const pr=this.props[E.c+','+E.r]||{};if(!pr.autoLift&&pr.liftHeight)E.top=E.base+Math.max(.5,Number(pr.liftHeight))*LEVEL;if(pr.autoLift){E.auto=true;E.rest=E.base;E.top=E.base+Math.max(.5,Number(pr.liftHeight)||1)*LEVEL;E.duration=Math.max(.8,Number(pr.travelTime)||2.6);E.pause=Math.max(.5,Number(pr.platformPause)||1.8);E.state='rest';} this.height[i] = E.rest; }
+      for (const E of this.elevators) {
+        const i=this.idx(E.c,E.r),pr=this.props[E.c+','+E.r]||{};
+        const rise=Math.min(BK.MAX_LIFT_RISE,Math.max(.5,Number(pr.liftHeight)||BK.MAX_LIFT_RISE));
+        E.base=this.height[i];E.top=Math.min(BK.MAX_TERRAIN_LEVEL*LEVEL,E.base+rise*LEVEL);
+        E.rest=pr.autoLift?E.base:Math.min(E.top,E.base+.35);
+        if(pr.autoLift){E.auto=true;E.duration=Math.max(.8,Number(pr.travelTime)||2.6);E.pause=Math.max(.5,Number(pr.platformPause)||1.8);}
+        this.height[i]=E.rest;
+      }
       // orientation des rampes et hauteur des portes (un pont-levis sur l'eau)
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
         const i = r * this.cols + c;
@@ -153,22 +176,38 @@
     }
     hAt(c, r) { return this.inside(c, r) ? this.height[r * this.cols + c] : 0; }
     tAt(c, r) { return this.inside(c, r) ? this.terrain[r * this.cols + c] : T_VOID; }
-    walkableTerrain(c, r) { const t = this.tAt(c, r); return t !== T_WATER && t !== T_VOID && t !== T_LAVA; }
+    walkableTerrain(c, r, who) { const t = this.tAt(c, r); return (t !== T_WATER || !!who?.waterwalk) && t !== T_VOID && t !== T_LAVA; }
     elevAt(c, r) { return this.elevators.length ? this.elevators.find(E => E.c === c && E.r === r) : null; }
     isPavement(t) { return t === T_SIDEWALK || t === T_CURB; }
     // Peut-on passer d'une case à l'autre ? (même niveau, ou une rampe entre les deux)
     canStep(c0, r0, c1, r1, who) {
       if (c0 === c1 && r0 === r1) return true; if (!this.inside(c0, r0) || !this.inside(c1, r1)) return false;
       const i0 = r0 * this.cols + c0, i1 = r1 * this.cols + c1;
-      if (this.ramp[i0] || this.ramp[i1]) return !who || who.faller || who.npc || who.ghost || !!who.climbs;
+      if (this.ramp[i0] || this.ramp[i1]) {
+        if (who && !(who.faller || who.npc || who.ghost || who.climbs)) return false;
+        // Comparer les deux surfaces au bord franchi, pas les centres des cases.
+        // Sur le côté d'une pente, la hauteur dépend de la position du personnage.
+        const x=c0===c1?(who?.x??c0+.5):(c0+c1+1)/2;
+        const y=r0===r1?(who?.y??r0+.5):(r0+r1+1)/2;
+        const edgeZ=(c,r)=>this.groundZ(Math.max(c+1e-6,Math.min(c+1-1e-6,x)),Math.max(r+1e-6,Math.min(r+1-1e-6,y)));
+        const rise=edgeZ(c1,r1)-edgeZ(c0,r0);
+        if(who?.faller&&!who.npc&&rise<0)return true;
+        return Math.abs(rise)<=LEVEL+.01;
+      }
       if (who && who.faller && !who.npc && this.height[i1] < this.height[i0] - 0.01) return true;   // le héros peut sauter en bas d'un rebord
       if (this.elevators.length && who && who.faller && (this.elevAt(c0, r0) || this.elevAt(c1, r1)) && Math.abs(this.height[i0] - this.height[i1]) < ((this.elevAt(c0,r0)?.auto||this.elevAt(c1,r1)?.auto)?.1:.45)) return true;   // on monte sur le plateau de l'ascenseur
       return Math.abs(this.height[i0] - this.height[i1]) < 0.01;
     }
     // Altitude du sol sous un point (les rampes montent en pente douce).
     rampHeights(c,r) {
-      const lv=this.props[c+','+r]?.lv,base=lv==null?null:lv*LEVEL;
-      const at=(cc,rr)=>{const h=this.hAt(cc,rr);return base==null?h:Math.max(base,Math.min(base+LEVEL,h));};
+      const pr=this.props[c+','+r]||{},lv=pr.lv,base=lv==null?null:lv*LEVEL;
+      if ([1,-1,2,-2].includes(pr.rampDir)) {
+        const low=base??0,high=low+LEVEL,d=pr.rampDir;
+        return {hN:d===-1?high:low,hS:d===1?high:low,hW:d===-2?high:low,hE:d===2?high:low};
+      }
+      // Entre deux rampes, le raccord est à mi-chemin de leurs centres,
+      // jamais à la hauteur du centre de la voisine (qui créait une dent de scie).
+      const at=(cc,rr)=>{let h=this.hAt(cc,rr);if(this.inside(cc,rr)&&this.ramp[this.idx(cc,rr)])h=(h+this.hAt(c,r))/2;return base==null?h:Math.max(base,Math.min(base+LEVEL,h));};
       return {hN:at(c,r-1),hS:at(c,r+1),hW:at(c-1,r),hE:at(c+1,r)};
     }
     groundZ(x, y) {
@@ -235,7 +274,7 @@
       if (v === HARD || v === TARGET || v === GATE || v === BARREL || v === SEALED || v === METAL) return true;
       if (this.explore) {
         // l'eau et le vide ne bloquent pas un joueur : il peut y tomber (et il y tombera)
-        if (!this.walkableTerrain(c, r)) return !(who && who.faller && !who.npc && who.alive);
+        if (!this.walkableTerrain(c, r, who)) return !(who && who.faller && !who.npc && who.alive);
         if (who && who.x != null && !this.canStep(Math.floor(who.x), Math.floor(who.y), c, r, who)) return true;
       }
       if (v === SOFT) return !(who && who.ghost);
@@ -247,7 +286,7 @@
     }
     liftAt(c, r) { return this.lifts.length ? this.lifts.find(L => L.c === c && L.r === r) : null; }
     raiseLift(L) {
-      if (L.moving) return; if (L.lv >= 4) { this.events.push({ type: 'liftMax', lift: L }); return; }
+      if (L.moving) return; if (L.lv >= BK.MAX_TERRAIN_LEVEL) { this.events.push({ type: 'liftMax', lift: L }); return; }
       L.from = this.hAt(L.c, L.r); L.lv++; L.to = L.lv * LEVEL; L.t = 0; L.moving = true; this.events.push({ type: 'liftUp', lift: L });
     }
     // Rails : les cases « ( » qui se touchent forment un chemin ; une plateforme (étage +1) y fait l'aller-retour,
@@ -352,11 +391,47 @@
     addPlayer(def, c, r, o) {
       o = o || {};
       const p = { def, id: def.id, x: c + 0.5, y: r + 0.5, dir: 0, r: BK.PLAYER_R, speed: BK.speedOf(def.speed), speedUp: 0,
-        bombsMax: o.bombs || 1, bombsOut: 0, fire: o.fire || 2, kick: !!o.kick, shield: 0, hp: o.hp || 40, maxHp: o.hp || 40, lives: o.lives == null ? 3 : o.lives,
+        bombsMax: o.bombs || 1, bombsOut: 0, fire: o.fire || 2, kick: !!o.kick, bombjump: !!o.bombjump, shield: 0, hp: o.hp || 40, maxHp: o.hp || 40, lives: o.lives == null ? 3 : o.lives,
         alive: true, invuln: o.invuln || 0, carrying: null, pose: 'idle', poseT: 0, animT: 0, walk: 0, moving: false, score: 0, kills: 0,
         staminaMax: o.staminaMax || 100, stamina: o.staminaMax || 100, staminaRegen: o.regen || 8, running: false, curSpeed: 0, lastTap: null, wasMoving: false, staminaWait: 0, dustT: 0,
         input: { dx: 0, dy: 0, bomb: false, action: false }, bot: o.bot || null, human: !o.bot, faller: true, falling: null, safe: { x: c + 0.5, y: r + 0.5, dir: 0 }, air: null, onBomb: null, zOff: 0, index: this.players.length, deadT: 0, wins: 0, color: def.outfit, name: def.name };
       this.players.push(p); return p;
+    }
+    wallMountBlock(c,r) {
+      if (!this.inside(c,r)) return null;
+      const i=this.idx(c,r);
+      if (this.wallTiles.has(i) && this.cells[i]===HARD) return {inset:.04,height:.85};
+      if (this.special.get(c+','+r)?.type==='brick') return {inset:.02,height:.9};
+      return null;
+    }
+    wallMountFace(c,r,dir) {
+      if (!this.inside(c,r) || this.props[c+','+r]?.caveOffset || this.tAt(c,r)===T_VOID || this.tAt(c,r)===T_WATER) return null;
+      const i=this.idx(c,r),z=this.hAt(c,r),block=this.wallMountBlock(c,r);
+      if (!block && (this.ramp[i] || this.props[c+','+r]?.raisedBridge || this.elevAt(c,r) || this.railAt(c,r))) return null;
+      const {dx,dy}=DIRS[dir],nc=c+dx,nr=r+dy,neighbor=this.wallMountBlock(nc,nr);
+      const adjacent=this.hAt(nc,nr)+(neighbor?.height||0);
+      const bottom=block?Math.max(z,adjacent):this.hAt(nc,nr),top=z+(block?.height||0);
+      if (top-bottom<.15) return null;
+      const inset=block?.inset||0,half=.5-inset;
+      return {x:c+.5+dx*half,y:r+.5+dy*half,dx,dy,half,bottom,top,block:!!block};
+    }
+    drawFaceDecors(ctx,cam,c,r,block) {
+      const decors=this.props[c+','+r]?.faceDecors;
+      if (!decors) return;
+      const view=cam.pos;
+      for (let dir=0;dir<DIRS.length;dir++) {
+        const kind=decors[dir];
+        if (!BK.FACE_DECOR.has(kind)) continue;
+        const face=this.wallMountFace(c,r,dir);
+        if (!face || face.block!==block) continue;
+        const {x,y,dx,dy,bottom,top}=face;
+        if ((view.x-x)*dx+(view.y-y)*dy<=0) continue;
+        const height=top-bottom,base=cam.project(x,y,bottom),right=cam.project(x+dy,y-dx,bottom),up=cam.project(x,y,top);
+        ctx.save();
+        ctx.transform(right.x-base.x,right.y-base.y,(base.x-up.x)/height,(base.y-up.y)/height,base.x,base.y);
+        BK.sprites.drawFaceDecor(ctx,kind,height);
+        ctx.restore();
+      }
     }
     drawWallDeco(ctx,cam,c,r,z,time) {
       const kind=this.props[c+','+r]?.wallDeco;if(!BK.WALL_DECOR.has(kind))return;
@@ -436,6 +511,34 @@
       for(const q of b.passengers||[]){q.x=b.x;q.y=b.y;q.dir=b.dir;}
       { const it=this.itemAt(Math.floor(b.x),Math.floor(b.y)); if(it)this.takeItem(p,it); }   // pièces et objets posés sur l'eau : on les ramasse en bateau
       inp.bomb=false;if(inp.action){inp.action=false;this.useBoat(p);}
+    }
+    followersOf(p) {
+      return [...this.players.filter(q=>q!==p&&q.alive&&q.ally&&q.leader===p),
+        ...this.enemies.filter(e=>!e.dead&&!e.carrier&&(e.follow===p || e.bond?.owner===p.id&&this.petBondReady(e)))];
+    }
+    whistleFollowers(p) {
+      if(!p.alive||p.air||p.falling||p.swallowedBy||p.boat||p.onBomb)return -1;
+      const c=Math.floor(p.x),r=Math.floor(p.y),z=this.groundZ(p.x,p.y);
+      if(!this.walkableTerrain(c,r))return -1;
+      const followers=this.followersOf(p);
+      const used=new Set();
+      for(const q of followers){
+        const spot=DIRS.map(d=>({c:c+d.dx,r:r+d.dy})).find(a=>this.inside(a.c,a.r)&&!used.has(a.c+','+a.r)&&
+          this.walkableTerrain(a.c,a.r)&&!this.blocked(a.c,a.r)&&!this.flameAt.has(this.idx(a.c,a.r))&&
+          this.canStep(c,r,a.c,a.r)&&Math.abs(this.groundZ(a.c+.5,a.r+.5)-z)<.1&&
+          !this.players.some(v=>v!==q&&v.alive&&Math.floor(v.x)===a.c&&Math.floor(v.y)===a.r)&&
+          !this.enemies.some(v=>v!==q&&!v.dead&&Math.floor(v.x)===a.c&&Math.floor(v.y)===a.r));
+        if(q.swallowedBy)this.releaseSwallowed(q);
+        if(q.carrying)this.dropCarried(q);
+        if(q.boat){const boat=q.boat;boat.passengers=(boat.passengers||[]).filter(v=>v!==q);if(boat.rider===q)boat.rider=null;q.boat=null;}
+        q.x=spot?spot.c+.5:p.x;q.y=spot?spot.r+.5:p.y;
+        if(spot)used.add(spot.c+','+spot.r);
+        Object.assign(q,{air:null,falling:null,onBomb:null,followFlight:null,followHop:null,hopPhase:0,followBlockedT:0,zOff:0,z:0,dropV:0,target:null,path:[],planT:0,firebarPlan:null,moving:false,running:false,vx:0,vy:0});
+        if(q.input){q.input.dx=q.input.dy=0;q.input.bomb=q.input.action=false;q.safe={x:q.x,y:q.y,dir:p.dir};this.setPose(q,'idle');}
+        else {q.follow=p;q.followT=Math.max(q.followT||0,60);q.state='rest';q.pause=.3;}
+        this.burst(q.x,q.y,.4,'#c1f6ee',8);
+      }
+      return followers.length;
     }
     updateAlly(p, dt) {
       BK.ai.updateAllyBombAlert(this,p);
@@ -587,64 +690,100 @@
       p.heldSnail=e; e.carrier=p; e.target=null; e.shell=1;
       this.setPose(p,'pickup',0.4); return true;
     }
-    nearbyPet(p) {
-      if (!p.alive || p.npc || !p.human || p.air || p.falling || p.carrying) return null;
-      return this.enemies.filter(e => !e.dead && !!BK.PET_FOODS[e.type] && e.def.peaceful && !p.swallowedBy && Math.abs(this.groundZ(e.x,e.y)-this.groundZ(p.x,p.y))<.3 && this.canSee(e, p, 1.4)).sort((a,b) => Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0] || null;
+    canCareForPet(p,e) {
+      return !!(p.alive && p.human && !p.npc && !p.air && !p.falling && !p.carrying && !p.swallowedBy &&
+        !e.dead && !e.gnomeInsideUntil && !(this.time<(e.rejectUntil||0)) && e.def.peaceful && BK.PET_FOODS[e.type] &&
+        Math.abs(this.groundZ(e.x,e.y)-this.groundZ(p.x,p.y))<.3 && this.canSee(e,p,2.25));
+    }
+    nearbyPet(p,food) {
+      return this.enemies.filter(e=>this.canCareForPet(p,e)&&(!food||this.petFoods(e).includes(food)))
+        .sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0] || null;
     }
     // Mur de briques : rouge brique partout, sauf si le créateur du tableau a choisi une autre couleur.
     brickColors(c, r) {
       const col = this.props[c + ',' + r]?.brickColor || BK.BRICK_COLOR;
       return col === BK.BRICK_COLOR ? { top: '#d16a45', front: col, side: '#7a2f18' } : { top: BK.draw3d.shade(col, 1.18), front: col, side: BK.draw3d.shade(col, 0.68) };
     }
+    petRequirements(e) { return e.eggCare || {pets:e.def.bondPetsRequired??2,meals:1}; }
+    petFoods(e) { return e.gnomeFoods || e.eggCare?.foods || BK.PET_FOODS[e.type] || []; }
+    petBondReady(e) { const need=this.petRequirements(e);return !!e.bond&&e.bond.pets>=need.pets&&e.bond.meals>=need.meals; }
     petFood(p,e) {
-      return (BK.PET_FOODS[e.type]||[]).find(type=>(p.inv||[]).some(s=>s.type===type&&s.n>0));
+      return this.petFoods(e).find(type=>(p.inv||[]).some(s=>s.type===type&&s.n>0));
+    }
+    petNeed(p,e) {
+      if(!e.def.wildlife)return 'food';
+      const bond=e.bond?.owner===p.id?e.bond:{pets:0,meals:0};
+      if(bond.pets<this.petRequirements(e).pets)return 'pet';
+      return bond.meals<this.petRequirements(e).meals?'food':null;
     }
     drawPetFood(ctx,cam) {
       this.petFoodRects=[];
       const p=this.players.find(p=>p.human&&!p.npc&&!p.ally&&p.alive);
       if(!p||p.air||p.falling||p.swallowedBy||p.carrying)return;
       for(const e of this.enemies){
-        if(e.dead||!BK.PET_FOODS[e.type]||!this.canSee(e,p,1.4)||Math.abs(this.groundZ(e.x,e.y)-this.groundZ(p.x,p.y))>.3)continue;
-        const pr=cam.project(e.x,e.y,this.groundZ(e.x,e.y)),w=54,h=46;
+        if(!this.canCareForPet(p,e)||this.time<(e.petRequestAt||0))continue;
+        const need=this.petNeed(p,e);if(!need)continue;
+        const pr=cam.project(e.x,e.y,this.groundZ(e.x,e.y)),w=76,h=54;
         if(pr.x<0||pr.x>BK.W||pr.y<0||pr.y>BK.H)continue;
         const x=Math.max(8,Math.min(BK.W-w-8,pr.x-w/2));let y=Math.max(8,pr.y-pr.k*.95-h);
         while(this.petFoodRects.some(r=>x<r.x+r.w+4&&x+w+4>r.x&&y<r.y+r.h+4&&y+h+4>r.y))y-=h+6;
         if(y<8)continue;
-        const count=(p.inv||[]).reduce((n,s)=>n+(BK.PET_FOODS[e.type].includes(s.type)?Math.max(0,s.n):0),0);
-        ctx.save();ctx.fillStyle=count?'#fff0b5':'#d0d0d5';ctx.strokeStyle=count?'#efae44':'#92929d';ctx.lineWidth=3;BK.sprites.rr(ctx,x,y,w,h,14);ctx.fill();ctx.stroke();
+        const count=(p.inv||[]).reduce((n,s)=>n+(this.petFoods(e).includes(s.type)?Math.max(0,s.n):0),0);
+        const available=need==='pet'||count>0;
+        ctx.save();ctx.fillStyle=available?'#fff0b5':'#e4e0d4';ctx.strokeStyle=available?'#efae44':'#aaa18d';ctx.lineWidth=3;BK.sprites.rr(ctx,x,y,w,h,16);ctx.fill();ctx.stroke();
         ctx.beginPath();ctx.moveTo(x+w/2-6,y+h);ctx.lineTo(x+w/2+6,y+h);ctx.lineTo(x+w/2,y+h+8);ctx.closePath();ctx.fill();
-        ctx.save();if(!count){ctx.filter='grayscale(1)';ctx.globalAlpha=.45;}ctx.font='25px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(BK.ITEMS[this.petFood(p,e)||BK.PET_FOODS[e.type][0]].icon,x+w/2,y+17);ctx.restore();
-        ctx.font='900 12px Nunito,sans-serif';ctx.fillStyle=count?'#47355f':'#656572';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(count?'×'+count:'Vide',x+w/2,y+36,w-8);ctx.restore();
-        if(e.def.wildlife){const bond=e.bond?.owner===p.id?e.bond:{pets:0,meals:0};ctx.save();ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillStyle='#ffe8a3';ctx.strokeStyle='#483b57';ctx.lineWidth=3;const label=bond.pets>=2&&bond.meals>=1?'♥ Ami protecteur':'♥ '+Math.min(2,bond.pets)+'/2 caresses · '+Math.min(1,bond.meals)+'/1 repas';ctx.strokeText(label,x+w/2,y-9);ctx.fillText(label,x+w/2,y-9);ctx.restore();}
-        this.petFoodRects.push({x,y,w,h,pet:e,count});
+        ctx.font='30px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        const icon=need==='pet'?'❤️':BK.ITEMS[this.petFood(p,e)||this.petFoods(e)[0]].icon;
+        ctx.fillText(icon,x+25,y+h/2);
+        ctx.font='900 38px Nunito,sans-serif';ctx.fillStyle='#67402b';ctx.fillText('?',x+57,y+h/2+1);ctx.restore();
+        this.petFoodRects.push({x,y,w,h,pet:e,count,need});
       }
     }
     bondPet(p,e,care) {
       if(!e.def.wildlife||!e.def.peaceful)return;
       if(e.bond?.owner!==p.id)e.bond={owner:p.id,pets:0,meals:0};
-      const was=e.bond.pets>=2&&e.bond.meals>=1;
+      const was=this.petBondReady(e);
       if(care==='meal')e.bond.meals++;else if(this.time>=(e.nextBondPet||0)){e.bond.pets++;e.nextBondPet=this.time+1.2;}
-      if(!was&&e.bond.pets>=2&&e.bond.meals>=1)this.addFloater(e.x,e.y,'♥ Nouvel ami !',{color:'#ffb1d5',size:.3,life:2});
+      if(!was&&this.petBondReady(e))this.addFloater(e.x,e.y,'♥ Nouvel ami !',{color:'#ffb1d5',size:.3,life:2});
+    }
+    startPetCare(p,e,pose,duration) {
+      e.petT=duration;e.pause=duration;e.target=null;
+      e.petRequestAt=this.time+duration+BK.PET_REQUEST_PAUSE;
+      this.petFoodRects=(this.petFoodRects||[]).filter(r=>r.pet!==e);
+      p.pettingUntil=this.time+duration;
+      const dx=e.x-p.x,dy=e.y-p.y;p.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?3:1):(dy>0?0:2);
+      this.setPose(p,pose,duration);p.running=false;p.moving=false;p.wasMoving=false;
     }
     feedPet(p,e,type) {
-      if(!p.alive||p.npc||p.swallowedBy||p.air||p.falling||p.carrying||!this.enemies.includes(e)||e.dead||!BK.PET_FOODS[e.type]?.includes(type)||!this.canSee(e,p,1.4)||Math.abs(this.groundZ(e.x,e.y)-this.groundZ(p.x,p.y))>.3)return false;
+      if(this.time<(p.pettingUntil||0)||!this.enemies.includes(e)||!this.canCareForPet(p,e)||!BK.HATCHLING_FOODS.includes(type))return false;
       const inv=p.inv||[],i=inv.findIndex(s=>s.type===type&&s.n>0);if(i<0)return false;
       const slot=inv[i];slot.n--;slot.perm=Math.min(slot.perm||0,slot.n);if(!slot.n)inv.splice(i,1);
+      if(!this.petFoods(e).includes(type)){
+        this.startPetCare(p,e,'feed',BK.FEED_ANIMATION_TIME);
+        e.rejectSpitAt=this.time+1;e.rejectUntil=this.time+5;e.petRequestAt=e.rejectUntil+BK.PET_REQUEST_PAUSE;
+        e.target=null;e.state='rest';e.eatingUntil=this.time+1;
+        return true;
+      }
       this.bondPet(p,e,'meal');
-      e.follow=p;e.followT=Math.min(180,Math.max(0,e.followT||0)+60);e.fedT=e.followT;e.followReady=false;e.target=null;e.pause=.8;e.petT=.8;e.heartT=.8;
-      this.setPose(p,'place',.3);this.burst(e.x,e.y,.4,'#ffb1ca',8);this.events.push({type:'pet',player:p,animal:e,voice:true,carry:true});e.petVoiceAt=this.time+.85;return true;
+      e.follow=p;e.followT=Math.min(180,Math.max(0,e.followT||0)+60);e.fedT=e.followT;e.followReady=false;e.target=null;e.heartT=.8;
+      this.startPetCare(p,e,'feed',BK.FEED_ANIMATION_TIME);e.eatingUntil=this.time+BK.FEED_ANIMATION_TIME;
+      this.burst(e.x,e.y,.4,'#ffb1ca',8);this.events.push({type:'pet',player:p,animal:e,voice:true,carry:true});e.petVoiceAt=this.time+.85;return true;
     }
-    petAnimal(p) {
-      const e = this.nearbyPet(p); if (!e) return false;
+    petAnimal(p,e=this.nearbyPet(p)) {
+      if (!e || !this.enemies.includes(e) || !this.canCareForPet(p,e) || this.time<(p.pettingUntil||0)) return false;
       // Après ses deux caresses, un animal sauvage qui attend son repas le reçoit directement si le sac contient sa nourriture.
-      const bond = e.bond?.owner === p.id ? e.bond : null, food = e.def.wildlife && bond?.pets >= 2 && !(bond.meals >= 1) && this.petFood(p, e);
+      const bond = e.bond?.owner === p.id ? e.bond : null, food = e.def.wildlife && this.petNeed(p,e)==='food' && this.petFood(p, e);
       if (food && this.feedPet(p, e, food)) { this.events.push({ type: 'petFed', player: p, animal: e, food }); return true; }
+      if(e.def.residence)return false;
       this.bondPet(p,e,'pet');
-      e.petT = 1.1; e.pause = 1.1; e.target = null; e.follow = p; e.followT = Math.max(e.followT||0,8); e.followReady = false;
-      this.setPose(p, 'pickup', 0.6); p.running = false;
+      this.startPetCare(p,e,'pet',BK.PET_ANIMATION_TIME);
+      e.follow = p; e.followT = Math.max(e.followT||0,8); e.followReady = false;
       if (!e.heartT || e.heartT <= 0) {
-        e.heartT = 0.8;
-        for (let k=0;k<5;k++) this.particles.push({ x:e.x+(Math.random()-0.5)*0.5, y:e.y, z:(this.explore?this.groundZ(e.x,e.y):0)+0.5, gz:0, vx:0, vy:0, vz:0.6, life:1.2, t:0, color:'#ff8fab', size:0.13, heart:true, float:true });
+        e.heartT = BK.PET_ANIMATION_TIME;
+        for (let k=0;k<9;k++) {
+          const a=k/9*Math.PI*2;
+          this.particles.push({x:e.x+Math.cos(a)*.42,y:e.y+Math.sin(a)*.2,z:(this.explore?this.groundZ(e.x,e.y):0)+.35+(k%3)*.17,gz:0,vx:Math.cos(a)*.08,vy:0,vz:.35+(k%3)*.1,life:1.8,t:0,color:k%2?'#ff6299':'#ffb1d1',size:.24+(k%3)*.025,heart:true,float:true});
+        }
       }
       const voice=this.time>=(e.petVoiceAt||0);if(voice)e.petVoiceAt=this.time+.85;
       this.events.push({ type:'pet', player:p, animal:e, voice, carry:true }); return true;
@@ -680,23 +819,65 @@
       this.events.push({ type: 'talk', npc: best, text: best.say }); return true;
     }
     setPose(p, pose, dur) { p.pose = pose; p.poseT = 0; p.poseDur = dur || 0; }
+    // Un saut peut franchir un seul étage : contrôler aussi les obstacles entre les bouts.
+    jumpHeightClear(x0,y0,x1,y1) {
+      const base=this.explore?this.groundZ(x0,y0):0,steps=Math.ceil(Math.hypot(x1-x0,y1-y0)*8);
+      for(let n=1;n<=steps;n++) {
+        const x=x0+(x1-x0)*n/steps,y=y0+(y1-y0)*n/steps,c=Math.floor(x),r=Math.floor(y);
+        if(!this.inside(c,r))return false;
+        if(c===Math.floor(x0)&&r===Math.floor(y0))continue;
+        if(this.props[c+','+r]?.caveOffset)return false;
+        const top=(this.explore?this.groundZ(x,y):0)+(this.cell(c,r)?LEVEL:0);
+        if(top>base+LEVEL+.01)return false;
+      }
+      return true;
+    }
     // Petit saut sur une bombe posée : on atterrit dessus et on y reste en rebondissant.
     hopOnto(p, b) {
+      if (!p.bombjump) return;
       b.passers = b.passers || new Set(); b.passers.add(p);
       const gz = (x, y) => this.explore ? this.groundZ(x, y) : 0;
       p.air = { x0: p.x, y0: p.y, z0: gz(p.x, p.y) + (p.zOff || 0), x1: b.x, y1: b.y, z1: gz(b.x, b.y) + 0.55, h: 0.45, t: 0, dur: 0.3, bomb: b };
       p.running = false; p.onBomb = null; this.setPose(p, 'jump', 99); this.events.push({ type: 'hop', player: p });
     }
-    // Grand bond depuis la bombe : deux cases dans la direction, sinon une ; on peut retomber sur un plateau plus haut,
+    // Sur une descente, conserver la vitesse horizontale jusqu'au contact avec le terrain.
+    // Calibrage : deux cases en 0,5 s depuis une bombe vers le sol du même étage.
+    descendingBombFlight(p, dir) {
+      const D = DIRS[dir], base = this.groundZ(p.x,p.y), z0 = base + (p.zOff || 0);
+      const gravity = 32, velocity = (gravity * .5 * .5 / 2 - (z0-base)) / .5;
+      const point = t => ({x:p.x+D.dx*4*t,y:p.y+D.dy*4*t,z:z0+velocity*t-gravity*t*t/2});
+      const surface = q => {
+        const c=Math.floor(q.x),r=Math.floor(q.y),b=this.bombAt(c,r);
+        return this.groundZ(q.x,q.y)+(this.deco[this.idx(c,r)]==='bigmushroom'?MUSH_TOP:b?.state==='idle' ? .55 : 0);
+      };
+      for (let n=1;n<=480;n++) {
+        const t=n/240,q=point(t),c=Math.floor(q.x),r=Math.floor(q.y);
+        if (!this.inside(c,r)) return null;
+        const ground=this.groundZ(q.x,q.y),solid=this.cell(c,r)&&this.deco[this.idx(c,r)]!=='bigmushroom';
+        if (this.props[c+','+r]?.caveOffset || ground+(solid?LEVEL:0)>base+LEVEL+.01 ||
+          (solid||this.solidEnemyAt(c,r)||this.falling.some(f=>f.c===c&&f.r===r)) && q.z<=ground+LEVEL) return null;
+        if (velocity-gravity*t>=0 || q.z>surface(q)) continue;
+        // Chercher le contact précis, aussi sur les pentes et les bords de plateau.
+        let lo=(n-1)/240,hi=t;
+        for(let k=0;k<16;k++){const mid=(lo+hi)/2,v=point(mid);if(v.z>surface(v))lo=mid;else hi=mid;}
+        const end=point(hi),z1=surface(end);
+        // Un mur de terrain rencontré de côté ne devient pas un point d'atterrissage.
+        if (Math.abs(end.z-z1)>.03 || hi<=.5+.001) return null;
+        return {x1:end.x,y1:end.y,z1,dur:hi,gravity,velocity};
+      }
+      return null;
+    }
+    // Grand bond depuis la bombe : deux cases sur le même étage, plus loin en descendant ; on peut retomber sur un plateau plus haut,
     // sur une autre bombe, ou dans l'eau. Rien de libre : on rebondit sur place.
     leap(p, dir) {
+      if (!p.bombjump) return;
       const D = DIRS[dir], c0 = Math.floor(p.x), r0 = Math.floor(p.y), gz = (x, y) => this.explore ? this.groundZ(x, y) : 0;
       let target = null;
       // deux cases plus loin (un gros champignon juste à côté compte aussi) ; si c'est bloqué (mur, bloc, monstre solide,
       // trop haut), on continue jusqu'à la première case libre (5 au plus)
-      { const c1 = c0 + D.dx, r1 = r0 + D.dy; if (this.inside(c1, r1) && this.deco[this.idx(c1, r1)] === 'bigmushroom') target = { x: c1 + 0.5, y: r1 + 0.5, z: gz(c1 + 0.5, r1 + 0.5) + MUSH_TOP, bomb: null, mush: true }; }
+      { const c1 = c0 + D.dx, r1 = r0 + D.dy; if (this.inside(c1, r1) && this.deco[this.idx(c1, r1)] === 'bigmushroom' && this.jumpHeightClear(p.x,p.y,c1+.5,r1+.5)) target = { x: c1 + 0.5, y: r1 + 0.5, z: gz(c1 + 0.5, r1 + 0.5) + MUSH_TOP, bomb: null, mush: true }; }
       for (let d = 2; d <= 5 && !target; d++) {
-        const c = c0 + D.dx * d, r = r0 + D.dy * d; if (!this.inside(c, r)) break;
+        const c = c0 + D.dx * d, r = r0 + D.dy * d; if (!this.inside(c, r) || !this.jumpHeightClear(p.x,p.y,c+.5,r+.5)) break;
         const v = this.cells[this.idx(c, r)], mush = this.deco[this.idx(c, r)] === 'bigmushroom';
         if (mush) { target = { x: c + 0.5, y: r + 0.5, z: gz(c + 0.5, r + 0.5) + MUSH_TOP, bomb: null, mush: true }; break; }
         if (v && v !== 0) continue;
@@ -707,25 +888,40 @@
       const from = p.onBomb; p.onBomb = null;
       if (!target) target = { x: p.x, y: p.y, z: gz(p.x, p.y) + 0.55, bomb: from };
       p.air = { x0: p.x, y0: p.y, z0: gz(p.x, p.y) + (p.zOff || 0), x1: target.x, y1: target.y, z1: target.z, h: target.mush ? 1.1 : 0.9, t: 0, dur: target.x === p.x && target.y === p.y ? 0.45 : target.mush ? 0.55 : 0.5, bomb: target.bomb, dir };
+      if (this.explore && !target.mush && target.z < gz(p.x,p.y)-.01) {
+        const flight=this.descendingBombFlight(p,dir);
+        if (flight) Object.assign(p.air,flight);
+      }
       this.setPose(p, 'jump', 99); this.events.push({ type: 'leap', player: p });
+    }
+    fallDamage(height) {
+      return this.hearts?5*Math.max(0,Math.ceil(height/LEVEL-5-1e-5)):0;
+    }
+    landFromHeight(p,height) {
+      const amount=this.fallDamage(height);
+      if(!amount)return;
+      this.damage(p,amount,{kind:'fall'});
+      if(p.hp<=0)this.killPlayer(p,{kind:'fall'});
+      else this.setPose(p,'hit',.4);
     }
     updateAir(p, dt) {
       const a = p.air; a.t += dt; p.animT += dt; p.poseT += dt; const u = Math.min(1, a.t / a.dur);
       if (a.control && (p.input.dx || p.input.dy)) {   // après un rebond, on dirige très légèrement le vol
         const ox = a.ox1 == null ? (a.ox1 = a.x1) : a.ox1, oy = a.oy1 == null ? (a.oy1 = a.y1) : a.oy1;
         a.x1 = Math.max(ox - 0.6, Math.min(ox + 0.6, a.x1 + p.input.dx * 1.4 * dt)); a.y1 = Math.max(oy - 0.6, Math.min(oy + 0.6, a.y1 + p.input.dy * 1.4 * dt));
-        const c = Math.floor(a.x1), r = Math.floor(a.y1); if (!this.inside(c, r) || (this.cell(c, r) && this.deco[this.idx(c, r)] !== 'bigmushroom') || this.solidEnemyAt(c, r)) { a.x1 = ox; a.y1 = oy; }
+        const c = Math.floor(a.x1), r = Math.floor(a.y1); if (!this.inside(c, r) || (this.cell(c, r) && this.deco[this.idx(c, r)] !== 'bigmushroom') || this.solidEnemyAt(c, r) || !this.jumpHeightClear(a.x0,a.y0,a.x1,a.y1)) { a.x1 = ox; a.y1 = oy; }
       }
       p.x = a.x0 + (a.x1 - a.x0) * u; p.y = a.y0 + (a.y1 - a.y0) * u;
-      const z = a.z0 + (a.z1 - a.z0) * u + a.h * Math.sin(Math.PI * u);
+      const elapsed=Math.min(a.t,a.dur);
+      const z = a.gravity ? a.z0+a.velocity*elapsed-a.gravity*elapsed*elapsed/2 : a.z0 + (a.z1 - a.z0) * u + a.h * Math.sin(Math.PI * u);
       p.zOff = z - (this.explore ? this.groundZ(p.x, p.y) : 0);
       if (u < 1) return;
       p.air = null; p.x = a.x1; p.y = a.y1;
       const mc = Math.floor(p.x), mr = Math.floor(p.y);
       if (this.deco[this.idx(mc, mr)] === 'bigmushroom') { this.bounce(p, mc, mr, a); return; }
       const b = this.bombAt(Math.floor(p.x), Math.floor(p.y));
-      if (b && b.state === 'idle' && !b.exploded) { p.onBomb = b; p.leapLock = true; b.passers = b.passers || new Set(); b.passers.add(p); p.zOff = 0.55; this.setPose(p, 'idle'); }
-      else { p.onBomb = null; p.zOff = 0; p.safe = p.safe; this.setPose(p, 'idle'); this.burst(p.x, p.y, 0.2, 'rgba(230,220,200,0.8)', 3); this.events.push({ type: 'land', player: p }); }
+      if (p.bombjump && b && b.state === 'idle' && !b.exploded) { p.onBomb = b; p.leapLock = true; b.passers = b.passers || new Set(); b.passers.add(p); p.zOff = 0.55; this.setPose(p, 'idle'); }
+      else { p.onBomb = null; p.zOff = 0; this.setPose(p, 'idle'); this.landFromHeight(p,Math.max(a.z0,p.dropStartZ??a.z0)-this.groundZ(p.x,p.y));p.dropStartZ=null; this.burst(p.x, p.y, 0.2, 'rgba(230,220,200,0.8)', 3); this.events.push({ type: 'land', player: p }); }
     }
     // Gros champignon = trampoline : on rebondit dessus et on repart 3 cases plus loin dans la même direction
     // (2 ou 1 si c'est bloqué ; sinon on retombe d'où l'on vient). En vol, on peut se déplacer un petit peu.
@@ -733,7 +929,7 @@
       const gz = (x, y) => this.explore ? this.groundZ(x, y) : 0;
       let dir = a.dir; if (dir == null) { const dx = a.x1 - a.x0, dy = a.y1 - a.y0; dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 1 : 3) : (dy < 0 ? 2 : 0); }
       const D = DIRS[dir]; let target = null;
-      const free = (c, r) => this.inside(c, r) && (!this.cell(c, r) || this.deco[this.idx(c, r)] === 'bigmushroom') && !this.solidEnemyAt(c, r) && !this.falling.some(f => f.c === c && f.r === r);
+      const free = (c, r) => this.inside(c, r) && (!this.cell(c, r) || this.deco[this.idx(c, r)] === 'bigmushroom') && !this.solidEnemyAt(c, r) && !this.falling.some(f => f.c === c && f.r === r) && this.jumpHeightClear(p.x,p.y,c+.5,r+.5);
       for (let d = 3; d >= 1 && !target; d--) { const c = mc + D.dx * d, r = mr + D.dy * d; if (free(c, r)) target = { c, r }; }
       if (!target) { const c = mc - D.dx, r = mr - D.dy; if (free(c, r)) target = { c, r }; }
       this.bounceT.set(this.idx(mc, mr), 0.45); this.burst(p.x, p.y, 0.35, 'rgba(255,255,255,0.8)', 8); this.events.push({ type: 'bounce', player: p });
@@ -747,8 +943,8 @@
     // puis on réapparaît sur la dernière case sûre. Sans cœur restant, c'est la mort.
     startFall(p, kind) {
       if (p.falling || !p.alive) return;
-      const z0 = this.explore ? this.groundZ(p.safe.x, p.safe.y) : 0;
-      p.falling = { kind, t: 0, z: z0, vz: 0.5, splashed: false, dur: kind === 'water' ? 1.25 : 1.15 };
+      const z0 = this.explore ? (p.dropStartZ??this.groundZ(p.safe.x, p.safe.y)) : 0;
+      p.falling = { kind, t: 0, z: z0, startZ:z0, vz: 0.5, splashed: false, dur: kind === 'water' ? 1.25 : 1.15 };
       p.invuln = 5; p.running = false; p.moving = false; this.setPose(p, 'hit', 99);
       if (p.carrying) { const b = p.carrying; p.carrying = null; b.x = p.x; b.y = p.y; this.splash(b); }
       this.events.push({ type: 'playerFell', player: p, kind });
@@ -763,13 +959,14 @@
     }
     finishFall(p) {
       const f = p.falling; p.falling = null;
-      p.x = p.safe.x; p.y = p.safe.y; p.dir = p.safe.dir; p.invuln = 0; p.input.dx = p.input.dy = 0; p.lastTap = null;
+      p.zOff=0;p.dropStartZ=null;p.x = p.safe.x; p.y = p.safe.y; p.dir = p.safe.dir; p.invuln = 0; p.input.dx = p.input.dy = 0; p.lastTap = null;
       if (!this.hearts) { p.invuln = BK.INVULN; this.setPose(p, 'hit', 0.5); this.burst(p.x, p.y, 0.4, '#ffffff', 8); return; }   // chez les grands-parents : pas de dégâts
-      this.damage(p, 10, { kind: f.kind });
+      this.damage(p, 10+this.fallDamage(f.startZ), { kind: f.kind });
       if (p.hp > 0) { p.invuln = BK.INVULN; this.setPose(p, 'hit', 0.5); this.burst(p.x, p.y, 0.4, '#ffffff', 8); return; }
       this.killPlayer(p, { kind: f.kind });
     }
     hitPlayer(p, source) {
+      if(source?.bomb?.petBreath)return false;
       if(p.swallowedBy)return false;
       if (!p.alive || p.invuln > 0 || this.frozen || p.npc) return false;
       if(this.mode==='adventure' && !BK.settings.friendlyFire && source?.owner && source.owner!==p && (p.ally || source.owner.ally) && (p.leader||p)===(source.owner.leader||source.owner))return false;
@@ -847,15 +1044,36 @@
       else this.explodeBomb(b);
     }
     revive(p, c, r) {
-      p.alive = true; p.hp = p.maxHp; p.invuln = BK.INVULN; p.x = c + 0.5; p.y = r + 0.5; p.carrying = null; this.setPose(p, 'idle'); p.dir = 0;
+      p.alive = true;p.zOff=0;p.dropStartZ=null; p.hp = p.maxHp; p.invuln = BK.INVULN; p.x = c + 0.5; p.y = r + 0.5; p.carrying = null; this.setPose(p, 'idle'); p.dir = 0;
     }
 
+    nearbyStoneSword(p) {
+      if (!p.gloves || p.stoneSword || !p.alive || p.npc || p.air || p.falling || p.boat || p.seat || p.swallowedBy || p.carrying) return null;
+      const c=Math.floor(p.x),r=Math.floor(p.y),z=this.groundZ(p.x,p.y);
+      for (const {dx,dy} of DIRS) {
+        const x=c+dx,y=r+dy,key=x+','+y;
+        if (this.inside(x,y) && this.deco[this.idx(x,y)]==='outdoor_sword' && !this.props[key]?.swordTaken &&
+            Math.hypot(x+.5-p.x,y+.5-p.y)<1.3 && Math.abs(this.hAt(x,y)-z)<.1) return {x,y,key};
+      }
+      return null;
+    }
+    takeStoneSword(p) {
+      const sword=this.nearbyStoneSword(p);
+      if (!sword) return false;
+      this.props[sword.key]={...this.props[sword.key],swordTaken:true,swordTakenAt:this.time};
+      p.stoneSword=true;
+      p.dir=DIRS.findIndex(d=>Math.floor(p.x)+d.dx===sword.x && Math.floor(p.y)+d.dy===sword.y);
+      this.setPose(p,'pickup',.7);
+      this.burst(sword.x+.5,sword.y+.5,.65,'#ffe49b',12);
+      return true;
+    }
     // ------------------------------------------------------------------ bombes
     placeBomb(p) {
       if (p.heldSnail || p.boat || p.bombsOut >= p.bombsMax) return false;
       const c = Math.floor(p.x), r = Math.floor(p.y);
       if (this.cell(c, r) || this.bombAt(c, r) || this.special.get(c + ',' + r)?.type === 'exit') return false;
-      const b = { cx: c, cy: r, x: c + 0.5, y: r + 0.5, z: 0, big: (p.sizeScale || 1) > 1, t: BK.BOMB_FUSE * (p.shortfuseT>0?0.5:1), fire: p.fire, damage:p.bomb2?2:1, level:p.bomb2?2:1, safeItems:!!p.safeitems, dome:!!p.dome, owner: p, state: 'idle', passers: new Set([p]), born: this.time, dir: 0 };
+      const damageMultiplier=p.stoneSword?2:1;
+      const b = { cx: c, cy: r, x: c + 0.5, y: r + 0.5, z: 0, big: (p.sizeScale || 1) > 1, t: BK.BOMB_FUSE * (p.shortfuseT>0?0.5:1), fire: p.fire, damage:(p.bomb2?2:1)*damageMultiplier, damageMultiplier, level:p.bomb2?2:1, safeItems:!!p.safeitems, dome:!!p.dome, owner: p, state: 'idle', passers: new Set([p]), born: this.time, dir: 0 };
       this.bombs.push(b); p.bombsOut++; this.setPose(p, 'place', 0.25);
       this.events.push({ type: 'bombPlaced', player: p, bomb: b }); return true;
     }
@@ -945,12 +1163,47 @@
       this.burst(target.x, target.y, 0.6, '#d6a0ff', 24); this.shake = 0.18;
       this.events.push({type:'bombFusion', bomb:target, player:moving.kicker}); return true;
     }
+    hitGnomeHouse(c,r,bomb,originC,originR) {
+      const i=this.idx(c,r),kind=this.deco[i];
+      if(!BK.GNOME_HOUSES.has(kind))return false;
+      if(Math.abs(this.hAt(c,r)-this.hAt(originC,originR))>.01&&!this.ramp[i]&&!this.ramp[this.idx(originC,originR)])return true;
+      const hit=bomb.gnomeHouseHits ||= new Set();
+      if(hit.has(i))return true;
+      hit.add(i);
+      const damage=Math.max(1,bomb.damage||bomb.level||1);
+      const hp=Math.max(0,(this.gnomeHouseHits.get(i)?.hp??3)-damage);
+      this.gnomeHouseHits.set(i,{c,r,kind,hp,at:this.time});
+      this.burst(c+.5,r+.5,this.hAt(c,r)+.45,kind==='enchanted_1'?'#f3d0b4':'#bac1ae',hp?5:14,1);
+      this.events.push({type:'gnomeHouseHit',c,r,hp,damage});
+      if(!hp){
+        const residents=this.enemies.filter(e=>!e.dead&&e.gnomeHome?.houseC===c&&e.gnomeHome.houseR===r);
+        this.destroyBlock(c,r,bomb.owner);
+        this.angerGnomes(c,r,kind,residents,bomb.kicker||bomb.owner);
+      }
+      return true;
+    }
+    angerGnomes(c,r,kind,residents,attacker) {
+      if(!residents.length){
+        const type=BK.WILDLIFE.find(e=>e.residence===kind)?.id;
+        if(type)residents.push(this.addEnemy(type,c,r));
+      }
+      const target=attacker?.leader||attacker;
+      const nearby=this.enemies.filter(e=>!e.dead&&e.def.residence&&Math.hypot(e.x-c-.5,e.y-r-.5)<=6);
+      for(const e of new Set([...residents,...nearby])){
+        if(residents.includes(e)&&e.gnomeInsideUntil){e.x=c+.5;e.y=r+.5;}
+        e.gnomeInsideUntil=0;if(residents.includes(e))e.gnomeHome=null;
+        e.bond=null;e.follow=null;e.target=null;
+        e.petT=0;e.rejectUntil=0;e.gnomeAngry=true;e.gnomeTarget=target;e.gnomeThrowAt=this.time+.45+Math.random()*.65;
+        e.def={...e.def,peaceful:false,dmg:4};e.hurt=Math.max(e.hurt,.85);
+        this.burst(e.x,e.y,this.groundZ(e.x,e.y)+.55,'#e99c70',6);
+      }
+    }
     explodeGiga(b, c, r) {
       // Propagation circulaire : traverse chaque couche destructible, s'arrête aux murs solides.
       const radius = Math.min(7, b.fire), queue = [[c,r,0]], seen = new Set([c+','+r]);
       for (let i=0; i<queue.length; i++) {
         const [x,y,dist] = queue[i], v = this.cell(x,y);
-        if(this.hitBridgeColumn?.(x,y,b)||this.hitBlastDrawbridge?.(x,y,b))continue;
+        if(this.hitBridgeColumn?.(x,y,b)||this.hitBlastDrawbridge?.(x,y,b)||this.hitGnomeHouse(x,y,b,c,r))continue;
         if (v === HARD || v === GATE || v === SEALED || v === METAL) continue;
         if (this.explore && Math.abs(this.hAt(x,y)-this.hAt(c,r))>0.01 && !this.ramp[this.idx(x,y)]) continue;
         if (v === SOFT) this.destroyBlock(x,y,b.owner);
@@ -965,7 +1218,36 @@
         }
       }
     }
+    updateMagicDoors(announce=true) {
+      this.magicDoorsDirty=false;
+      for(const group of this.magicGroups.values()){
+        if(!group.beacons.length||group.beacons.some(b=>!b.on))continue;
+        for(const door of group.doors){
+          if(door.open||group.beacons.length<door.count)continue;
+          door.open=true;this.cells[this.idx(door.c,door.r)]=0;
+          if(announce){
+            this.burst(door.c+.5,door.r+.5,this.hAt(door.c,door.r)+.45,BK.targetColor(door.color),15);
+            this.events.push({type:'gateOpened',cells:[{c:door.c,r:door.r}]});
+          }
+        }
+      }
+    }
+    toggleMagicBeacon(beacon,bomb) {
+      if(beacon?.type!=='magicBeacon'||bomb.blastSource!=='bomb')return;
+      const hits=bomb.magicBeaconHits ||= new Set();
+      if(hits.has(beacon))return;
+      hits.add(beacon);beacon.on=!beacon.on;this.magicDoorsDirty=true;
+      this.burst(beacon.c+.5,beacon.r+.5,this.hAt(beacon.c,beacon.r)+.25,BK.targetColor(beacon.color),beacon.on?9:4);
+    }
     explodeBomb(b) {
+      this.magicBlastDepth=(this.magicBlastDepth||0)+1;
+      try{this.resolveBomb(b);}
+      finally{
+        this.magicBlastDepth--;
+        if(!this.magicBlastDepth&&this.magicDoorsDirty)this.updateMagicDoors();
+      }
+    }
+    resolveBomb(b) {
       if (b.exploded || b.rock) return; b.exploded = true; b.blastSource = 'bomb';   // une roche n'explose pas : la flamme s'y arrête
       const i = this.bombs.indexOf(b); if (i >= 0) this.bombs.splice(i, 1);
       if (b.owner) b.owner.bombsOut = Math.max(0, b.owner.bombsOut - 1);
@@ -996,6 +1278,7 @@
           if (!this.inside(cc, rr)) break;
           if(this.hitBridgeColumn?.(cc,rr,b)) break;
           if(this.hitBlastDrawbridge?.(cc,rr,b)) break;
+          if(this.hitGnomeHouse(cc,rr,b,c,r)) break;
           const v = this.cell(cc, rr);
           if (v === METAL) { if ((this.metal[this.idx(cc, rr)] + 2) % 4 === d) this.destroyMetal(cc, rr, b.owner); break; }   // la flamme frappe la face opposée à sa direction
           if (v === HARD && this.explore) { const dk = this.deco[this.idx(cc, rr)]; if (dk === 'mailbox') { this.destroyMailbox(cc, rr, b.owner); this.addFlame(cc, rr, 'end', d, b); break; } if (dk === 'beehive') { this.destroyHive(cc, rr, b.owner); this.addFlame(cc, rr, 'end', d, b); break; } if (dk === 'chest') { this.destroyChest(cc, rr, b.owner); this.addFlame(cc, rr, 'end', d, b); break; } }
@@ -1012,6 +1295,7 @@
         }
     }
     addFlame(c, r, kind, dir, bomb) {
+      this.toggleMagicBeacon(this.special.get(c+','+r),bomb);
       const key = this.idx(c, r), old = this.flameAt.get(key);
       const f = { cx: c, cy: r, t: 0, level:bomb.level||1, duration:BK.flameLife(bomb.level||1), kind: old && old.kind === 'center' ? 'center' : kind, dir, seed: Math.random() * 10, owner: bomb.owner, bomb };
       if (old) { const remaining=(old.duration||BK.FLAME_TIME)-old.t;old.duration=Math.max(remaining,f.duration);old.t=0;if(f.level>=(old.level||1)){old.level=f.level;old.owner=bomb.owner;old.bomb=bomb;}return old; }
@@ -1027,13 +1311,27 @@
       this.cells[this.idx(c, r)] = 0; const kind = this.deco[this.idx(c, r)]; this.deco[this.idx(c, r)] = null;
       const sp0 = this.special.get(c + ',' + r); if (sp0 && sp0.type === 'brick') this.special.delete(c + ',' + r);
       if (by) by.score += BK.BLOCK_SCORE;
-      const SOFT_COLORS = { crate: '#a0703a', melon: '#ff5a5a', cheese: '#f4c430', gift: '#ffd54a', dirtblock: '#7d5428', pumpkin: '#ff8a1f', flowerpot: '#c8693a', marshmallow: this.props[c + ',' + r]?.color || '#ffd1e3' };
+      const SOFT_COLORS = { enchanted_11: '#67a477', market: '#a0703a', crate: '#a0703a', melon: '#ff5a5a', cheese: '#f4c430', gift: '#ffd54a', dirtblock: '#7d5428', pumpkin: '#ff8a1f', flowerpot: '#c8693a', marshmallow: this.props[c + ',' + r]?.color || '#ffd1e3' };
       this.burst(c + 0.5, r + 0.5, 0.5, SOFT_COLORS[kind] || (sp0 && sp0.type === 'brick' ? this.brickColors(c, r).front : this.theme.soft), 10, 1);
       if (kind === 'melon') this.burst(c + 0.5, r + 0.5, 0.4, '#2e7d32', 6, 1);
       if (kind === 'flowerpot') { this.burst(c + 0.5, r + 0.5, 0.35, '#5a3b1c', 6, 1); this.burst(c + 0.5, r + 0.5, 0.45, '#ff6fae', 5, 1); }   // pot cassé : terre et pétales
       this.events.push({ type: 'blockDestroyed', c, r, player: by });
+      if (BK.GNOME_HOUSES.has(kind)) return;
       const sp = this.special.get(c + ',' + r);
       if (sp && sp.type === 'exit') { this.exit.hidden = false; return; }
+      if (kind === 'market') {
+        const foods=['carrot','pumpkinpiece','fish','meatcooked','poultrycooked'];
+        const loot=['coin','coin'], count=2+Math.floor(Math.random()*2);
+        for(let n=0;n<count;n++)loot.push(foods.splice(Math.floor(Math.random()*foods.length),1)[0]);
+        for(const type of loot){
+          const spot=this.freeCellNear(c,r)||{c,r};
+          this.spawnItem(spot.c,spot.r,type);
+          const item=this.items[this.items.length-1];
+          item.from={x:c+.5,y:r+.5};
+          item.flyDur=.45;
+        }
+        return;
+      }
       if (kind === 'pumpkin') { for (let n = 0; n < 3; n++) this.spawnItem(c, r, 'pumpkinpiece'); return; }
       if (kind === 'marshmallow') { this.spawnItem(c, r, 'marshmallow'); return; }   // bloc de guimauve : une guimauve à manger
       if (this.coins && Math.random() < 0.22) { this.spawnItem(c, r, 'coin'); return; }
@@ -1063,6 +1361,37 @@
       const i = this.idx(c, r); this.cells[i] = 0; this.deco[i] = null; if (by) by.score += BK.BLOCK_SCORE; this.hives = this.hives.filter(h => h.c !== c || h.r !== r);
       this.burst(c + 0.5, r + 0.5, 0.5, '#f0a830', 12, 1); this.burst(c + 0.5, r + 0.5, 0.3, '#ffd54a', 6);
       this.events.push({ type: 'hiveBroken', c, r }); this.spawnItem(c, r, 'honey', (this.props[c + ',' + r] || {}).honey || 3);
+    }
+    // Une portion prête après cinq minutes actives, conservée dans l’arbre jusqu’à la récolte.
+    updateMaples(dt) {
+      if(!this.explore)return;
+      this.mapleGrowth ||= new Map();
+      for(const tree of this.trees){
+        const key=tree.c+','+tree.r;
+        if(this.props[key]?.style!=='erable')continue;
+        const age=Math.min(300,(this.mapleGrowth.get(key)||0)+dt);this.mapleGrowth.set(key,age);
+      }
+    }
+    drawMaplePrompt(ctx,cam) {
+      for(const tree of this.trees){
+        const key=tree.c+','+tree.r;
+        if(this.props[key]?.style!=='erable'||(this.mapleGrowth?.get(key)||0)<300)continue;
+        if(!this.players.some(p=>p.alive&&p.human&&!p.npc&&!p.air&&!p.falling&&Math.abs(this.groundZ(p.x,p.y)-this.hAt(tree.c,tree.r))<.1&&Math.abs(Math.floor(p.x)-tree.c)+Math.abs(Math.floor(p.y)-tree.r)===1))continue;
+        const q=cam.project(tree.c+.5,tree.r+.5,this.hAt(tree.c,tree.r)+1.4);
+        ctx.save();ctx.font='bold 17px Nunito,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        const w=ctx.measureText('🍁 Entrée').width+24;ctx.fillStyle='#fff3cf';ctx.strokeStyle='#b88136';ctx.lineWidth=2;
+        BK.sprites.rr(ctx,q.x-w/2,q.y-18,w,36,10);ctx.fill();ctx.stroke();ctx.fillStyle='#573c25';ctx.fillText('🍁 Entrée',q.x,q.y);ctx.restore();
+      }
+    }
+    harvestMaple(p) {
+      if(!this.explore||p.carrying||p.air||p.falling)return false;
+      const d=DIRS[p.dir],c=Math.floor(p.x)+d.dx,r=Math.floor(p.y)+d.dy,key=c+','+r;
+      if(!this.trees.some(t=>t.c===c&&t.r===r)||this.props[key]?.style!=='erable'||Math.abs(this.hAt(c,r)-this.groundZ(p.x,p.y))>.1)return false;
+      if((this.mapleGrowth?.get(key)||0)<300)return false;
+      if(!this.applyItem(p,{type:'maplesyrup',value:1}))return true;
+      this.mapleGrowth.set(key,0);this.setPose(p,'pickup',.4);
+      this.addFloater(c+.5,r+.5,'🍁 Sirop récolté !',{color:'#f3bd58',size:.28,life:2});
+      return true;
     }
     chopTree(p) {
       if (!p.alive || p.air || p.falling || p.carrying || p.onBomb || p.fishing || (p.axeUntil || 0) > this.time) return false;
@@ -1096,7 +1425,7 @@
     }
     // Inventaire (24 piles) : utiliser le pot de miel verse une flaque sous le héros ; les monstres qui y marchent sont englués.
     useItem(p, slot, snailIndex=0) {
-      const inv = p.inv || []; const s = inv[slot]; if (!s || !p.alive) return false;
+      const inv = p.inv || []; const s = inv[slot]; if (!s || !p.alive || this.time<(p.pettingUntil||0)) return false;
       const spend = () => { s.n--; if ((s.perm || 0) > s.n) s.perm = s.n; if (s.n <= 0) inv.splice(slot, 1); };
       if(BK.ITEMS[s.type]?.snailColor) {
         if(p.air||p.falling||p.boat||p.seat||p.carrying||p.heldSnail) return false;
@@ -1106,7 +1435,7 @@
         this.setPose(p,'place',0.3);return true;
       }
       // Près d'un animal qui aime cette nourriture (carotte pour le faon…), on la lui donne au lieu de la lancer.
-      { const pet = this.nearbyPet(p); if (pet && BK.PET_FOODS[pet.type]?.includes(s.type) && this.feedPet(p, pet, s.type)) { this.events.push({ type: 'petFed', player: p, animal: pet, food: s.type }); return true; } }
+      { const pet = BK.HATCHLING_FOODS.includes(s.type)?this.nearbyPet(p):null; if (pet && this.feedPet(p, pet, s.type)) { this.events.push({ type: 'petFed', player: p, animal: pet, food: s.type }); return true; } }
       if(BK.remedyId(s.type)==='antidote'){if(!(p.diarrheaT>0||p.shortfuseT>0||p.poison>0))return false;p.diarrheaT=p.shortfuseT=p.autoBombT=p.poison=p.poisonTick=0;spend();this.events.push({type:'cured',player:p,carry:true});return true;}
       if (s.type === 'wood') { if(!this.buildCampfire(p)) {this.events.push({type:'campfireBlocked',player:p,carry:true});return false;}spend();return true; }
       if (s.type === 'axe') return this.chopTree(p);
@@ -1115,7 +1444,7 @@
       if (s.type === 'carrot') { if (!this.throwFish(p, 'carrot')) return false; spend(); return true; }
       if (s.type === 'meatraw'||s.type==='poultryraw') return this.cookFish(p, null, s.type);
       if (s.type === 'meatcooked'||s.type==='poultrycooked') { if(p.hp>=p.maxHp)return false; this.heal(p,s.type==='poultrycooked'?15:10);this.setPose(p,'drink',0.6);spend();return true; }
-      if (s.type === 'pumpkinpiece' || s.type === 'marshmallow') { if (p.hp >= p.maxHp) return false; this.heal(p, 5); this.setPose(p, 'drink', 0.6); spend(); return true; }
+      if (s.type === 'pumpkinpiece' || s.type === 'marshmallow' || s.type === 'maplesyrup') { if (p.hp >= p.maxHp) return false; this.heal(p, 5); this.setPose(p, 'drink', 0.6); spend(); return true; }
       if (s.type === 'fishcooked') { this.eatFish(p); spend(); return true; }
       if (s.type === 'spore') { if (!this.growMushroom(p)) return false; spend(); return true; }
       if (s.type === 'honey') {
@@ -1132,6 +1461,7 @@
     slowAt(e) { const fs = this.floorSlow(e); if (!this.puddles.length) return fs; const c = Math.floor(e.x), r = Math.floor(e.y); return this.puddles.some(q => q.kind!=='toadSlime' && q.c === c && q.r === r) ? 0.12 : fs; }
     // ---- Cycle jour-nuit (4 minutes) : jour, crépuscule (30 s), nuit (70 s), aube (30 s). darkness() : 0 le jour, 1 en pleine nuit.
     darkness() {
+      if(this.themeId==='cave')return .95;
       if (!this.dayCycle) return 0; const t = this.time % BK.DAY_CYCLE, u = t / BK.DAY_CYCLE;
       if (u < 0.42) return 0; if (u < 0.54) return (u - 0.42) / 0.12; if (u < 0.84) return 1; if (u < 0.96) return 1 - (u - 0.84) / 0.12; return 0;
     }
@@ -1142,6 +1472,22 @@
     lights() {
       const L = [];
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) { const k = this.deco[r * this.cols + c]; if (k === 'lamp') L.push({ x: c + 0.5, y: r + 0.5, z: this.hAt(c, r) + 1.6, r: 2.6, warm: 0.5 }); else if (k === 'volcano') L.push({ x: c + 0.5, y: r + 0.5, z: this.hAt(c, r) + 2.3, r: 2.8, warm: 0.6 }); }
+      if(this.themeId==='cave'){
+        const sources={outdoor_cave_lamp:[.29,2.05,'255,185,98'],outdoor_cave_turquoise:[.34,1.42,'106,240,223'],
+          outdoor_cave_pyrite:[.34,1.38,'255,222,133'],outdoor_cave_rose:[.34,1.42,'245,146,210']};
+        for(let i=0;i<this.deco.length;i++){
+          const light=sources[this.deco[i]];
+          if(!light)continue;
+          const c=i%this.cols,r=Math.floor(i/this.cols);
+          if(this.hiddenSecretAt?.(c,r))continue;
+          L.push({x:c+.5,y:r+.5,z:this.hAt(c,r)+light[0],r:light[1],warm:.88,tint:light[2]});
+        }
+      }
+      for(const {beacons} of this.magicGroups.values())for(const b of beacons){
+        if(!b.on||this.hiddenSecretAt?.(b.c,b.r))continue;
+        const hex=Number.parseInt(BK.targetColor(b.color).slice(1),16);
+        L.push({x:b.c+.5,y:b.r+.5,z:this.hAt(b.c,b.r)+.28,r:1.1,warm:.65,tint:[hex>>16,hex>>8&255,hex&255].join(',')});
+      }
       for (const f of this.campfires) L.push({ x: f.c + 0.5, y: f.r + 0.5, z: this.hAt(f.c, f.r) + 0.3, r: 2.4 + 0.15 * Math.sin(this.time * 7), warm: 0.7 });
       for (const p of this.players) if (p.alive && this.lanternOn(p)) L.push({ x: p.x, y: p.y, z: (this.explore ? this.groundZ(p.x, p.y) : 0) + (p.zOff || 0) + 0.5, r: 3.4 + 0.1 * Math.sin(this.time * 5), warm: 0.45 });
       for (const f of this.flames) L.push({ x: f.cx + 0.5, y: f.cy + 0.5, z: 0.3, r: 1.6, warm: 0.5 });
@@ -1151,11 +1497,11 @@
     renderNight(ctx, cam) {
       const d = this.darkness(); if (d <= 0.01) return; const W = ctx.canvas.width, H = ctx.canvas.height;
       if (!this.nightCv || this.nightCv.width !== W || this.nightCv.height !== H) { this.nightCv = typeof document !== 'undefined' ? document.createElement('canvas') : null; if (!this.nightCv) return; this.nightCv.width = W; this.nightCv.height = H; }
-      const nc = this.nightCv.getContext('2d'); nc.globalCompositeOperation = 'source-over'; nc.clearRect(0, 0, W, H); nc.fillStyle = 'rgba(8,12,44,' + (0.66 * d) + ')'; nc.fillRect(0, 0, W, H);
+      const nc = this.nightCv.getContext('2d'); nc.globalCompositeOperation = 'source-over'; nc.clearRect(0, 0, W, H); nc.fillStyle = this.themeId==='cave'?'rgba(13,15,24,.82)':'rgba(8,12,44,' + (0.66 * d) + ')'; nc.fillRect(0, 0, W, H);
       const L = this.lights(); nc.globalCompositeOperation = 'destination-out';
       for (const l of L) { const pr = cam.project(l.x, l.y, l.z), rad = pr.k * l.r; const g = nc.createRadialGradient(pr.x, pr.y, 0, pr.x, pr.y, rad); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.45, 'rgba(0,0,0,0.85)'); g.addColorStop(1, 'rgba(0,0,0,0)'); nc.fillStyle = g; nc.beginPath(); nc.arc(pr.x, pr.y, rad, 0, Math.PI * 2); nc.fill(); }
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(this.nightCv, 0, 0);
-      if (d > 0.3 && this.explore) {   // les étoiles se reflètent dans l'eau : petits points qui scintillent sur les cases d'eau (dégagées devant)
+      if (d > 0.3 && this.explore && this.themeId!=='cave') {   // les étoiles se reflètent dans l'eau : petits points qui scintillent sur les cases d'eau (dégagées devant)
         const a = Math.min(1, (d - 0.3) / 0.7), cmin = Math.max(0, Math.floor(cam.target.x - 11)), cmax = Math.min(this.cols - 1, Math.ceil(cam.target.x + 11)), rmin = Math.max(0, Math.floor(cam.target.y - 10)), rmax = Math.min(this.rows - 1, Math.ceil(cam.target.y + 9));
         for (let r = rmin; r <= rmax; r++) for (let c = cmin; c <= cmax; c++) {
           if (this.tAt(c, r) !== T_WATER || this.tAt(c, r + 1) !== T_WATER) continue; const h = (c * 7919 + r * 104729) % 97; if (h > 13) continue;
@@ -1164,7 +1510,7 @@
           ctx.fillStyle = 'rgba(220,235,255,' + (a * 0.12 * tw) + ')'; ctx.fillRect(pr.x - 0.6, pr.y + 2, 1.2, 2 + tw * 2);
         }
       }
-      for (const l of L) { const pr = cam.project(l.x, l.y, l.z), rad = pr.k * l.r * 0.8; const g = ctx.createRadialGradient(pr.x, pr.y, 0, pr.x, pr.y, rad); g.addColorStop(0, 'rgba(255,190,90,' + (0.22 * l.warm * d) + ')'); g.addColorStop(1, 'rgba(255,150,60,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(pr.x, pr.y, rad, 0, Math.PI * 2); ctx.fill(); }
+      for (const l of L) { const pr = cam.project(l.x, l.y, l.z), rad = pr.k * l.r * 0.8; const g = ctx.createRadialGradient(pr.x, pr.y, 0, pr.x, pr.y, rad); g.addColorStop(0, 'rgba('+(l.tint||'255,190,90')+','+(0.22*l.warm*d)+')'); g.addColorStop(1, 'rgba('+(l.tint||'255,150,60')+',0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(pr.x, pr.y, rad, 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
     }
     // Poudre de champignon : on la lance sur la case devant soi (libre, même étage) et un champignon géant y pousse
@@ -1313,6 +1659,8 @@
       else if (it.type === 'speed') { if (p.speedUp < BK.MAX_SPEED_UP) { p.speedUp++; p.speed += 0.45; } }
       else if (it.type === 'kick') p.kick = true;
       else if (it.type === 'gloves') p.gloves = true;
+      else if (it.type === 'heavyboots') p.heavyboots = true;
+      else if (it.type === 'waterwalk') p.waterwalk = true;
       else if (it.type === 'lantern') p.lantern = true;
       else if (it.type === 'shield') p.shield = 1;
       else if (it.type === 'card') { p.cards = (p.cards || 0) + 1; p.score += 200; }
@@ -1336,14 +1684,44 @@
     giveItem(p, type, value, bought) { if (!this.applyItem(p, { type, value }, bought)) return false; this.burst(p.x, p.y, 0.4, BK.ITEMS[type].color, 10); this.events.push({ type: 'itemTaken', player: p, item: type }); return true; }
 
     // ------------------------------------------------------------------ ennemis
+    gnomeResidence(kind,c,r) {
+      const isHouse=(x,y)=>this.inside(x,y)&&this.deco[this.idx(x,y)]===kind;
+      if(isHouse(c,r)){
+        const dir=((this.props[c+','+r]?.orientation||0)%4+4)%4;
+        for(const d of [dir,(dir+1)%4,(dir+3)%4,(dir+2)%4]){
+          const D=DIRS[d],x=c+D.dx,y=r+D.dy;
+          if(!this.blocked(x,y)&&Math.abs(this.hAt(x,y)-this.hAt(c,r))<.1)return {c:x,r:y,houseC:c,houseR:r};
+        }
+        return null;
+      }
+      const cells=[{c,r,steps:0}],seen=new Set([c+','+r]);
+      for(const at of cells){
+        for(const {dx,dy} of DIRS){
+          const x=at.c+dx,y=at.r+dy,key=x+','+y;
+          if(isHouse(x,y)&&Math.abs(this.hAt(x,y)-this.hAt(at.c,at.r))<.1)return {c:at.c,r:at.r,houseC:x,houseR:y};
+          if(at.steps<3&&!seen.has(key)&&!this.blocked(x,y)&&this.canStep(at.c,at.r,x,y)){
+            seen.add(key);cells.push({c:x,r:y,steps:at.steps+1});
+          }
+        }
+      }
+      return null;
+    }
     addEnemy(type, c, r, o) {
       const def = BK.ENEMIES[type];
-      const e = { type, def, x: c + 0.5, y: r + 0.5, dir: Math.floor(Math.random() * 4), speed: def.speed, hp: def.hp, maxHp: def.hp, r: def.r, t: Math.random() * 10, hurt: 0, dead: false, deadT: 0,
+      const e = { type, def, climbs: !!def.peaceful, x: c + 0.5, y: r + 0.5, dir: Math.floor(Math.random() * 4), speed: def.speed, hp: def.hp, maxHp: def.hp, r: def.r, t: Math.random() * 10, hurt: 0, dead: false, deadT: 0,
         home: def.peaceful ? { c, r } : undefined, pause: def.peaceful ? Math.random() * 1.5 : 0, ghost: def.behavior === 'ghost', target: null, state: 'walk', stateT: 0, z: 0, boss: def.boss || null, name: def.name, ...(o || {}) };
+      if(def.residence){
+        e.gnomeFoods=BK.normalizeEggCare({foods:e.gnomeFoods}).foods;
+        const home=e.gnomeHome=this.gnomeResidence(def.residence,c,r);
+        if(home){
+          e.home=home;e.gnomeReturnAt=this.time+7+Math.random()*3;
+          if(c===home.houseC&&r===home.houseR){e.x=home.c+.5;e.y=home.r+.5;}
+        }
+      }
       this.enemies.push(e); return e;
     }
     hurtEnemy(e, by, dmg, source) {
-      if(e.bond?.pets>=2&&e.bond?.meals>=1&&!BK.settings.friendlyFire&&(by?.id===e.bond.owner||by?.leader?.id===e.bond.owner))return false;
+      if(this.petBondReady(e)&&!BK.settings.friendlyFire&&(by?.id===e.bond.owner||by?.leader?.id===e.bond.owner))return false;
       if(e.arenaBoss && (by===e || e.state==='sealed' || e.state==='transform'))return false;
       const helper=by?.ally?by:null;
       if(by?.ally)by=by.leader;
@@ -1387,6 +1765,7 @@
       this.time += dt; const carried = this.events.filter(e => e.carry); this.events.length = 0; for (const e of carried) { e.carry = false; this.events.push(e); }   // événements nés hors de la mise à jour (touche, clic) : vus au prochain tour
       if (this.shake > 0) this.shake = Math.max(0, this.shake - dt);
       if (!this.frozen) {
+        this.updateMaples(dt);
         for (const p of this.players) {if(p.ally)this.updateAlly(p,dt);this.updatePlayer(p, dt);}
         this.updateArenaEffects(dt);
         for(const bar of this.firebars){const props=this.props[bar.c+','+bar.r]||{},speed=props.speed==='slow'?.5:props.speed==='fast'?2:1;bar.angle=(bar.angle+dt*.9*speed*(props.direction===-1?-1:1))%(Math.PI*2);}
@@ -1437,9 +1816,10 @@
       if(this.updateBombStun?.(p,dt))return;
       const inp = p.input;
       // actions
-      const busy = (p.pose === 'pickup' || p.pose === 'throw') && p.poseT < p.poseDur;
+      const busy = (p.pose === 'pickup' || p.pose === 'throw' || p.pose === 'pet' || p.pose === 'feed') && p.poseT < p.poseDur;
       if (inp.bomb && !busy) {
         inp.bomb = false;
+        if(this.harvestMaple(p))return;
         if (p.carrying) { if(p.inflate && !p.carrying.rock) p.inflating=p.carrying; else this.throwBomb(p); }
         else if (this.bombAt(Math.floor(p.x), Math.floor(p.y))) { if(this.pickupBomb(p) && p.inflate && inp.bombHeld && !p.carrying.rock) p.inflating=p.carrying; }
         else if (!this.placeBomb(p)) { if(this.pickupBomb(p) && p.inflate && inp.bombHeld && !p.carrying.rock) p.inflating=p.carrying; }
@@ -1449,14 +1829,14 @@
         if(p.carrying!==b || b.exploded) p.inflating=null;
         else if(inp.bombHeld) {
           if(b.baseFire==null){b.baseFire=b.fire;b.baseDamage=b.damage||1;}
-          b.inflation=Math.min(1,(b.inflation||0)+dt/1.1);b.fire=b.baseFire+Math.floor(b.inflation*2);b.damage=b.baseDamage+Math.floor(b.inflation*2);
+          b.inflation=Math.min(1,(b.inflation||0)+dt/1.1);b.fire=b.baseFire+Math.floor(b.inflation*2);b.damage=b.baseDamage+Math.floor(b.inflation*2)*(b.damageMultiplier||1);
         } else if(!busy) this.throwBomb(p);
       }
-      if (inp.action && !busy) { inp.action = false; if (this.useSnail(p)) { /* escargot */ } else if (!p.carrying && this.petAnimal(p)) { /* caresse */ } else if (p.carrying) this.throwBomb(p); else this.pickupBomb(p); }
+      if (inp.action && !busy) { inp.action = false; if(this.harvestMaple(p)) { /* sirop */ } else if (this.useSnail(p)) { /* escargot */ } else if (!p.carrying && this.petAnimal(p)) { /* caresse */ } else if (p.carrying) this.throwBomb(p); else this.pickupBomb(p); }
       // debout sur une bombe : on rebondit sur place ; une direction = grand bond dans cette direction
       if (p.onBomb) {
         const b = p.onBomb;
-        if (b.state !== 'idle' || b.exploded || p.carrying) { p.onBomb = null; p.zOff = 0; }
+        if (!p.bombjump || b.state !== 'idle' || b.exploded || p.carrying) { p.onBomb = null; p.zOff = 0; }
         else {
           p.x = b.x; p.y = b.y; p.zOff = 0.55 + 0.07 * Math.abs(Math.sin(p.animT * 6)); p.moving = false; p.running = false; p.wasMoving = false;
           if (p.poseDur && p.poseT >= p.poseDur) { p.poseDur = 0; p.pose = 'idle'; } if (!p.poseDur) p.pose = 'idle';
@@ -1469,7 +1849,7 @@
       }
       // déplacement
       let dx = inp.dx || 0, dy = inp.dy || 0;
-      const lockMove = p.pose === 'pickup' && p.poseT < 0.25 || p.pose === 'throw' && p.poseT < 0.15 || p.pose === 'hit' && p.poseT < 0.3;
+      const lockMove = (p.pose === 'pet' || p.pose === 'feed') && p.poseT < p.poseDur || p.pose === 'pickup' && p.poseT < 0.25 || p.pose === 'throw' && p.poseT < 0.15 || p.pose === 'hit' && p.poseT < 0.3;
       if (lockMove) { dx = dy = 0; }
       const len = Math.hypot(dx, dy);
       if (len > 1) { dx /= len; dy /= len; }
@@ -1504,8 +1884,8 @@
       if(p.diarrheaT>0 && p.moving && !p.carrying && !p.air && !p.onBomb && p.autoBombT<=0) { if(this.placeBomb(p)) p.autoBombT=0.22; }
       // descendu d'un rebord : on reste en l'air un instant et on retombe avec un petit nuage
       const gz1 = this.explore ? this.groundZ(p.x, p.y) : 0;
-      if (gz1 < gz0 - 0.3 && !p.onBomb) { p.zOff = (p.zOff || 0) + (gz0 - gz1); p.dropV = 0; }
-      if (p.zOff > 0 && !p.onBomb && !p.air) { p.dropV = (p.dropV || 0) - 18 * dt; p.zOff = Math.max(0, p.zOff + p.dropV * dt); if (p.zOff === 0) { p.dropV = 0; this.burst(p.x, p.y, 0.2, 'rgba(230,220,200,0.8)', 3); } }
+      if (gz1 < gz0 - 0.3 && !p.onBomb) { p.dropStartZ??=gz0; p.zOff = (p.zOff || 0) + (gz0 - gz1); p.dropV = 0; }
+      if (p.zOff > 0 && !p.onBomb && !p.air) { p.dropV = (p.dropV || 0) - 18 * dt; p.zOff = Math.max(0, p.zOff + p.dropV * dt); if (p.zOff === 0) { const start=p.dropStartZ;p.dropV=0;p.dropStartZ=null; if(start!=null)this.landFromHeight(p,start-gz1); if(!p.alive)return; this.burst(p.x, p.y, 0.2, 'rgba(230,220,200,0.8)', 3); } }
       // enfoncé dans une case qui bloque (au pied du rebord dont on vient de sauter) : on est repoussé doucement dehors
       if (this.explore && !p.onBomb) { const ov = this.collides(p.x, p.y, p.r, p); if (ov) { const nx = Math.max(ov.c, Math.min(ov.c + 1, p.x)), ny = Math.max(ov.r, Math.min(ov.r + 1, p.y)); let ux = p.x - nx, uy = p.y - ny, d = Math.hypot(ux, uy); if (d < 1e-6) { ux = p.x - ov.c - 0.5; uy = p.y - ov.r - 0.5; d = Math.hypot(ux, uy) || 1; ux /= d; uy /= d; d = 0; } else { ux /= d; uy /= d; } const push = Math.min(p.r - d + 0.002, 4 * dt), tx = p.x + ux * push, ty = p.y + uy * push; if (!this.collides(tx, ty, p.r, p, p)) { p.x = tx; p.y = ty; } } }
       // pose
@@ -1525,13 +1905,13 @@
       if(p.ally)return;
       // objets, sortie
       const c = Math.floor(p.x), r = Math.floor(p.y);
-      if (this.explore) { const t = this.tAt(c, r); if (t === T_WATER || t === T_VOID) { this.startFall(p, t === T_WATER ? 'water' : 'void'); return; } if (t === T_LAVA) { if (p.invuln <= 0 && !p.onBomb) { this.burst(p.x, p.y, 0.4, '#ff8a1f', 10); this.hitPlayer(p, { kind: 'lava', dmg: 5 }); this.events.push({ type: 'burn', player: p }); } } else p.safe = { x: c + 0.5, y: r + 0.5, dir: p.dir }; }
+      if (this.explore) { const t = this.tAt(c, r); if (t === T_VOID || t === T_WATER && !p.waterwalk) { this.startFall(p, t === T_WATER ? 'water' : 'void'); return; } if (t === T_LAVA) { if (p.invuln <= 0 && !p.onBomb) { this.burst(p.x, p.y, 0.4, '#ff8a1f', 10); this.hitPlayer(p, { kind: 'lava', dmg: 5 }); this.events.push({ type: 'burn', player: p }); } } else p.safe = { x: c + 0.5, y: r + 0.5, dir: p.dir }; }
       const it = this.itemAt(c, r); if (it) this.takeItem(p, it);
       if (this.deco[this.idx(c, r)] === 'carrot') this.pickCarrot(p, c, r);
       // devant une porte (la case juste au sud, face à elle) : la pancarte « Entrer » s'affiche, Entrée fait entrer
       p.nearFountain = null; if (this.explore) { const pc = Math.floor(p.x), pr0 = Math.floor(p.y); for (let dc = -1; dc <= 1 && !p.nearFountain; dc++) for (let dr = -1; dr <= 1; dr++) { if (this.inside(pc + dc, pr0 + dr) && this.deco[this.idx(pc + dc, pr0 + dr)] === 'fountain') { p.nearFountain = { c: pc + dc, r: pr0 + dr }; break; } } }
       p.nearFire = null; if (this.campfires.length && !p.npc && (p.inv || []).some(s => !!BK.COOKABLE[s.type])) { const f = this.fireNear(p); if (f && !f.cook) p.nearFire = f; }
-      p.nearDoor = null; for (const d of this.doors) if (d.enterable && Math.abs(p.x - d.c - 0.5) < 0.6 && p.y > d.r + 1 && p.y < d.r + 2.1) p.nearDoor = d;
+      p.nearDoor = null; for (const d of this.doors) if (d.enterable && Math.abs(p.x - d.c - 0.5) < 0.6 && p.y > d.r + 1 && p.y < d.r + 2.1 && (!d.cave||Math.abs(this.groundZ(p.x,p.y)-this.hAt(d.c,d.r))<.12)) p.nearDoor = d;
       const exit=this.roomExit ? this.special.get(c+','+r)?.exit : this.exit;
       if (exit && exit.open && exit.c === c && exit.r === r && !exit.used) {
         if (this.roomExit || Math.hypot(p.x - c - 0.5, p.y - r - 0.5) < (exit.kind === 'diamond' ? 0.45 : 0.3)) { exit.used = true; this.events.push({ type: 'exit', player: p, kind: exit.kind }); }
@@ -1549,8 +1929,8 @@
         // coup de pied
         const b = this.bombAt(hit.c, hit.r);
         // Avec le pouvoir, marcher pousse la bombe ; courir permet toujours de sauter dessus.
-        if (b && !b.rock && who && who.human && !who.npc && !who.carrying && !who.air && b.state === 'idle' && (!who.kick || who.running)) { this.hopOnto(who, b); return; }
-        if (b && !b.rock && who && who.kick && b.state === 'idle' && (!who.running || !who.human)) { const d = axis === 'x' ? (sign > 0 ? 3 : 1) : (sign > 0 ? 0 : 2); const D = DIRS[d]; const other = this.bombAt(b.cx + D.dx, b.cy + D.dy); if (!this.blocked(b.cx + D.dx, b.cy + D.dy) || who.fusion && other && !other.rock && !this.cell(other.cx, other.cy)) this.kickBomb(b, d, who); }
+        if (b && !b.rock && who && who.bombjump && who.human && !who.npc && !who.carrying && !who.air && b.state === 'idle' && (!who.kick || who.running)) { this.hopOnto(who, b); return; }
+        if (b && !b.rock && who && who.kick && b.state === 'idle' && (!who.running || !who.human || !who.bombjump)) { const d = axis === 'x' ? (sign > 0 ? 3 : 1) : (sign > 0 ? 0 : 2); const D = DIRS[d]; const other = this.bombAt(b.cx + D.dx, b.cy + D.dy); if (!this.blocked(b.cx + D.dx, b.cy + D.dy) || who.fusion && other && !other.rock && !this.cell(other.cx, other.cy)) this.kickBomb(b, d, who); }
         if (who && who.boss && this.cell(hit.c, hit.r) === SOFT) { this.destroyBlock(hit.c, hit.r, null); continue; }
         // aide dans les coins : on glisse vers le passage le plus proche
         const cur = axis === 'x' ? Math.floor(e.y) : Math.floor(e.x);
@@ -1639,7 +2019,7 @@
       for (const e of this.enemies) {
         if (e.dead) continue;
         const f = this.flameTouches(e.x, e.y, e.r);
-        if (f) this.hurtEnemy(e, f.bomb?.kicker || f.owner, f.bomb && f.bomb.damage || 1, !f.magic && f.bomb && f.bomb.blastSource === 'bomb' ? 'bomb' : 'other');
+        if (f && !(f.bomb?.petBreath && (e.def.peaceful || e.tame))) this.hurtEnemy(e, f.bomb?.kicker || f.owner, f.bomb && f.bomb.damage || 1, !f.magic && f.bomb && f.bomb.blastSource === 'bomb' ? 'bomb' : 'other');
       }
     }
     // Pluie de blocs (mort subite) : spirale de l'extérieur vers l'intérieur.
@@ -1673,10 +2053,18 @@
     updateEnemy(e, dt) {
       e.t += dt; e.stateT += dt; if (e.hurt > 0) e.hurt -= dt;
       if (e.dead) { e.deadT += dt; return; }
+      const poison=e.gnomePoison;
+      if(poison&&this.time>=poison.next&&e.hurt<=0){
+        this.hurtEnemy(e,poison.owner,1,'pet');
+        this.burst(e.x,e.y,.4,'#9ade78',5);
+        poison.next=this.time+1;if(--poison.left<=0)e.gnomePoison=null;
+        if(e.dead)return;
+      }
       if (e.stunT > 0 && !e.leap) { e.stunT = Math.max(0, e.stunT - dt); return; }   // étourdi par une bombe bottée : des étoiles, et il ne fait rien
       if(e.arenaBoss)return this.updateFirstBoss(e,dt);
       if(e.def.bestiary)return this.updateBestiary(e,dt);
       const bh = e.def.behavior;
+      if (e.gnomeAngry) return this.updateAngryGnome(e,dt);
       if (bh === 'peaceful') return this.updatePeaceful(e, dt);
       if (bh === 'toad') return this.updateToad(e, dt);
       if (bh === 'launcher') return this.updateLauncher(e, dt);
@@ -1807,7 +2195,7 @@
     // Déplacement libre (pas case par case) vers un point : on glisse le long des blocs ; vrai si on a avancé.
     moveFree(e, tx, ty, speed, dt) {
       const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy); if (d < 1e-4) return true; const step = Math.min(d, speed * this.slowAt(e) * dt), ux = dx / d, uy = dy / d, h0 = this.hAt(Math.floor(e.x), Math.floor(e.y));
-      const free = (x, y) => { const c = Math.floor(x), r = Math.floor(y); return this.inside(c, r) && !this.cell(c, r) && this.walkableTerrain(c, r) && !this.bombAt(c, r) && Math.abs(this.hAt(c, r) - h0) < 0.01 && (this.solidEnemyAt(c, r) || e) === e; };
+      const free = (x, y) => { const c = Math.floor(x), r = Math.floor(y); return this.inside(c, r) && !this.cell(c, r) && this.walkableTerrain(c, r) && !this.bombAt(c, r) && (e.climbs ? this.canStep(Math.floor(e.x),Math.floor(e.y),c,r,e) : Math.abs(this.hAt(c, r) - h0) < 0.01) && (this.solidEnemyAt(c, r) || e) === e; };
       const probe = (x, y, px, py) => free(x, y) && free(x + px * e.r * 0.8, y + py * e.r * 0.8) && free(x + px * e.r * 0.8, y) && free(x, y + py * e.r * 0.8);
       const nx = e.x + ux * step, ny = e.y + uy * step, sx = Math.sign(ux), sy = Math.sign(uy);
       if (probe(nx, ny, sx, sy)) { e.x = nx; e.y = ny; if (ux) e.flip = ux < 0; return true; }
@@ -1818,7 +2206,7 @@
     // Un animal apprivoisé protège son ami pendant qu’il le suit.
     updateAnimalFriend(e,dt) {
       const p=e.follow;
-      if(!p?.alive||p.falling||e.followT<=0||e.bond?.owner!==p.id||e.bond.pets<2||e.bond.meals<1||Math.hypot(e.x-p.x,e.y-p.y)>6)return false;
+      if(!p?.alive||p.falling||e.followT<=0||e.bond?.owner!==p.id||!this.petBondReady(e)||Math.hypot(e.x-p.x,e.y-p.y)>6)return false;
       const foe=this.enemies.filter(q=>q!==e&&!q.dead&&!q.def.peaceful&&!q.tame&&q.state!=='hidden'&&q.state!=='sealed'&&q.state!=='transform'&&Math.abs(this.groundZ(q.x,q.y)-this.groundZ(e.x,e.y))<.2&&this.canSee(p,q,4)&&this.canSee(e,q,5)).sort((a,b)=>(a.swallowed===p?-10:Math.hypot(a.x-e.x,a.y-e.y))-(b.swallowed===p?-10:Math.hypot(b.x-e.x,b.y-e.y)))[0];
       if(!foe)return false;
       e.target=null;e.pause=0;
@@ -1839,9 +2227,129 @@
       return true;
     }
     // Faune paisible : petites promenades près du point de placement, avec des pauses.
+    updatePetRefusal(e,dt) {
+      if(!e.rejectUntil)return false;
+      if(this.time>=e.rejectUntil){e.rejectUntil=0;e.target=null;e.pause=0;return false;}
+      if(e.rejectSpitAt){
+        if(this.time<e.rejectSpitAt)return true;
+        e.rejectSpitAt=0;this.burst(e.x,e.y,.35,'#b99964',7);this.addFloater(e.x,e.y,'Beurk !',{color:'#ffe5b1',life:1,size:.25});
+      }
+      if(!e.target){const dirs=this.freeDirs(Math.floor(e.x),Math.floor(e.y),e);if(!dirs.length)return true;
+        const d=DIRS[pick(dirs)];e.target={x:Math.floor(e.x)+d.dx+.5,y:Math.floor(e.y)+d.dy+.5};e.flip=d.dx<0;}
+      e.state='walk';this.moveFree(e,e.target.x,e.target.y,e.speed,dt);
+      if(Math.hypot(e.x-e.target.x,e.y-e.target.y)<.1)e.target=null;
+      return true;
+    }
+    updateGnomeCompanion(e,dt) {
+      const p=this.players.find(p=>p.id===e.bond?.owner&&p.alive);
+      if(!p||!this.petBondReady(e))return false;
+      e.follow=p;e.followT=60;e.gnomeInsideUntil=0;
+      if(p.falling||p.boat||e.petT>0){e.state='rest';return true;}
+      const foe=this.enemies.find(q=>!q.dead&&!q.def.peaceful&&!q.tame&&!['hidden','sealed','transform'].includes(q.state)&&
+        Math.abs(this.groundZ(q.x,q.y)-this.groundZ(p.x,p.y))<.25&&this.canSee(p,q,4.5));
+      const facing=DIRS[p.dir],dx=foe?foe.x-p.x:facing.dx,dy=foe?foe.y-p.y:facing.dy,dist=Math.hypot(dx,dy)||1;
+      const ux=dx/dist,uy=dy/dist,cover={x:p.x-ux*.74,y:p.y-uy*.74};
+      const free=point=>!this.blocked(Math.floor(point.x),Math.floor(point.y))&&
+        !this.flameAt.has(this.idx(Math.floor(point.x),Math.floor(point.y)))&&
+        Math.abs(this.groundZ(point.x,point.y)-this.groundZ(p.x,p.y))<.25;
+      const shelter=free(cover)?cover:p;
+      if(Math.hypot(e.x-shelter.x,e.y-shelter.y)<.18)e.gnomeInCover=true;
+      const ready=foe&&e.gnomeInCover&&this.time>=(e.gnomeThrowAt||0);
+      const peek=ready&&[1,-1].map(side=>({x:cover.x-uy*side*.65,y:cover.y+ux*side*.65})).find(point=>free(point)&&this.canSee(point,foe,5));
+      const goal=peek||shelter;
+      const near=Math.hypot(e.x-goal.x,e.y-goal.y)<.14;
+      if(near&&peek&&this.canSee(e,foe,5)){
+        const a=Math.atan2(foe.y-e.y,foe.x-e.x);
+        this.shots.push({kind:'gnomeMushroom',x:e.x,y:e.y,z:.55,ground:this.groundZ(e.x,e.y),a,speed:6.5,r:.17,t:0,life:.95,owner:p});
+        e.gnomeThrowAt=this.time+2.5;e.gnomeInCover=false;e.flip=Math.cos(a)<0;
+      }
+      e.state=near?'rest':'walk';
+      if(!near){
+        const speed=Math.max(e.speed,p.speed*.92);
+        if(!this.moveFree(e,goal.x,goal.y,speed,dt)){
+          const next=this.stepToward(Math.floor(e.x),Math.floor(e.y),Math.floor(goal.x),Math.floor(goal.y),(n,from)=>
+            Math.hypot(n.c+.5-p.x,n.r+.5-p.y)<7&&!this.blocked(n.c,n.r)&&this.canStep(from.c,from.r,n.c,n.r,e));
+          if(next)this.moveFree(e,next.c+.5,next.r+.5,speed,dt);
+        }
+      }
+      return true;
+    }
+    updateAngryGnome(e,dt) {
+      const p=this.players.includes(e.gnomeTarget)&&e.gnomeTarget.alive?e.gnomeTarget:this.nearestPlayer(e.x,e.y);
+      if(!p||p.falling){e.state='rest';return;}
+      const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);
+      if(this.canSee(e,p,5)&&Math.abs(this.groundZ(e.x,e.y)-this.groundZ(p.x,p.y))<.25){
+        e.state='rest';e.flip=dx<0;
+        if(this.time>=e.gnomeThrowAt){
+          const a=Math.atan2(dy,dx);
+          this.shots.push({kind:'gnomeMushroom',hostile:true,x:e.x,y:e.y,z:.55,ground:this.groundZ(e.x,e.y),a,speed:5.5,r:.17,t:0,life:1.05,owner:e});
+          e.gnomeThrowAt=this.time+2.15+Math.random()*.65;
+        }
+        if(dist>1)return;
+        this.moveFree(e,e.x-dx,e.y-dy,e.speed,dt);
+        return;
+      }
+      const c=Math.floor(e.x),r=Math.floor(e.y);
+      const next=this.stepToward(c,r,Math.floor(p.x),Math.floor(p.y),(n,from)=>
+        !this.blocked(n.c,n.r)&&this.canStep(from.c,from.r,n.c,n.r,e));
+      e.state=next?'walk':'rest';
+      if(next)this.moveFree(e,next.c+.5,next.r+.5,e.speed,dt);
+    }
+    updateGnomeMushroom(s,dt) {
+      const distance=s.speed*dt,steps=Math.max(1,Math.ceil(distance/.15)),dx=Math.cos(s.a)*distance/steps,dy=Math.sin(s.a)*distance/steps;
+      s.z=.52+Math.sin(Math.min(1,s.t/.8)*Math.PI)*.37;
+      for(let i=0;i<steps;i++){
+        s.x+=dx;s.y+=dy;
+        const c=Math.floor(s.x),r=Math.floor(s.y);
+        if(s.life<=0||!this.inside(c,r)||this.cell(c,r)||Math.abs(this.hAt(c,r)-s.ground)>.3){this.killShot(s);return;}
+        if(s.hostile){
+          const p=this.players.find(p=>p.alive&&!p.npc&&!p.falling&&!p.air&&
+            Math.abs(this.groundZ(p.x,p.y)-s.ground)<.3&&Math.hypot(p.x-s.x,p.y-s.y)<p.r+s.r);
+          if(p){
+            if(this.hitPlayer(p,{kind:'shot',shot:s,dmg:4}))this.poisonPlayer(p,s.owner);
+            this.killShot(s);return;
+          }
+          continue;
+        }
+        const foe=this.enemies.find(e=>!e.dead&&!e.def.peaceful&&!e.tame&&!['hidden','sealed','transform'].includes(e.state)&&
+          Math.abs(this.groundZ(e.x,e.y)-s.ground)<.3&&Math.hypot(e.x-s.x,e.y-s.y)<(e.def.hitR||e.r)+s.r);
+        if(foe){
+          if(this.hurtEnemy(foe,s.owner,1,'pet')&&!foe.dead)foe.gnomePoison={owner:s.owner,next:this.time+1,left:3};
+          this.killShot(s);return;
+        }
+      }
+    }
+    updateGnomeHome(e,dt) {
+      const home=e.gnomeHome;
+      if(!home || this.deco[this.idx(home.houseC,home.houseR)]!==e.def.residence){
+        e.gnomeHome=null;e.gnomeInsideUntil=0;return false;
+      }
+      if(e.gnomeInsideUntil){
+        if(this.time<e.gnomeInsideUntil||this.blocked(home.c,home.r)||this.flameAt.has(this.idx(home.c,home.r)))return true;
+        e.gnomeInsideUntil=0;e.gnomeReturnAt=this.time+9+Math.random()*4;
+        return false;
+      }
+      if(this.time<e.gnomeReturnAt)return false;
+      const c=Math.floor(e.x),r=Math.floor(e.y);
+      const x=home.c+.5+(home.houseC-home.c)*.30,y=home.r+.5+(home.houseR-home.r)*.30;
+      if(Math.hypot(x-e.x,y-e.y)<.06){
+        e.x=x;e.y=y;e.target=null;e.state='rest';e.gnomeInsideUntil=this.time+2.8;
+        return true;
+      }
+      const next=c===home.c&&r===home.r?home:this.stepToward(c,r,home.c,home.r,(n,from)=>
+        Math.hypot(n.c-home.c,n.r-home.r)<=4&&!this.blocked(n.c,n.r)&&this.canStep(from.c,from.r,n.c,n.r,e)&&!this.flameAt.has(this.idx(n.c,n.r)));
+      if(!next){e.gnomeReturnAt=this.time+2;return false;}
+      e.target=null;e.state='walk';
+      if(Math.abs(next.c+.5-e.x)>.04)e.flip=next.c+.5<e.x;
+      this.moveFree(e,next===home?x:next.c+.5,next===home?y:next.r+.5,e.speed,dt);
+      return true;
+    }
     updatePeaceful(e, dt) {
+      if(this.updatePetRefusal(e,dt))return;
+
       e.fedT=Math.max(0,(e.fedT||0)-dt);
       e.z = 0; e.heartT = Math.max(0,(e.heartT||0)-dt); e.petT = Math.max(0,(e.petT||0)-dt);
+      if(e.def.residence&&(this.updateGnomeCompanion(e,dt)||this.updateGnomeHome(e,dt)))return;
       if (e.type === 'escargot') {
         if(e.carrier) {
           const p=e.carrier;
@@ -1856,7 +2364,7 @@
         e.shell = Math.max(0,Math.min(1,(e.shell || 0) + (hiding ? 5 : -0.65)*dt));
         if (hiding || e.shell > 0) { e.state = 'rest'; return; }
       }
-      const pet = !!BK.PET_FOODS[e.type], p = pet ? this.nearestPlayer(e.x,e.y) : null;
+      const pet = !!BK.PET_FOODS[e.type]&&!e.def.residence, p = pet ? this.nearestPlayer(e.x,e.y) : null;
       if (e.followReady == null) e.followReady = true;
       if (p && !e.follow && Math.hypot(p.x-e.x,p.y-e.y)>3.5) e.followReady=true;
       if (p && e.followReady && !e.follow && this.canSee(e,p,2.3)) { e.follow=p; e.followT=8; e.followReady=false; e.pause=0; e.target=null; }
@@ -1918,10 +2426,32 @@
     // Orque : garde son shaman (à 2 cases au plus). S'il voit le héros à 6 cases, il grogne et fonce en frappant de
     // l'épée ; dès qu'il s'éloigne de 4 à 6 cases de son shaman, il grogne et revient se placer à côté. Sans shaman,
     // il garde son poste de la même façon.
+    orcSwordReach(e,p) {
+      const reach=1.35;
+      if(!p?.alive||p.npc||p.air||p.falling||Math.hypot(p.x-e.x,p.y-e.y)>=reach||Math.abs(this.groundZ(p.x,p.y)-this.groundZ(e.x,e.y))>=.35)return false;
+      const clear=(a,b)=>{
+        const steps=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.05),z=this.groundZ(e.x,e.y);
+        for(let n=0;n<=steps;n++) {
+          const t=steps?n/steps:0,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t,c=Math.floor(x),r=Math.floor(y);
+          if(!this.inside(c,r)||this.cell(c,r)||Math.abs(this.groundZ(x,y)-z)>=.35)return false;
+        }
+        return true;
+      };
+      if(clear(e,p))return true;
+      // La lame peut contourner un coin proche, mais pas traverser un mur.
+      for(let r=Math.floor(Math.min(e.y,p.y));r<=Math.floor(Math.max(e.y,p.y));r++)for(let c=Math.floor(Math.min(e.x,p.x));c<=Math.floor(Math.max(e.x,p.x));c++) {
+        if(!this.cell(c,r))continue;
+        for(const x of [c-.01,c+1.01])for(const y of [r-.01,r+1.01]) {
+          const corner={x,y};
+          if(Math.hypot(x-e.x,y-e.y)+Math.hypot(p.x-x,p.y-y)<=reach&&clear(e,corner)&&clear(corner,p))return true;
+        }
+      }
+      return false;
+    }
     updateOrc(e, dt) {
       e.swing = Math.max(0, (e.swing || 0) - dt * 3);
       if (e.shaman === undefined || (e.shaman && e.shaman.dead)) { e.shaman = null; let bd = 9; for (const o of this.enemies) if (!o.dead && o.type === 'shaman') { const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; e.shaman = o; } } }
-      const p = this.nearestPlayer(e.x, e.y), S = e.shaman, home = S || e.home || (e.home = { x: e.x, y: e.y });
+      const p = this.nearestPlayer(e.x, e.y) || (e.state==='chase'?this.players.filter(p=>this.orcSwordReach(e,p)).sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0]:null), S = e.shaman, home = S || e.home || (e.home = { x: e.x, y: e.y });
       const dH = Math.hypot(home.x - e.x, home.y - e.y), dP = p ? Math.hypot(p.x - e.x, p.y - e.y) : 1e9;
       if (e.state === 'walk') { e.state = 'guard'; e.stateT = 0; }
       if (e.state === 'return') { if (dH < 2) { e.state = 'guard'; e.stateT = 0; } else this.moveFree(e, home.x, home.y, e.speed * 1.2, dt); return; }
@@ -1931,7 +2461,7 @@
         this.moveFree(e, p.x, p.y, e.speed * 1.5, dt); e.flip = p.x < e.x;
         e.swingT = (e.swingT || 0) - dt; if (dP < 1.4 && e.swingT <= 0) { e.swingT = 0.55; e.swing = 1; e.swingHit = 0.18; this.events.push({ type: 'swing', enemy: e }); }   // coups d'épée sans arrêt
         // L'épée touche vraiment à sa portée, même quand un coin de mur, une bombe ou une marche l'empêche de coller au héros.
-        if (e.swingHit > 0) { e.swingHit -= dt; if (e.swingHit <= 0 && p.alive && !p.air && !p.falling && Math.hypot(p.x - e.x, p.y - e.y) < 1.35 && Math.abs(this.groundZ(p.x, p.y) - this.groundZ(e.x, e.y)) < 0.35) this.hitPlayer(p, { kind: 'enemy', enemy: e, dmg: e.def.dmg || 10 }); }
+        if (e.swingHit > 0) { e.swingHit -= dt; if (e.swingHit <= 0 && this.orcSwordReach(e,p)) this.hitPlayer(p, { kind: 'enemy', enemy: e, dmg: e.def.dmg || 10 }); }
         return;
       }
       if (p && e.stateT > 0.5 && dP < 6 && this.canSee(e, p, 6)) { e.state = 'chase'; e.stateT = 0; e.leash = 4 + Math.random() * 2; this.events.push({ type: 'growl', enemy: e }); return; }
@@ -2065,6 +2595,7 @@
       for (const s of this.shots) {
         if (s.dead) { s.deadT += dt; continue; }
         s.t += dt; s.life -= dt;
+        if(s.kind==='gnomeMushroom'){this.updateGnomeMushroom(s,dt);continue;}
         if (s.kind === 'missile') { const p = this.nearestPlayer(s.x, s.y); if (p) { const want = Math.atan2(p.y - s.y, p.x - s.x); let d = want - s.a; d = Math.atan2(Math.sin(d), Math.cos(d)); s.a += Math.max(-s.turn * dt, Math.min(s.turn * dt, d)); } }
         if (s.kind === 'bone') {   // boomerang : aller, pause au bout, retour vers le squelette
           const o = s.owner;
@@ -2130,7 +2661,7 @@
       else if (s.kind === 'dirt') this.burst(s.x, s.y, 0.4, '#7d5428', 10, 1);
       else if (s.kind === 'bone') this.burst(s.x, s.y, 0.35, '#f4f0e6', 8, 1);
       else if (s.kind === 'ice') this.burst(s.x, s.y, 0.35, '#e8fbff', 10);
-      else if (s.kind === 'poison') { this.burst(s.x, s.y, 0.45, 'rgba(120,255,80,0.9)', 12); this.burst(s.x, s.y, 0.3, '#1f7a2a', 6, 1); }
+      else if (s.kind === 'poison' || s.kind==='gnomeMushroom') { this.burst(s.x, s.y, 0.45, 'rgba(120,255,80,0.9)', 12); this.burst(s.x, s.y, 0.3, '#1f7a2a', 6, 1); }
       else if (s.kind === 'magic') { this.burst(s.x, s.y, 0.4, '#ffd54a', 6); this.burst(s.x, s.y, 0.4, '#ff5c8a', 6); this.burst(s.x, s.y, 0.4, '#3f9cff', 6); }
       else this.burst(s.x, s.y, 0.3, '#666', 6);
       if (by) { by.score += 50; this.events.push({ type: 'shotDestroyed', shot: s, player: by }); }
@@ -2289,6 +2820,24 @@
     livingEnemies() { return this.enemies.filter(e => !e.dead && !e.tame && !e.def.peaceful); }   // les animaux pacifiques et les lapins apprivoisés ne comptent pas
 
     // ------------------------------------------------------------------ rendu
+    playerDrawDepth(p) {
+      if(p.seat)return p.seat.r+.5+(p.dir===2?-.3:.3);
+      if(!p.air&&!(p.zOff>0))return p.y;
+      const feet=(this.explore?this.groundZ(p.x,p.y):0)+(p.zOff||0),radius=p.r||.25;
+      let depth=p.y;
+      for(let r=Math.floor(p.y-radius);r<=Math.floor(p.y+radius);r++)for(let c=Math.floor(p.x-radius);c<=Math.floor(p.x+radius);c++) {
+        if(!this.inside(c,r))continue;
+        const i=this.idx(c,r),v=this.cells[i],deco=this.deco[i],sp=this.special.get(c+','+r);
+        // Dessiner après les blocs réellement survolés, seulement si les pieds dépassent leur sommet.
+        let height=null;
+        if(v===HARD&&!deco&&!this.trees.some(t=>t.c===c&&t.r===r)&&!this.rocks.some(t=>t.c===c&&t.r===r)&&sp?.type!=='door')height=this.explore ? .85 : (c===0||r===0||c===this.cols-1||r===this.rows-1?1:.9);
+        if(v===METAL||sp?.type==='brick'||BK.CUBE_BLOCKS.includes(deco))height=.9;
+        if(height==null)continue;
+        const top=(this.explore?this.hAt(c,r):0)+height;
+        if(feet>=top-.001)depth=Math.max(depth,r+1.001);
+      }
+      return depth;
+    }
     render(ctx, cam, o) {
       o = o || {}; const T = this.theme, time = this.time;
       ctx.save();
@@ -2296,24 +2845,51 @@
       // ciel, montagnes, nuages
       const W = cam.W, H = cam.H;
       if (!o.noBackground) {
-      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, T.sky[0]); g.addColorStop(1, T.sky[1]); ctx.fillStyle = g; ctx.fillRect(-20, -20, W + 40, H + 40);
-      const dk = this.darkness(); if (dk > 0.3) {   // étoiles dans le ciel, derrière les montagnes et le terrain
-        const a = Math.min(1, (dk - 0.3) / 0.7); for (let i = 0; i < 70; i++) { const sx = ((i * 7919) % 1000) / 1000 * W, sy = ((i * 104729) % 1000) / 1000 * H * 0.42, tw = 0.5 + 0.5 * Math.sin(time * (1.5 + i % 3) + i); ctx.fillStyle = 'rgba(255,255,255,' + (a * 0.85 * tw) + ')'; ctx.beginPath(); ctx.arc(sx, sy, i % 5 === 0 ? 1.9 : 1.2, 0, Math.PI * 2); ctx.fill(); }
-      }
-      ctx.fillStyle = T.mountain; ctx.beginPath(); ctx.moveTo(-20, H * 0.5);
-      for (let x = -20; x <= W + 40; x += 40) { const h = Math.sin(x * 0.011) * 60 + Math.sin(x * 0.027 + 2) * 35 + Math.sin(x * 0.005) * 50; ctx.lineTo(x, H * 0.36 - h); }
-      ctx.lineTo(W + 40, H); ctx.lineTo(-20, H); ctx.closePath(); ctx.fill();
-      const fg = ctx.createLinearGradient(0, H * 0.3, 0, H * 0.75); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, T.fog); ctx.fillStyle = fg; ctx.fillRect(-20, H * 0.3, W + 40, H);
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      for (const c of this.clouds) { const x = ((c.x + time * c.v) % (W + 300)) - 150; for (const [ox, oy, r] of [[0, 0, 26], [22, -10, 20], [-20, -6, 18], [40, 4, 16], [-36, 6, 14]]) { ctx.beginPath(); ctx.arc(x + ox * c.s, c.y + oy * c.s, r * c.s, 0, Math.PI * 2); ctx.fill(); } }
+        const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, T.sky[0]); g.addColorStop(1, T.sky[1]); ctx.fillStyle = g; ctx.fillRect(-20, -20, W + 40, H + 40);
+        const dk = this.darkness(); if (dk > 0.3 && this.themeId!=='cave') {   // étoiles dans le ciel, derrière les montagnes et le terrain
+          const a = Math.min(1, (dk - 0.3) / 0.7); for (let i = 0; i < 70; i++) { const sx = ((i * 7919) % 1000) / 1000 * W, sy = ((i * 104729) % 1000) / 1000 * H * 0.42, tw = 0.5 + 0.5 * Math.sin(time * (1.5 + i % 3) + i); ctx.fillStyle = 'rgba(255,255,255,' + (a * 0.85 * tw) + ')'; ctx.beginPath(); ctx.arc(sx, sy, i % 5 === 0 ? 1.9 : 1.2, 0, Math.PI * 2); ctx.fill(); }
+        }
+        if(this.themeId!=='cave'){
+          ctx.fillStyle = T.mountain; ctx.beginPath(); ctx.moveTo(-20, H * 0.5);
+          for (let x = -20; x <= W + 40; x += 40) { const h = Math.sin(x * 0.011) * 60 + Math.sin(x * 0.027 + 2) * 35 + Math.sin(x * 0.005) * 50; ctx.lineTo(x, H * 0.36 - h); }
+          ctx.lineTo(W + 40, H); ctx.lineTo(-20, H); ctx.closePath(); ctx.fill();
+          const fg = ctx.createLinearGradient(0, H * 0.3, 0, H * 0.75); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, T.fog); ctx.fillStyle = fg; ctx.fillRect(-20, H * 0.3, W + 40, H);
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          for (const c of this.clouds) { const x = ((c.x + time * c.v) % (W + 300)) - 150; for (const [ox, oy, r] of [[0, 0, 26], [22, -10, 20], [-20, -6, 18], [40, 4, 16], [-36, 6, 14]]) { ctx.beginPath(); ctx.arc(x + ox * c.s, c.y + oy * c.s, r * c.s, 0, Math.PI * 2); ctx.fill(); } }
+        }
       }
       // sol (les cases hors champ sont sautées)
       const D3 = BK.draw3d;
       this._floorColor = (c, r, t) => floorColor(c, r, t); this._floorPattern = (p, c, r, t) => floorPattern(p, c, r, t);
       const cmin = Math.max(0, Math.floor(cam.target.x - 11)), cmax = Math.min(this.cols - 1, Math.ceil(cam.target.x + 11)), rmin = Math.max(0, Math.floor(cam.target.y - 10)), rmax = Math.min(this.rows - 1, Math.ceil(cam.target.y + 9));
       const list = [], bubbles = [];
+      // Les sprites peuvent dépasser leur case ; le relief voisin reste opaque.
+      const drawTerrainClippedDeco=(c,r,...args)=>{
+        const base=this.groundZ(c+.5,r+.5);ctx.save();
+        for(let rr=r;rr<=Math.min(this.rows-1,r+2);rr++)for(let cc=Math.max(0,c-2);cc<=Math.min(this.cols-1,c+2);cc++){
+          if(cc===c&&rr===r)continue;
+          if(rr===r&&Math.abs(cc+.5-camX)>=Math.abs(c+.5-camX))continue;
+          const i=this.idx(cc,rr),h=this.hAt(cc,rr),rp=this.ramp[i];
+          const heights=rp?this.rampHeights(cc,rr):{hN:h,hS:h,hW:h,hE:h};
+          if(Math.max(...Object.values(heights))<=base+.01)continue;
+          const {hN,hS,hW,hE}=heights;
+          const z=(x,y)=>!rp?h:Math.abs(rp)===1?hN+(hS-hN)*(y-rr):hW+(hE-hW)*(x-cc);
+          const corners=[[cc,rr],[cc+1,rr],[cc+1,rr+1],[cc,rr+1]],top=corners.map(([x,y])=>cam.project(x,y,z(x,y))),bottom=corners.map(([x,y])=>cam.project(x,y,0));
+          const faces=[top,[top[3],top[2],bottom[2],bottom[3]],cc+.5<camX?[top[2],top[1],bottom[1],bottom[2]]:[top[0],top[3],bottom[3],bottom[0]]];
+          for(const face of faces){ctx.beginPath();ctx.rect(-100000,-100000,200000,200000);ctx.moveTo(face[0].x,face[0].y);for(const p of face.slice(1))ctx.lineTo(p.x,p.y);ctx.closePath();ctx.clip('evenodd');}
+        }
+        const impact=BK.GNOME_HOUSES.has(args[1])&&this.gnomeHouseHits.get(this.idx(c,r));
+        const age=impact?time-impact.at:Infinity;
+        if(age<.35){
+          ctx.translate(Math.sin(age*70)*args[4]*.09*(1-age/.35),0);
+          if(age<.16&&Math.floor(age*30)%2===0)ctx.filter='brightness(0) invert(1)';
+          if(!impact.hp)ctx.globalAlpha*=1-age/.35;
+        }
+        BK.sprites.drawDeco(...args);ctx.restore();
+      };
+
       const camX = cam.pos.x;
-      const push = (y, x, fn) => {if(!this.hiddenSecretAt?.(Math.floor(x),Math.floor(y)))list.push({ y, x: -Math.abs(x - camX), fn });};
+      const push = (y, x, fn, sourceY=y) => {if(!this.hiddenSecretAt?.(Math.floor(x),Math.floor(sourceY)))list.push({ y, x: -Math.abs(x - camX), fn });};
       const drawSpecial = (p, c, r) => {
         const sp = this.special.get(c + ',' + r), exit=this.roomExit ? sp?.exit : this.exit;
         if (sp && sp.type === 'exit' && !this.cell(c, r) && exit?.kind === 'door') {
@@ -2375,6 +2951,13 @@
         if (t === T_ICE) { const a = D3.onQuad(p, 0.12, 0.75), b = D3.onQuad(p, 0.45, 0.2), d = D3.onQuad(p, 0.55, 0.85), e = D3.onQuad(p, 0.88, 0.35); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(e.x, e.y); ctx.stroke(); if ((c * 7 + r * 3) % 4 === 0) { const f1 = D3.onQuad(p, 0.3, 0.5), f2 = D3.onQuad(p, 0.5, 0.6), f3 = D3.onQuad(p, 0.62, 0.42); ctx.strokeStyle = 'rgba(120,170,210,0.6)'; ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y); ctx.lineTo(f3.x, f3.y); ctx.stroke(); } return; }
         if (t === T_SNOW) { ctx.fillStyle = 'rgba(255,255,255,0.9)'; for (let k = 0; k < 3; k++) { const q = D3.onQuad(p, 0.15 + ((c * 5 + r * 7 + k * 11) % 7) / 10, 0.15 + ((c * 3 + r * 11 + k * 5) % 7) / 10); ctx.beginPath(); ctx.arc(q.x, q.y, 1.2, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = 'rgba(160,190,230,0.35)'; const q2 = D3.onQuad(p, 0.3 + ((c * 7 + r) % 5) / 10, 0.55 + ((c + r * 3) % 4) / 10); ctx.beginPath(); ctx.ellipse(q2.x, q2.y, 3.5, 1.6, 0, 0, Math.PI * 2); ctx.fill(); return; }
         const line = (u0, v0, u1, v1, col, w) => { const a = D3.onQuad(p, u0, v0), b = D3.onQuad(p, u1, v1); ctx.strokeStyle = col; ctx.lineWidth = w || 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); };
+        if(t===T_STONE&&this.themeId==='cave'){
+          const u=.16+((c*7+r*11)%9)*.064,v=.27+((c*13+r*5)%6)*.074;
+          line(u-.11,v+.07,u,v,'#424650');
+          line(u,v,u+.20,v+.037,'#60616a');
+          if((c+r*3)%4===0)line(u+.20,v+.037,u+.25,v-.035,'#77716f');
+          return;
+        }
         if(t>=16&&t<=20){
           const ink=t===20?'#eee1a9':'#ad7748';
           if(t===16||t===17)for(let j=0;j<4;j++)line(.1,.16+j*.21,.85,.20+j*.21,ink,t===16?.5:1.4);
@@ -2421,7 +3004,11 @@
           continue;
         }
         if (t === T_VOID) continue;
-        if (t === T_LAVA) { const p0 = D3.tile(ctx, cam, c, r, Math.sin(time * 1.5 + c * 1.3 + r * 0.7) > 0.3 ? '#ff6a1f' : '#e8471a'); drawLava(p0, c, r); continue; }
+        if (t === T_LAVA && !this.ramp[i]) { const p0 = D3.tile(ctx, cam, c, r, Math.sin(time * 1.5 + c * 1.3 + r * 0.7) > 0.3 ? '#ff6a1f' : '#e8471a'); drawLava(p0, c, r); continue; }
+        if(this.props[c+','+r]?.floor==='~'&&BK.WATER_STEPS?.has(this.deco[i])){
+          D3.tile(ctx,cam,c,r,T.water||'#2f6fd6');
+          push(r+.02,c+.5,()=>{const pr=cam.project(c+.5,r+.5,0);BK.sprites.drawDeco(ctx,this.deco[i],pr.x,pr.y,pr.k,time,null,c*17+r*5,0,null,this.props[c+','+r]);});continue;
+        }
         if (t === T_WATER) { const w = Math.sin(time * 1.5 + c * 1.3 + r * 0.7) > 0.3; D3.tile(ctx, cam, c, r, this.deepWater.has(i) ? (w ? '#21559f' : '#1a4592') : w ? T.water2 || '#3f84ec' : T.water || '#2f6fd6'); continue; }
         if (this.ramp[i]) {
           push(r + 0.02, c + 0.5, () => {
@@ -2429,22 +3016,28 @@
             const z = (cx, cy) => Math.abs(rp) === 1 ? hN + (hS - hN) * (cy - r) : hW + (hE - hW) * (cx - c);
             const q = [cam.project(c, r, z(c, r)), cam.project(c + 1, r, z(c + 1, r)), cam.project(c + 1, r + 1, z(c + 1, r + 1)), cam.project(c, r + 1, z(c, r + 1))];
             const m = BK.MATERIALS[this.props[c + ',' + r]?.material];   // matériau choisi dans l'éditeur (sinon rampe classique)
-            if (Math.abs(rp) === 1 && hS > hN) D3.quad(ctx, [q[3], q[2], cam.project(c + 1, r + 1, 0), cam.project(c, r + 1, 0)], m ? m.side : T.cliff || '#8a6a4a');
-            if (m) { D3.quad(ctx, q, m.top); BK.drawMaterialTop(ctx, q, m, Math.abs(rp) !== 1); }
+            // Fermer les faces visibles dans les quatre orientations, même à un étage élevé.
+            const face = (a,b,x0,y0,x1,y1,color) => { if (z(x0,y0)>0 || z(x1,y1)>0) D3.quad(ctx,[q[a],q[b],cam.project(x1,y1,0),cam.project(x0,y0,0)],color); };
+            face(3,2,c,r+1,c+1,r+1,m?.side || T.cliff || '#8a6a4a');
+            if(c+.5<camX) face(2,1,c+1,r+1,c+1,r,m?.dark || T.cliffDark || '#5e4731');
+            else face(0,3,c,r,c,r+1,m?.dark || T.cliffDark || '#5e4731');
+            if (this.props[c+','+r]?.ramp || this.props[c+','+r]?.rampFloor != null) { D3.quad(ctx,q,floorColor(c,r,t)); floorPattern(q,c,r,t); if(t===T_LAVA)drawLava(q,c,r); }
+            else if (m) { D3.quad(ctx, q, m.top); BK.drawMaterialTop(ctx, q, m, Math.abs(rp) !== 1); }
             else { D3.quad(ctx, q, '#9a8a6a'); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
             for (let k = 1; k < 4; k++) { const a = D3.onQuad(q, 0, k / 4), b = D3.onQuad(q, 1, k / 4); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); } }
+            if(over) BK.drawFloorPattern(ctx,q,c,r,over,time,this);
           });
           continue;
         }
         if (h > 0) {
           const lower = (cc, rr) => this.tAt(cc, rr) === T_VOID || this.hAt(cc, rr) < h - 0.01 || this.ramp[this.idx(Math.max(0, Math.min(this.cols - 1, cc)), Math.max(0, Math.min(this.rows - 1, rr)))] !== 0;
-          push(r + 0.02, c + 0.5, () => { const f = D3.cube(ctx, cam, c, r, c + 1, r + 1, h, { top: floorColor(c, r, t), front: T.cliff || '#8a6a4a', side: T.cliffDark || '#5e4731' }, { faces: { front: lower(c, r + 1), east: lower(c + 1, r), west: lower(c - 1, r) } }); if (h > LEVEL + 0.05) { ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1; for (let zz = LEVEL; zz < h - 0.05; zz += LEVEL) { const seg = (x0, y0, x1, y1) => { const a = cam.project(x0, y0, zz), b2 = cam.project(x1, y1, zz); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b2.x, b2.y); ctx.stroke(); }; if (lower(c, r + 1)) seg(c, r + 1, c + 1, r + 1); if (c + 0.5 < camX - 0.01 && lower(c + 1, r)) seg(c + 1, r, c + 1, r + 1); else if (c + 0.5 > camX + 0.01 && lower(c - 1, r)) seg(c, r, c, r + 1); } } if (t>=16 || this.lifts.length && this.liftAt(c, r)) floorPattern(f.top, c, r, t); this.drawCastleFloor?.(ctx,cam,c,r,h,time); drawSpecial(f.top, c, r); if (this.trail[i]) this.drawTrail(ctx, cam, c, r, h); if (this.flowers.some(fl => fl.c === c && fl.r === r)) { const pr = cam.project(c + 0.5, r + 0.5, h); BK.sprites.drawFlowers(ctx, pr.x, pr.y, pr.k, (this.props[c + ',' + r] || {}).colors, c * 31 + r * 7, time); } if (this.deco[i] && !this.cells[i]) { const pr = cam.project(c + 0.5, r + 0.5, h); BK.sprites.drawDeco(ctx, this.deco[i], pr.x, pr.y, pr.k, time, null, c * 17 + r * 5, this.props[c+','+r]?.orientation||0, this.props[c+','+r]?.lightColor, this.props[c+','+r]); } });
+          push(r + 0.02, c + 0.5, () => { const f = D3.cube(ctx, cam, c, r, c + 1, r + 1, h, { top: floorColor(c, r, t), front: T.cliff || '#8a6a4a', side: T.cliffDark || '#5e4731' }, { faces: { front: lower(c, r + 1), east: lower(c + 1, r), west: lower(c - 1, r) } }); if (h > LEVEL + 0.05) { ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1; for (let zz = LEVEL; zz < h - 0.05; zz += LEVEL) { const seg = (x0, y0, x1, y1) => { const a = cam.project(x0, y0, zz), b2 = cam.project(x1, y1, zz); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b2.x, b2.y); ctx.stroke(); }; if (lower(c, r + 1)) seg(c, r + 1, c + 1, r + 1); if (c + 0.5 < camX - 0.01 && lower(c + 1, r)) seg(c + 1, r, c + 1, r + 1); else if (c + 0.5 > camX + 0.01 && lower(c - 1, r)) seg(c, r, c, r + 1); } } this.drawFaceDecors(ctx,cam,c,r,false); if (t>=16 || this.lifts.length && this.liftAt(c, r)) floorPattern(f.top, c, r, t); this.drawCastleFloor?.(ctx,cam,c,r,h,time); drawSpecial(f.top, c, r); if (this.trail[i]) this.drawTrail(ctx, cam, c, r, h); if (this.flowers.some(fl => fl.c === c && fl.r === r)) { const pr = cam.project(c + 0.5, r + 0.5, h); BK.sprites.drawFlowers(ctx, pr.x, pr.y, pr.k, (this.props[c + ',' + r] || {}).colors, c * 31 + r * 7, time); } if (this.deco[i] && !this.cells[i]) { const pr = cam.project(c + 0.5, r + 0.5, h); drawTerrainClippedDeco(c,r,ctx, this.deco[i], pr.x, pr.y, pr.k, time, null, c * 17 + r * 5, this.props[c+','+r]?.orientation||0, this.props[c+','+r]?.lightColor, this.props[c+','+r]); } });
           continue;
         }
         const wet = tt => tt === T_WATER || tt === T_VOID || tt === T_LAVA;
         if (this.isPavement(t)) {   // trottoir et bordure : dalle surélevée, faces seulement vers les sols plus bas
           const low = tt => !this.isPavement(tt) && !wet(tt);
-          push(r + 0.02, c + 0.5, () => { const f = D3.cube(ctx, cam, c, r, c + 1, r + 1, 0.1, { top: floorColor(c, r, t), front: t === T_CURB ? '#8a8d94' : '#a4a7ad', side: '#8a8d94' }, { faces: { front: low(this.tAt(c, r + 1)), east: low(this.tAt(c + 1, r)), west: low(this.tAt(c - 1, r)) } }); floorPattern(f.top, c, r, t); drawSpecial(f.top, c, r); if(this.trail[i])this.drawTrail(ctx,cam,c,r,.1); if(this.flowers.some(f=>f.c===c&&f.r===r)){const pr=cam.project(c+.5,r+.5,.1);BK.sprites.drawFlowers(ctx,pr.x,pr.y,pr.k,this.props[c+','+r]?.colors,c*31+r*7,time);} if (t === T_CURB) { const q = f.top; const a = D3.onQuad(q, 0, 0.85), b = D3.onQuad(q, 1, 0.85); ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); } if (this.deco[i] && !this.cells[i]) { const pr = cam.project(c + 0.5, r + 0.5, 0.1); BK.sprites.drawDeco(ctx, this.deco[i], pr.x, pr.y, pr.k, time, null, c * 17 + r * 5, this.props[c+','+r]?.orientation||0, this.props[c+','+r]?.lightColor, this.props[c+','+r]); } });
+          push(r + 0.02, c + 0.5, () => { const f = D3.cube(ctx, cam, c, r, c + 1, r + 1, 0.1, { top: floorColor(c, r, t), front: t === T_CURB ? '#8a8d94' : '#a4a7ad', side: '#8a8d94' }, { faces: { front: low(this.tAt(c, r + 1)), east: low(this.tAt(c + 1, r)), west: low(this.tAt(c - 1, r)) } }); floorPattern(f.top, c, r, t); drawSpecial(f.top, c, r); if(this.trail[i])this.drawTrail(ctx,cam,c,r,.1); if(this.flowers.some(f=>f.c===c&&f.r===r)){const pr=cam.project(c+.5,r+.5,.1);BK.sprites.drawFlowers(ctx,pr.x,pr.y,pr.k,this.props[c+','+r]?.colors,c*31+r*7,time);} if (t === T_CURB) { const q = f.top; const a = D3.onQuad(q, 0, 0.85), b = D3.onQuad(q, 1, 0.85); ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); } if (this.deco[i] && !this.cells[i]) { const pr = cam.project(c + 0.5, r + 0.5, 0.1); drawTerrainClippedDeco(c,r,ctx, this.deco[i], pr.x, pr.y, pr.k, time, null, c * 17 + r * 5, this.props[c+','+r]?.orientation||0, this.props[c+','+r]?.lightColor, this.props[c+','+r]); } });
           continue;
         }
         const shore = t !== T_BRIDGE && (wet(this.tAt(c, r + 1)) || wet(this.tAt(c - 1, r)) || wet(this.tAt(c + 1, r)));
@@ -2464,6 +3057,11 @@
         const v = this.cells[this.idx(c, r)]; if (!v) continue;
         const edge = c === 0 || r === 0 || c === this.cols - 1 || r === this.rows - 1, z = this.explore ? this.height[this.idx(c, r)] : 0;
         const sp = this.explore ? this.special.get(c + ',' + r) : null;
+        if(sp?.type==='magicIronDoor')continue;
+        if(this.props[c+','+r]?.caveOffset){
+          const [dc,dr]=this.props[c+','+r].caveOffset;
+          if(this.houses[(c-dc)+','+(r-dr)]?.kind==='cave')continue;
+        }
         push(['chair','stool'].includes(this.deco[this.idx(c,r)])?r+.25:r+1, c + 0.5, () => {
           if (this.explore && this.deco[this.idx(c, r)] === 'counter') { const same = (cc, rr) => this.inside(cc, rr) && this.deco[this.idx(cc, rr)] === 'counter'; const f = D3.cube(ctx, cam, c + (same(c - 1, r) ? 0 : 0.08), r + 0.15, c + 1 - (same(c + 1, r) ? 0 : 0.08), r + 0.85, 0.62, { top: '#c98f4f', front: '#8a5a2a', side: '#6b4a2a' }, { z, faces: { east: !same(c + 1, r), west: !same(c - 1, r) }, outline: 'rgba(0,0,0,0.25)' }); const a = D3.onQuad(f.front, 0, 0.5), b = D3.onQuad(f.front, 1, 0.5); ctx.strokeStyle = 'rgba(255,230,160,0.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); return; }
           const dk0 = this.explore ? this.deco[this.idx(c, r)] : null;
@@ -2472,30 +3070,47 @@
           if (dk0 === 'volcano') { this.drawVolcano(ctx, cam, c, r, z, time); return; }
           if (this.explore && this.deco[this.idx(c, r)] === 'crackedstone') { BK.sprites.drawSecretWall(ctx, cam, c, r, z, { top: T.rockTop || T.hardTop, front: T.rock || T.hard, side: T.rockDark || T.hardDark }); return; }   // mur secret : un bloc de ciment… à peine fissuré
           if (this.explore && BK.CUBE_BLOCKS.includes(this.deco[this.idx(c, r)])) { BK.sprites.drawCubeBlock(ctx, cam, c, r, z, this.deco[this.idx(c, r)], this.props[c + ',' + r]); return; }   // vrais blocs pleine case
-          if (this.explore && this.deco[this.idx(c, r)]) { const kind = this.deco[this.idx(c, r)], pr = cam.project(c + 0.5, r + 0.5, z); const same = (cc, rr) => this.inside(cc, rr) && this.deco[this.idx(cc, rr)] === kind; const gt = this.growT.get(this.idx(c, r)); let bt = this.bounceT.get(this.idx(c, r)); if (gt != null) { const u = Math.min(1, gt / 0.6), e2 = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2), sc = Math.max(0.02, e2); ctx.save(); ctx.translate(pr.x, pr.y); ctx.scale(sc * (1 + 0.15 * Math.sin(u * Math.PI)), sc); ctx.translate(-pr.x, -pr.y); bt = 0; } else if (bt) { const q = Math.sin(Math.PI * bt / 0.45) * 0.28; ctx.save(); ctx.translate(pr.x, pr.y); ctx.scale(1 + q, 1 - q); ctx.translate(-pr.x, -pr.y); } BK.sprites.drawDeco(ctx, kind, pr.x, pr.y, pr.k, time, { n: same(c, r - 1), s: same(c, r + 1), e: same(c + 1, r), w: same(c - 1, r) }, c * 17 + r * 5, this.props[c+','+r]?.orientation||0, this.props[c+','+r]?.lightColor, this.props[c+','+r]); if (bt || gt != null) ctx.restore(); return; }
+          if (this.explore && this.deco[this.idx(c, r)]) { const kind = this.deco[this.idx(c, r)], pr = cam.project(c + 0.5, r + 0.5, z); const same = (cc, rr) => this.inside(cc, rr) && this.deco[this.idx(cc, rr)] === kind; const gt = this.growT.get(this.idx(c, r)); let bt = this.bounceT.get(this.idx(c, r)); if (gt != null) { const u = Math.min(1, gt / 0.6), e2 = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2), sc = Math.max(0.02, e2); ctx.save(); ctx.translate(pr.x, pr.y); ctx.scale(sc * (1 + 0.15 * Math.sin(u * Math.PI)), sc); ctx.translate(-pr.x, -pr.y); bt = 0; } else if (bt) { const q = Math.sin(Math.PI * bt / 0.45) * 0.28; ctx.save(); ctx.translate(pr.x, pr.y); ctx.scale(1 + q, 1 - q); ctx.translate(-pr.x, -pr.y); } drawTerrainClippedDeco(c,r,ctx, kind, pr.x, pr.y, pr.k, time, { n: same(c, r - 1), s: same(c, r + 1), e: same(c + 1, r), w: same(c - 1, r) }, c * 17 + r * 5, this.props[c+','+r]?.orientation||0, this.props[c+','+r]?.lightColor, this.props[c+','+r]); if (bt || gt != null) ctx.restore(); return; }
           if (v === METAL) { BK.sprites.drawMetal(ctx, cam, c, r, z, this.metal[this.idx(c, r)]); return; }
           if (v === BARREL) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawBarrel(ctx, pr.x, pr.y, pr.k, time); return; }
           if (v === SEALED) { const pr = cam.project(c + 0.5, r + 1, z); D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 1.0, { top: '#6a5a8a', front: '#4a3a6a', side: '#2e2345' }, { outline: 'rgba(0,0,0,0.3)' }); BK.sprites.drawRune(ctx, pr.x, pr.y - pr.k * 0.45, pr.k * 0.28, time); return; }
           if (v === TARGET) { const tg = Object.values(this.targets).find(t => t.c === c && t.r === r); const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawTarget(ctx, pr.x, pr.y, pr.k, tg && tg.hit, time, BK.targetColor(tg && tg.letter)); return; }
           if (v === GATE) {
-            if (sp && sp.bridge) D3.cube(ctx, cam, c + 0.08, r + 0.08, c + 0.92, r + 0.92, 1.1, { top: '#c9a24a', front: '#a0703a', side: '#7a5228' }, { bricks: 'rgba(60,30,10,0.5)', rows: 4, cols: 1, outline: 'rgba(0,0,0,0.3)' });
-            else { D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 1.0, { top: '#9aa3ad', front: '#5a6270', side: '#3e454f' }, { outline: 'rgba(0,0,0,0.3)' }); const q = cam.project(c + 0.5, r + 1, z), top = cam.project(c + 0.5, r + 1, z + 1); ctx.strokeStyle = '#cfd6de'; ctx.lineWidth = Math.max(1.5, q.k * 0.05); for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(q.x + k * q.k * 0.17, q.y); ctx.lineTo(top.x + k * q.k * 0.17, top.y); ctx.stroke(); } }
+            if (sp && sp.bridge) D3.cube(ctx, cam, c + 0.08, r + 0.08, c + 0.92, r + 0.92, 1.1, { top: '#c9a24a', front: '#a0703a', side: '#7a5228' }, { z, bricks: 'rgba(60,30,10,0.5)', rows: 4, cols: 1, outline: 'rgba(0,0,0,0.3)' });
+            else { D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 1.0, { top: '#9aa3ad', front: '#5a6270', side: '#3e454f' }, { z, outline: 'rgba(0,0,0,0.3)' }); const q = cam.project(c + 0.5, r + 1, z), top = cam.project(c + 0.5, r + 1, z + 1); ctx.strokeStyle = '#cfd6de'; ctx.lineWidth = Math.max(1.5, q.k * 0.05); for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(q.x + k * q.k * 0.17, q.y); ctx.lineTo(top.x + k * q.k * 0.17, top.y); ctx.stroke(); } }
             // emblème de la couleur de la cible qui l'ouvre
             const em = cam.project(c + 0.5, r + 1, z + (sp && sp.bridge ? 0.75 : 0.62)); ctx.fillStyle = BK.targetColor(sp && sp.letter); ctx.beginPath(); ctx.arc(em.x, em.y, em.k * 0.17, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = Math.max(1.5, em.k * 0.04); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.arc(em.x - em.k * 0.05, em.y - em.k * 0.06, em.k * 0.06, 0, Math.PI * 2); ctx.fill();
             return;
           }
           if (this.explore && v === HARD && this.trees.some(t => t.c === c && t.r === r)) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawTree(ctx, pr.x, pr.y, pr.k, time, this.props[c + ',' + r]); return; }
           if (this.explore && v === HARD && this.rocks.some(t => t.c === c && t.r === r)) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawRock(ctx, pr.x, pr.y, pr.k, c * 13 + r * 3); return; }
-          if (sp && sp.type === 'brick') { D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 0.9, this.brickColors(c, r), { z, bricks: 'rgba(60,20,10,0.5)', outline: 'rgba(0,0,0,0.25)' }); this.drawWallDeco(ctx,cam,c,r,z,time); return; }   // mur de briques (se casse)
+          if (sp && sp.type === 'brick') { D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 0.9, this.brickColors(c, r), { z, bricks: 'rgba(60,20,10,0.5)', outline: 'rgba(0,0,0,0.25)' }); this.drawWallDeco(ctx,cam,c,r,z,time); this.drawFaceDecors(ctx,cam,c,r,true); return; }   // mur de briques (se casse)
           if (this.explore && v === SOFT) { const pr = cam.project(c + 0.5, r + 0.5, z); BK.sprites.drawBush(ctx, pr.x, pr.y, pr.k, T.bush || T.soft, c * 7 + r); return; }
           if (v === HARD) {
             if (sp && sp.type === 'brick') D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, 0.9, this.brickColors(c, r), { z, bricks: 'rgba(60,20,10,0.5)', outline: 'rgba(0,0,0,0.25)' });
             else if (this.explore) D3.cube(ctx, cam, c + 0.04, r + 0.04, c + 0.96, r + 0.96, 0.85, { top: T.rockTop || T.hardTop, front: T.rock || T.hard, side: T.rockDark || T.hardDark }, { z, topInset: D3.shade(T.rockTop || T.hardTop, 0.9), outline: 'rgba(0,0,0,0.22)' });
             else D3.cube(ctx, cam, c + 0.02, r + 0.02, c + 0.98, r + 0.98, edge ? 1.0 : 0.9, { top: T.hardTop, front: T.hard, side: T.hardDark }, { z, topInset: D3.shade(T.hardTop, 0.93), outline: 'rgba(0,0,0,0.18)' });
           }
-          if(v===HARD) this.drawWallDeco(ctx,cam,c,r,z,time);
+          if(v===HARD) { this.drawWallDeco(ctx,cam,c,r,z,time); this.drawFaceDecors(ctx,cam,c,r,true); }
           else D3.cube(ctx, cam, c + 0.06, r + 0.06, c + 0.94, r + 0.94, 0.86, { top: D3.shade(T.soft, 1.2), front: T.soft, side: D3.shade(T.soft, 0.75) }, { z, bricks: T.softMortar, outline: 'rgba(0,0,0,0.2)' });
         });
+      }
+      for(const {beacons,doors} of this.magicGroups.values()){
+        const lit=beacons.filter(b=>b.on).length;
+        for(const b of [...beacons,...doors]){
+          if(b.c<cmin||b.c>cmax||b.r<rmin||b.r>rmax)continue;
+          push(b.r+.83,b.c+.5,()=>{
+            const pr=cam.project(b.c+.5,b.r+.5,this.hAt(b.c,b.r));
+            BK.sprites.drawMagicMechanism(ctx,pr.x,pr.y,pr.k,b,time,lit,beacons.length);
+          });
+        }
+      }
+      for(const {c,r,kind,hp,at} of this.gnomeHouseHits.values()){
+        const age=time-at;
+        if(age>=1.25||this.hiddenSecretAt?.(c,r))continue;
+        const x=c+.5,y=r+.5,z=this.hAt(c,r),pr=cam.project(x,y,z),props=this.props[c+','+r];
+        bubbles.push({x:pr.x,y:pr.y+pr.k*.62,k:pr.k,text:'Grrr…',a:Math.min(1,(1.25-age)*4)});
+        if(!hp&&age<.35)push(r+1,x,()=>drawTerrainClippedDeco(c,r,ctx,kind,pr.x,pr.y,pr.k,time,null,c*17+r*5,props?.orientation||0,props?.lightColor,props));
       }
       // boîte aux lettres renversée : elle bascule, le bois brisé reste au sol, puis tout s'efface
       for (const d of this.debris) push(d.r + 1, d.c + 0.5, () => {
@@ -2527,7 +3142,7 @@
         if (f.front) { ctx.fillStyle = this.theme.castleFloor?'#c2a268':'#1b1b1b'; for (let k = 0; k < 5; k += 2) { const a = D3.onQuad(f.front, k / 5, 0), b = D3.onQuad(f.front, (k + 1) / 5, 0), c2 = D3.onQuad(f.front, (k + 1) / 5, 1), d = D3.onQuad(f.front, k / 5, 1); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c2.x, c2.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill(); } }
         const g0 = cam.project(M.x, M.y, M.base), rg = ctx.createRadialGradient(g0.x, g0.y, 0, g0.x, g0.y, g0.k * 0.6); rg.addColorStop(0, 'rgba(140,200,255,0.35)'); rg.addColorStop(1, 'rgba(140,200,255,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(g0.x, g0.y, g0.k * 0.6, g0.k * 0.3, 0, 0, Math.PI * 2); ctx.fill();
       });
-      for (const e of this.enemies) push(e.y, e.x, () => {
+      for (const e of this.enemies) if(!e.gnomeInsideUntil) push(e.followHop&&e.z>.9?Math.max(e.y,Math.floor(e.y)+1.01):e.y, e.x, () => {
         if(e.carrier||e.sky) return;
         const z0 = gz(e.x, e.y), pr = cam.project(e.x, e.y, z0), top = cam.project(e.x, e.y, z0 + (e.z || 0));
         if (!e.dead) D3.shadow(ctx, cam, e.x, e.y, (e.def.hitR || e.r) * 0.95 * Math.max(0.5, 1 - (e.z || 0) / 3), 0.3, z0);
@@ -2574,7 +3189,11 @@
       for (const p of this.players) if (p.fishing && p.alive) push(p.y + 0.01, p.x, () => this.drawFishing(ctx, cam, p, time));
       for(const b of this.boats) if(!b.rider) push(b.y+.1,b.x,()=>{const pr=cam.project(b.x,b.y,0);BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,false,{rider:false,time});BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k,b.dir,b.rowT,true,{rider:false,time});});
       for (const d of this.doors) push(d.r + 1.02, d.c + 0.5, () => BK.sprites.drawHouse(ctx, cam, d.c, d.r, time, this.explore ? this.groundZ(d.c + 0.5, d.r + 0.5) : 0, this.houses[d.c + ',' + d.r]));
-      for (const p of this.players) push(p.seat ? p.seat.r + 0.5 + (p.dir === 2 ? -0.3 : 0.3) : p.y, p.x, () => {   // assis : devant la chaise (dos au dossier) ou derrière quand il regarde au loin
+      for(const p of this.players) if(p.alive&&!p.falling&&!p.swallowedBy&&!p.seat&&this.playerDrawDepth(p)>p.y) push(p.y,p.x,()=>{
+        const zg=gz(p.x,p.y);
+        D3.shadow(ctx,cam,p.x,p.y,(.3*(p.def.size||1)+.1)*(p.sizeScale||1)*Math.max(.45,1-(p.zOff||0)/2.5),.3,p.onBomb?zg+.55:zg);
+      });
+      for (const p of this.players) push(this.playerDrawDepth(p), p.x, () => {   // assis : devant la chaise (dos au dossier) ou derrière quand il regarde au loin
         if(p.swallowedBy)return;
         if(p.boat && p.boat.rider!==p)return;
         if (!p.alive && p.deadT > 1.3) return;
@@ -2586,7 +3205,7 @@
           ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(g0.x, g0.y, R, R * 0.55, 0, 0, Math.PI * 2); ctx.fill();
           ctx.strokeStyle = 'rgba(255,90,90,' + (a * 1.2) + ')'; ctx.lineWidth = Math.max(1.5, g0.k * 0.05); ctx.beginPath(); ctx.ellipse(g0.x, g0.y, R * (0.75 + 0.1 * Math.sin(time * 7)), R * 0.55 * (0.75 + 0.1 * Math.sin(time * 7)), 0, 0, Math.PI * 2); ctx.stroke();
         }
-        if (p.alive) D3.shadow(ctx, cam, p.x, p.y, (0.3 * (p.def.size || 1) + 0.1) * (p.sizeScale||1) * Math.max(0.45, 1 - (p.zOff || 0) / 2.5), 0.3, p.onBomb ? zg + 0.55 : zg);
+        if (p.alive && (p.seat || this.playerDrawDepth(p) <= p.y)) D3.shadow(ctx, cam, p.x, p.y, (0.3 * (p.def.size || 1) + 0.1) * (p.sizeScale||1) * Math.max(0.45, 1 - (p.zOff || 0) / 2.5), 0.3, p.onBomb ? zg + 0.55 : zg);
         if(p.boat){
           const crew=(p.boat.passengers||[]).filter(q=>q.alive),size=pr.k*(crew.length?1.35:1);
           BK.sprites.drawBoat(ctx,pr.x,pr.y,size,p.dir,p.boat.rowT,false,{rowing:p.moving,time});
@@ -2596,16 +3215,22 @@
         ctx.save(); ctx.translate(pr.x, pr.y+(p.boat?pr.k*.16:0));ctx.scale(p.sizeScale||1,p.sizeScale||1);
         if (p.vanish) { const u = Math.min(1, p.vanish.t / p.vanish.dur); if (u >= 1) { ctx.restore(); return; } ctx.globalAlpha = 1 - u; ctx.rotate(u * 7); ctx.scale(1 - u * 0.92, 1 - u * 0.92); }
         if (p.invuln > 0 && p.alive && Math.floor(p.animT * 18) % 2) ctx.globalAlpha = 0.45;
+        if(p.waterwalk&&p.alive&&!p.air&&!p.boat&&!p.onBomb&&this.tAt(Math.floor(p.x),Math.floor(p.y))===T_WATER){
+          const u=(time*2.4)%1;
+          ctx.strokeStyle='rgba(173,248,255,'+(.8*(1-u))+')';ctx.lineWidth=Math.max(1,pr.k*.026);
+          ctx.beginPath();ctx.ellipse(0,0,pr.k*(.14+u*.23),pr.k*(.045+u*.095),0,0,Math.PI*2);ctx.stroke();
+        }
         const view = p.dir === 0 ? 'front' : p.dir === 2 ? 'back' : 'side';
         const b = p.carrying;
-        BK.sprites.drawCharacter(ctx, p.def, { s: pr.k, pose: p.seat?'sit':p.boat?'fish':p.pose, t: p.animT, poseT: p.poseT, view, flip: p.dir === 1, walk: p.walk, jolt: !!(p.fishing && p.fishing.bit && !p.fishing.caught), carrying: !!b, rock: !!(b && b.rock), rockCracked: !!(b && b.rock && b.uses < 2), bombLevel:b?.level, bombGiga:b?.giga, bombInflation:b?.inflation, bombGift:b?.gift, bombT: b ? time - b.born : 0, bombFuse: b ? Math.max(0, b.t / BK.BOMB_FUSE) : 1 });
+        BK.sprites.drawCharacter(ctx, p.def, { s: pr.k, pose: p.seat?'sit':p.boat?'fish':p.pose, heavyboots:p.heavyboots, t: p.animT, poseT: p.poseT, view, flip: p.dir === 1, walk: p.walk, jolt: !!(p.fishing && p.fishing.bit && !p.fishing.caught), carrying: !!b, rock: !!(b && b.rock), rockCracked: !!(b && b.rock && b.uses < 2), bombLevel:b?.level, bombGiga:b?.giga, bombInflation:b?.inflation, bombGift:b?.gift, bombT: b ? time - b.born : 0, bombFuse: b ? Math.max(0, b.t / BK.BOMB_FUSE) : 1 });
         if (p.axeUntil > this.time) { ctx.save();ctx.translate(pr.k*(p.dir===1?-0.35:0.35),-pr.k*0.65);ctx.rotate((p.dir===1?-1:1)*(0.8-(p.axeUntil-this.time)*3));BK.sprites.drawAxe(ctx,0,0,pr.k*0.8);ctx.restore(); }
         if (BK.wearsLantern(p) && p.alive && !p.falling) BK.sprites.drawLantern(ctx, pr.k * 0.3 * (p.dir === 1 ? -1 : 1), -pr.k * 0.42, pr.k, this.lanternOn(p), time, p.dir === 2);
         if (p.frozen > 0 && p.alive) { const H = pr.k * (0.8 + 0.7 * (p.def.size || 1)); ctx.globalAlpha = 0.55; ctx.fillStyle = '#bfefff'; BK.sprites.rr(ctx, -pr.k * 0.4, -H * 1.08, pr.k * 0.8, H * 1.12, pr.k * 0.12); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#eafcff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-pr.k * 0.3, -H * 1.0, pr.k * 0.07, H * 0.55); }
         if (p.shield > 0 && p.alive) { ctx.strokeStyle = 'rgba(180,140,240,' + (0.5 + 0.3 * Math.sin(time * 8)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, -pr.k * 0.55, pr.k * 0.55, pr.k * 0.7, 0, 0, Math.PI * 2); ctx.stroke(); }
         ctx.restore();
         if(p.boat)BK.sprites.drawBoat(ctx,pr.x,pr.y,pr.k*((p.boat.passengers||[]).some(q=>q.alive)?1.35:1),p.dir,p.boat.rowT,true,{rowing:p.moving,time});
-        if(p.human&&!p.npc&&!p.ally&&p.alive&&(p.seat||this.nearbySeat(p)))bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:p.seat?'⏎ Se lever':'⏎ S’asseoir',a:1,sign:true});
+        const swordSign=this.mode==='adventure'&&p.human&&this.nearbyStoneSword(p);
+        if(!swordSign&&p.human&&!p.npc&&!p.ally&&p.alive&&(p.seat||this.nearbySeat(p)))bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:p.seat?'⏎ Se lever':'⏎ S’asseoir',a:1,sign:true});
         else if(p.boat && this.boatLanding(p))bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:'⏎ Débarquer',a:1,sign:true});
         else if(this.nearbyBoat(p))bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:'⏎ Embarquer',a:1,sign:true});
         const care=this.allyCareNeeds(p);
@@ -2614,16 +3239,16 @@
         if(care.length)care.forEach((type,i)=>bubbles.push({x:pr.x+(i-(care.length-1)/2)*64,anchorX:pr.x,y:pr.y,k:pr.k,allyFood:p,careType:type}));
         else if(p.ally && !bombNotice && this.nearHuman(p)) bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:p.name+' · ♥ '+Math.ceil(p.hp)+'/'+p.maxHp+' · '+p.lives+' vies',a:1});
         if (p.npc && !care.length && p.sayT > 0 && (!p.recruit || this.nearHuman(p))) bubbles.push({ x: pr.x, y: pr.y, k: pr.k, text: p.say, a: Math.min(1, p.sayT * 2) });
-        if(p.human&&this.nearbyTerrarium(p)) bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:'🐌 Terrarium',a:1,sign:true});
+        if(!swordSign&&p.human&&this.nearbyTerrarium(p)) bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:'🐌 Terrarium',a:1,sign:true});
         if(p.sizeT>0&&p.alive){ctx.save();ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff3bd';ctx.strokeStyle='#463652';ctx.lineWidth=3;const label=(p.sizeScale<1?'Mini · ':'Géant · ')+Math.ceil(p.sizeT)+' s',y=pr.y-pr.k*1.65*(p.sizeScale||1);ctx.strokeText(label,pr.x,y);ctx.fillText(label,pr.x,y);ctx.restore();}
         if(p.heldSnail) { ctx.save(); ctx.translate(pr.x,pr.y-pr.k*.85); BK.sprites.drawAnimal(ctx,'escargot',{s:pr.k,shell:1,shellColor:p.heldSnail.shellColor,baby:p.heldSnail.baby,growth:p.heldSnail.growth}); ctx.restore(); }
-        if (!p.seat && !this.nearbySeat(p) && this.nearbyPet(p) && !p.nearDoor && !p.nearDisplay && !p.nearFire && !p.nearFountain) bubbles.push({ x: pr.x, y: pr.y, k: pr.k, text: '⏎ Caresser', a: 1, sign: true });
-        if (!p.seat && !this.nearbySeat(p) && p.nearDoor && p.human && p.alive) bubbles.push({ x: pr.x, y: pr.y, k: pr.k, text: '⏎  Entrer', a: 1, sign: true });
+        if (swordSign) bubbles.push({x:pr.x,y:pr.y,k:pr.k,text:'⏎ Retirer l’épée',a:1,sign:true});
+        else if (!p.seat && !this.nearbySeat(p) && p.nearDoor && p.human && p.alive) bubbles.push({ x: pr.x, y: pr.y, k: pr.k, text: p.nearDoor.cave?'Entrer dans la grotte':'⏎  Entrer', a: 1, sign: true });
         else if (!p.seat && !this.nearbySeat(p) && p.nearDisplay && p.human && p.alive) bubbles.push({ x: pr.x, y: pr.y, k: pr.k, text: p.nearDisplay.soldOut ? 'Épuisé' : (p.nearDisplay.waiting?'⏎  Soigner / Reprendre':(p.nearDisplay.ally?'⏎  Recruter · 🪙 ':'⏎  Acheter · 🪙 ') + p.nearDisplay.price), a: 1, sign: true, dim: p.nearDisplay.soldOut || !p.nearDisplay.affordable });
         else if (!p.seat && !this.nearbySeat(p) && p.nearFountain && p.human && p.alive && !p.drinkT && p.stamina < p.staminaMax - 0.5) bubbles.push({ x: pr.x, y: pr.y, k: pr.k, text: '⏎  Boire', a: 1, sign: true });
         else if (!p.seat && !this.nearbySeat(p) && p.nearFire && p.human && p.alive && !p.fishing) bubbles.push({ x: pr.x, y: pr.y, k: pr.k, text: '⏎  Cuisiner', a: 1, sign: true });
         if (o.names && p.alive) { ctx.font = 'bold ' + Math.round(pr.k * 0.26) + 'px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 3; const ny = pr.y - pr.k * 1.55; ctx.strokeText(p.name, pr.x, ny); ctx.fillStyle = p.color; ctx.fillText(p.name, pr.x, ny); }
-      });
+      }, p.y);
       for (const q of this.particles) push(q.y, q.x, () => { const pr = cam.project(q.x, q.y, q.z); ctx.globalAlpha = 1 - q.t / q.life; ctx.fillStyle = q.color; const sz = q.size * pr.k; if (q.ring) { ctx.strokeStyle = q.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(pr.x, pr.y, sz * 3, sz * 1.3, 0, 0, Math.PI * 2); ctx.stroke(); } else if (q.heart) { const x = pr.x + Math.sin(q.t * 5 + q.x * 7) * sz * 0.35, y = pr.y, s = sz * (0.8 + 0.2 * Math.sin(q.t * 9)); ctx.beginPath(); ctx.moveTo(x, y + s * 0.45); ctx.bezierCurveTo(x - s * 0.95, y - s * 0.25, x - s * 0.5, y - s * 0.8, x, y - s * 0.3); ctx.bezierCurveTo(x + s * 0.5, y - s * 0.8, x + s * 0.95, y - s * 0.25, x, y + s * 0.45); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; ctx.stroke(); } else if (q.heavy) ctx.fillRect(pr.x - sz / 2, pr.y - sz / 2, sz, sz); else { ctx.beginPath(); ctx.arc(pr.x, pr.y, sz / 2, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; });
       this.renderArenaEffects(ctx,cam,time,push);
       list.sort((a, b) => a.y - b.y || a.x - b.x);
@@ -2664,6 +3289,7 @@
         }
         const k = b.k; ctx.font = 'bold ' + Math.round(k * 0.3) + 'px Nunito, sans-serif'; const w = BK.sprites.coinWidth(ctx, b.text) + k * 0.5, bx = Math.max(8, Math.min(W - w - 8, b.x - w / 2)), by = b.y - k * 2.5 - (b.sign ? Math.sin(time * 4) * k * 0.06 : 0); ctx.globalAlpha = b.a; ctx.fillStyle = b.sign ? (b.dim ? '#c9c2a8' : '#ffd54a') : '#fff'; BK.sprites.rr(ctx, bx, by, w, k * 0.55, k * 0.2); ctx.fill(); ctx.beginPath(); ctx.moveTo(b.x - k * 0.12, by + k * 0.55); ctx.lineTo(b.x + k * 0.12, by + k * 0.55); ctx.lineTo(b.x, by + k * 0.75); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#1b2a4a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; BK.sprites.textWithCoin(ctx, b.text, bx + w / 2, by + k * 0.28); ctx.globalAlpha = 1; if (b.sign) this.signRect = { x: bx, y: by, w, h: k * 0.55 }; }
       this.drawPetFood(ctx,cam);
+      this.drawMaplePrompt(ctx,cam);
       this.snailRect=null;this.stowSnailRect=null;
       const snailHero=this.players.find(p=>p.human&&p.alive&&(p.heldSnail||this.nearbySnail(p)));
       if(snailHero){const pr=cam.project(snailHero.x,snailHero.y,this.groundZ(snailHero.x,snailHero.y)),label=snailHero.heldSnail?'🐌 Déposer':'🐌 Ramasser';ctx.save();ctx.font='bold 18px Nunito,sans-serif';const w=ctx.measureText(label).width+28,h=46,x=Math.max(8,Math.min(W-w-8,pr.x-w/2)),y=Math.max(8,pr.y-pr.k*1.8);ctx.fillStyle='#ffd54a';BK.sprites.rr(ctx,x,y,w,h,14);ctx.fill();ctx.fillStyle='#1b2a4a';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x+w/2,y+h/2);this.snailRect={x,y,w,h};

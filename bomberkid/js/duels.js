@@ -29,6 +29,8 @@ class Duel{
   for(const p of [this.player,this.rival]){for(const k of BK.BOMB_POWERS)p[k]=!!source[k];p.kick=true;p.gloves=source.gloves;p.speed=source.speed*(p===this.rival?[.65,.8,1,1.1][this.level-1]:1);}
   this.rival.bombsMax=Math.min(source.bombsMax,this.level);this.state='intro';this.t=0;this.timer=120;W.frozen=true;this.cam=new BK.Camera(BK.W,BK.H);this.cam.fit(W.cols,W.rows,{top:95,bottom:65,left:35,right:35});
   this.rewardKey=BK.duelRewardKey(parent,key);
+  this.previousMusic=BK.music?.current;
+  BK.music?.play('grass-world');
  }
  update(dt){
   this.t+=dt;if(this.state==='intro'){this.world.update(dt);if(this.t>3){this.state='play';this.world.frozen=false;BK.audio.go();}return;}if(this.state!=='play')return;
@@ -47,7 +49,7 @@ class Duel{
   if(won&&!this.previewEditor){const save=this.parent.save;save.duels=save.duels||{};if(!save.duels[this.rewardKey]){save.duels[this.rewardKey]=true;const gold=50*this.level,xp=35*this.level;save.gold=(save.gold||0)+gold;this.parent.gainXp(xp);save.pendingBossLoot=save.pendingBossLoot||[];save.pendingBossLoot.push({type:'antidote',n:1});this.parent.deliverBossLoot();BK.saveAdventure(this.parent.charId,save);text='<i class="goldcoin sm"></i> +'+gold+' pièces d’or   ⭐ +'+xp+' XP   🧪 +1 antidote';}else text='Victoire ! Les récompenses de ce duelliste ont déjà été reçues.';}
   BK.audio[won?'win':'lose']();BK.overlay.show({playful:'pause',title:draw?'🤝 Égalité':won?'🏆 Duel remporté !':'💪 À la prochaine !',text,buttons:[{label:'↩ Reprendre l’aventure',primary:true,onClick:()=>this.leave()}]});
  }
- leave(){BK.overlay.hide();BK.input.keys.clear();BK.input.flush();Object.assign(BK.input.touch,{dx:0,dy:0,bomb:false,bombHeld:false,action:false});if(this.previewEditor){BK.current=this.previewEditor;BK.show('editor');return;}this.parent.duelCooldown=3;this.parent.duelMustLeave=this.key;this.parent.player.invuln=Math.max(2,this.parent.player.invuln);BK.current=this.parent;}
+ leave(){BK.overlay.hide();BK.input.keys.clear();BK.input.flush();Object.assign(BK.input.touch,{dx:0,dy:0,bomb:false,bombHeld:false,action:false});if(this.previewEditor){BK.current=this.previewEditor;BK.show('editor');return;}this.parent.duelCooldown=3;this.parent.duelMustLeave=this.key;this.parent.player.invuln=Math.max(2,this.parent.player.invuln);BK.current=this.parent;if(this.previousMusic)BK.music?.play(this.previousMusic);else BK.music?.stop();}
  showPause(){this.state='pause';this.world.frozen=true;BK.overlay.show({playful:'pause',title:'⏸ Duel en pause',text:'💣 Bombe : Espace · 🦵 Botte une bombe en marchant contre elle. Fais tomber ton adversaire du ring ou bats-le avec tes bombes ! Sur tablette, utilise les boutons du jeu.',buttons:[{label:'▶ Continuer',primary:true,onClick:()=>{BK.overlay.hide();this.state='play';this.world.frozen=false;}},{label:'↩ Quitter le duel',onClick:()=>this.leave()}]});}
  render(ctx){this.world.render(ctx,this.cam,{names:true});ctx.save();ctx.textAlign='center';ctx.font='bold 24px Nunito,sans-serif';ctx.fillStyle='#302447';BK.sprites.rr(ctx,170,12,BK.W-340,65,20);ctx.fill();ctx.fillStyle='#ffe16b';ctx.fillText('💣 '+this.player.name+'   VS   '+this.rival.name,BK.W/2,39);ctx.font='bold 18px Nunito,sans-serif';ctx.fillStyle='#fff';ctx.fillText('♥ '+Math.ceil(this.player.hp)+'     ·     '+Math.ceil(this.timer)+' s     ·     ♥ '+Math.ceil(this.rival.hp),BK.W/2,65);if(this.state==='intro'){ctx.font='bold 76px Nunito,sans-serif';ctx.fillStyle='#ffe16b';ctx.strokeStyle='#33224a';ctx.lineWidth=7;const txt=this.t<1?'Un défi !':String(Math.ceil(3-this.t));ctx.strokeText(txt,BK.W/2,BK.H/2);ctx.fillText(txt,BK.W/2,BK.H/2);}ctx.font='bold 18px Nunito,sans-serif';ctx.fillStyle='#fff';ctx.strokeStyle='#302447';ctx.lineWidth=4;const hint='Bombes ou sortie du ring : à toi de jouer !';ctx.strokeText(hint,BK.W/2,BK.H-22);ctx.fillText(hint,BK.W/2,BK.H-22);ctx.restore();}
 }
@@ -77,13 +79,13 @@ BK.EDITOR_TABS.find(t=>t.id==='magasin')?.items.unshift({ch:'"',deco:'duelist',o
 if(!BK.EDITOR_TABS.some(t=>t.items.some(i=>i.deco==='duelist')))BK.EDITOR_TABS.find(t=>t.id==='deco').items.unshift({ch:'"',deco:'duelist',opts:'duelist',name:'Duelliste',icon:'⚔️'});
 BK.EDITOR_TABS.find(t=>t.id==='objets').items.push({tool:'duelOpponent',opts:'duelOpponent',name:'Départ adverse · duel',icon:'⚔️',hint:'Dans un ring de duel, place ici le départ de ton adversaire. Le drapeau Départ reste celui du héros.'});
 const paint=E.paint;
-E.paint=function(c,r,first){
+E.paint=function(c,r,first,faceDir){
  if(this.item?.tool==='duelOpponent'){
   if(this.parent?.kind!=='duel'){this.toast('Cet outil sert dans le ring d’un duelliste.');return;}
   if(!this.inside(c,r)||this.world.cell(c,r)||!this.world.walkableTerrain(c,r))return;if(first)this.snapshot();
   for(const p of Object.values(this.props))delete p.duelOpponent;this.props[c+','+r]={...(this.props[c+','+r]||{}),duelOpponent:true};this.markDirty();this.rebuild();return;
  }
- const old=this.props[c+','+r]?.duelArena;paint.call(this,c,r,first);
+ const old=this.props[c+','+r]?.duelArena;paint.call(this,c,r,first,faceDir);
  if(this.item?.deco==='duelist'&&this.inside(c,r)){Object.assign(this.props[c+','+r],{duelistLevel:this.duelistLevel||1,duelistStyle:this.duelistStyle||0,...(old?{duelArena:old}:{})});this.rebuild();}
 };
 const options=E.renderOptions;

@@ -30,7 +30,7 @@ BK.EXTRA_FLOORS=[
  F('Â',43,'volcanic','Roche volcanique','🌋','nature',['#3d3638','#373032'],{hint:'Résiste à la chaleur : une bombe posée dessus explose une case moins loin.'}),
  F('Ê',44,'coral','Récif de corail','🪸','nature',['#f08a7e','#e87e73'],{slow:.85,hint:'Tranchant : on avance 15 % moins vite. Une bombe qui explose dessus le casse et il devient de l’eau profonde.'}),
  F('Î',45,'vines','Liane rampante','🌿','nature',['#557f38','#4e7733'],{hint:'Une chance sur quatre de rester pris 1 seconde dans les lianes en entrant sur la case.'}),
- F('Ô',46,'tallgrass','Herbe haute','🌾','nature',['#5c9e3c','#56953a'],{hint:'Cache les héros, les petites bombes et les objets. Quand un héros y passe, ce qui s’y cachait se voit.'}),
+ F('Ô',46,'tallgrass','Herbes hautes 1','🌾','nature',['#5c9e3c','#56953a'],{hint:'Cache les héros, les petites bombes et les objets. Quand un héros y passe, ce qui s’y cachait se voit.'}),
  F('Û',47,'slate','Ardoise sombre','🌑','nature',['#434b57','#3d4550'],{hint:'Un peu glissant : quand on s’arrête, on glisse encore une demi-case.'}),
  F('Ä',48,'bronze','Sol en bronze','🥉','interieur',['#b77c3c','#ae7536'],{hint:'Le souffle des bombes y ricoche à angle droit, des deux côtés, au lieu de continuer tout droit.'}),
  F('Ë',49,'redbrick','Briques rouges','🧱','interieur',['#b4553c','#aa4e36'],{hint:'Bonne adhérence : les explosions et les chocs ne font pas reculer.'}),
@@ -152,8 +152,16 @@ BK.drawFloorPattern=function(ctx,p,c,r,id,time,W){
   case 'toxic':blob(.45,.5,.32,.24,'rgba(130,220,40,.55)');blob(.3,.35,.14,.1,'rgba(170,240,60,.5)');blob(.7,.68,.12,.09,'rgba(110,200,30,.5)');
    for(let i=0;i<3;i++){const g=(T*.7+i*.37+c*.21+r*.13)%1,u=.25+rnd(c,r,i)*.5,v=.3+rnd(c,r,i+3)*.4;blob(u,v,.02+g*.05,.02+g*.05,'rgba(220,255,140,'+(.8*(1-g))+')');}
    {const q=at(.5,.5);ctx.fillStyle='rgba(40,50,10,.55)';for(let n=0;n<3;n++){const a=-Math.PI/2+n*Math.PI*2/3;ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.ellipse(q.x,q.y,k*.12,k*.12*.62,0,a-.45,a+.45);ctx.closePath();ctx.fill();}}break;
-  case 'speedmark':for(let n=0;n<2;n++){const v=.3+n*.3,pulse=(Math.sin(T*6-n*1.5)+1)/2,col='rgba(255,'+(200+Math.floor(40*pulse))+',60,'+(.6+.4*pulse)+')';line(.2,v+.18,.5,v,col,3);line(.5,v,.8,v+.18,col,3);}
-   line(.04,.04,.04,.96,'#e8e8e8',2);line(.96,.04,.96,.96,'#e8e8e8',2);break;
+  case 'speedmark':{
+   const dir=BK.DIRS[W?.props?.[c+','+r]?.speedmarkDir]||BK.DIRS[2];
+   const turn=(u,v)=>[.5+(u-.5)*-dir.dy+(.5-v)*dir.dx,.5+(u-.5)*dir.dx+(.5-v)*dir.dy];
+   const stripe=(u0,v0,u1,v1,col,w)=>line(...turn(u0,v0),...turn(u1,v1),col,w);
+   for(let n=0;n<2;n++){
+    const v=.3+n*.3,pulse=(Math.sin(T*6-n*1.5)+1)/2,col='rgba(255,'+(200+Math.floor(40*pulse))+',60,'+(.6+.4*pulse)+')';
+    stripe(.2,v+.18,.5,v,col,3);stripe(.5,v,.8,v+.18,col,3);
+   }
+   stripe(.04,.04,.04,.96,'#e8e8e8',2);stripe(.96,.04,.96,.96,'#e8e8e8',2);break;
+  }
   case 'mirror':line(0,0,1,0,'rgba(255,255,255,.9)',1.5);line(0,0,0,1,'rgba(255,255,255,.9)',1.5);line(1,0,1,1,'rgba(120,140,160,.6)');line(0,1,1,1,'rgba(120,140,160,.6)');
    {const s=(T*.25+c*.17+r*.11)%1.5;line(Math.min(1,s),0,Math.max(0,s-.5),1,'rgba(255,255,255,.75)',3);line(Math.min(1,s+.12),0,Math.max(0,s-.38),1,'rgba(255,255,255,.4)',1.5);}break;
   case 'conveyor':{const dir=W?.props?.[c+','+r]?.beltDir??3,D=BK.DIRS[dir],side=D.dx?[[0,.06,1,.06],[0,.94,1,.94]]:[[.06,0,.06,1],[.94,0,.94,1]];

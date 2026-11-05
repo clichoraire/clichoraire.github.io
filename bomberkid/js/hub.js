@@ -18,7 +18,7 @@
     { id: 'bomb', name: 'Bombe en plus', icon: '💣', price: 30, max: 3, desc: 'Commence chaque tableau avec une bombe de plus.' },
     { id: 'fire', name: 'Grande flamme', icon: '🔥', price: 30, max: 3, desc: 'Tes explosions vont une case plus loin.' },
     { id: 'speed', name: 'Patins', icon: '⚡', price: 40, max: 2, desc: 'Tu cours plus vite dès le départ.' },
-    { id: 'kick', name: 'Coup de pied', icon: '🦵', price: 60, max: 1, desc: 'Marche pour pousser une bombe, cours pour sauter dessus.' },
+    { id: 'kick', name: 'Coup de pied', icon: '🦵', price: 60, max: 1, desc: 'Pousse les bombes d’un coup de pied. Avec Saut sur bombe, cours pour sauter dessus.' },
     { id: 'gloves', name: 'Gants de force', icon: '🧤', price: 70, max: 1, desc: 'Soulève les roches (Espace devant) et lance-les : 2 points de dégâts, un bond de plus. Deux lancers par roche.' },
     { id: 'heart', name: 'Cœur', icon: '❤️', price: 80, max: 2, desc: '10 points de vie max de plus, pour toujours.' },
     { id: 'life', name: 'Vie en plus', icon: '💖', price: 50, max: 2, desc: 'Une vie de plus à chaque aventure.' },

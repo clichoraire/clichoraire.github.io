@@ -188,12 +188,12 @@ Deux modes :
   Sol sous les objets : une case entourée seulement d'objets (bloc parmi des blocs) prend le sol des alentours
   (plus de case de pierre qui apparaît au milieu du gazon après une explosion).
   Un monstre ne prend qu'un coup par bombe (son invincibilité dure plus longtemps que la flamme).
-  Sauter sur une bombe (style Bomberman 64) : marcher dans une bombe posée fait sauter dessus ; perché, on rebondit sur place
+  Le pouvoir **Saut sur bombe** (`bombjump`), à ramasser ou à placer dans l’éditeur, débloque le saut (style Bomberman 64). Sans ce pouvoir, aucune montée sur une bombe. Une fois acquis, marcher dans une bombe posée fait sauter dessus ; perché, on rebondit sur place
   et les monstres ne nous atteignent pas (mais la mèche brûle !). Relâcher puis appuyer une direction = grand bond de deux cases
   (un gros champignon juste à côté compte aussi) ; si la case est bloquée (mur, bloc, monstre solide, trop haut), on continue
   jusqu'à la première case libre (cinq au plus), assez haut pour atterrir sur un plateau sans rampe, sur une autre bombe, ou
   dans l'eau.
-  Avec le coup de pied, marcher dans la bombe la pousse ; courir dedans permet de sauter dessus (double appui sur une direction).
+  Avec le coup de pied, marcher dans la bombe la pousse ; courir dedans permet de sauter dessus seulement si le pouvoir Saut sur bombe est aussi acquis (double appui sur une direction).
   L'eau et le vide ne bloquent plus le joueur : il y tombe (plouf et il coule / il rapetisse en tournoyant), perd un cœur
   et réapparaît sur la dernière case sûre (sans cœur restant, il meurt ; chez les grands-parents, aucun dégât).
 - **Défis** (remplace le bouton Match) — trois îles (`js/challenges.js`, `js/challenges-plus.js`), cinq niveaux (Facile → Légende) :
@@ -424,3 +424,11 @@ Vérification : `node tools/test-castle-mechanisms.cjs` simule le parcours compl
 - **Loup-garou** : rôde à une case de sa tanière ; repère un joueur visible à quatre cases puis sprinte avec ses griffes.
 
 Les marcheurs ordinaires errent localement quand ils ne voient personne. Les fantômes restent à 1,5 case de leur point de départ hors poursuite et repèrent le joueur à 3,5 cases. La perception ennemie est bloquée par les murs ; les canons peuvent toujours viser au-dessus de l’eau et tirer sur les statues.
+
+Les œufs de dragon, de tortue, de canard et de chouette (éditeur, Déco → Château)
+éclosent sous une explosion : deux moitiés de coquille révèlent un petit animal.
+Une caresse et un seul repas, dans n’importe quel ordre, suffisent pour en faire
+un compagnon. Tous les aliments du sac conviennent, crus ou cuits, y compris
+le miel et la guimauve. Le dragon souffle les flammes des bombes sur trois cases
+en ligne droite contre les ennemis ; les murs et changements d’étage les arrêtent.
+Ce souffle protège le joueur et les animaux amis. Les autres petits aident au contact.

@@ -114,19 +114,58 @@ const bridgeRender=W.renderArenaEffects;
 W.renderArenaEffects=function(ctx,cam,time,push){
  bridgeRender.call(this,ctx,cam,time,push);
  for(const b of this.blastDrawbridges||[]){
-  // Abaissé, le tablier devient un vrai pont en bois du terrain : le sol le dessine sous le héros.
-  if(b.state==='open')continue;
+  const thickness=.19;
+  // Une fois abaissé, le terrain dessine les planches. On ajoute seulement les chants visibles.
+  if(b.state==='open'){
+   const view=cam.pos;
+   const exposed=(c,r)=>!this.walkableTerrain(c,r)||this.hAt(c,r)<b.z-.01;
+   for(const {c,r} of b.cells){
+    const edge=(x0,y0,x1,y1)=>BK.draw3d.quad(ctx,[
+     cam.project(x0,y0,b.z),cam.project(x1,y1,b.z),
+     cam.project(x1,y1,b.z-thickness),cam.project(x0,y0,b.z-thickness)
+    ],'#89592f');
+    push(r+.025,c+.5,()=>{
+     if(view.y>r+1&&exposed(c,r+1))edge(c,r+1,c+1,r+1);
+     if(view.x<c&&exposed(c-1,r))edge(c,r,c,r+1);
+     if(view.x>c+1&&exposed(c+1,r))edge(c+1,r,c+1,r+1);
+    });
+   }
+   continue;
+  }
   const D=BK.DIRS[b.direction],S={dx:-D.dy,dy:D.dx},u=b.state==='lowering'?Math.min(1,b.t/1.2):0,angle=(1-u*u)*Math.PI/2;
   const x=b.c+.5-D.dx*.5,y=b.r+.5-D.dy*.5;
-  const point=(w,n)=>cam.project(x+S.dx*w+D.dx*n*Math.cos(angle),y+S.dy*w+D.dy*n*Math.cos(angle),b.z+.035+n*Math.sin(angle));
+  const cos=Math.cos(angle),sin=Math.sin(angle),z=b.z+.035;
+  const point=(w,n,h=0)=>cam.project(x+S.dx*w+D.dx*(n*cos-h*sin),y+S.dy*w+D.dy*(n*cos-h*sin),z+n*sin+h*cos);
+  const view=cam.pos,along=(view.x-x)*D.dx+(view.y-y)*D.dy;
+  const viewW=(view.x-x)*S.dx+(view.y-y)*S.dy;
+  const viewN=along*cos+(view.z-z)*sin,viewH=-along*sin+(view.z-z)*cos;
   push(Math.max(b.r+.55,b.r+D.dy*b.length*Math.cos(angle)+.5),b.c+.5,()=>{
    ctx.save();
-   // Mêmes couleurs que le pont en bois : bois uni et fines lignes de planches, sans contour sombre.
-   BK.draw3d.quad(ctx,[point(-.5,0),point(.5,0),point(.5,b.length),point(-.5,b.length)],'#a0703a');
-   ctx.strokeStyle='rgba(60,30,10,0.45)';ctx.lineWidth=1;
-   for(let n=1;n<b.length*4;n++){const a=point(-.5,n/4),q=point(.5,n/4);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(q.x,q.y);ctx.stroke();}
-   for(const w of [-.52,.52]){const a=cam.project(x+S.dx*w,y+S.dy*w,b.z+1.15),p=point(w,b.length*.9);ctx.strokeStyle=u===0?'#d9c69b':'#9f8a66';ctx.lineWidth=3;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.setLineDash([]);}
+   const quad=(points,color)=>BK.draw3d.quad(ctx,points.map(p=>point(...p)),color);
    if(this.editorPreview&&b.state==='raised')for(const q of b.cells)BK.draw3d.quad(ctx,[[q.c,q.r],[q.c+1,q.r],[q.c+1,q.r+1],[q.c,q.r+1]].map(([x,y])=>cam.project(x,y,b.z+.04)),'rgba(255,205,80,.18)','#ffc956');
+   const cords=[-.52,.52],near=w=>viewW*Math.sign(w)>.5;
+   const drawCord=w=>{
+    const a=cam.project(x+S.dx*w,y+S.dy*w,b.z+1.15),p=point(w,b.length*.9,thickness*.5);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(p.x,p.y);
+    ctx.lineCap='round';ctx.strokeStyle='#775735';ctx.lineWidth=Math.max(2,p.k*.035);ctx.stroke();
+    ctx.strokeStyle='#be9a66';ctx.lineWidth=Math.max(1,p.k*.015);ctx.stroke();
+   };
+   for(const w of cords)if(!near(w))drawCord(w);
+   if(Math.abs(viewW)>.5){
+    const w=Math.sign(viewW)*.5;
+    quad([[w,0,0],[w,b.length,0],[w,b.length,thickness],[w,0,thickness]],'#89592f');
+   }
+   if(viewN<0||viewN>b.length){
+    const n=viewN<0?0:b.length;
+    quad([[-.5,n,0],[.5,n,0],[.5,n,thickness],[-.5,n,thickness]],'#c08c50');
+   }
+   if(viewH<=0||viewH>=thickness){
+    const h=viewH<=0?0:thickness;
+    quad([[-.5,0,h],[.5,0,h],[.5,b.length,h],[-.5,b.length,h]],h?'#ae7942':'#a0703a');
+    ctx.strokeStyle='rgba(60,30,10,0.45)';ctx.lineWidth=1;
+    for(let n=1;n<b.length*4;n++){const a=point(-.5,n/4,h),q=point(.5,n/4,h);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(q.x,q.y);ctx.stroke();}
+   }
+   for(const w of cords)if(near(w))drawCord(w);
    ctx.restore();
   });
  }
@@ -142,6 +181,7 @@ W.kickedBombImpact=function(b,c,r){
   mage.stunT=3;mage.hurt=Math.max(mage.hurt||0,.3);this.burst(mage.x,mage.y,.45,'#ffe36b',14);this.events.push({type:'enemyStunned',enemy:mage,bomb:b});
   b.state='idle';b.x=b.cx+.5;b.y=b.cy+.5;b.passers=new Set();this.events.push({type:'bombKicked',bomb:b});if(b.t<=0)this.explodeBomb(b);return true;
  }
+ if(p.heavyboots)return false;
  if(p!==b.kicker&&this.mode==='adventure'&&!BK.settings.friendlyFire&&(p.leader||p)===(b.kicker.leader||b.kicker))return false;
  p.bombStun=1;p.bombPush={dir:b.dir,left:.95};p.inflating=null;p.onBomb=null;p.zOff=0;this.setPose(p,'hit',1);
  b.state='idle';b.x=b.cx+.5;b.y=b.cy+.5;b.passers=new Set();this.events.push({type:'bombKicked',bomb:b});
@@ -151,7 +191,7 @@ W.updateBombStun=function(p,dt){
  if(!(p.bombStun>0))return false;
  p.bombStun=Math.max(0,p.bombStun-dt);p.moving=p.running=false;p.input.bomb=p.input.action=p.input.bombHeld=false;p.input.dx=p.input.dy=0;
  if(p.bombPush?.left>0){const D=BK.DIRS[p.bombPush.dir],distance=Math.min(p.bombPush.left,dt*4);for(let d=0;d<distance;d+=.05){const step=Math.min(.05,distance-d);this.moveCircle(p,D.dx*step,D.dy*step,p);}p.bombPush.left-=distance;}
- if(!this.walkableTerrain(Math.floor(p.x),Math.floor(p.y)))this.startFall(p,this.tAt(Math.floor(p.x),Math.floor(p.y))===2?'water':'void');
+ if(!this.walkableTerrain(Math.floor(p.x),Math.floor(p.y),p))this.startFall(p,this.tAt(Math.floor(p.x),Math.floor(p.y))===2?'water':'void');
  const flame=this.flameTouches(p.x,p.y,p.r);if(flame)this.hitPlayer(p,{kind:'flame',owner:flame.owner,bomb:flame.bomb});
  return true;
 };

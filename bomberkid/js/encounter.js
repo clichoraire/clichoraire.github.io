@@ -65,7 +65,7 @@
     // Après le mouvement volontaire : même en courant contre le jet, on recule.
     for(const [key,props] of Object.entries(this.props))if(props.deco==='waterjet'){
       const [c,r]=key.split(',').map(Number);if(this.deco[this.idx(c,r)]!=='waterjet')continue;const points=this.waterJetPoints(c,r);
-      for(const p of this.players)if(p.alive&&!p.npc&&!p.boat&&!p.air&&!p.falling){const q=points.find(q=>Math.abs(this.groundZ(p.x,p.y)-q.z)<.3&&Math.hypot(p.x-q.x,p.y-q.y)<p.r+.23);if(q){p.running=false;p.vx=p.vy=0;const step=Math.max(10,p.speed*BK.RUN_MULT+2)*dt;this.moveCircle(p,q.dx*step,q.dy*step,p);}}
+      for(const p of this.players)if(p.alive&&!p.npc&&!p.heavyboots&&!p.boat&&!p.air&&!p.falling){const q=points.find(q=>Math.abs(this.groundZ(p.x,p.y)-q.z)<.3&&Math.hypot(p.x-q.x,p.y-q.y)<p.r+.23);if(q){p.running=false;p.vx=p.vy=0;const step=Math.max(10,p.speed*BK.RUN_MULT+2)*dt;this.moveCircle(p,q.dx*step,q.dy*step,p);}}
     }
     for(const a of this.arenaAnvils||[]){a.t+=dt;if(a.t>=a.warn+.45&&!a.hit){a.hit=true;this.shake=.3;this.burst(a.x,a.y,.3,'#a8b7c4',12);for(const p of this.players)if(p.alive&&!p.npc&&!p.air&&Math.hypot(p.x-a.x,p.y-a.y)<.75)this.hitPlayer(p,{kind:'anvil',dmg:20});}}
     this.arenaAnvils=(this.arenaAnvils||[]).filter(a=>a.t<a.warn+.8);

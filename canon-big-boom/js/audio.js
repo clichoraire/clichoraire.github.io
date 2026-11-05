@@ -26,6 +26,14 @@
     lose: () => { [392, 349, 311, 262].forEach((f, i) => tone(f, f * .95, .3, 'sawtooth', .14, i * .22)); },
     click: () => tone(900, 700, .05, 'square', .06),
     back: () => tone(500, 350, .07, 'square', .06),
+    mission: () => { [784, 988, 1175, 1568].forEach((f, i) => tone(f, f, .42, 'triangle', .11, i * .08)); tone(3136, 3130, .65, 'sine', .07, .28); },
+    coin: () => {
+      // Deux impacts de métal : modes inharmoniques d’une pièce, attaque sèche et résonance courte.
+      for (const [at, strength] of [[0, 1], [.075, .55]]) {
+        noise(.014, .12 * strength, at, 9500);
+        for (const [hz, gain, duration] of [[2350, .16, .38], [3760, .08, .25], [5230, .045, .16], [7140, .02, .1]]) tone(hz, hz * .998, duration, 'sine', gain * strength, at);
+      }
+    },
     buy: () => { tone(880, 1320, .1, 'square', .12); tone(1320, 1760, .12, 'square', .12, .08); },
     nope: () => tone(200, 150, .15, 'square', .1),
     card: () => { tone(660, 990, .1, 'triangle', .14); tone(990, 1320, .15, 'triangle', .12, .1); },

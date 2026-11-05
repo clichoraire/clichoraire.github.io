@@ -11,16 +11,19 @@
   D.fromSlot = (wi, vi) => {
     const w = CB.WORLDS[wi], d = CB.waveDef(wi, vi), cw = (CB.CUSTOM_WAVES || {})[w.id + '-' + (vi + 1)]; if (cw) return JSON.parse(JSON.stringify(cw));   // tableau déjà relié : on repart de son JSON
     return { official: true, slot: w.id + '-' + (vi + 1), world: w.id, name: d.name, text: d.text, type: d.type, goal: d.goal || 10, seconds: d.seconds || 40, density: d.density || 1,
-      scene: w.scene || w.id, sky: w.sky.slice(), ground: w.ground, space: !!w.space, random: { enabled: true, enemies: [...new Set(w.enemies)] }, spawns: [], sequence: d.sequence ? JSON.parse(JSON.stringify(d.sequence)) : [], boss: d.type === 'boss' ? w.boss : null, hpScale: 1, speedScale: 1, maxAlive: d.maxAlive || 0, swarm: d.swarm ? JSON.parse(JSON.stringify(d.swarm)) : undefined, chestAt: 0, chestEvery: 0, portalAt: 0, cibles: d.cibles ? JSON.parse(JSON.stringify(CB.minigame('cibles', d.cibles))) : undefined, brigands: d.brigands ? JSON.parse(JSON.stringify(CB.minigame('brigands', d.brigands))) : undefined };
+      scene: w.scene || w.id, sky: w.sky.slice(), ground: w.ground, space: !!w.space, random: { enabled: true, enemies: [...new Set(d.roster || w.enemies)] }, spawns: [], sequence: d.sequence ? JSON.parse(JSON.stringify(d.sequence)) : [], boss: d.type === 'boss' ? w.boss : null, hpScale: 1, speedScale: 1, maxAlive: d.maxAlive || 0, swarm: d.swarm ? JSON.parse(JSON.stringify(d.swarm)) : undefined, chestAt: 0, chestEvery: 0, portalAt: 0, cibles: d.cibles ? JSON.parse(JSON.stringify(CB.minigame('cibles', d.cibles))) : undefined, brigands: d.brigands ? JSON.parse(JSON.stringify(CB.minigame('brigands', d.brigands))) : undefined };
   };
-  D.blank = (wi, vi) => Object.assign(D.fromSlot(wi, vi), { official: false, name: 'Nouveau tableau', text: 'Abats 10 ennemis !', type: 'kill', goal: 10, random: { enabled: false, enemies: [] },
-    spawns: [], sequence: [{ kinds: [{ type: 'bat', count: 3, elite: false }], every: .6, at: null, rel: null }], boss: null, spread: 1 });
+  D.blank = (wi = 0) => { const w = CB.WORLDS[wi]; return { official: false, slot: '', world: w.id,
+    name: 'Nouveau tableau', text: 'Abats 10 ennemis !', type: 'kill', goal: 10, seconds: 120, density: 1,
+    scene: w.scene || w.id, sky: w.sky.slice(), ground: w.ground, space: !!w.space,
+    random: { enabled: false, enemies: [] }, spawns: [], sequence: [], boss: null,
+    hpScale: 1, speedScale: 1, maxAlive: 0, spread: 1, chestAt: 0, chestEvery: 0, portalAt: 0, portalKills: 0 }; };
   // Anciens JSON (spawns = paquets répétés) : convertis en séquence de groupes, une seule façon de faire dans l'éditeur.
   D.normalize = c => { for (const t of ['cibles', 'brigands']) if (c[t] || c.type === t) { c[t] = CB.minigame(t, c[t]); while (c[t].medals.length < 4) c[t].medals.push(1); } if (!Array.isArray(c.sequence)) c.sequence = []; if (Array.isArray(c.spawns) && c.spawns.length) { for (const s of c.spawns) for (let p = 0; p < Math.max(1, Math.round(+s.packs || 1)); p++) c.sequence.push({ kinds: [{ type: s.type, count: Math.max(1, Math.round(+s.count || 1)) }], every: +s.every || .6, at: Math.max(0, +s.at || 0) + p * (+s.interval || 5), elite: !!s.elite }); c.spawns = []; } for (const g of c.sequence) { if (g.at != null && g.rel != null) g.rel = null; if ((g.at != null || g.rel != null) && g.left != null) g.left = null; if (g.elite) { for (const k of g.kinds || []) k.elite = true; g.elite = false; } g.kinds = (g.kinds || []).filter(k => k && (CB.ENEMIES[k.type] || (String(k.type).startsWith('boss:') && CB.BOSSES[k.type.slice(5)]))); if (g.every == null) g.every = .6; } return c; };
   // official : tableau sans JSON relié (ex. 1-2, la nuée) : le Debug lance le vrai tableau (null = la définition du jeu) ;
   // « Appliquer » le transforme en tableau de l'éditeur avec tes changements (avant, il ouvrait tout de suite une copie approximative).
   const run = c => CB.app.startWave(c && c.official ? null : c);
-  D.open = def => { const app = CB.app; app.debug = true; app.custom = D.normalize(def); run(app.custom); };
+  D.open = def => { const app = CB.app; app.debug = true; D.tab = 'objectif'; D.menu = null; D.scrollByTab = {}; D.renderedTab = null; app.custom = D.normalize(def); run(app.custom); };
   D.close = () => { const app = CB.app; D.hide(false); app.debug = false; app.custom = null; app.show('map'); };
   D.restart = () => run(CB.app.custom);
 
@@ -55,7 +58,7 @@
     const dinos = CB.DINOS.filter(k => CB.ENEMIES[k] && !used.has(k)); dinos.forEach(k => used.add(k)); g.push(['dinos', '🦖 Dinosaures', dinos]);
     g.push(['autres', '✨ Spéciaux et décors', Object.keys(CB.ENEMIES).filter(k => !used.has(k))]); g.push(['boss', '💀 Boss', Object.keys(CB.BOSSES).map(k => 'boss:' + k)]); return g;
   };
-  const nameOf = k => k.startsWith('boss:') ? (CB.BOSSES[k.slice(5)] || {}).name || k : (CB.ENEMIES[k] || {}).name || k;
+  const nameOf = k => k === 'coffre' ? 'Coffre d’or' : k === 'coffreOr' ? 'Coffre du portail' : k.startsWith('boss:') ? (CB.BOSSES[k.slice(5)] || {}).name || k : (CB.ENEMIES[k] || {}).name || k;
   const fld = (label, inner, cls = '') => '<label class="fld ' + cls + '"><span>' + label + '</span>' + inner + '</label>';
   // Réglages d'un mini-jeu (clés pointées « cibles.every.0 » → c.cibles.every[0] ; data-pct : entré en %, gardé en fraction)
   const minigame = (c, type) => {
@@ -72,6 +75,8 @@
   };
   D.render = () => {
     const app = CB.app, c = app.custom, el = $('#debug-panel'); if (!c || !el) return;
+    D.scrollByTab ||= {}; if (D.renderedTab) D.scrollByTab[D.renderedTab] = el.querySelector('.dbg-body')?.scrollTop || 0;
+    const restoreScroll = D.scrollByTab[D.tab] || 0;
     const enemyOpts = sel => Object.entries(CB.ENEMIES).map(([k, e]) => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + esc(e.name) + '</option>').join('');
     const num = (key, v, step = 1, min = 0) => '<input type="number" data-k="' + key + '" value="' + v + '" step="' + step + '" min="' + min + '">';
     let body = '';
@@ -81,7 +86,7 @@
       + (c.type === 'cibles' || c.type === 'brigands' ? minigame(c, c.type) : '')
       + fld('À abattre', num('goal', c.goal)) + fld('Secondes', num('seconds', c.seconds)) + fld('Monstres aléatoires du monde', '<span class="switch"><input type="checkbox" data-k="randomOn"' + (c.random.enabled ? ' checked' : '') + '> en plus de la liste Monstres</span>') + fld('Densité (aléatoires)', num('density', c.density, .05)) + fld('Max à l’écran (aléatoires) · 0 = sans limite', num('maxAlive', c.maxAlive || 0)) + fld('Boss', '<select data-k="boss"><option value="">aucun</option>' + Object.entries(CB.BOSSES).map(([k, b]) => '<option value="' + k + '"' + (k === c.boss ? ' selected' : '') + '>' + esc(b.name) + '</option>').join('') + '</select>')
       + fld('PV ×', num('hpScale', c.hpScale || 1, .1, .1)) + fld('Vitesse ×', num('speedScale', c.speedScale || 1, .1, .1))
-      + fld('Coffre mystère : premier à (s)', num('chestAt', c.chestAt || 0)) + fld('… puis toutes les (s) · 0 = jamais', num('chestEvery', c.chestEvery || 0)) + fld('Coffre doré (portail) à (s) · 0 = jamais', num('portalAt', c.portalAt || 0), 'wide')
+      + fld('Coffre mystère : premier à (s)', num('chestAt', c.chestAt || 0)) + fld('… puis toutes les (s) · 0 = jamais', num('chestEvery', c.chestEvery || 0)) + fld('Coffre doré (portail) à (s) · 0 = jamais', num('portalAt', c.portalAt || 0), 'wide') + fld('Ou après N ennemis abattus · 0 = désactivé', num('portalKills', c.portalKills || 0), 'wide')
       + fld('Largeur du cône d’apparition', '<span class="range"><input type="range" data-k="spread" min=".2" max="1" step=".05" value="' + (c.spread || 1) + '"><b id="dbg-spread">' + Math.round((c.spread || 1) * 100) + ' %</b></span>', 'wide') + '</div>'
       + '<p class="dbg-help">Monstres aléatoires : ceux du monde du tableau, en plus de ta liste. Densité : plus c’est haut, plus ils arrivent vite. PV × et Vitesse × s’appliquent à tout le monde. Largeur du cône : 100 % = toute la zone visible de l’écran (jamais plus, pour les petits écrans).</p>';
     else if (D.tab === 'visuel') body = '<div class="grid2">' + fld('Scène', '<select data-k="scene">' + CB.Render.SCENE_KEYS.map(k => '<option' + (k === c.scene ? ' selected' : '') + '>' + k + '</option>').join('') + '</select>')
@@ -90,14 +95,15 @@
       + '<p class="dbg-help">Les couleurs changent en direct dans le jeu.</p>';
     else if (D.tab === 'arrivees') { const f = D.filter.toLowerCase(), seq = c.sequence || [], menu = D.menu != null && seq[D.menu] ? D.menu : null; D.menu = menu;
       const menuHtml = i => '<div class="menu"><div class="dbg-bar"><input class="search" id="dbg-mfilter" placeholder="🔍 Filtrer…" value="' + esc(D.filter) + '"><button data-act="closemenu">✕</button></div><div class="mlist">'
-        + groups().map(([id, title, list]) => { const shown = list.filter(k => !f || nameOf(k).toLowerCase().includes(f) || k.includes(f)); if (!shown.length) return ''; return '<div class="mhead">' + title + '</div>' + shown.map(k => '<button type="button" class="mrow" data-pick="' + k + '" data-g="' + i + '"><canvas width="28" height="28" data-icon="' + k + '"></canvas><span class="nm">' + esc(nameOf(k)) + '</span><span class="stars">' + D.power(k) + '</span></button>').join(''); }).join('') + '</div></div>';
+        + (D.menuKind === 'event' ? [['events', '💣 Événements', ['bombeMagique', 'coffre', 'coffreOr']]] : groups()).map(([id, title, list]) => { const shown = list.filter(k => (D.menuKind === 'event' || !['bombeMagique', 'coffre', 'coffreOr'].includes(k)) && (!f || nameOf(k).toLowerCase().includes(f) || k.includes(f))); if (!shown.length) return ''; return '<div class="mhead">' + title + '</div>' + shown.map(k => '<button type="button" class="mrow" data-pick="' + k + '" data-g="' + i + '"><canvas width="28" height="28" data-icon="' + k + '"></canvas><span class="nm">' + esc(nameOf(k)) + '</span><span class="stars">' + D.power(k) + '</span></button>').join(''); }).join('') + '</div></div>';
       body = '<div class="dbg-bar"><b>Ordre des arrivées</b><span class="count">' + seq.length + ' groupe' + (seq.length > 1 ? 's' : '') + '</span></div><div class="seq">'
         + (seq.length ? seq.map((g, i) => { const mode = g.at != null ? 'at' : g.rel != null ? 'rel' : g.left != null ? 'left' : 'auto', when = mode === 'at' ? g.at : mode === 'rel' ? g.rel : mode === 'left' ? g.left : '';
           return '<div class="seq-card" draggable="true" data-seq="' + i + '"><div class="sp-head"><span class="drag" title="Glisser pour déplacer">≡</span><b>#' + (i + 1) + '</b>'
           + '<span class="mini"><button data-move="' + i + ':-1" title="Monter"' + (i ? '' : ' disabled') + '>▲</button><button data-move="' + i + ':1" title="Descendre"' + (i < seq.length - 1 ? '' : ' disabled') + '>▼</button></span>'
           + '<span class="status"></span><button class="sp-del" data-gdel="' + i + '" title="Supprimer">✕</button></div>'
-          + '<div class="kinds">' + g.kinds.map((k, j) => '<span class="kind"><canvas width="28" height="28" data-icon="' + k.type + '"></canvas>' + esc(nameOf(k.type)) + ' ×<input type="number" data-g="' + i + '" data-kind="' + j + '" value="' + k.count + '" min="1">' + (k.type.startsWith('boss:') ? '' : '<button class="kelite' + (k.elite ? ' on' : '') + '" data-kelite="' + i + ':' + j + '" title="' + (k.elite ? 'Élites (clique : normaux)' : 'Normaux (clique : élites)') + '">' + (k.elite ? '⭐ élite' : '☆') + '</button>') + '<button data-kdel="' + i + ':' + j + '" title="Enlever">×</button></span>').join('')
-          + '<button class="add' + (menu === i ? ' on' : '') + '" data-add="' + i + '">➕ Ajouter un monstre</button></div>' + (menu === i ? menuHtml(i) : '')
+          + '<div class="kinds">' + g.kinds.map((k, j) => '<span class="kind"><canvas width="28" height="28" data-icon="' + k.type + '"></canvas>' + esc(nameOf(k.type)) + ' ×<input type="number" data-g="' + i + '" data-kind="' + j + '" value="' + k.count + '" min="1">' + (k.type.startsWith('boss:') || (CB.ENEMIES[k.type]?.hazard || CB.ENEMIES[k.type]?.chest) ? '' : '<button class="kelite' + (k.elite ? ' on' : '') + '" data-kelite="' + i + ':' + j + '" title="' + (k.elite ? 'Élites (clique : normaux)' : 'Normaux (clique : élites)') + '">' + (k.elite ? '⭐ élite' : '☆') + '</button>') + '<button data-kdel="' + i + ':' + j + '" title="Enlever">×</button></span>').join('')
+          + '<button class="add' + (menu === i ? ' on' : '') + '" data-add="' + i + '">➕ Ajouter un monstre</button><button class="add" data-event="' + i + '">💣 Ajouter événement</button></div>' + (menu === i ? menuHtml(i) : '')
+          + '<label class="switch"><input type="checkbox" data-g="' + i + '" data-f="shuffle"' + (g.shuffle ? ' checked' : '') + '> Ordre aléatoire dans ce groupe</label>'
           + '<div class="row timing">' + fld('Départ', '<select data-g="' + i + '" data-f="mode"><option value="auto"' + (mode === 'auto' ? ' selected' : '') + '>Après l’élimination du groupe d’avant</option><option value="at"' + (mode === 'at' ? ' selected' : '') + '>À (s) · temps absolu</option><option value="rel"' + (mode === 'rel' ? ' selected' : '') + '>Relatif au groupe d’avant (± s)</option><option value="left"' + (mode === 'left' ? ' selected' : '') + '>Quand il reste N ennemis du groupe d’avant</option></select>')
           + (mode === 'auto' ? '' : fld(mode === 'at' ? 'À (s)' : mode === 'left' ? 'Il en reste (ennemis)' : '± s après la fin de ses arrivées', '<input type="number" data-g="' + i + '" data-f="when" value="' + when + '" step="' + (mode === 'left' ? '1' : '.5') + '"' + (mode === 'rel' ? '' : ' min="0"') + '>'))
           + fld('Écart (s)', '<input type="number" data-g="' + i + '" data-f="every" value="' + g.every + '" step=".1" min="0">') + '</div></div>'; }).join('')
@@ -125,19 +131,20 @@
     const gr = el.querySelector('[data-k="ground"]'); if (gr) gr.oninput = e => { c.ground = e.target.value; live(); };
     el.querySelectorAll('[data-icon]').forEach(cv => { try { CB.Render.enemyIcon(cv.getContext('2d'), cv.dataset.icon, 14, 15, 3.6); } catch (e) { } });
     el.querySelectorAll('details.grp').forEach(d => d.ontoggle = () => { D.openGroups[d.dataset.grpId] = d.open; });
-    const flt = el.querySelector('#dbg-filter'); if (flt) { flt.oninput = () => { D.filter = flt.value; const pos = flt.selectionStart; D.render(); const f2 = el.querySelector('#dbg-filter'); if (f2) { f2.focus(); f2.setSelectionRange(pos, pos); } }; }
+    const flt = el.querySelector('#dbg-filter'); if (flt) { flt.oninput = () => { D.filter = flt.value; const pos = flt.selectionStart; D.render(); const f2 = el.querySelector('#dbg-filter'); if (f2) { f2.focus({ preventScroll: true }); f2.setSelectionRange(pos, pos); } }; }
     const seq = c.sequence || (c.sequence = []);
     el.querySelectorAll('[data-g]').forEach(inp => inp.onchange = () => { const g = seq[+inp.dataset.g]; if (!g) return; if (inp.dataset.kind != null) { const k = g.kinds[+inp.dataset.kind]; if (k) k.count = Math.max(1, Math.round(+inp.value || 1)); return; } const f = inp.dataset.f;
       if (f === 'mode') { const v = g.at != null ? g.at : g.rel != null ? g.rel : g.left != null ? g.left : 0; g.at = inp.value === 'at' ? Math.max(0, v) : null; g.rel = inp.value === 'rel' ? v : null; g.left = inp.value === 'left' ? Math.max(0, Math.round(v)) : null; D.render(); return; }   // left : le groupe part quand il ne reste que N ennemis du groupe d'avant
       if (f === 'when') { const v = inp.value === '' || isNaN(+inp.value) ? 0 : +inp.value; if (g.at != null) g.at = Math.max(0, v); else if (g.rel != null) g.rel = v; else if (g.left != null) g.left = Math.max(0, Math.round(v)); return; }
-      g[f] = f === 'elite' ? inp.checked : (inp.value === '' || isNaN(+inp.value) ? .6 : Math.max(0, +inp.value)); });   // écart 0 : tout le groupe d'un coup
+      g[f] = (f === 'elite' || f === 'shuffle') ? inp.checked : (inp.value === '' || isNaN(+inp.value) ? .6 : Math.max(0, +inp.value)); });   // écart 0 : tout le groupe d'un coup
     el.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => { seq.splice(+b.dataset.gdel, 1); D.menu = null; D.render(); });
     el.querySelectorAll('[data-kelite]').forEach(b => b.onclick = () => { const [gi, ki] = b.dataset.kelite.split(':').map(Number), k = (seq[gi] || { kinds: [] }).kinds[ki]; if (k) { k.elite = !k.elite; D.render(); } });   // élite par sorte, pas par groupe
     el.querySelectorAll('[data-kdel]').forEach(b => b.onclick = () => { const [i, j] = b.dataset.kdel.split(':').map(Number); if (seq[i]) seq[i].kinds.splice(j, 1); D.render(); });
     el.querySelectorAll('[data-move]').forEach(b => b.onclick = () => { const [i, d] = b.dataset.move.split(':').map(Number), j = i + d; if (j < 0 || j >= seq.length) return; [seq[i], seq[j]] = [seq[j], seq[i]]; if (D.menu === i) D.menu = j; else if (D.menu === j) D.menu = i; D.render(); });
-    el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const i = +b.dataset.add; D.menu = D.menu === i ? null : i; D.filter = ''; D.render(); const m = el.querySelector('#dbg-mfilter'); if (m) m.focus(); });
-    el.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { const k = b.dataset.pick, g = seq[+b.dataset.g]; if (!g) return; const have = g.kinds.find(x => x.type === k && !x.elite); if (have) have.count++; else g.kinds.push({ type: k, count: k.startsWith('boss:') ? 1 : 3, elite: false }); D.menu = null; D.filter = ''; D.render(); });
-    const mf = el.querySelector('#dbg-mfilter'); if (mf) { mf.oninput = () => { D.filter = mf.value; const pos = mf.selectionStart; D.render(); const f2 = el.querySelector('#dbg-mfilter'); if (f2) { f2.focus(); f2.setSelectionRange(pos, pos); } }; }
+    el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const i = +b.dataset.add; D.menu = D.menu === i && D.menuKind !== 'event' ? null : i; D.menuKind = 'monster'; D.filter = ''; D.render(); const m = el.querySelector('#dbg-mfilter'); if (m) m.focus({ preventScroll: true }); });
+    el.querySelectorAll('[data-event]').forEach(b => b.onclick = () => { const i = +b.dataset.event; D.menu = D.menu === i && D.menuKind === 'event' ? null : i; D.menuKind = 'event'; D.filter = ''; D.render(); });
+    el.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { const k = b.dataset.pick, g = seq[+b.dataset.g]; if (!g) return; g.kinds.push({ type: k, count: 1, elite: false }); D.menu = null; D.filter = ''; D.render(); });
+    const mf = el.querySelector('#dbg-mfilter'); if (mf) { mf.oninput = () => { D.filter = mf.value; const pos = mf.selectionStart; D.render(); const f2 = el.querySelector('#dbg-mfilter'); if (f2) { f2.focus({ preventScroll: true }); f2.setSelectionRange(pos, pos); } }; }
     el.querySelectorAll('.seq-card').forEach(card => {   // glisser-déposer pour réordonner
       card.ondragstart = e => { D.drag = +card.dataset.seq; card.classList.add('dragging'); try { e.dataTransfer.setData('text/plain', card.dataset.seq); e.dataTransfer.effectAllowed = 'move'; } catch (err) { } };
       card.ondragend = () => { D.drag = null; el.querySelectorAll('.seq-card').forEach(x => x.classList.remove('dragging', 'over')); };
@@ -151,15 +158,16 @@
       if (a === 'freeze') { app.W.freeze = !app.W.freeze; D.render(); }
       else if (a === 'restart') D.restart();
       else if (a === 'apply') { if (c.official) { c.official = false; D.render(); } D.restart(); }
-      else if (a === 'newgroup') { seq.push({ kinds: [], every: .6, at: null, rel: null }); D.menu = seq.length - 1; D.filter = ''; D.render(); const cards = el.querySelectorAll('.seq-card'); const last = cards[cards.length - 1]; if (last) last.scrollIntoView({ block: 'nearest' }); const m = el.querySelector('#dbg-mfilter'); if (m) m.focus(); }
+      else if (a === 'newgroup') { seq.push({ kinds: [], every: .6, at: null, rel: null }); D.menu = seq.length - 1; D.menuKind = 'monster'; D.filter = ''; D.render(); const cards = el.querySelectorAll('.seq-card'); const last = cards[cards.length - 1]; if (last) last.scrollIntoView({ block: 'nearest' }); const m = el.querySelector('#dbg-mfilter'); if (m) m.focus({ preventScroll: true }); }
       else if (a === 'closemenu') { D.menu = null; D.filter = ''; D.render(); }
       else if (a === 'hide') D.hide(true);
       else if (a === 'save') D.save();
-      else if (a === 'blank') { const wi = CB.WORLDS.findIndex(w => w.id === c.world); app.custom = D.blank(Math.max(0, wi), app.vi); D.menu = null; D.restart(); }
+      else if (a === 'blank') { const wi = CB.WORLDS.findIndex(w => w.id === c.world); D.open(D.blank(Math.max(0, wi))); }
       else if (a === 'close') D.close();
     });
     const file = $('#dbg-file'); if (file) file.onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(txt => { try { const j = JSON.parse(txt); if (!j || typeof j !== 'object') throw 0; app.custom = D.normalize(Object.assign(D.blank(app.wi, app.vi), j, { random: Object.assign({ enabled: false, enemies: [] }, j.random || {}), spawns: Array.isArray(j.spawns) ? j.spawns : [], sequence: Array.isArray(j.sequence) ? j.sequence : [] })); D.restart(); } catch (err) { alert('JSON invalide'); } }); };
     D.tick();
+    el.querySelector('.dbg-body').scrollTop = restoreScroll; D.renderedTab = D.tab;
   };
   D.tick = () => {
     const w = CB.app.wave, st = $('#dbg-status'); if (!w || !st) return;

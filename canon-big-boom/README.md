@@ -307,7 +307,7 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   qui reste hors de l'écran (`e.flee`) ; le tableau se termine quand tout le monde est sorti, et des bombes magiques (`bombeMagique`, `def.hazard`) posées dans un cercle magique
   avec un décompte de 3 s : tirer dedans la fait disparaître, sinon elle explose et enlève des vies. Pas de compte à
   rebours : on tient le plus longtemps possible, étoiles à 1, 3 et 5 minutes, bouton « Terminer » pour arrêter.
-- **Tableau 1-4 « Cent secondes »** : survivre 100 s, dense (`density` 1,9, `ramp` toutes les 25 s) ; son étoile ouvre le boss.
+- **Tableau 1-4 « L’ombre du dragon »** : survivre 180 s, puis regarder le Dragon rouge chasser les monstres ; deux étoiles permettent de déverrouiller le boss.
 - **Monde 1, tableaux 3 à 5** (`def.night`) : les monstres de la nuit sans fin reviennent dans le même ordre, sans
   paliers de couleur, avec le temps de la nuit compressé (`timeScale`) pour que seuls les premiers styles arrivent,
   mais plus rapides (`speed`).
@@ -405,7 +405,7 @@ Aucun outil de build : ouvrir `index.html` (ou servir le dossier). Tout est en J
   (`bateauVolant`, `cross`, `hits: 3`, `secretBoat`) traverse la nuée de gauche à droite ; chaque boulet compte pour un coup
   (`applyDamage`), au troisième il se brise (« UN NOUVEAU SECRET S'EST OUVERT SUR LA CARTE ») et `profile.boatSecret`
   ouvre le tableau 1-9 (`S.waveUnlocked`, `nextReveal`), même si la nuée est perdue. Il ne repasse plus une fois trouvé.
-- **La mer des monstres (1-9)** : `type: 'survive'` 300 s, roster de monstres marins (`swim: true` : requin, piranha,
+- **La mer des monstres (1-9)** : `type: 'kill'`, objectif de 33 monstres, sans limite de temps. Deux monstres simultanés maximum, densité 0,55 et grands boucliers à 8 points. Roster de monstres marins (`swim: true` : requin, piranha,
   pieuvre, crabe géant, méduse, serpent de mer) : leur corps est à y ≈ 0 et `R.enemy` coupe tout ce qui est sous la ligne
   d'eau projetée (`waterBack` : ondes derrière ; `waterFront` : écume, gouttes, sillage devant), donc à moitié immergés et quelques
   chauves-souris dans les airs. Les nageurs ne « nous atteignent » jamais : arrivés à la coque (`CB.SEA_BITE.z`, `Wave.sea`),
@@ -513,3 +513,271 @@ tools/test-game.cjs        vérifications de la simulation (node tools/test-game
 ## Mise en ligne
 
 Augmenter `CB.VERSION` dans `js/config.js`, puis `../jeux-site/deploy.sh "Canon Big Boom : …"`.
+
+
+### Hangar — 1 novembre 2026
+
+Quatre onglets : Canon (choix intégré, améliorations et spécialités du canon choisi), Boulets
+(effets en premier, puis apparences), Pouvoirs (objets, attaque spéciale, cartes, pouvoirs de boss
+et deuxième pouvoir), Équipe (sièges et famille). Le canon regardé est distinct du canon équipé ;
+son aperçu et ses cartes portent le même nom. Les descriptions du hangar utilisent des phrases
+simples plutôt que des pourcentages. Le sélecteur de canons reste dans le contenu sur tous les écrans.
+
+Les améliorations commencent à 1 800–3 000 pièces (dégâts : 2 000, puis 2 900, puis 4 205),
+avec une progression ×1,45 et le multiplicateur habituel du palier du canon. Cible de départ :
+environ un achat par tableau sur la base du retour de jeu de ~4 000 pièces en deux tableaux.
+Spécialités des canons : anciens prix ×15 ; effets des boulets : anciens prix ×20.
+Les niveaux déjà achetés sont conservés. Vérification : `node tools/test-game.cjs`.
+
+
+### Soccer d’Eliott et cibles — 1 novembre 2026
+
+Le tableau 1-3 fait apparaître ses trois cibles à 40, 100 et 160 ennemis abattus
+(auparavant 12, 30 et 48 secondes). Choisir un canon dans le hangar ne défile plus la page.
+
+« Soccer étoile » permet de tirer des ballons blancs et noirs pendant 12 secondes.
+Chaque ballon alterne entre deux monstres : il revient sur le précédent tant qu’il vit,
+remplace un adversaire mort si le dernier touché survit, et s’arrête lorsque les deux membres
+du duo sont morts. Les ricochets suivent les ennemis mobiles et ignorent les coffres comme
+partenaires. Un ballon déjà lancé termine sa chaîne après les 12 secondes ; les puzzles
+interrompent ses ricochets. Le filet, les quatre cibles, les coffres bonus et la division en
+cinq ballons sont supprimés. Le pouvoir fonctionne aussi pour les coéquipiers et en deuxième
+pouvoir. Le bonus passif d’esquive d’Eliott reste inchangé.
+
+
+### Créateur, tableau 1-1, soins et soccer — mise à jour du 1 novembre 2026
+
+- « Créer un tableau » part d’une définition indépendante, sans emplacement, groupe ni
+  réglage de portail hérité. L’éditeur conserve le défilement de chaque onglet après modification.
+- Le 1-1 utilise désormais `Downloads/tableau-11.json` (« Les Premiers Pas », dix groupes),
+  recopié dans `tableaux/tableau-foret-1.json` et `js/custom-waves.js`. Son champ `slot` est
+  corrigé de `foret-3` à `foret-1`. Le coffre-portail est déclenché par `portalKills: 80`,
+  dès la première partie ; l’ancien réglage temporel reste disponible pour les autres tableaux.
+- La carte Vampire fait flotter des petits « + » verts autour du joueur pendant un bref instant
+  lorsqu’une élimination lui rend effectivement des points de vie.
+- Soccer : les renforts et groupes continuent désormais normalement. Le but n’a plus de verrou
+  global lié aux monstres ; les collisions des ballons restent actives. Filet en profondeur,
+  poteaux blancs et quatre cibles circulaires rouges et blanches entièrement à l’intérieur,
+  sans chiffres. Les récompenses et la durée de douze secondes restent identiques.
+
+
+### Groupes de l’éditeur et bilan soccer — 1 novembre 2026
+
+Chaque ajout de monstre crée désormais un badge indépendant de quantité 1. Les badges
+identiques ne sont pas fusionnés. « Ajouter événement », à côté du bouton des monstres,
+propose la bombe magique explosive ; elle rejoint le groupe avec sa quantité et sa mèche.
+La case « Ordre aléatoire dans ce groupe » sauvegarde `shuffle: true` dans le JSON.
+La simulation mélange alors les individus avec Fisher–Yates sans changer les quantités
+ni les élites. Sans cette option, l’ordre des badges est conservé.
+
+Après les quatre cibles du soccer, aucun coffre n’est dessiné : le bilan affiche l’or des
+quatre cibles, le bonus équivalent aux trois coffres et le total reçu. Les gains effectifs
+et leurs annonces « +X » avec pièce sont inchangés ; le bilan ne crédite pas d’or en double.
+
+Le déclenchement automatique du coffre-portail du 1-1 à 80 éliminations est désormais désactivé (`portalKills: 0`, `portalAt: 0`). Le coffre se place manuellement dans les groupes via « Ajouter événement ».
+
+### Cartes et encyclopédie — 2026-11-02
+
+Bille gluante fait partie des cartes gratuites dès le niveau 1. Trésor se débloque au niveau 10,
+avec la sphère déjà prévue à ce niveau ; le niveau 13 donne désormais 500 pièces.
+L’encyclopédie présente les pouvoirs et combos en carrousel circulaire (flèches, clavier gauche/droite,
+glissement tactile), avec trois cartes sur grand écran et une sur petit écran.
+Les cartes verrouillées n’exposent que leur cadenas et les conditions de déblocage.
+Les combos restent entièrement masqués jusqu’à leur sélection en jeu, enregistrée dans
+`profile.usedCombos` et sauvegardée immédiatement. Les anciennes sauvegardes sans cet historique
+ne permettent pas de reconstituer les combos utilisés auparavant.
+
+
+### Réserve de pouvoirs — 2026-11-02
+
+Dans le hangar, onglet Pouvoirs, « Réserve de pouvoirs » permet de stocker deux charges
+pour 1 200 pièces, puis trois pour 2 400 pièces (remises habituelles applicables).
+L’amélioration suit le personnage et concerne séparément ses deux pouvoirs, y compris
+le pouvoir unique équipé. Chaque charge exige une jauge entière ; une activation
+consomme une seule charge et conserve la fraction en cours. Le compteur indique les
+charges prêtes et la capacité, et le cercle montre la progression de la prochaine charge.
+Les pouvoirs à durée doivent toujours se terminer avant une nouvelle activation ou
+une recharge normale. Les bonus « Jauge pleine » complètent la prochaine charge ;
+l’objet de départ donne une seule charge. La réserve repart à zéro à chaque tableau.
+
+
+### Hangar, cartes et affichage — 2026-11-02
+
+- Le chrono inférieur droit est masqué pendant la survie et les nuées. Le chrono
+  d’objectif reste visible. La mâchoire du dragon est arrondie et son souffle passe derrière.
+- Les descriptions des apparences de boulets ont huit mots maximum, sans longue liste
+  de variantes. Bille gluante : « Ralentit les monstres de temps en temps. »
+  Les annonces de pouvoirs ne contiennent plus « (à acheter) ».
+- Le niveau 8 débloque les améliorations permanentes des cartes au hangar. Chaque carte
+  améliorable affiche son effet actuel et le suivant. Premier achat : 5 000 pièces,
+  puis prix multiplié par 1,7 à chaque achat de cette carte, avec les remises habituelles.
+  Aucun niveau maximum. Les effets immédiats sans valeur quantitative (bombe, jauge,
+  surprise) et les combos ne font pas partie de cette boutique. Les trois niveaux des
+  cartes pendant un tableau restent distincts des améliorations permanentes.
+- Gâchette rapide est additive : +20/40/60 % pour une, deux, trois cartes ; après
+  une amélioration permanente, +21/42/63 %. Les bonus sont rejoués au passage du portail.
+- Choix supplémentaires : 4 000, 10 000, 25 000 pièces pour passer à 4, 5, 6 choix.
+  Les choix déjà gagnés par niveau comptent dans ce maximum. La touche 6 choisit la
+  sixième carte ; disposition sur deux colonnes sur téléphone.
+- Relances achetées : stock maximum 3, une à la fois, 5 000 / 10 000 / 20 000 pièces
+  selon le stock actuel. Elles persistent entre tableaux et sont consommées après les
+  relances gratuites du tableau. Chaque relance conserve le nombre de choix disponible.
+- À gauche du hangar, « Stats du personnage » est fermé par défaut. Au clic, il affiche
+  les statistiques du canon équipé, défense, pouvoirs, tirages, butin, effets, spécialités
+  et cartes améliorées dans un panneau sombre et doré.
+
+
+### Missions, étoiles, pièces et déplacement — 2026-11-02
+
+Chaque tableau possède désormais trois missions (`js/missions.js`). Le bilan de fin
+attribue une étoile par mission réussie, même après une mort. Une étoile est enregistrée
+par identifiant de mission : les réussites de plusieurs parties se cumulent, sans créditer
+plusieurs fois la même étoile. Les anciennes étoiles et les accès déjà ouverts sont conservés.
+Les récompenses d’or et d’XP du combat restent encaissées.
+
+- Tableau 1-1 : 100 monstres, 3 élites, 120 secondes. Les groupes personnalisés sont
+  conservés ; après le dernier, les monstres continuent d’arriver. Les 100 éliminations
+  ne mettent plus fin à la partie.
+- Tableau 1-2 : 75 chauves-souris, 5 bombes magiques désamorcées, terminer la nuée (150 s). Une mort
+  peut donner les deux premières étoiles ; quitter ne valide pas la fin.
+- Tableau 1-3 : 120 monstres, niveau 5 dans la partie, deux attaques spéciales.
+  La partie continue après les 120 monstres.
+- Les autres tableaux utilisent trois objectifs adaptés à leur type. Les boss demandent
+  de les vaincre, de garder 50 % de vie et de les vaincre sans attaque spéciale.
+- La liste complète des idées de missions reste une réserve de défis : les compteurs
+  disponibles couvrent notamment types d’ennemis/élites, survie, vie à un instant donné,
+  niveaux et cartes, éléments, ricochets, combos, or, déplacements et restrictions.
+  Des définitions personnalisées peuvent fournir trois entrées `missions` ; les défis
+  plus avancés (précision par salve, chaînes d’explosions, pièges…) ne sont pas encore affectés.
+
+Le tableau suivant exige deux étoiles dans le précédent. La carte conserve son animation
+d’apparition ; le joueur sélectionne ensuite la tuile verrouillée et valide pour compter
+les deux étoiles et ouvrir le cadenas. Cette validation ne lance pas la partie : une nouvelle
+validation sert à jouer. Les étoiles ne sont pas consommées. Le monde suivant nécessite
+toujours une véritable victoire sur le boss, distincte des étoiles de missions.
+
+Prime par mission réussie et par partie :
+`arrondi(100 × (1 + palierDuMonde) × (1 + indexDuTableau × 0,25))`.
+Le monde 1 donne 100 / 125 / 150 / 175 / 200 pièces par mission ; le monde 2 commence
+à 200. Une mission déjà étoilée redonne sa prime si elle est réussie dans une nouvelle
+partie. Les primes sont indiquées sur la carte et dans le bilan, sans double encaissement.
+
+Des pièces bonus apparaissent à partir de 12 secondes, puis toutes les 18 à 28 secondes,
+avec au maximum trois pièces présentes. Valeurs par monde principal : 5, 10, 20, 50, 100,
+250 pièces. Elles se récupèrent en les touchant avec un tir ou à proximité du canon.
+Elles ne comptent ni comme monstres abattus ni comme XP et ne subissent pas les multiplicateurs
+d’or : leur valeur affichée est exactement le montant reçu.
+
+Le déplacement latéral s’achète séparément pour chaque canon possédé : 1 000 pièces
+pour le classique, puis +500 par palier de canon, avant remise. Il fonctionne dans tous
+les tableaux et n’est plus accordé gratuitement sur les boss ou en mer.
+Les murs magiques demandent 10 coups dans le monde 1, puis 15, 20, 25, 30 et 35 dans
+les mondes suivants. Les réglages explicites d’un tableau restent prioritaires.
+
+Vérification : `node tools/test-game.cjs` (combat historique isolé des apparitions de
+pièces) et `node tools/test-missions.cjs` (jeu avec missions, sauvegarde, progression,
+récompenses, pièces, murs et achat du déplacement).
+
+
+### Goélands pirates et clics sur la carte — 2026-11-02
+
+Le tableau bateau du monde 1 (1-9) remplace ses chauves-souris par des goélands
+pirates : grandes ailes blanches et grises, bec jaune, foulard rouge, bicorne et
+cache-œil. L’élite est un capitaine doré. Ils volent au-dessus de la mer et gardent
+la difficulté des anciennes chauves-souris. Leur entrée figure dans le bestiaire.
+
+Le panneau de missions de la carte est déplacé en haut à gauche, compacté et
+rendu transparent aux clics. Les tuiles sous le panneau restent sélectionnables,
+notamment le tableau 1 qui était masqué par l’ancien panneau inférieur gauche.
+
+
+### Pièces, suivi des missions et horde — 2026-11-02
+
+Les pièces bonus ont une tranche striée, un relief doré, une valeur frappée au centre
+et un reflet animé. La collecte produit des étincelles et un son métallique WebAudio
+dédié (deux impacts courts et résonances inharmoniques), soumis au volume des effets
+et au bouton de coupure du son.
+
+Chaque mission dispose de sa barre de progression, bleue en cours et dorée une fois
+réussie. La réussite déclenche une étoile animée, des rayons et étincelles, le nom de
+la mission, sa prime d’or et une petite fanfare. Les notifications sont mises en file,
+une fois par mission et par partie ; elles attendent pendant les choix de cartes.
+Les objectifs réversibles ne sont célébrés qu’au bilan. Le compteur d’or inclut les
+primes acquises, encaissées une seule fois au bilan. La fin de partie laisse les
+animations se terminer avant d’ouvrir les résultats. Le mode « mouvement réduit »
+remplace les grands mouvements par un fondu.
+
+Au premier tableau du monde 1, dès 120 secondes, une horde supplémentaire commence
+même si les groupes personnalisés ne sont pas encore tous éliminés. Toutes les
+30 secondes, ses apparitions se rapprochent, puis arrivent par deux et par trois.
+Chaque palier ajoute 40 % de vie de base et 12 % de vitesse de base aux nouveaux
+monstres ; des élites arrivent régulièrement. Les primes et l’or par ennemi ne sont
+pas augmentés par cette difficulté. Les renforts s’arrêtent temporairement quand
+40 monstres vivants sont présents, pour éviter de surcharger le navigateur.
+
+
+### Horde, Dragon rouge et aperçu de carte (2 novembre 2026)
+- La horde accélère toutes les 30 secondes après 2 minutes dans les combats sans chrono.
+  Dans les combats chronométrés, elle commence à 60 % de la durée (au plus 120 s).
+  Elle conserve le bestiaire et les plafonds de monstres du tableau. Pas de horde supplémentaire
+  au tableau 1-2, dans les mini-jeux ou les combats de boss ; les fins existantes sont conservées.
+- Le tableau 1-2 finit à 150 s sans dragon. Le tableau 1-4 « L’ombre du dragon » dure
+  180 s, puis le dragon chasse les monstres. Renforts, événements et dégâts au canon
+  s’arrêtent pendant ce passage ; la fin attend la fuite des monstres.
+- Le boss 1-5 est le Dragon rouge : ailes rouges, ventre doré et écaille fragile,
+  boules de feu puis éventails et murs. Sa clé historique `batking` reste compatible
+  avec les sauvegardes et l’éditeur ; le Dragon de lave du volcan reste distinct.
+- Le panneau de carte utilise trois missions courtes, une pièce dorée CSS et un badge
+  bleu « 2 × ★ » près du cadenas. Les étoiles gagnées restent sous le tableau.
+- `stageBestiary[monde-tableau]` enregistre les variantes réellement tuées à
+  l’encaissement : espèce, élite, palier, nom et couleur. Aucun transfert des anciens
+  totaux globaux : on ne peut pas en déduire le tableau d’origine. Une espèce simplement
+  vue n’est pas révélée, et les découvertes des autres tableaux restent cachées.
+
+
+### Missions variées et bombes dans les combats
+Les tableaux de survie proposent désormais désamorçage, niveau et fin du tableau,
+avec un seul objectif de durée/fin. Les boss proposent victoire, trois bombes et trois
+boîtes bonus. Les tableaux navals à objectif de flotte demandent bateaux, bombes et
+attaque spéciale. Les mini-jeux combinent quantité, rapidité et précision (ou civils
+épargnés). Les identifiants de mission restent stables pour conserver les étoiles acquises.
+Les bombes magiques arrivent dès 20 secondes dans les autres combats, puis toutes les
+22 à 14 secondes selon le temps écoulé, une à la fois. La nuée conserve son rythme.
+Elles ne surgissent ni pendant les puzzles ni pendant la finale du dragon ; les mini-jeux
+restent exempts de bombes.
+
+
+### Carte, deuxième tableau et réglages (2 novembre, suite)
+- Le tableau 1-2 devient « Les bois hantés » : combat ouvert, horde après 120 s,
+  120 monstres / 5 bombes / 120 secondes. Le bateau secret reste accessible à 40 s.
+  Les tableaux 2, 3 et 4 ont maintenant des listes explicites de monstres (`def.roster`),
+  utilisables pour les futurs défis et la recherche d’un monstre par tableau.
+- La carte affiche le total d’étoiles à côté de l’or. Les découvertes visuellement
+  identiques (espèce et couleur) sont regroupées à l’affichage, sans supprimer les
+  variantes détaillées enregistrées. Le secret gagné dispose d’une grande carte dédiée.
+- Réglages : choix explicite Auto/Tous les effets/Léger, secousses, grands flashs,
+  conseils de début de tableau, petits textes de combat et grand viseur. Préférences
+  conservées dans `settings`, appliquées au rendu sans modifier les règles du combat.
+
+
+### Début doux du tableau 1-2
+Le joueur choisit deux cartes avant que la difficulté monte : chauves-souris simples,
+une toutes les 2,2 secondes, quatre présentes au maximum, vitesse réduite, sans élites,
+grosses variantes, bombes ni événements aléatoires. Ensuite : hiboux, fantômes puis
+citrouilles sur 40 secondes, jusqu’à six ennemis pendant la transition. Les paliers de
+résistance repartent de cette transition ; la horde attend au moins 120 secondes de
+partie et 45 secondes après les deux choix. Le bateau secret reste disponible.
+
+
+### Campagne étendue et finale CHAOS
+- Dix tableaux principaux par monde ; secrets, voyage en bateau et deux stands de mini-jeux restent en supplément.
+- Ordre principal : Forêt → Manoir → Foire → Ruche → Volcan → Bonbons → Espace → CHAOS. Le dragon annonce le boss aux tableaux 9 et 10 de la Forêt.
+- Une étoile au tableau précédent révèle le suivant sur la carte. Pour l’ouvrir, il faut aussi atteindre le seuil du monde, étoiles des tableaux bonus comprises. Seuils d’étoiles cumulées avant les tableaux 2 à 10 : 2, 4, 7, 9, 12, 14, 17, 20, 23. Les étoiles ne sont pas dépensées.
+- Trois cibles au tableau 3 découvrent le stand de cibles de chaque monde. Le tableau 7 présente les brigands et gentils ; une étoile y ouvre leur stand. Les brigands commencent par des glissades, puis suivent des lettres et des boucles, seuls ou en groupe. Le nombre, la profondeur et l’espacement des pancartes changent au fil des manches.
+- Le Grand N’importe Quoi termine CHAOS : gribouillis vivant, tempête de lettres, soleil de peinture. Changements de forme à 2/3 et 1/3 des PV, attaques distinctes et projectiles destructibles.
+- `js/campaign.js` étend les définitions historiques et migre les anciennes sauvegardes (`campaignVersion: 2`) sans supprimer or, étoiles ou accès acquis. Les indices des mondes historiques restent stables ; utiliser `CB.mainWorlds()` pour leur ordre.
+- `js/campaign-art.js` dessine les nouveaux décors, monstres et formes du boss en canvas.
+- Vérification intégrée : `node tools/test-campaign.cjs`, en complément de `tools/test-game.cjs` et `tools/test-missions.cjs`.
+
+- Dans le hangar, **🎨 Visuel** regroupe les apparences de boulets et huit viseurs. Le style et la couleur du viseur sont enregistrés par héros.
+- **Pouvoirs → Brise-mur** : cinq niveaux permanents. Chaque niveau ajoute 1 dégât par boulet du héros contre les murs magiques, quel que soit son canon.
