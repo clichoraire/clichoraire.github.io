@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Paper Run · Paper Loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=4">
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-mode" class="screen">
+    <div class="mode-wrap">
+      <div class="title-box mode-box">
+        <p class="eyebrow">LA FAMILLE EN PAPIER · DEUX JEUX</p>
+        <h1 class="logo"><span>PAPER</span></h1>
+        <p class="lead">Choisis ton jeu. Les deux se jouent avec les mêmes personnages, chacun garde sa sauvegarde.</p>
+        <div class="menu-grid mode-grid">
+          <button id="mode-run" class="menu-card paper"><span class="icon">🏁</span><b>Paper Run</b><small>Courses à quatre, cubes d’objets, coupes et trophées.</small></button>
+          <button id="mode-loop" class="menu-card paper"><span class="icon">🔁</span><b>Paper Loop</b><small>Cours jusqu’à la tirelire ; tes clones refont la boucle pour toi.</small></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-title" class="screen hidden">
+    <canvas id="title-anim" width="1280" height="520" aria-hidden="true"></canvas>
+    <div class="title-box">
+      <p class="eyebrow">LA FAMILLE EN PAPIER · COURSES À QUATRE</p>
+      <h1 class="logo"><span>PAPER</span><span class="t2">RUN</span></h1>
+      <p class="lead">Quatre coureurs, des cubes d’objets, des raccourcis pour qui a les bons pouvoirs. Gagne les coupes en Feuille, Carton et Origami… et ramasse tous les trophées d’or !</p>
+      <div class="title-buttons">
+        <button id="btn-continue" class="btn big primary hidden"></button>
+        <button id="btn-play" class="btn big">▶ Choisir un personnage</button>
+        <button id="btn-sound" class="btn small">🔊 Son</button>
+        <button id="btn-loop" class="btn small">🔁 Jouer à Paper Loop</button>
+      </div>
+      <p class="hint">Flèches ou A / D : courir · Espace : sauter · E ou Ctrl : objet · Maj ou X : élan · Échap : pause</p>
+      <span id="version"></span>
+    </div>
+  </section>
+
+  <section id="screen-chars" class="screen hidden">
+    <header class="bar">
+      <button class="btn small" data-back="title">◀ Retour</button>
+      <h2>Qui court aujourd’hui ?</h2>
+      <span></span>
+    </header>
+    <div id="char-grid" class="char-grid"></div>
+  </section>
+
+  <section id="screen-menu" class="screen hidden">
+    <header class="bar">
+      <div id="menu-badge" class="badge paper"></div>
+      <div class="wallet"><span id="menu-progress" class="pill"></span><span id="menu-gold" class="pill gold"></span></div>
+      <div class="bar-actions">
+        <button id="btn-change" class="btn small">👥 Personnage</button>
+        <button class="btn small" data-back="title">🏠</button>
+      </div>
+    </header>
+    <div class="menu-grid">
+      <button id="btn-cups" class="menu-card paper"><span class="icon">🏆</span><b>Tournoi</b><small>Cinq coupes de quatre courses, trois difficultés. Des trophées à gagner partout.</small></button>
+      <button id="btn-free" class="menu-card paper"><span class="icon">🏁</span><b>Course libre</b><small>Une course, n’importe quel tableau, pour s’entraîner ou essayer un raccourci.</small></button>
+      <button id="btn-shop" class="menu-card paper"><span class="icon">🛍️</span><b>Papeterie</b><small>Dépense ton or : double saut, ciseaux, élan, ruban… Les raccourcis sont à ce prix.</small></button>
+      <button id="btn-trophies" class="menu-card paper"><span class="icon">🏅</span><b>Trophées</b><small>Le tableau de tes coupes : le but, c’est de l’or partout.</small></button>
+    </div>
+  </section>
+
+  <section id="screen-cups" class="screen hidden">
+    <header class="bar">
+      <button class="btn small" data-back="menu">◀ Menu</button>
+      <h2>Tournoi</h2>
+      <span></span>
+    </header>
+    <div class="cups-layout">
+      <aside class="diff-col">
+        <h3>Difficulté</h3>
+        <div id="diff-list" class="diff-list"></div>
+        <p id="diff-desc" class="diff-desc paper"></p>
+      </aside>
+      <div id="cup-grid" class="cup-grid"></div>
+    </div>
+  </section>
+
+  <section id="screen-free" class="screen hidden">
+    <header class="bar">
+      <button class="btn small" data-back="menu">◀ Menu</button>
+      <h2>Course libre</h2>
+      <div id="free-diff" class="bar-actions"></div>
+    </header>
+    <div id="free-grid" class="free-grid"></div>
+  </section>
+
+  <section id="screen-game" class="screen hidden">
+    <div class="game-frame">
+      <canvas id="game" width="960" height="540"></canvas>
+      <p id="game-tip" class="game-tip hidden"></p>
+      <div id="touch" class="touch hidden">
+        <div class="touch-left"><button data-touch="left">◀</button><button data-touch="right">▶</button><button data-touch="down" class="down">⤓</button></div>
+        <div class="touch-right"><button data-touch="item">🎁</button><button data-touch="dash">💨</button><button data-touch="jump" class="jump">⤒</button></div>
+      </div>
+      <div id="pause" class="overlay hidden">
+        <div class="paper panel">
+          <h2>Pause</h2>
+          <button id="p-resume" class="btn big primary">▶ Reprendre <small>Entrée</small></button>
+          <button id="p-restart" class="btn">↻ Recommencer la course</button>
+          <button id="p-sound" class="btn">🔊 Son</button>
+          <button id="p-quit" class="btn">🏠 Abandonner · menu</button>
+        </div>
+      </div>
+      <div id="results" class="overlay hidden">
+        <div class="paper panel results">
+          <div class="r-stamp"></div>
+          <h2 class="r-title"></h2>
+          <p class="r-level"></p>
+          <div class="r-table"></div>
+          <div class="r-stats"></div>
+          <div class="r-gold"></div>
+          <div class="r-buttons">
+            <button id="r-again" class="btn">↻ Rejouer <small>R</small></button>
+            <button id="r-next" class="btn primary">▶ Suivant <small>Entrée</small></button>
+            <button id="r-shop" class="btn">🛍️ Papeterie</button>
+            <button id="r-menu" class="btn small">🏠 Menu <small>Échap</small></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-podium" class="screen hidden">
+    <div class="podium-layout">
+      <canvas id="podium-canvas" width="800" height="230"></canvas>
+      <div class="paper panel podium-panel">
+        <h2 class="p-title"></h2>
+        <p class="p-sub"></p>
+        <div class="p-table r-table"></div>
+        <p class="p-gold"></p>
+        <div class="r-buttons">
+          <button id="podium-back" class="btn big primary">🏆 Les coupes <small>Entrée</small></button>
+          <button id="podium-shop" class="btn">🛍️ Papeterie</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-trophies" class="screen hidden">
+    <header class="bar">
+      <button class="btn small" data-back="menu">◀ Menu</button>
+      <h2>Trophées</h2>
+      <span id="trophy-summary" class="pill"></span>
+    </header>
+    <div id="trophy-grid" class="trophy-grid paper"></div>
+  </section>
+
+  <section id="screen-shop" class="screen hidden">
+    <header class="bar">
+      <button class="btn small" data-back="menu">◀ Menu</button>
+      <h2>La Papeterie de Grand-maman</h2>
+      <span id="shop-gold" class="pill gold"></span>
+    </header>
+    <div class="shop-layout">
+      <aside class="keeper">
+        <div id="shop-keeper" class="keeper-portrait paper"></div>
+        <p id="shop-say" class="bubble paper"></p>
+      </aside>
+      <div id="shop-grid" class="shop-grid"></div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast paper hidden"></div>
+</div>
+
+<script src="js/family-head-sources.js"></script>
+<script src="js/family-heads.js"></script>
+<script src="js/data.js?v=4"></script>
+<script src="js/physics.js?v=4"></script>
+<script src="js/levels.js?v=4"></script>
+<script src="js/paths.js?v=4"></script>
+<script src="js/render.js?v=4"></script>
+<script src="js/audio.js?v=4"></script>
+<script src="js/input.js?v=4"></script>
+<script src="js/game.js?v=4"></script>
+<script src="js/main.js?v=4"></script>
+</body>
+</html>

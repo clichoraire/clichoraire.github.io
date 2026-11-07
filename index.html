@@ -217,6 +217,14 @@
     if (window.SITE_CONFIG && SITE_CONFIG.sosariaApi) fetch(SITE_CONFIG.sosariaApi + '/api/relais', { mode: 'no-cors' }).catch(() => {});
     // Pour ajouter un jeu : une entrée ici, un dossier à côté (avec son index.html) et une image dans covers/.
     const GAMES = [
+      {
+        title: 'Paper Run', path: 'paper-run/', cover: 'covers/paper-run.jpg', badge: 'Nouveau · Course', badgeClass: 'alpha',
+        desc: "Courses de plateforme à quatre dans un monde de papier découpé : cubes d’objets, tuyaux secrets, glace et raccourcis pour qui a les bons pouvoirs. Gagne les coupes en Feuille, Carton et Origami. Avec Paper Loop, où tes clones refont la boucle pour toi.",
+      },
+      {
+        title: 'Duel de Sorciers', path: 'duel-de-sorciers/', cover: 'covers/duel-de-sorciers.jpg', badge: 'Nouveau · Magie', badgeClass: 'alpha',
+        desc: "Trace tes sorts dans les airs avec ta baguette, pare ceux de l’adversaire. Suis les cours de l’école, fouille le magasin, monte la tour, pars à l’aventure et remporte les tournois.",
+      },
       {title: 'Go Godefroy, Go !', path: 'go-godefroy-go/', cover: 'go-godefroy-go/assets/godefroy.png', badge: 'Nouveau · Ça décolle !', badgeClass: 'alpha',
        desc: "Un chevalier trop lourd pour voler… mais trop têtu pour abandonner ! Équipe-toi, rebondis sur les monstres, défonce les tours et découvre les trésors des remparts."},
       {

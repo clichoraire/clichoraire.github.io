@@ -12,6 +12,9 @@ ver_of() { node -e "const w={};global.window=w;require('$1');process.stdout.writ
 VER_ZC=$(ver_of "$PROJETS/ZoneControl/js/config.js"); VER_HK=$(ver_of "$PROJETS/HockeyBoisjoli/js/config.js"); VER_SK=$(ver_of "$PROJETS/SnowKids/js/config.js"); VER_FS=$(ver_of "$PROJETS/FrigoSnap/js/config.js"); VER_BC=$(ver_of "$PROJETS/BallonChasseur/js/config.js"); VER_CB=$(ver_of "$PROJETS/CanonBigBoom/js/config.js"); VER_BK=$(ver_of "$PROJETS/Bomberkid/js/config.js")
 # Go Godefroy Go n'a ni config.js ni dépôt Git : sa version est dans le fichier VERSION, à augmenter à chaque mise en ligne.
 VER_GG=$(tr -d '[:space:]' < "$PROJETS/go-godefroy-go/VERSION")
+# Paper Run et Duel de Sorciers n'ont pas de dépôt Git non plus : version dans js/data.js (PR.VERSION, DS.VERSION), à augmenter à chaque mise en ligne.
+VER_PR=$(node -e "const w={};global.window=w;require('$PROJETS/PaperRun/js/data.js');process.stdout.write(w.PR.VERSION)")
+VER_DS=$(node -e "const w={};global.window=w;require('$PROJETS/DuelDeSorciers/js/data.js');process.stdout.write(w.DS.VERSION)")
 HEAD_ZC=$(git -C "$PROJETS/ZoneControl" rev-parse HEAD); HEAD_HK=$(git -C "$PROJETS/HockeyBoisjoli" rev-parse HEAD); HEAD_SK=$(git -C "$PROJETS/SnowKids" rev-parse HEAD); HEAD_FS=$(git -C "$PROJETS/FrigoSnap" rev-parse HEAD); HEAD_BC=$(git -C "$PROJETS/BallonChasseur" rev-parse HEAD); HEAD_CB=$(git -C "$PROJETS/CanonBigBoom" rev-parse HEAD); HEAD_BK=$(git -C "$PROJETS/Bomberkid" rev-parse HEAD)
 if [ -f versions.json ] && [[ " $* " != *" --force "* ]]; then
   for j in "bunker $VER_ZC $HEAD_ZC" "hockey $VER_HK $HEAD_HK" "snow $VER_SK $HEAD_SK" "frigo $VER_FS $HEAD_FS" "ballon $VER_BC $HEAD_BC" "canon $VER_CB $HEAD_CB" "bomber $VER_BK $HEAD_BK"; do set -- $j
@@ -20,9 +23,9 @@ if [ -f versions.json ] && [[ " $* " != *" --force "* ]]; then
     if [ "$OLDC" != "$3" ] && [ "$OLDV" = "$2" ]; then echo "✖ $1 : le code a changé mais la version est encore $2. Augmente VERSION dans js/config.js (ou ./deploy.sh --force)."; exit 1; fi
   done
 fi
-echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"hockey\": { \"version\": \"$VER_HK\", \"commit\": \"$HEAD_HK\" }, \"snow\": { \"version\": \"$VER_SK\", \"commit\": \"$HEAD_SK\" }, \"frigo\": { \"version\": \"$VER_FS\", \"commit\": \"$HEAD_FS\" }, \"ballon\": { \"version\": \"$VER_BC\", \"commit\": \"$HEAD_BC\" }, \"canon\": { \"version\": \"$VER_CB\", \"commit\": \"$HEAD_CB\" }, \"bomber\": { \"version\": \"$VER_BK\", \"commit\": \"$HEAD_BK\" }, \"godefroy\": { \"version\": \"$VER_GG\" } }" > versions.json
-echo "window.GAME_VERSIONS = { 'go-godefroy-go/': '$VER_GG', 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK', 'snow-kids/': '$VER_SK', 'frigo-snap/': '$VER_FS', 'ballon-chasseur/': '$VER_BC', 'canon-big-boom/': '$VER_CB', 'bomberkid/': '$VER_BK' };" > versions.js
-echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK · Snow Kids $VER_SK · Frigo Snap $VER_FS · Ballon Chasseur $VER_BC · Canon Big Boom $VER_CB · Bomberkid $VER_BK · Go Godefroy Go $VER_GG"
+echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"hockey\": { \"version\": \"$VER_HK\", \"commit\": \"$HEAD_HK\" }, \"snow\": { \"version\": \"$VER_SK\", \"commit\": \"$HEAD_SK\" }, \"frigo\": { \"version\": \"$VER_FS\", \"commit\": \"$HEAD_FS\" }, \"ballon\": { \"version\": \"$VER_BC\", \"commit\": \"$HEAD_BC\" }, \"canon\": { \"version\": \"$VER_CB\", \"commit\": \"$HEAD_CB\" }, \"bomber\": { \"version\": \"$VER_BK\", \"commit\": \"$HEAD_BK\" }, \"godefroy\": { \"version\": \"$VER_GG\" }, \"paperrun\": { \"version\": \"$VER_PR\" }, \"duel\": { \"version\": \"$VER_DS\" } }" > versions.json
+echo "window.GAME_VERSIONS = { 'go-godefroy-go/': '$VER_GG', 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK', 'snow-kids/': '$VER_SK', 'frigo-snap/': '$VER_FS', 'ballon-chasseur/': '$VER_BC', 'canon-big-boom/': '$VER_CB', 'bomberkid/': '$VER_BK', 'paper-run/': '$VER_PR', 'duel-de-sorciers/': '$VER_DS' };" > versions.js
+echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK · Snow Kids $VER_SK · Frigo Snap $VER_FS · Ballon Chasseur $VER_BC · Canon Big Boom $VER_CB · Bomberkid $VER_BK · Go Godefroy Go $VER_GG · Paper Run $VER_PR · Duel de Sorciers $VER_DS"
 
 echo "▸ Bunker Zone (copie de ZoneControl/)"
 rsync -a --delete --exclude .git --exclude .DS_Store --exclude '_extract.html' "$PROJETS/ZoneControl/" bunker-zone/
@@ -57,6 +60,12 @@ cp "$G"/assets/*.png go-godefroy-go/assets/
 rsync -a --exclude .DS_Store "$G/assets/wings" "$G/assets/equipment" go-godefroy-go/assets/
 rsync -a --exclude .DS_Store "$G/assets/audio/mixed" go-godefroy-go/assets/audio/
 rsync -a --exclude .DS_Store "$G/assets/music/mixed" go-godefroy-go/assets/music/
+
+echo "▸ Paper Run + Paper Loop (copie de PaperRun/, sans les restes de l'ancien calibrage des médailles)"
+rsync -a --delete --exclude .git --exclude .DS_Store --exclude 'tools/medals.json' --exclude 'tools/calibrate-medals.sh' "$PROJETS/PaperRun/" paper-run/
+
+echo "▸ Duel de Sorciers (copie de DuelDeSorciers/)"
+rsync -a --delete --exclude .git --exclude .DS_Store "$PROJETS/DuelDeSorciers/" duel-de-sorciers/
 
 echo "▸ Sosaria Online (bundle + assets chargés à l'exécution)"
 (cd "$PROJETS/sosaria" && node build.js >/dev/null)

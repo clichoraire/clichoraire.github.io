@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Duel de Sorciers</title>
+<link rel="stylesheet" href="css/style.css?v=51">
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<div id="app">
+
+  <section id="screen-title" class="screen menu">
+    <div class="title-box">
+      <p class="eyebrow">Club de duel · Baguettes &amp; sortilèges</p>
+      <h1 class="logo"><span>Duel</span><small>de</small><span>Sorciers</span></h1>
+      <p class="tagline">Trace tes sorts dans les airs. Pare ceux de ton adversaire.</p>
+      <button id="btn-play" class="btn primary big">✦ Jouer</button>
+      <p class="record" id="title-record"></p>
+      <button id="btn-reset" class="btn ghost reset hidden">Effacer ma sauvegarde</button>
+    </div>
+    <div id="reset-confirm" class="overlay hidden">
+      <div class="card">
+        <h2 class="lose">Tout effacer ?</h2>
+        <p>Ton niveau, ton or, tes sorts appris, tes baguettes, tes leçons, tes médailles et tes coupes seront perdus. Impossible de revenir en arrière.</p>
+        <button id="btn-reset-no" class="btn primary">Non, je garde tout</button>
+        <button id="btn-reset-yes" class="btn ghost">Oui, effacer ma sauvegarde</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-chars" class="screen menu hidden">
+    <div class="panel">
+      <header class="panel-head">
+        <button class="btn ghost" id="btn-chars-back">← Retour</button>
+        <h2>Choisis ton sorcier</h2>
+        <span class="step" id="chars-step">1 / 2</span>
+      </header>
+      <div id="char-grid" class="grid chars" role="listbox" aria-label="Choisis ton sorcier"></div>
+      <footer class="panel-foot"><button id="btn-chars-next" class="btn primary">Choisir la baguette →</button></footer>
+    </div>
+  </section>
+
+  <section id="screen-wands" class="screen menu hidden">
+    <div class="panel">
+      <header class="panel-head">
+        <button class="btn ghost" id="btn-wands-back">← Retour</button>
+        <h2 id="wands-title">Choisis ta baguette</h2>
+        <span class="step" id="wands-step">2 / 2</span>
+        <span class="purse hidden" id="wands-purse"><i class="coin"></i> <b class="gold-amt">0</b></span>
+      </header>
+      <div id="wand-grid" class="grid wands" role="listbox" aria-label="Choisis ta baguette"></div>
+      <footer class="panel-foot"><button id="btn-wands-next" class="btn primary">Entrer à l’école →</button></footer>
+    </div>
+  </section>
+
+  <!-- La carte de l'école : le fond est une image, les chandelles et les bulles sont animées par-dessus (js/map.js) -->
+  <section id="screen-map" class="screen hidden">
+    <div id="map" class="map">
+      <img src="img/carte.jpg" alt="" draggable="false">
+      <canvas id="map-fx" aria-hidden="true"></canvas>
+      <div id="map-places"></div>
+      <button class="btn ghost map-ui back" data-go="title">← Titre</button>
+      <button class="map-ui who" id="map-me" title="Changer de sorcier">
+        <canvas id="map-portrait" width="96" height="96"></canvas>
+        <span class="info"><b id="map-name"></b><span class="bar xpbar"><i id="map-xp"></i><span id="map-xp-txt"></span></span></span>
+      </button>
+      <span class="purse map-ui gold"><i class="coin"></i> <b class="gold-amt">0</b></span>
+    </div>
+  </section>
+
+  <!-- Mon grimoire : un livre ouvert, avec seulement les sorts appris, rangés par catégorie -->
+  <section id="screen-book" class="screen menu hidden">
+    <div class="book-wrap">
+      <header class="panel-head">
+        <button class="btn ghost" id="btn-book-back">← Retour</button>
+        <h2>Mon grimoire</h2>
+        <span class="purse" id="spell-count"></span>
+      </header>
+      <div class="book" id="book">
+        <div class="edge left"></div><div class="edge right"></div>
+        <div class="page left" id="page-left"></div>
+        <div class="page right" id="page-right"></div>
+        <div class="flip hidden" id="flip"><div class="face front page"></div><div class="face back page"></div></div>
+        <button class="corner left" id="corner-left" aria-label="Page précédente"></button>
+        <button class="corner right" id="corner-right" aria-label="Page suivante"></button>
+        <nav class="tabs" id="book-tabs"></nav>
+      </div>
+      <div class="book-belt" id="book-belt"></div>
+      <footer class="panel-foot"><button id="btn-book-go" class="btn primary"></button></footer>
+    </div>
+  </section>
+
+  <!-- Le magasin de magie : une vraie boutique qu'on parcourt. Les parchemins (sorts) et les fioles (potions) sont posés sur les étagères du décor peint ;
+       on fait défiler les rayons, on clique un objet, et sa fiche s'ouvre à droite (js/main.js buildShop) -->
+  <section id="screen-shop" class="screen hidden">
+    <div class="shop-top"><button class="btn ghost" data-go="map">← Carte</button><h2>Magasin de magie</h2><span class="purse"><i class="coin"></i> <b class="gold-amt">0</b></span></div>
+    <div id="shop-scene" class="shop-scene"></div>
+    <button class="btn store-room" id="store-room">L’arrière-boutique ▶</button>
+    <p class="store-hint" id="store-hint">Fouille la boutique : clique sur les parchemins et les objets.</p>
+    <div id="shop-detail" class="shop-detail hidden"></div>
+  </section>
+
+  <!-- Le miroir magique : on s'y voit, et on lui demande de nous rendre plus fort (les talents, js/main.js renderTalents) -->
+  <section id="screen-talents" class="screen menu hidden">
+    <div class="panel wide mirror-room">
+      <header class="panel-head">
+        <button class="btn ghost" data-go="map">← Retour</button>
+        <h2>Le miroir magique</h2>
+        <span class="purse">⭐ <b id="talent-pts">0</b></span>
+      </header>
+      <nav class="ltabs" id="mirror-tabs"><button data-tab="talents" class="on">⭐ Talents</button><button data-tab="hats">🎩 Chapeaux</button><button data-tab="wand">🪄 Baguette</button><button data-tab="titles">📜 Titres</button></nav>
+      <div class="mirror-wrap">
+        <div class="mirror-side">
+          <div class="mirror" id="mirror"><canvas id="mirror-me" width="300" height="420"></canvas></div>
+          <p class="mirror-say" id="talent-note"></p>
+        </div>
+        <div id="talent-list" class="talents sheet-wrap"></div>
+      </div>
+      <footer class="panel-foot"><button id="btn-talents-reset" class="btn ghost">Reprendre tous mes points</button></footer>
+    </div>
+  </section>
+
+  <!-- La Tour des Épreuves : un duel par étage, des règles tirées au sort, un record à battre (js/extras.js) -->
+  <section id="screen-tour" class="screen menu hidden">
+    <div class="panel tower">
+      <header class="panel-head">
+        <button class="btn ghost" data-go="map">← Retour</button>
+        <h2>Tour des Épreuves</h2>
+        <span class="purse"><i class="coin"></i> <b class="gold-amt">0</b></span>
+      </header>
+      <div class="tower-wrap">
+        <div class="tower-side">
+          <div class="floor-big">Étage <b id="tower-floor">1</b></div>
+          <div class="steps" id="tower-steps"></div>
+          <p class="best" id="tower-best"></p>
+          <div class="foe-card"><canvas id="tower-portrait" width="150" height="150"></canvas><div class="foe-txt" id="tower-foe"></div></div>
+        </div>
+        <div class="tower-main">
+          <h3>Règles de l’étage</h3>
+          <div id="tower-mods" class="mods"></div>
+          <p class="reward" id="tower-reward"></p>
+          <p class="note" id="tower-note"></p>
+        </div>
+      </div>
+      <footer class="panel-foot"><button id="btn-tower-go" class="btn primary big"></button></footer>
+    </div>
+  </section>
+
+  <!-- Le laboratoire d'alchimie : un chaudron, des ingrédients, un codex de recettes à compléter (js/extras.js) -->
+  <section id="screen-labo" class="screen menu hidden">
+    <div class="panel wide lab">
+      <header class="panel-head">
+        <button class="btn ghost" data-go="map">← Retour</button>
+        <h2>Laboratoire d’alchimie</h2>
+        <span class="purse" id="lab-count"></span>
+      </header>
+      <div class="lab-wrap">
+        <div class="lab-left">
+          <canvas id="cauldron" width="320" height="290"></canvas>
+          <div id="lab-slots" class="lslots"></div>
+          <button id="btn-brew" class="btn primary">🔥 Mélanger</button>
+          <p class="lab-say" id="lab-say"></p>
+        </div>
+        <div class="lab-right">
+          <nav class="ltabs" id="lab-tabs"><button data-tab="ingr" class="on">🧪 Ingrédients</button><button data-tab="base">✦ Sorts de base</button><button data-tab="codex">📜 Codex</button></nav>
+          <div id="lab-shelf" class="shelf"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- La volière : les familiers, à adopter, à nourrir, et à emmener au duel (js/extras.js) -->
+  <section id="screen-familiers" class="screen menu hidden">
+    <div class="panel wide">
+      <header class="panel-head">
+        <button class="btn ghost" data-go="map">← Retour</button>
+        <h2>La volière</h2>
+        <span class="purse"><i class="coin"></i> <b class="gold-amt">0</b></span>
+      </header>
+      <p class="panel-note fam-say" id="fam-say"></p>
+      <div id="fam-list" class="fams"></div>
+      <footer class="panel-foot"><button id="fam-none" class="btn ghost hidden">Aller au duel sans familier</button></footer>
+    </div>
+  </section>
+
+  <!-- L'aventure : on sort de l'école par le tapis et on traverse les biomes avec les flèches ; les monstres se combattent comme en duel (js/aventure.js) -->
+  <section id="screen-aventure" class="screen hidden">
+    <div class="adv">
+      <div class="adv-top"><button class="btn ghost" data-go="map">← Carte</button><div class="adv-title"><b id="adv-biome"></b><small id="adv-sub"></small></div><span class="purse"><i class="coin"></i> <b class="gold-amt">0</b></span></div>
+      <canvas id="adv-canvas" width="1120" height="640"></canvas>
+      <div class="adv-bottom">
+        <p class="adv-msg" id="adv-msg"></p>
+        <div class="adv-pad" id="adv-pad"><button data-dir="u" aria-label="Haut">▲</button><button data-dir="l" aria-label="Gauche">◀</button><button data-dir="d" aria-label="Bas">▼</button><button data-dir="r" aria-label="Droite">▶</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Salle d'entraînement : le mannequin (tous les sorts achetés, rien ne compte) ou un duel contre un adversaire de son niveau -->
+  <section id="screen-train" class="screen menu hidden">
+    <div class="panel narrow">
+      <header class="panel-head">
+        <button class="btn ghost" data-go="map">← Retour</button>
+        <h2>Salle d’entraînement</h2>
+        <span class="purse"><i class="coin"></i> <b class="gold-amt">0</b></span>
+      </header>
+      <div class="train-picks">
+        <button id="btn-train-dummy" class="train-pick" style="--c:#ffd978"><span class="ico">🎯</span><b>Le mannequin</b><small id="train-dummy-n"></small></button>
+        <button id="btn-train-duel" class="train-pick" style="--c:#ff9a7a"><span class="ico">⚔️</span><b>Duel d’entraînement</b><small id="train-duel-lvl"></small></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-cups" class="screen menu hidden">
+    <div class="panel">
+      <header class="panel-head">
+        <button class="btn ghost" id="btn-cups-back">← Retour</button>
+        <h2 id="cups-title">Tournois</h2>
+        <span class="purse"><i class="coin"></i> <b class="gold-amt">0</b></span>
+      </header>
+      <div id="cup-list" class="cups"></div>
+      <div id="cup-run" class="run hidden">
+        <p class="panel-note" id="run-note"></p>
+        <div id="bracket" class="bracket"></div>
+        <footer class="panel-foot"><button id="btn-run-quit" class="btn ghost">Abandonner la coupe</button><button id="btn-run-go" class="btn primary"></button></footer>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-duel" class="screen hidden" data-phase="prep">
+    <!-- Barres de vie et d'énergie, tout en haut et sur toute la largeur, comme dans un jeu de combat : ce qui reste de vie est du côté du centre -->
+    <div class="hud-top">
+      <div class="fighter me">
+        <canvas id="hud-me" width="128" height="128"></canvas>
+        <div class="info">
+          <b id="me-name"></b>
+          <div class="bar hp" id="me-hp-bar"><em id="me-hp-lag"></em><i id="me-hp"></i><span id="me-hp-txt"></span></div>
+          <div class="bar mana" id="me-mana-bar"><i id="me-mana"></i><span id="me-mana-txt"></span></div>
+          <div class="status" id="me-status"></div>
+        </div>
+      </div>
+      <div class="versus" aria-hidden="true">VS</div>
+      <div class="fighter foe">
+        <div class="info">
+          <b><span id="foe-name"></span> <small id="foe-level"></small></b>
+          <div class="bar hp" id="foe-hp-bar"><em id="foe-hp-lag"></em><i id="foe-hp"></i><span id="foe-hp-txt"></span></div>
+          <div class="bar mana" id="foe-mana-bar"><i id="foe-mana"></i><span id="foe-mana-txt"></span></div>
+          <div class="status" id="foe-status"></div>
+        </div>
+        <canvas id="hud-foe" width="128" height="128"></canvas>
+      </div>
+    </div>
+
+    <div id="prep" class="prep">
+      <!-- avant le duel : l'adversaire nous lance une pique (js/data.js, DS.TAUNTS), et le gros bouton tout seul dessous -->
+      <div class="taunt" id="prep-bubble"><b id="prep-who"></b><p id="prep-taunt"></p></div>
+      <button id="btn-engage" class="btn primary start"></button>
+    </div>
+
+    <!-- Ceinture : les seuls sorts qu'on peut lancer. Tiroir : tous ceux qu'on connaît, à glisser sur une case de la ceinture (js/duel.js) -->
+    <div id="drawer" class="drawer ui"></div>
+    <div id="allybar" class="spellbar allybar ui hidden"></div>
+    <div id="spellbar" class="spellbar ui"></div>
+    <p class="hint">Espace : tracer · Clic : parer<span id="hint-hold"> (garde-le enfoncé pour tenir le bouclier)</span><span id="hint-swipe"> · Revers rapide à travers l’anneau doré : dévier</span> · G : voir les formes · B : changer de sorts · Échap : pause</p>
+
+    <!-- Cours : barre du haut, liste des leçons et des défis, consigne en cours, bulle du professeur (js/school.js) -->
+    <div id="school" class="school hidden">
+      <div class="school-top"><button id="school-back" class="btn ghost">← Carte</button><b id="school-title"></b><span id="school-lvl" class="purse"></span></div>
+      <div id="school-menu" class="school-menu ui"></div>
+      <div id="school-hud" class="school-hud hidden"></div>
+      <div id="say" class="say ui hidden"><b id="say-who"></b><p id="say-text"></p><div id="say-btns" class="say-btns"></div></div>
+    </div>
+
+    <!-- Leçon en classe (cours d'attaque) : bulle du professeur, compteur, panneau de progression (js/classe.js) -->
+    <div id="classe" class="classe hidden">
+      <div class="school-top"><button id="classe-back" class="btn ghost">← Carte</button><b id="classe-title"></b><span id="classe-lvl" class="purse"></span></div>
+      <div id="classe-count" class="school-hud hidden"></div>
+      <div id="classe-panel" class="classe-panel"><b id="cp-title"></b><small id="cp-part"></small><div class="bar"><i id="cp-bar"></i><span id="cp-pct"></span></div><p id="cp-goal"></p></div>
+      <div id="bulle" class="bulle ui hidden"><b class="who">Professeur Brasier</b><p id="bulle-text"></p><div id="bulle-fig" class="bulle-fig hidden"></div><div id="bulle-btns" class="bulle-btns"></div><span id="bulle-more" class="more">Suivant ▸</span></div>
+      <div id="classe-fade" class="classe-fade"></div>
+    </div>
+
+    <div id="duel-pause" class="overlay hidden">
+      <div class="card">
+        <h2>Pause</h2>
+        <div class="vols">
+          <label>🎵 Musique <input type="range" min="0" max="100" step="5" data-vol="music" aria-label="Volume de la musique"></label>
+          <label>🔔 Sons <input type="range" min="0" max="100" step="5" data-vol="sfx" aria-label="Volume des sons"></label>
+        </div>
+        <button id="btn-resume" class="btn primary">Reprendre</button>
+        <button id="btn-quit" class="btn ghost">Abandonner le duel</button>
+      </div>
+    </div>
+
+    <div id="duel-end" class="overlay hidden">
+      <div class="card">
+        <h2 id="end-title"></h2>
+        <p id="end-sub"></p>
+        <div id="end-stats" class="stats"></div>
+        <div id="end-loot" class="loot"></div>
+        <p id="end-level" class="next"></p>
+        <button id="btn-again" class="btn primary"></button>
+        <button id="btn-end-spells" class="btn ghost">Ouvrir mon grimoire</button>
+        <button id="btn-end-menu" class="btn ghost">Retour à la carte</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Son : bouton toujours à portée de main (sauf en plein duel : les mêmes réglages sont dans le menu Pause). Touche M : tout couper -->
+  <button id="btn-son" class="son-btn" title="Son et musique (touche M : tout couper)" aria-label="Son et musique">🔊</button>
+  <div id="son-panel" class="son-panel hidden">
+    <div class="vols">
+      <label>🎵 Musique <input type="range" min="0" max="100" step="5" data-vol="music" aria-label="Volume de la musique"></label>
+      <label>🔔 Sons <input type="range" min="0" max="100" step="5" data-vol="sfx" aria-label="Volume des sons"></label>
+    </div>
+    <button class="btn ghost" data-mute>🔇 Tout couper</button>
+  </div>
+</div>
+
+<script src="js/data.js?v=51"></script>
+<script src="js/gestures.js?v=51"></script>
+<script src="js/audio.js?v=51"></script>
+<script src="js/music.js?v=51"></script>
+<script src="js/art.js?v=51"></script>
+<script src="js/duel.js?v=51"></script>
+<script src="js/school.js?v=51"></script>
+<script src="js/classe.js?v=51"></script>
+<script src="js/lecons.js?v=51"></script>
+<script src="js/map.js?v=51"></script>
+<script src="js/extras.js?v=51"></script>
+<script src="js/aventure.js?v=51"></script>
+<script src="js/main.js?v=51"></script>
+</body>
+</html>

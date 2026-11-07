@@ -13,6 +13,8 @@ canon-big-boom/   copie du projet CanonBigBoom (tel quel, aucun build)
 bomberkid/        copie du projet Bomberkid (tel quel, aucun build)
 go-godefroy-go/   copie du projet go-godefroy-go : le code et seulement les images, sons et musiques que le jeu charge
                   (version dans go-godefroy-go/VERSION, à augmenter à chaque mise en ligne)
+paper-run/        copie du projet PaperRun (Paper Run + Paper Loop, tel quel, aucun build ; version PR.VERSION dans js/data.js)
+duel-de-sorciers/ copie du projet DuelDeSorciers (tel quel, aucun build ; version DS.VERSION dans js/data.js)
 sosaria/          index.html = dist/sosaria.html du projet sosaria, + assets/ chargés à l'exécution
 banque/           la banque : tout l'or gagné dans les jeux (lu dans le navigateur), par personnage, dans un coffre-fort animé
 families/         atelier des familles (ajout/retrait de personnages via family-service) et fiches des membres
@@ -25,7 +27,7 @@ deploy.sh         recopie la dernière version des jeux, commit, push
 ## Mettre à jour les jeux en ligne
 
 Chaque jeu affiche sa version (`ZC.VERSION` dans `ZoneControl/js/config.js`, `HK.VERSION` dans
-`HockeyBoisjoli/js/config.js`, `SK.VERSION` dans `SnowKids/js/config.js`, `BC.VERSION` dans `BallonChasseur/js/config.js`, `CB.VERSION` dans `CanonBigBoom/js/config.js`) : il faut l'augmenter à chaque mise en ligne. `deploy.sh` refuse de publier un jeu dont le
+`HockeyBoisjoli/js/config.js`, `SK.VERSION` dans `SnowKids/js/config.js`, `BC.VERSION` dans `BallonChasseur/js/config.js`, `CB.VERSION` dans `CanonBigBoom/js/config.js`, `PR.VERSION` dans `PaperRun/js/data.js`, `DS.VERSION` dans `DuelDeSorciers/js/data.js`) : il faut l'augmenter à chaque mise en ligne. `deploy.sh` refuse de publier un jeu dont le
 code a changé sans changement de version (`--force` pour passer outre) et écrit `versions.js`, affiché sur les cartes.
 
 ```bash

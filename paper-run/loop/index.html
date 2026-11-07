@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Paper Loop · Paper Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=15">
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-title" class="screen">
+    <canvas id="title-anim" width="1280" height="520" aria-hidden="true"></canvas>
+    <div class="title-box">
+      <p class="eyebrow">L’USINE DE PAPIER · COURSES EN BOUCLE</p>
+      <h1 class="logo"><span>PAPER</span><span class="t2">LOOP</span></h1>
+      <p class="lead">Cours jusqu’à la tirelire pour gagner des pièces. Tes clones de papier refont ton parcours en boucle pendant que tu achètes des pouvoirs… et que tu vas plus haut.</p>
+      <div class="title-buttons">
+        <button id="btn-continue" class="btn big primary hidden"></button>
+        <button id="btn-play" class="btn big">▶ Choisir un personnage</button>
+        <button id="btn-sound" class="btn small">🔊 Son</button>
+        <button id="btn-run" class="btn small">🏁 Jouer à Paper Run</button>
+      </div>
+      <p class="hint">Flèches ou A / D : courir · Espace : sauter · sauter sous une boîte : acheter · Maj ou X : élan · Tab : stats · Échap : menu</p>
+      <span id="version"></span>
+    </div>
+  </section>
+
+  <section id="screen-chars" class="screen hidden">
+    <header class="bar">
+      <button class="btn small" data-back="title">◀ Retour</button>
+      <h2>Qui court aujourd’hui ?</h2>
+      <span></span>
+    </header>
+    <div id="char-grid" class="char-grid"></div>
+  </section>
+
+  <section id="screen-game" class="screen hidden">
+    <div class="game-frame">
+      <canvas id="game" width="960" height="540"></canvas>
+      <div id="touch" class="touch hidden">
+        <div class="touch-left"><button data-touch="left">◀</button><button data-touch="right">▶</button></div>
+        <div class="touch-right"><button data-touch="dash">⚡</button><button data-touch="jump" class="jump">⤒</button></div>
+      </div>
+      <div id="pause" class="overlay hidden">
+        <div class="paper panel">
+          <h2>Menu</h2>
+          <p id="pause-info"></p>
+          <button id="p-resume" class="btn big primary">▶ Reprendre <small>Échap</small></button>
+          <button id="p-sound" class="btn">🔊 Son</button>
+          <button id="p-change" class="btn">👥 Changer de personnage</button>
+          <button id="p-games" class="btn">🎮 Changer de jeu</button>
+          <button id="p-reset" class="btn danger">🗑️ Recommencer à zéro</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast paper hidden"></div>
+</div>
+
+<script src="../js/family-head-sources.js"></script>
+<script src="../js/family-heads.js"></script>
+<script src="js/data.js?v=15"></script>
+<script src="js/physics.js?v=15"></script>
+<script src="js/world.js?v=15"></script>
+<script src="js/render.js?v=15"></script>
+<script src="js/audio.js?v=15"></script>
+<script src="js/input.js?v=15"></script>
+<script src="js/game.js?v=15"></script>
+<script src="js/main.js?v=15"></script>
+</body>
+</html>
