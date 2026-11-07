@@ -213,6 +213,7 @@
     if (h.has('cook') && BK.current && BK.current.player) BK.current.world.cookFish(BK.current.player);
     if (h.has('honey') && BK.current && BK.current.player) { const p = BK.current.player; p.inv = [{ type: 'honey', n: +h.get('honey') || 3 }]; if (h.has('use')) BK.current.world.useItem(p, 0); }
     if (h.has('stamina') && BK.current && BK.current.player) BK.current.player.stamina = +h.get('stamina');
+    if (h.has('throw') && BK.current && BK.current.player) BK.current.player.throw = true;
     if (h.has('drink') && BK.current && BK.current.player) { BK.current.world.update(1 / 60); BK.current.world.drink(BK.current.player); }
     if (h.has('coins') && BK.current && BK.current.world) { const W = BK.current.world; for (const spec of h.get('coins').split('.')) { const [c, r] = spec.split('-'); W.spawnItem(+c, +r, 'coin'); } }
     if (h.has('enemy') && BK.current && BK.current.world) for (const spec of h.get('enemy').split('.')) { const [type, c, r] = spec.split('-'); if (BK.ENEMIES[type]) BK.current.world.addEnemy(type, +c, +r); }

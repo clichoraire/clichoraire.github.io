@@ -36,7 +36,7 @@
     { id: 'foret', name: 'La Forêt verte', theme: 'forest', stages: [
       // 1-1 : la vraie carte de Matthieu (js/stage-1-1.js, importée de l'éditeur) ; le Jardin vert d'avant reste dans BK.GARDEN_STAGE (tests, `#stage=jardin`)
       { id: '1-1', name: BK.STAGE_1_1.name, objective: 'goal', explore: true, theme: BK.STAGE_1_1.theme, items: 0.25, map: BK.STAGE_1_1.grid, props: BK.STAGE_1_1.props, houses: BK.STAGE_1_1.houses, npcs: BK.STAGE_1_1.npcs, shop: BK.STAGE_1_1.shop, music: BK.STAGE_1_1.music, mapId: 'stage-1-1', enemies: BK.STAGE_1_1.enemies,
-        hint: 'Le village de Matthieu : explore, casse des blocs, entre dans les maisons, ramasse les pièces et trouve le but tout en haut. Les cibles rayées s’atteignent en lançant une bombe (Shift).' },
+        hint: 'Le village de Matthieu : explore, casse des blocs, entre dans les maisons, ramasse les pièces et trouve le but tout en haut. Le coffre du pré aux lapins cache deux pouvoirs : le saut sur bombe et le lancer de bombe (Shift), qui atteint les cibles rayées.' },
       { id:'1-2',name:BK.STAGE_1_2.name,objective:'goal',explore:true,theme:BK.STAGE_1_2.theme,map:BK.STAGE_1_2.grid,props:BK.STAGE_1_2.props,houses:BK.STAGE_1_2.houses,npcs:BK.STAGE_1_2.npcs,shop:BK.STAGE_1_2.shop,music:BK.STAGE_1_2.music,enemies:BK.STAGE_1_2.enemies,mapId:'stage-1-2',items:.25,hint:'Explore le sentier et trouve le portail de sortie.' },
       { id:'1-3',name:BK.STAGE_1_3.name,objective:'goal',explore:true,theme:BK.STAGE_1_3.theme,map:BK.STAGE_1_3.grid,props:BK.STAGE_1_3.props,houses:BK.STAGE_1_3.houses,npcs:BK.STAGE_1_3.npcs,shop:BK.STAGE_1_3.shop,music:BK.STAGE_1_3.music,enemies:BK.STAGE_1_3.enemies,mapId:'stage-1-3',items:.25,hint:'Active les trois cibles pour ouvrir le chemin vers le portail de sortie.' },
       { id:'1-4',name:BK.STAGE_1_4.name,objective:'goal',explore:true,preview:'volcano',theme:BK.STAGE_1_4.theme,map:BK.STAGE_1_4.grid,props:BK.STAGE_1_4.props,houses:BK.STAGE_1_4.houses,npcs:BK.STAGE_1_4.npcs,shop:BK.STAGE_1_4.shop,music:BK.STAGE_1_4.music,enemies:BK.STAGE_1_4.enemies,mapId:'stage-1-4',items:.25,hint:'Explore le volcan, évite la lave et les éruptions, puis trouve le portail de sortie.' },
@@ -101,6 +101,7 @@
       p.bombsMax = Math.min(BK.MAX_BOMBS, p.bombsMax + (up.bomb || 0)); p.fire = Math.min(BK.MAX_FIRE, p.fire + (up.fire || 0)); p.speed += 0.45 * (up.speed || 0); p.speedUp = up.speed || 0; if (up.kick) p.kick = true; if (up.gloves) p.gloves = true; if (up.lantern) p.lantern = true; BK.applyStats(p, this.save);
       // les objets trouvés dans un tableau ne durent que ce tableau ; seuls les achats (save.upgrades, pots de miel save.inv) restent
       p.found = []; p.inv = (this.save.inv || []).filter(s => s.n > 0).map(s => ({ type: s.type, n: s.n, perm: s.n, ...(s.snails?{snails:s.snails.map(sn=>({...sn}))}:{}) })); p.bagSlots = (this.save.bagSlots || []).slice(); p.quickSlots = (this.save.quickSlots || []).slice(); void prev; void keepPowers;
+      if(this.custom||this.challenge)p.throw=true;   // tableaux de l'éditeur et défis : on lance toujours
       if(this.challenge?.kind==='timing'){p.kick=true;this.timingHits=0;this.timingNext=0;W.timingTarget={c:this.challenge.target,r:3};}
       this.deliverBossLoot();
       for (const en of s.enemies || []) W.addEnemy(en.type, en.c, en.r, {shellColor:en.shellColor, catColor:en.catColor,gnomeFoods:en.gnomeFoods});
@@ -244,6 +245,7 @@
           if (e.type === 'sealedOpened') { BK.audio.door(); this.toast('La porte scellée vole en éclats !', 3); }
           if (e.type === 'metalBroken') { BK.audio.block(); this.toast('Le bloc de métal cède par sa face en bois !', 2.5); }
           if (e.type === 'itemTaken' && [...BK.BOMB_POWERS,'bombdiarrhea','shortfuse','heavyboots','waterwalk'].includes(e.item) && e.player === p) this.toast(BK.ITEMS[e.item].icon+' '+BK.ITEMS[e.item].name+' : '+BK.ITEMS[e.item].desc,5);
+          if (e.type === 'itemTaken' && e.item === 'throw' && e.player === p && !this.custom && !this.challenge) { this.save.upgrades = this.save.upgrades || {}; this.save.upgrades.throw = 1; BK.saveAdventure(this.charId, this.save); }   // pouvoir clé : gardé d'un tableau à l'autre
           if (e.type === 'itemTaken' && e.item === 'card') { this.toast('Carte d’or ' + p.cards + ' / ' + W.cardsTotal, 2.5); }
           if (e.type === 'itemTaken' && e.item === 'coin') { this.save.gold = (this.save.gold || 0) + 1; this.goldDirty = true; }
           if (e.type === 'honeyUsed') this.syncInv();
@@ -428,7 +430,7 @@
       BK.overlay.show({playful:'controls',title:'🎮 Comment jouer ?',html:`<div class="control-cards"><section>
         <h3>⌨️ Avec le clavier</h3>
         <p><b>Flèches</b> : se déplacer ou ramer.<br><b>Courir</b> : deux appuis rapides dans la même direction, puis maintenir.</p>
-        <p><b>Espace / X</b> : poser une bombe, la ramasser ou la lancer.<br><b>Shift / C</b> : ramasser, lancer ou interagir à proximité.<br><b>Entrée</b> ou <b>clic sur la pancarte au-dessus du héros</b> : acheter, recruter, s’asseoir, se lever, caresser, embarquer ou débarquer, selon ce qui est proposé.</p>
+        <p><b>Espace / X</b> : poser une bombe (avec le pouvoir Lancer de bombe : la ramasser ou la lancer).<br><b>Shift / C</b> : ramasser, lancer ou interagir à proximité.<br><b>Entrée</b> ou <b>clic sur la pancarte au-dessus du héros</b> : acheter, recruter, s’asseoir, se lever, caresser, embarquer ou débarquer, selon ce qui est proposé.</p>
         <p><b>1 à 8</b> : utiliser les objets de la ceinture.<br><b>Q / W</b> : utiliser le premier / deuxième raccourci.<br><b>I</b> ou <b>icône du sac</b> : inventaire (glisser-déposer pour ranger).<br><b>Tab</b> : fiche du personnage et statistiques.<br><b>P</b> : pause. <b>Échap</b> : pause dehors, sortir de la maison à l’intérieur.</p>
         </section><section><h3>💣 Les bonds et les bombes</h3>
         <p>Pose une bombe, éloigne-toi, puis avance vers elle. Avec le pouvoir de botter, <b>cours</b> vers elle pour monter dessus : marcher la pousse. Une fois dessus, <b>relâche la direction puis réappuie</b> pour faire un grand bond.</p>

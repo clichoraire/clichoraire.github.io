@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Duel de Sorciers</title>
-<link rel="stylesheet" href="css/style.css?v=51">
+<link rel="stylesheet" href="css/style.css?v=52">
 </head>
 <body>
 <canvas id="stage" aria-hidden="true"></canvas>
@@ -121,29 +121,25 @@
     </div>
   </section>
 
-  <!-- La Tour des Épreuves : un duel par étage, des règles tirées au sort, un record à battre (js/extras.js) -->
+  <!-- La Tour des Épreuves : 100 étages à gravir comme une échelle de Mortal Kombat — un monstre (ou deux, ou trois) par étage, un maître tous les 10, le dragon au sommet (js/extras.js) -->
   <section id="screen-tour" class="screen menu hidden">
-    <div class="panel tower">
-      <header class="panel-head">
+    <div class="tower-scene">
+      <canvas id="tower-bg" aria-hidden="true"></canvas>
+      <i class="torch" style="left:7%;top:34%"></i><i class="torch t2" style="left:22%;top:28%"></i><i class="torch t3" style="left:78%;top:28%"></i><i class="torch t4" style="left:93%;top:34%"></i>
+      <header class="tower-top">
         <button class="btn ghost" data-go="map">← Retour</button>
         <h2>Tour des Épreuves</h2>
         <span class="purse"><i class="coin"></i> <b class="gold-amt">0</b></span>
       </header>
-      <div class="tower-wrap">
-        <div class="tower-side">
-          <div class="floor-big">Étage <b id="tower-floor">1</b></div>
-          <div class="steps" id="tower-steps"></div>
-          <p class="best" id="tower-best"></p>
-          <div class="foe-card"><canvas id="tower-portrait" width="150" height="150"></canvas><div class="foe-txt" id="tower-foe"></div></div>
-        </div>
-        <div class="tower-main">
-          <h3>Règles de l’étage</h3>
-          <div id="tower-mods" class="mods"></div>
-          <p class="reward" id="tower-reward"></p>
-          <p class="note" id="tower-note"></p>
+      <div class="tower-col">
+        <div class="tower-cap"></div>
+        <ol id="tower-rows" class="tower-rows"></ol>
+        <div class="tower-base">
+          <div id="tower-info" class="tower-info"></div>
+          <button id="btn-tower-go" class="btn primary big"></button>
         </div>
       </div>
-      <footer class="panel-foot"><button id="btn-tower-go" class="btn primary big"></button></footer>
+      <p class="tower-foot" id="tower-best"></p>
     </div>
   </section>
 
@@ -317,18 +313,18 @@
   </div>
 </div>
 
-<script src="js/data.js?v=51"></script>
-<script src="js/gestures.js?v=51"></script>
-<script src="js/audio.js?v=51"></script>
-<script src="js/music.js?v=51"></script>
-<script src="js/art.js?v=51"></script>
-<script src="js/duel.js?v=51"></script>
-<script src="js/school.js?v=51"></script>
-<script src="js/classe.js?v=51"></script>
-<script src="js/lecons.js?v=51"></script>
-<script src="js/map.js?v=51"></script>
-<script src="js/extras.js?v=51"></script>
-<script src="js/aventure.js?v=51"></script>
-<script src="js/main.js?v=51"></script>
+<script src="js/data.js?v=52"></script>
+<script src="js/gestures.js?v=52"></script>
+<script src="js/audio.js?v=52"></script>
+<script src="js/music.js?v=52"></script>
+<script src="js/art.js?v=52"></script>
+<script src="js/duel.js?v=52"></script>
+<script src="js/school.js?v=52"></script>
+<script src="js/classe.js?v=52"></script>
+<script src="js/lecons.js?v=52"></script>
+<script src="js/map.js?v=52"></script>
+<script src="js/extras.js?v=52"></script>
+<script src="js/aventure.js?v=52"></script>
+<script src="js/main.js?v=52"></script>
 </body>
 </html>

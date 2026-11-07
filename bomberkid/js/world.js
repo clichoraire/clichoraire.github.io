@@ -391,7 +391,7 @@
     addPlayer(def, c, r, o) {
       o = o || {};
       const p = { def, id: def.id, x: c + 0.5, y: r + 0.5, dir: 0, r: BK.PLAYER_R, speed: BK.speedOf(def.speed), speedUp: 0,
-        bombsMax: o.bombs || 1, bombsOut: 0, fire: o.fire || 2, kick: !!o.kick, bombjump: !!o.bombjump, shield: 0, hp: o.hp || 40, maxHp: o.hp || 40, lives: o.lives == null ? 3 : o.lives,
+        bombsMax: o.bombs || 1, bombsOut: 0, fire: o.fire || 2, kick: !!o.kick, bombjump: !!o.bombjump, throw: o.throw == null ? true : !!o.throw, shield: 0, hp: o.hp || 40, maxHp: o.hp || 40, lives: o.lives == null ? 3 : o.lives,
         alive: true, invuln: o.invuln || 0, carrying: null, pose: 'idle', poseT: 0, animT: 0, walk: 0, moving: false, score: 0, kills: 0,
         staminaMax: o.staminaMax || 100, stamina: o.staminaMax || 100, staminaRegen: o.regen || 8, running: false, curSpeed: 0, lastTap: null, wasMoving: false, staminaWait: 0, dustT: 0,
         input: { dx: 0, dy: 0, bomb: false, action: false }, bot: o.bot || null, human: !o.bot, faller: true, falling: null, safe: { x: c + 0.5, y: r + 0.5, dir: 0 }, air: null, onBomb: null, zOff: 0, index: this.players.length, deadT: 0, wins: 0, color: def.outfit, name: def.name };
@@ -1083,6 +1083,7 @@
       let b = this.bombAt(c, r);
       if (!b) { const d = DIRS[p.dir]; b = this.bombAt(c + d.dx, r + d.dy); if (b && Math.hypot(p.x - b.x, p.y - b.y) > (b.rock ? 1.1 : 0.95)) b = null; }
       if (b && b.rock && !p.gloves) b = null;   // une roche posée ne se soulève qu'avec les gants
+      if (b && !b.rock && !p.throw) return false;   // ramasser et lancer une bombe est un pouvoir (« Lancer de bombe ») ; le héros de l'aventure ne l'a pas au départ
       if (!b && p.gloves) { const d = DIRS[p.dir], cc = c + d.dx, rr = r + d.dy; if (this.inside(cc, rr) && this.deco[this.idx(cc, rr)] === 'rock' && Math.hypot(p.x - cc - 0.5, p.y - rr - 0.5) < 1.1) return this.liftRock(p, cc, rr); }
       if (!b || b.underElevator) return false;
       if (b.rock) { b.state = 'carried'; b.carrier = p; p.carrying = b; this.setPose(p, 'pickup', 0.4); this.events.push({ type: 'rockPicked', player: p, rock: b }); return true; }
@@ -1345,7 +1346,8 @@
       if (!cand.length) cand.push({ c, r });
       const n = 3 + Math.floor(Math.random() * 3), fly = (cell, type) => { this.spawnItem(cell.c, cell.r, type); const it = this.items[this.items.length - 1]; it.from = { x: c + 0.5, y: r + 0.5 }; it.born = this.time; it.flyDur = 0.4 + Math.random() * 0.25; };
       for (let k = 0; k < n; k++) fly(cand[k % cand.length], 'coin');
-      if (Math.random() < 0.45) fly(cand[n % cand.length]);
+      const loot = this.props[c + ',' + r]?.loot, extras = loot ? [].concat(loot).filter(t => BK.ITEMS[t]) : Math.random() < 0.45 ? [undefined] : [];
+      extras.forEach((t, k) => fly(cand[(n + k) % cand.length], t));
       this.burst(c + 0.5, r + 0.5, 0.6, '#ffd54a', 14); this.burst(c + 0.5, r + 0.5, 0.4, '#8a5a2a', 8, 1); this.shake = Math.max(this.shake, 0.1);
       this.events.push({ type: 'chestOpened', c, r, coins: n });
     }

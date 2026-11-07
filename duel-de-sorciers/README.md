@@ -400,11 +400,24 @@ les deux salles.
 
 ## Tour des Épreuves, laboratoire, volière, garde-robe (2026-11-06)
 Quatre lieux de plus sur la carte (`js/extras.js`, données dans `js/data.js`, écrans dans `index.html`) :
-- **Tour des Épreuves** (le donjon au fond) : un duel par étage contre un adversaire du niveau de l'étage. À partir du 3e étage, une règle tirée au sort
-  (`DS.TOWER_MODS` : brasier, géant, sorciers de verre, mains nues, source tarie, grand vent, brume, vampires, adversaire fébrile, guérisseur, trésor, colosse),
-  deux à partir du 10e ; le 10e, 20e… étage, c'est Morgane, maître de la tour (+50 % de vie, triple prix). Les règles sont lues par duel.js dans `D.mod`
-  (pHp, foeHp, regen, cost, noShield, speed, fireDmg, pDmg, shieldT, comboLv, dodge, leech, foeSpeed, heals). Une défaite (ou abandon) ramène au dernier palier
-  (tous les 5 étages, `DS.TOWER_STEP`) ; le palier offre un point de sort et deux ingrédients. `save.tower = { floor, best, next }`, `next` est tiré une fois par étage.
+- **Tour des Épreuves** (le donjon au fond, refaite le 2026-11-07 à la Mortal Kombat) : une échelle de **100 étages** (`DS.TOWER_FLOORS`), affichée comme
+  une tour de pierre (l'étage à jouer en or en bas, les cinq suivants, le prochain maître, le sommet ; `renderTower`, donjon dessiné une fois par `drawTowerBg`,
+  torches animées en CSS). On monte d'un étage à chaque victoire, on **redescend d'un** à chaque défaite ou abandon ; quitter le jeu ne fait rien perdre
+  (`save.tower = { floor, best, seed, crowned }`). Chaque étage est tiré **une fois pour toutes** par la graine de la sauvegarde (`DS.towerFloor(seed, n)`,
+  déterministe) : ses monstres, leurs variantes, ses règles. Niveau des monstres : `DS.towerLevel(n)` (1 + 0,3 par étage, 31 au sommet).
+  - **22 bêtes** (`DS.TOWER_BEASTS`, 13 silhouettes de `drawMonster` : slime, bat, ghost, skeleton, golem, spider, wisp, dragon, yeti, et les nouvelles goblin, knight,
+    eye, imp), chacune avec son premier étage (`from`), ses sorts criés, sa vie et sa force (`hp`, `dmg` × celles d'un sorcier du niveau).
+  - **Variantes** (`DS.TOWER_TIERS`) : la même bête d'une autre couleur (`tint` appliquée à tout le dessin), avec un signe (`mark` : horns, aura, spikes, crown, mask)
+    et un sort de plus — sombre, givrée, ardente, venimeuse, spectrale, et les rares **dorée** (vie ×2) et **noire** (vie et force ×1,9). De plus en plus fréquentes en montant.
+  - **Plusieurs contre un** : 2 monstres possibles dès l'étage 8, 3 dès le 30e (horde d'une seule vague, `cfg.horde` avec `hpK` = vie de chacun, `label` dans le HUD ;
+    le monstre qui lance frappe avec sa propre force, `D.ai.dmg0 × ch.dmg` dans `setActive`).
+  - **Maîtres** tous les 10 étages (une bête `boss`, couronne, ×1,3 de taille, ×1,8 de vie, une épithète `DS.TOWER_EPITHETS`) : leur coffre donne un point de sort et deux ingrédients.
+  - **Règles de l'étage** (`DS.TOWER_MODS`, lues par duel.js dans `D.mod`) : une dès le 12e, deux dès le 40e.
+  - **Le sommet** : Pyrrhax, le Dragon Ancestral (`DS.TOWER_DRAGON`, taille 1,5 ancré plus bas par `sink`, vie ×2,4), qui crie Infernus, Flammurus, Meteorus, Nocturna, Vortex,
+    pendant que la tour s'en mêle (`DS.TOWER_DRAGON_EVENTS` : pluie de feu, souffle, secousses…). Il reste « ? ? ? » tant qu'on n'a pas atteint l'étage 90.
+    Le vaincre : `crowned`, 3 points de sort, le titre « Tombeur du Dragon » (et « Seigneur des Cimes » à l'étage 50). On peut le défier encore (prix divisé par 4).
+  - Prix d'un étage : `towerReward` (or et XP du niveau × hauteur × variantes × nombre de monstres × règles) ; une défaite rapporte le quart.
+    Non mesuré en vrai : la difficulté des étages hauts (niveau 31 + variantes + 3 contre 1) n'a pas encore été jouée.
 - **Laboratoire d'alchimie** (tour de gauche) : huit ingrédients (`DS.INGREDIENTS`), à trouver au magasin de magie (un objet inutile sur cinq) et après un duel gagné
   (quatre fois sur cinq). Deux ingrédients, parfois un sort connu comme base, et on mélange : `DS.RECIPES` (18 : 6 potions, 12 sorts appris pour toujours sans les acheter).
   Un raté ne consomme rien et donne un indice (ingrédient qui « réagit », base manquante) ; le codex garde les recettes trouvées. `save.ingr`, `save.recipes`, `save.hints`.
@@ -414,7 +427,7 @@ Quatre lieux de plus sur la carte (`js/extras.js`, données dans `js/data.js`, �
 - **Miroir magique 2.0** : quatre onglets (talents, chapeaux, baguette, titres). `DS.HATS` (chapeau + aura d'étincelles, visible dans le miroir et sur le portrait de la carte),
   `DS.WAND_LOOKS` (couleur du tracé `D.look.trail/trailHi`, manche, cœur de la baguette : `DS.extras.styledWand`), `DS.TITLES` (après le prénom, au féminin si `f`).
   Tout se débloque par un exploit (`unlock(save)`) ; une pastille « nouveautés » apparaît sur la carte (`save.seen`). `DS.extras.styled(me)` donne le sorcier habillé (carte, miroir, duel).
-Console : `DS.app.ingredients(n)` donne des ingrédients ; `DS.app.startTower(DS.extras.towerCfg())` lance l'étage.
+Console : `DS.app.ingredients(n)` donne des ingrédients ; `DS.app.startTower(DS.extras.towerCfg())` lance l'étage (`DS.app.save.tower.floor = n` pour en choisir un ; `DS.extras.towerFloor(n)` le décrit).
 
 ## L'aventure : biomes, monstres et hordes (2026-11-06)
 Par le tapis, en bas de la carte (`js/aventure.js`, données `DS.BIOMES` / `DS.MONSTERS` dans `js/data.js`, monstres dessinés par `drawMonster` dans `js/art.js`).

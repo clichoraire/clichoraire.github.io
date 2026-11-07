@@ -26,7 +26,7 @@ class Duel{
   const W=this.world=new BK.World({map:ring.grid,props:JSON.parse(JSON.stringify(ring.props||{})),theme,mode:'match',explore:true,hearts:true,itemChance:0});
   const st=W.starts[0],op=Object.entries(ring.props).find(([k,p])=>p.duelOpponent)[0].split(',').map(Number);
   this.player=W.addPlayer(source.def,st.c,st.r,{hp:40,bombs:source.bombsMax,fire:source.fire});this.rival=W.addPlayer(BK.duelistDef(trainer.duelistStyle),op[0],op[1],{hp:[20,30,40,50][this.level-1],bombs:source.bombsMax,fire:source.fire,bot:{level:this.level===1?'facile':this.level===2?'moyen':'difficile'}});
-  for(const p of [this.player,this.rival]){for(const k of BK.BOMB_POWERS)p[k]=!!source[k];p.kick=true;p.gloves=source.gloves;p.speed=source.speed*(p===this.rival?[.65,.8,1,1.1][this.level-1]:1);}
+  for(const p of [this.player,this.rival]){for(const k of BK.BOMB_POWERS)p[k]=!!source[k];p.kick=true;p.throw=true;p.gloves=source.gloves;p.speed=source.speed*(p===this.rival?[.65,.8,1,1.1][this.level-1]:1);}
   this.rival.bombsMax=Math.min(source.bombsMax,this.level);this.state='intro';this.t=0;this.timer=120;W.frozen=true;this.cam=new BK.Camera(BK.W,BK.H);this.cam.fit(W.cols,W.rows,{top:95,bottom:65,left:35,right:35});
   this.rewardKey=BK.duelRewardKey(parent,key);
   this.previousMusic=BK.music?.current;

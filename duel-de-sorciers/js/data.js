@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var DS = window.DS = window.DS || {};
-  DS.VERSION = '1.0'; // à augmenter à chaque mise en ligne (affichée sur la carte du site)
+  DS.VERSION = '1.1'; // à augmenter à chaque mise en ligne (affichée sur la carte du site)
 
   // Âge d'un sorcier selon son niveau : enfant jusqu'au niveau 7, ado de 8 à 15, vrai magicien (chapeau pointu) à partir de 16.
   // h : taille par rapport à un adulte · head : grosseur de la tête par rapport au corps · eye : grosseur des yeux · hem : hauteur du bas de la robe
@@ -553,8 +553,85 @@
     { id: 'tresor', icon: '💰', name: 'Étage au trésor', desc: 'Rien ne change au duel… mais l’étage rapporte le double d’or.', gold: 2 },
     { id: 'colosse', icon: '🏔️', name: 'Le colosse', desc: 'Il a le double de vie et frappe un peu plus fort. Toi, tes sorts font +30 %.', foeHp: 2, foeDmg: 1.2, pDmg: 1.3 }
   ];
-  DS.TOWER_STEP = 5; // un palier tous les 5 étages : une défaite ramène au dernier palier, et le palier offre un coffre
-  DS.towerFloorOf = function (floor) { return { level: floor, mods: floor < 3 ? 0 : floor < 10 ? 1 : 2, boss: floor % 10 === 0 }; }; // le 10e, 20e… étage : un maître de la tour
+  // ── La Tour des Épreuves (js/extras.js) : 100 étages, à la Mortal Kombat. On monte d'un étage à chaque victoire, on redescend d'un à chaque défaite.
+  // Chaque étage est un combat contre un monstre (parfois deux, jusqu'à trois en haut), tiré une fois pour toutes par la graine de la sauvegarde
+  // (DS.towerFloor) : quitter le jeu ne change rien, on retrouve le même étage et le même monstre. Tous les 10 étages, un maître ; au 100e, le dragon.
+  DS.TOWER_FLOORS = 100;
+  DS.TOWER_BOSS_EVERY = 10;
+  DS.towerLevel = function (n) { return Math.max(1, Math.round(1 + (n - 1) * 0.3)); }; // niveau des monstres de l'étage n (31 au sommet)
+  DS.rng = function (seed) { var s = Math.floor(Math.abs(seed)) % 2147483647; if (s <= 0) s += 2147483646; return function () { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; }; };
+  // Les bêtes de la tour. kind : silhouette (js/art.js drawMonster) · f : nom féminin · from : premier étage où on la croise · boss : peut être maître d'un étage
+  // hp / dmg : vie et dégâts (× ceux d'un sorcier du niveau de l'étage) · spells : les seuls sorts qu'elle crie (elle ne trace rien)
+  var B = function (id, kind, name, f, color, spells, from, o) { var m = { id: id, kind: kind, name: name, title: '', f: !!f, color: color, spells: spells, from: from, monster: true, size: 1, hp: 1, dmg: 1 }; for (var k in o || {}) m[k] = o[k]; return m; };
+  DS.TOWER_BEASTS = [
+    B('gluant', 'slime', 'Gluant', 0, '#6fd36f', ['scintilla', 'toxicus'], 1, { eye: '#1b3a1b', taunts: ['Blorp… blorp…', 'Glou. Glou glou !'] }),
+    B('follet', 'wisp', 'Feu follet', 0, '#9fe8ff', ['scintilla', 'fulgur', 'lumina'], 1, { taunts: ['Suis-moi… suis-moi…', 'Hi hi hi hi !'] }),
+    B('chauvesouris', 'bat', 'Chauve-souris', 1, '#5b3d7a', ['scintilla', 'vespera', 'tenebra'], 2, { eye: '#ff5a5a', taunts: ['Scriiii !', 'Tes yeux ne te serviront à rien.'] }),
+    B('gobelin', 'goblin', 'Gobelin archer', 0, '#5fa54a', ['scintilla', 'sagitta', 'spina'], 3, { eye: '#ffd24a', taunts: ['Hé hé ! Une flèche entre les deux yeux !', 'Tu vas finir dans ma marmite.'] }),
+    B('diablotin', 'imp', 'Diablotin', 0, '#e0452a', ['ignis', 'scintilla', 'fulgur'], 5, { eye: '#ffe14a', taunts: ['Ça va chauffer, petit sorcier !', 'Hi hi ! Tu sens le roussi.'] }),
+    B('araignee', 'spider', 'Araignée', 1, '#3a2a3a', ['toxicus', 'spina', 'tremor'], 7, { eye: '#ff3b3b', size: 1.15, hp: 1.15, boss: true, taunts: ['Viens dans ma toile, petit sorcier…', 'Huit yeux pour te regarder perdre.'] }),
+    B('fantome', 'ghost', 'Fantôme', 0, '#cfe0ff', ['vespera', 'somnus', 'evanesco'], 9, { eye: '#0d0b1c', taunts: ['Ouuuuuh…', 'Dors… dors…'] }),
+    B('squelette', 'skeleton', 'Squelette', 0, '#4a2a5a', ['vespera', 'tenebra', 'fractura'], 11, { eye: '#ff7a3a', taunts: ['Clac clac clac.', 'Rejoins-moi sous la pierre.'] }),
+    B('oeil', 'eye', 'Œil rôdeur', 0, '#c9a8ff', ['lumina', 'myopia', 'somnus', 'vespera'], 13, { eye: '#2a0a4a', taunts: ['Je te vois… je te vois…', 'Regarde-moi dans l’œil.'] }),
+    B('salamandre', 'slime', 'Salamandre', 1, '#ff5a2a', ['ignis', 'radius', 'scintilla'], 15, { eye: '#ffe14a', taunts: ['Sssss…', 'Je vis dans les flammes.'] }),
+    B('golem', 'golem', 'Golem de pierre', 0, '#9a8a70', ['terra', 'saxum', 'tremor'], 17, { eye: '#ffe14a', hp: 1.2, boss: true, taunts: ['Grrrmmm.', 'Tu es sur mes terres.'] }),
+    B('chouette', 'bat', 'Chouette des neiges', 1, '#f3f6ff', ['glacius', 'lumina', 'sagitta'], 19, { eye: '#ffd978', taunts: ['Hou. Hou.', 'Je vois tout, même la nuit.'] }),
+    B('chaman', 'goblin', 'Gobelin chaman', 0, '#7a9a3a', ['toxicus', 'vortex', 'cura', 'acidus'], 22, { eye: '#ffd24a', mark: 'mask', taunts: ['Les esprits sont avec moi, pas avec toi.', 'Oum… baka… CHAK !'] }),
+    B('yeti', 'yeti', 'Yéti', 0, '#e8f0ff', ['glacius', 'stiria', 'terra'], 25, { eye: '#2a3a6a', hp: 1.15, boss: true, taunts: ['RRRAAAH !', 'Le froid ne me fait rien. Et toi ?'] }),
+    B('chevalier', 'knight', 'Chevalier d’ombre', 0, '#3a3a5a', ['fractura', 'tenebra', 'murus', 'nocturna'], 28, { eye: '#8a7bff', hp: 1.2, boss: true, taunts: ['Nul ne passe.', 'Mon armure a vu mille sorciers tomber.'] }),
+    B('spectre', 'ghost', 'Spectre', 0, '#8a7bff', ['nocturna', 'tenebra', 'silencio', 'vespera'], 31, { eye: '#ffffff', taunts: ['Tais-toi… à jamais.', 'La nuit est à moi.'] }),
+    B('vouivre', 'dragon', 'Vouivre', 1, '#2f8a5a', ['aqua', 'vortex', 'toxicus', 'ignis'], 35, { eye: '#ffe14a', size: 1.2, hp: 1.3, boss: true, taunts: ['Ma tour, mes règles.', 'Je vais te noyer dans la vase.'] }),
+    B('liche', 'skeleton', 'Liche', 1, '#2a1a40', ['vampyra', 'toxicus', 'fractura', 'inversium', 'vespera'], 40, { eye: '#c58bff', hp: 1.2, boss: true, taunts: ['J’ai eu mille ans pour apprendre.', 'Ta vie sera la mienne.'] }),
+    B('magma', 'golem', 'Golem de magma', 0, '#7a2a1a', ['ignis', 'terra', 'bombus', 'tremor'], 45, { eye: '#ffb347', hp: 1.3, boss: true, taunts: ['Le sol va fondre sous toi.', 'BOUM.'] }),
+    B('vampire', 'bat', 'Vampire', 0, '#2a0a1a', ['vampyra', 'vespera', 'somnus', 'scintilla'], 50, { eye: '#ff2a4a', taunts: ['J’ai soif…', 'Un cou bien tendre.'] }),
+    B('esprit', 'wisp', 'Esprit de lave', 0, '#ff7a3a', ['ignis', 'fulgur', 'meteorus'], 55, { taunts: ['Ça chauffe !', 'Viens te brûler les doigts.'] }),
+    B('dragongivre', 'dragon', 'Dragon de givre', 0, '#9fd8ff', ['blizzardus', 'stiria', 'glacius', 'stalagma', 'sagitta'], 60, { eye: '#ffffff', size: 1.35, hp: 1.5, boss: true, taunts: ['Mon souffle est un hiver.', 'Personne ne redescend de chez moi.'] })
+  ];
+  // Les variantes : la même bête, d'une autre couleur (tint : la couleur et sa force, appliquée à tout le dessin), avec un petit signe en plus (mark : horns, aura, spikes…),
+  // et bien plus forte pour certaines. adj : l'adjectif (masculin, féminin) · add : un sort de plus · w : poids au tirage · from : premier étage où on la voit · gold : prix multiplié
+  DS.TOWER_TIERS = [
+    { id: 'normal', adj: ['', ''], w: 10, from: 1, hp: 1, dmg: 1, gold: 1 },
+    { id: 'sombre', adj: ['sombre', 'sombre'], tint: ['#160f2a', 0.55], eye: '#ff5a5a', w: 5, from: 6, hp: 1.25, dmg: 1.15, gold: 1.3 },
+    { id: 'givre', adj: ['givré', 'givrée'], tint: ['#bfe6ff', 0.55], eye: '#5fb8ff', add: 'glacius', w: 4, from: 10, hp: 1.2, dmg: 1.2, gold: 1.3 },
+    { id: 'ardent', adj: ['ardent', 'ardente'], tint: ['#ff4a1a', 0.55], eye: '#ffe14a', add: 'ignis', w: 4, from: 14, hp: 1.25, dmg: 1.35, gold: 1.4 },
+    { id: 'venimeux', adj: ['venimeux', 'venimeuse'], tint: ['#7a2aa0', 0.5], eye: '#9fff5a', add: 'toxicus', mark: 'spikes', w: 3, from: 18, hp: 1.3, dmg: 1.25, gold: 1.4 },
+    { id: 'spectral', adj: ['spectral', 'spectrale'], tint: ['#e8f0ff', 0.6], eye: '#ffffff', mark: 'aura', w: 3, from: 24, hp: 0.85, dmg: 1.7, gold: 1.5 },
+    { id: 'dore', adj: ['doré', 'dorée'], tint: ['#ffd24a', 0.65], eye: '#ffffff', mark: 'aura', w: 2, from: 20, hp: 2, dmg: 1.5, gold: 2.5 },
+    { id: 'noir', adj: ['noir', 'noire'], tint: ['#05030a', 0.8], eye: '#ff2a3a', mark: 'horns', w: 1.5, from: 30, hp: 1.9, dmg: 1.9, gold: 3 }
+  ];
+  DS.TOWER_EPITHETS = [['le Terrible', 'la Terrible'], ['l’Ancien', 'l’Ancienne'], ['le Colossal', 'la Colossale'], ['l’Immortel', 'l’Immortelle'], ['le Cruel', 'la Cruelle'], ['le Gardien', 'la Gardienne'], ['le Dévoreur', 'la Dévoreuse'], ['l’Implacable', 'l’Implacable'], ['le Maudit', 'la Maudite']];
+  // Le sommet : un dragon gigantesque, maître du feu et de la magie. Pendant le combat, la tour elle-même s'en mêle (events, comme les biomes de l'aventure).
+  DS.TOWER_DRAGON = { id: 'pyrrhax', kind: 'dragon', name: 'Pyrrhax', title: 'le Dragon Ancestral', f: false, color: '#c9361b', eye: '#ffe14a', size: 1.5, sink: 0.26, hp: 2.4, dmg: 1.3, mark: 'crown', angry: true, monster: true, final: true, // sink : il se tient plus bas, donc plus près de nous (duel.js foeFrame)
+    spells: ['infernus', 'flammurus', 'meteorus', 'nocturna', 'vortex'], taunts: ['Cent étages pour finir en cendres. Quel dommage.', 'Des milliers sont montés. Aucun n’est redescendu.', 'Je suis le feu, la nuit et la fin.'] };
+  DS.TOWER_DRAGON_EVENTS = [{ spell: 'meteorus', say: '☄️ PLUIE DE FEU !' }, { spell: 'flammurus', say: '🔥 SOUFFLE DU DRAGON ! Aegis !' }, { quake: true, say: '💢 La tour tremble sur ses fondations !' }, { spell: 'tenebra', say: '🌑 Son ombre couvre tout !' }, { spell: 'fulgur', say: '⚡ La foudre tombe du ciel !' }];
+  // L'étage n, toujours le même pour une graine donnée : { n, level, boss, final, foes, hpK, mods, gold }.
+  // foes : les monstres (copies des bêtes, variante appliquée) · hpK : la vie de chacun quand ils sont plusieurs (duel.js nextWave) · mods : règles de l'étage (DS.TOWER_MODS) · gold : prix multiplié
+  DS.towerFloor = function (seed, n) {
+    var r = DS.rng(seed * 131 + n * 7919), lv = DS.towerLevel(n), final = n >= DS.TOWER_FLOORS, boss = !final && n % DS.TOWER_BOSS_EVERY === 0, pick, i;
+    var weighted = function (list, wf) { var tot = 0, ws = list.map(function (x) { var w = Math.max(0, wf(x)); tot += w; return w; }), t = r() * tot; for (var j = 0; j < list.length; j++) { t -= ws[j]; if (t <= 0) return list[j]; } return list[list.length - 1]; };
+    var clone = function (b) { var c = {}; for (var k in b) c[k] = b[k]; c.spells = b.spells.slice(); return c; };
+    var out = { n: n, level: lv, boss: boss, final: final, foes: [], hpK: 1, mods: [], gold: 1 };
+    if (final) { var d = clone(DS.TOWER_DRAGON); out.foes = [d]; out.gold = 6; out.hpK = 1; return out; }
+    var pool = DS.TOWER_BEASTS.filter(function (b) { return b.from <= n; }), recent = function (b) { return 1 / (1 + Math.max(0, n - b.from) / 22); }; // les bêtes vues depuis peu reviennent le plus
+    if (boss) {
+      var bp = pool.filter(function (b) { return b.boss; }); if (!bp.length) bp = pool;
+      var bb = clone(weighted(bp, recent)), ep = DS.TOWER_EPITHETS[Math.floor(r() * DS.TOWER_EPITHETS.length)];
+      bb.title = ep[bb.f ? 1 : 0]; bb.size *= 1.3; bb.hp *= 1.8; bb.dmg *= 1.3; bb.mark = 'crown'; bb.tier = 'maitre'; bb.angry = true; out.foes = [bb]; out.gold = 3;
+    } else {
+      var p2 = n < 8 ? 0 : Math.min(0.5, 0.15 + (n - 8) / 150), p3 = n < 30 ? 0 : Math.min(0.3, 0.08 + (n - 30) / 250), t = r(), count = t < p3 ? 3 : t < p3 + p2 ? 2 : 1;
+      for (i = 0; i < count; i++) {
+        var b = clone(weighted(pool, recent)), pv = Math.min(0.75, Math.max(0, (n - 5) / 60)), tiers = DS.TOWER_TIERS.filter(function (x) { return x.from <= n; });
+        var tier = r() < pv && tiers.length > 1 ? weighted(tiers.slice(1), function (x) { return x.w * (x.w < 3 ? 1 + n / 120 : 1); }) : DS.TOWER_TIERS[0]; // les rares (dorée, noire) de plus en plus souvent en haut
+        if (tier.adj[0]) { b.title = tier.adj[b.f ? 1 : 0]; b.tint = tier.tint; b.eye = tier.eye || b.eye; if (tier.mark && !b.mark) b.mark = tier.mark; if (tier.add && b.spells.indexOf(tier.add) < 0) b.spells.push(tier.add); }
+        b.hp *= tier.hp; b.dmg *= tier.dmg; b.tier = tier.id; out.gold *= tier.gold; out.foes.push(b);
+      }
+      out.hpK = count === 1 ? 1 : count === 2 ? 0.62 : 0.48; out.gold *= count === 1 ? 1 : count === 2 ? 1.3 : 1.6;
+    }
+    var nm = n < 12 ? 0 : n < 40 ? 1 : 2, ids = DS.TOWER_MODS.map(function (m) { return m.id; }); // les règles de l'étage : une à partir du 12e, deux à partir du 40e
+    for (i = ids.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp; }
+    out.mods = ids.slice(0, nm);
+    return out;
+  };
 
   // ── Le laboratoire d'alchimie (js/extras.js) : des ingrédients, à trouver au magasin de magie (parmi les objets qui ne servent à rien) et après un duel gagné.
   DS.INGREDIENTS = [
@@ -698,6 +775,8 @@
     { id: 'champion', names: ['le Champion', 'la Championne'], how: 'Gagner une coupe', unlock: function (s) { return DS.CUPS.some(function (c) { return cup(s, c.id); }); } },
     { id: 'archimage', names: ['l’Archimage', 'l’Archimage'], how: 'Gagner la Coupe des Archimages', unlock: function (s) { return cup(s, 'archimages'); } },
     { id: 'nuages', names: ['le Grimpeur des Nuages', 'la Grimpeuse des Nuages'], how: 'Atteindre l’étage 20 de la tour', unlock: function (s) { return (s.tower.best || 0) >= 20; } },
+    { id: 'cimes', names: ['le Seigneur des Cimes', 'la Dame des Cimes'], how: 'Atteindre l’étage 50 de la tour', unlock: function (s) { return (s.tower.best || 0) >= 50; } },
+    { id: 'dragon', names: ['le Tombeur du Dragon', 'la Tombeuse du Dragon'], how: 'Vaincre Pyrrhax au sommet de la tour', unlock: function (s) { return !!s.tower.crowned; } },
     { id: 'alchimiste', names: ['l’Alchimiste', 'l’Alchimiste'], how: 'Découvrir 10 recettes', unlock: function (s) { return Object.keys(s.recipes).length >= 10; } },
     { id: 'dresseur', names: ['le Dresseur', 'la Dresseuse'], how: 'Deux familiers au niveau 3', unlock: function (s) { return Object.keys(s.fam.owned).filter(function (id) { return s.fam.owned[id] >= 3; }).length >= 2; } },
     { id: 'erudit', names: ['le Grand Érudit', 'la Grande Érudite'], how: 'Connaître tous les sorts', unlock: function (s) { return s.owned.length >= DS.SPELLS.length; } }

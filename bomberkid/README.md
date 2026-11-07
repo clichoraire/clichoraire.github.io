@@ -72,7 +72,10 @@ Deux modes :
   un palier) pour remonter recommencer ; arène finale (étage 2) où un ascenseur monte au diamant (étage 4), gardé par
   un canon rouge et deux chevaliers.
   Coffre : une flamme le fait éclater ; 3 à 5 pièces d'or volent en cloche sur les cases libres autour (et parfois un
-  objet en plus).
+  objet en plus). Butin fixe : `props["c,r"].loot = 'bombjump'` ou `['bombjump','throw']` sur la case du coffre, et ces
+  objets sortent à coup sûr (à la place de l'objet au hasard). Dans le 1-1, le coffre du pré aux lapins (2,64, à côté du
+  cerf) livre le saut sur bombe et le lancer de bombe, tous deux nécessaires pour finir le tableau ; tools/import-1-1.cjs
+  remet ce butin après une réimportation de la carte.
   Objets trouvés et achats : sous les barres (vie, niveau, stamina), chaque objet ramassé dans le tableau s'affiche avec
   son nombre (💣 ×2, 🔥 ×1, 🍯…) ; ces objets ne durent que le tableau (le suivant repart des achats). Ce qui est acheté
   est pour toujours : bombe, flamme, patins, coup de pied et gants de force passent dans les améliorations (save.upgrades,
@@ -188,6 +191,10 @@ Deux modes :
   Sol sous les objets : une case entourée seulement d'objets (bloc parmi des blocs) prend le sol des alentours
   (plus de case de pierre qui apparaît au milieu du gazon après une explosion).
   Un monstre ne prend qu'un coup par bombe (son invincibilité dure plus longtemps que la flamme).
+  Le pouvoir **Lancer de bombe** (`throw`, 🤾) : ramasser une bombe (Espace) et la lancer (Shift) est un pouvoir. Le héros de
+  l'aventure ne l'a pas au départ (sans lui, Espace sur une bombe ne fait rien) ; trouvé une fois, il est gardé pour toujours
+  (save.upgrades.throw). Tout le monde l'a d'office ailleurs : matchs, duels, alliés, tableaux de l'éditeur et défis
+  (`#stage=1-1,skip,throw` le donne dans un test). Les roches des gants de force se soulèvent sans lui.
   Le pouvoir **Saut sur bombe** (`bombjump`), à ramasser ou à placer dans l’éditeur, débloque le saut (style Bomberman 64). Sans ce pouvoir, aucune montée sur une bombe. Une fois acquis, marcher dans une bombe posée fait sauter dessus ; perché, on rebondit sur place
   et les monstres ne nous atteignent pas (mais la mèche brûle !). Relâcher puis appuyer une direction = grand bond de deux cases
   (un gros champignon juste à côté compte aussi) ; si la case est bloquée (mur, bloc, monstre solide, trop haut), on continue

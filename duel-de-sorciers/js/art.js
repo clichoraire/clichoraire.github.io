@@ -696,12 +696,14 @@
   // Même contrat que drawWizard pour la salle de duel (js/duel.js drawFoeBody) : un monstre lance ses sorts sans baguette, la lueur sort de lui.
   function drawMonster(g, m, x, fy, h, pose) {
     pose = pose || {};
-    var u = h / 100, t = pose.t !== undefined ? pose.t : performance.now() / 1000, C = function (c) { return pose.tint ? mix(c, pose.tint[0], pose.tint[1]) : c; };
+    var u = h / 100, t = pose.t !== undefined ? pose.t : performance.now() / 1000, tint = pose.tint || m.tint, C = function (c) { return tint ? mix(c, tint[0], tint[1]) : c; }; // tint : une variante de la tour, teinte sur tout le dessin
     var col = m.color, dark = shade(col, -0.38), light = shade(col, 0.28), eye = m.eye || '#1b1b26', k = m.kind, face = pose.face, i;
-    var fly = k === 'bat' || k === 'ghost' || k === 'wisp', bob = fly ? Math.sin(t * 2.4) * 4 * u : Math.sin(t * 3) * 1.2 * u;
+    var fly = k === 'bat' || k === 'ghost' || k === 'wisp' || k === 'eye', bob = fly ? Math.sin(t * 2.4) * 4 * u : Math.sin(t * 3) * 1.2 * u;
     g.save(); g.translate(x, fy);
     g.fillStyle = 'rgba(0,0,0,0.28)'; ell(g, 0, 0, (fly ? 20 : 30) * u, 6 * u); g.fill(); // l'ombre au sol
     g.translate(0, bob - (fly ? 14 * u : 0));
+    var HEAD = { slime: [0, -56], bat: [0, -84], ghost: [0, -97], skeleton: [0, -102], golem: [0, -88], spider: [0, -60], wisp: [0, -74], dragon: [26, -106], yeti: [0, -87], goblin: [0, -92], knight: [0, -103], eye: [0, -86], imp: [0, -80] }; // le haut de la tête, pour la couronne et les cornes
+    if (m.mark === 'aura') { g.save(); g.globalCompositeOperation = 'lighter'; glowDot(g, 0, -48 * u, (58 + Math.sin(t * 3) * 4) * u, C(light), 0.55); g.restore(); } // une variante qui rayonne
     // les yeux : ronds et vifs ; en croix quand il est touché, fermés quand il dort, froncés quand il lance un sort
     function eyes(ex, ey, r, ec, n) {
       var xs = n === 1 ? [0] : n === 3 ? [-ex, 0, ex] : [-ex, ex], white = m.eyeWhite !== false;
@@ -799,6 +801,51 @@
       g.strokeStyle = C('#3a2a3a'); g.lineWidth = 1.5 * u; g.beginPath(); g.arc(0, -62 * u, 7 * u, 0.1 * Math.PI, 0.9 * Math.PI); g.stroke();
       g.fillStyle = C('#ffffff'); for (i = -1; i <= 1; i++) { poly(g, [[i * 4 * u - 1.5 * u, -60 * u], [i * 4 * u + 1.5 * u, -60 * u], [i * 4 * u, -56 * u]]); g.fill(); }
     }
+    else if (k === 'goblin') { // un petit bonhomme vert : grandes oreilles, gros nez, pagne, et son arc (ou son bâton, pour le chaman masqué)
+      var gsw = Math.sin(t * 3) * 2 * u, sham = m.mark === 'mask';
+      g.fillStyle = C(dark); ell(g, -9 * u, -8 * u, 7 * u, 10 * u); g.fill(); ell(g, 9 * u, -8 * u, 7 * u, 10 * u); g.fill(); g.fillStyle = C('#3a2a1a'); ell(g, -10 * u, 0, 9 * u, 4 * u); g.fill(); ell(g, 10 * u, 0, 9 * u, 4 * u); g.fill(); // jambes et pieds
+      g.fillStyle = C(col); ell(g, 0, -40 * u, 20 * u, 23 * u); g.fill(); g.fillStyle = C(light); ell(g, 3 * u, -36 * u, 11 * u, 13 * u); g.fill();
+      g.fillStyle = C('#6a4a2a'); g.fillRect(-18 * u, -26 * u, 36 * u, 9 * u); g.fillStyle = C('#2a1a0a'); for (i = -1; i <= 1; i++) { poly(g, [[i * 10 * u - 5 * u, -17 * u], [i * 10 * u + 5 * u, -17 * u], [i * 10 * u, -9 * u]]); g.fill(); } // le pagne
+      g.strokeStyle = C(col); g.lineWidth = 6 * u; g.lineCap = 'round'; g.beginPath(); g.moveTo(-16 * u, -46 * u); g.lineTo(-30 * u, -34 * u + gsw); g.moveTo(16 * u, -46 * u); g.lineTo(30 * u, -52 * u - gsw); g.stroke(); // les bras
+      if (sham) { g.strokeStyle = C('#5a3a1a'); g.lineWidth = 3.5 * u; g.beginPath(); g.moveTo(32 * u, -10 * u); g.lineTo(30 * u, -96 * u); g.stroke(); g.fillStyle = C('#1b1b26'); ell(g, 30 * u, -98 * u, 6 * u, 6 * u); g.fill(); glowDot(g, 30 * u, -98 * u, 9 * u, m.eye || '#9fff5a', 0.8); } // le bâton du chaman
+      else { g.strokeStyle = C('#8a5a2a'); g.lineWidth = 2.5 * u; g.beginPath(); g.arc(30 * u, -52 * u - gsw, 22 * u, -Math.PI * 0.55, Math.PI * 0.55); g.stroke(); g.strokeStyle = C('#e8e0c8'); g.lineWidth = u; g.beginPath(); g.moveTo(30 * u, -74 * u - gsw); g.lineTo(30 * u, -30 * u - gsw); g.stroke(); } // l'arc et sa corde
+      g.fillStyle = C(col); [-1, 1].forEach(function (s) { poly(g, [[s * 12 * u, -70 * u], [s * 36 * u, -84 * u], [s * 14 * u, -60 * u]]); g.fill(); }); ell(g, 0, -72 * u, 17 * u, 16 * u); g.fill(); // oreilles et tête
+      g.fillStyle = C(light); ell(g, 2 * u, -68 * u, 5 * u, 4 * u); g.fill(); g.fillStyle = C(dark); ell(g, 6 * u, -66 * u, 5 * u, 3.5 * u); g.fill(); // le gros nez
+      if (sham) { g.fillStyle = C('#8a5a2a'); ell(g, 0, -74 * u, 15 * u, 14 * u); g.fill(); g.fillStyle = C('#1b1b26'); ell(g, -6 * u, -77 * u, 4 * u, 3 * u); g.fill(); ell(g, 6 * u, -77 * u, 4 * u, 3 * u); g.fill(); g.fillStyle = C(m.eye || '#9fff5a'); ell(g, -6 * u, -77 * u, 2 * u, 2 * u); g.fill(); ell(g, 6 * u, -77 * u, 2 * u, 2 * u); g.fill(); g.strokeStyle = C('#e8e0c8'); g.lineWidth = 1.2 * u; for (i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(i * 4 * u, -66 * u); g.lineTo(i * 4 * u, -61 * u); g.stroke(); } g.fillStyle = C('#ff5a2a'); for (i = -1; i <= 1; i++) { poly(g, [[i * 7 * u - 2 * u, -86 * u], [i * 7 * u, -104 * u + Math.abs(i) * 6 * u], [i * 7 * u + 2 * u, -86 * u]]); g.fill(); } } // le masque de bois et ses plumes
+      else { eyes(6 * u, -76 * u, 3.5 * u); mouth(0, -62 * u, 6 * u, face === 'happy'); fangs(0, -64 * u, 3 * u); }
+    } else if (k === 'knight') { // une armure sombre et vide : heaume à visière luisante, épaulières, cape, et une grande épée
+      var ksw = Math.sin(t * 1.5) * 2 * u, steel = col, kd = shade(col, -0.45), kl = shade(col, 0.35);
+      g.fillStyle = C(shade(col, -0.6)); g.beginPath(); g.moveTo(-24 * u, -74 * u); g.lineTo(24 * u, -74 * u); g.lineTo(32 * u + ksw, -4 * u); g.lineTo(-30 * u - ksw, -2 * u); g.closePath(); g.fill(); // la cape
+      g.fillStyle = C(kd); g.fillRect(-14 * u, -24 * u, 11 * u, 24 * u); g.fillRect(3 * u, -24 * u, 11 * u, 24 * u); g.fillStyle = C(steel); g.fillRect(-16 * u, -6 * u, 15 * u, 6 * u); g.fillRect(1 * u, -6 * u, 15 * u, 6 * u); // jambières et bottes
+      g.fillStyle = C(steel); g.beginPath(); g.moveTo(-22 * u, -72 * u); g.lineTo(22 * u, -72 * u); g.lineTo(18 * u, -22 * u); g.lineTo(-18 * u, -22 * u); g.closePath(); g.fill(); g.fillStyle = C(kl); g.beginPath(); g.moveTo(-10 * u, -70 * u); g.lineTo(10 * u, -70 * u); g.lineTo(6 * u, -40 * u); g.lineTo(-6 * u, -40 * u); g.closePath(); g.fill(); // le plastron
+      g.fillStyle = C(kd); ell(g, -26 * u, -70 * u, 13 * u, 9 * u); g.fill(); ell(g, 26 * u, -70 * u, 13 * u, 9 * u); g.fill(); g.strokeStyle = C(steel); g.lineWidth = 7 * u; g.lineCap = 'round'; g.beginPath(); g.moveTo(-28 * u, -66 * u); g.lineTo(-32 * u, -36 * u + ksw); g.moveTo(28 * u, -66 * u); g.lineTo(34 * u, -40 * u - ksw); g.stroke(); // épaulières et bras
+      g.strokeStyle = C('#d8dce8'); g.lineWidth = 4 * u; g.beginPath(); g.moveTo(36 * u, -34 * u - ksw); g.lineTo(44 * u, -108 * u - ksw); g.stroke(); g.strokeStyle = C('#5a4a2a'); g.lineWidth = 3 * u; g.beginPath(); g.moveTo(28 * u, -40 * u - ksw); g.lineTo(44 * u, -36 * u - ksw); g.stroke(); // l'épée et sa garde
+      g.fillStyle = C(steel); ell(g, 0, -86 * u, 15 * u, 17 * u); g.fill(); g.fillStyle = C(kd); g.fillRect(-15 * u, -92 * u, 30 * u, 6 * u); poly(g, [[0, -103 * u], [-4 * u, -118 * u], [4 * u, -118 * u]]); g.fill(); // le heaume, la visière et le cimier
+      if (face === 'hit') eyes(6 * u, -89 * u, 3 * u, eye); else { glowDot(g, 0, -89 * u, 12 * u, eye, 0.7); g.fillStyle = C(eye); g.fillRect(-11 * u, -91 * u, 22 * u, 3 * u); } // la fente qui luit
+    } else if (k === 'eye') { // un gros œil qui flotte, avec des tentacules qui ondulent dessous
+      var ey = -60 * u, er = 24 * u;
+      g.strokeStyle = C(dark); g.lineWidth = 3.5 * u; g.lineCap = 'round'; for (i = 0; i < 5; i++) { var tx = (i - 2) * 9 * u, ph = t * 3 + i; g.beginPath(); g.moveTo(tx, ey + er * 0.7); g.quadraticCurveTo(tx + Math.sin(ph) * 8 * u, ey + er + 12 * u, tx + Math.sin(ph + 1) * 10 * u, ey + er + 26 * u); g.stroke(); }
+      g.fillStyle = C(dark); ell(g, 0, ey, er * 1.05, er * 1.05); g.fill(); var eg = g.createRadialGradient(-er * 0.3, ey - er * 0.3, 2 * u, 0, ey, er); eg.addColorStop(0, '#ffffff'); eg.addColorStop(0.7, '#f1ecdf'); eg.addColorStop(1, C(light)); g.fillStyle = eg; ell(g, 0, ey, er, er); g.fill(); // le globe
+      g.strokeStyle = 'rgba(200,40,60,0.45)'; g.lineWidth = u; for (i = 0; i < 6; i++) { var va = i / 6 * TAU + 0.3; g.beginPath(); g.moveTo(Math.cos(va) * er * 0.55, ey + Math.sin(va) * er * 0.55); g.lineTo(Math.cos(va) * er * 0.95, ey + Math.sin(va) * er * 0.95); g.stroke(); } // des veines
+      if (face === 'hit') { g.strokeStyle = C('#1b1b26'); g.lineWidth = 3 * u; g.beginPath(); g.moveTo(-9 * u, ey - 9 * u); g.lineTo(9 * u, ey + 9 * u); g.moveTo(9 * u, ey - 9 * u); g.lineTo(-9 * u, ey + 9 * u); g.stroke(); }
+      else if (face === 'sleep') { g.fillStyle = C(col); ell(g, 0, ey, er, er); g.fill(); g.strokeStyle = C(dark); g.lineWidth = 2 * u; g.beginPath(); g.moveTo(-er * 0.8, ey + 2 * u); g.quadraticCurveTo(0, ey + 10 * u, er * 0.8, ey + 2 * u); g.stroke(); }
+      else { var px = Math.sin(t * 0.7) * 4 * u, py = Math.cos(t * 0.9) * 3 * u; g.fillStyle = C(col); ell(g, px, ey + py, 11 * u, 11 * u); g.fill(); g.fillStyle = C(eye); ell(g, px, ey + py, 5.5 * u, (face === 'cast' || m.angry ? 7 : 5.5) * u); g.fill(); g.fillStyle = 'rgba(255,255,255,0.8)'; ell(g, px - 3 * u, ey + py - 4 * u, 2.5 * u, 2 * u); g.fill(); } // iris et pupille qui se promènent
+      if (face === 'cast' || m.angry) { g.fillStyle = C(dark); g.beginPath(); g.moveTo(-er, ey - er * 0.2); g.quadraticCurveTo(0, ey - er * 1.25, er, ey - er * 0.2); g.lineTo(er, ey - er * 1.2); g.lineTo(-er, ey - er * 1.2); g.closePath(); g.fill(); } // la paupière froncée
+    } else if (k === 'imp') { // un petit diable rouge : cornes, queue en pointe, petites ailes, et une fourche
+      var iw = Math.sin(t * 9) * 0.4;
+      g.fillStyle = C(dark); [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(s * 10 * u, -40 * u); g.quadraticCurveTo(s * 26 * u, -62 * u - iw * 10 * u, s * 36 * u, -46 * u); g.quadraticCurveTo(s * 26 * u, -42 * u, s * 14 * u, -30 * u); g.closePath(); g.fill(); }); // les ailes
+      g.strokeStyle = C(col); g.lineWidth = 3 * u; g.lineCap = 'round'; g.beginPath(); g.moveTo(-10 * u, -14 * u); g.quadraticCurveTo(-30 * u, -8 * u + Math.sin(t * 2) * 6 * u, -34 * u, -30 * u); g.stroke(); g.fillStyle = C(col); poly(g, [[-38 * u, -36 * u], [-28 * u, -33 * u], [-34 * u, -25 * u]]); g.fill(); // la queue
+      g.fillStyle = C(dark); ell(g, -7 * u, -6 * u, 5 * u, 8 * u); g.fill(); ell(g, 7 * u, -6 * u, 5 * u, 8 * u); g.fill();
+      g.fillStyle = C(col); ell(g, 0, -32 * u, 17 * u, 19 * u); g.fill(); g.fillStyle = C(light); ell(g, 0, -28 * u, 9 * u, 11 * u); g.fill();
+      g.strokeStyle = C(col); g.lineWidth = 5 * u; g.beginPath(); g.moveTo(14 * u, -38 * u); g.lineTo(26 * u, -50 * u); g.stroke(); g.strokeStyle = C('#3a2a3a'); g.lineWidth = 2.5 * u; g.beginPath(); g.moveTo(26 * u, -20 * u); g.lineTo(26 * u, -82 * u); g.stroke(); poly(g, [[20 * u, -78 * u], [20 * u, -90 * u], [23 * u, -82 * u], [26 * u, -94 * u], [29 * u, -82 * u], [32 * u, -90 * u], [32 * u, -78 * u]]); g.fill(); // la fourche
+      g.fillStyle = C(col); ell(g, 0, -58 * u, 14 * u, 13 * u); g.fill(); g.fillStyle = C(shade(col, -0.5)); [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(s * 6 * u, -68 * u); g.quadraticCurveTo(s * 14 * u, -74 * u, s * 10 * u, -84 * u); g.quadraticCurveTo(s * 10 * u, -72 * u, s * 2 * u, -70 * u); g.closePath(); g.fill(); }); // tête et cornes
+      eyes(5.5 * u, -60 * u, 3.5 * u); mouth(0, -50 * u, 5 * u, face !== 'hit'); fangs(0, -52 * u, 3 * u);
+    }
+    // Les signes des variantes et des maîtres (js/data.js DS.TOWER_TIERS) : couronne, cornes, piquants
+    var hp = HEAD[k] || [0, -80], hx = hp[0] * u, hy = hp[1] * u;
+    if (m.mark === 'crown') { g.fillStyle = C('#f2c94c'); poly(g, [[hx - 12 * u, hy + 2 * u], [hx - 12 * u, hy - 12 * u], [hx - 6 * u, hy - 5 * u], [hx, hy - 15 * u], [hx + 6 * u, hy - 5 * u], [hx + 12 * u, hy - 12 * u], [hx + 12 * u, hy + 2 * u]]); g.fill(); g.fillStyle = C('#ff3b6b'); ell(g, hx, hy - 3 * u, 2.5 * u, 2.5 * u); g.fill(); g.fillStyle = C('#b8860b'); g.fillRect(hx - 12 * u, hy, 24 * u, 2 * u); }
+    if (m.mark === 'horns') { g.fillStyle = C('#15101c'); [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(hx + s * 5 * u, hy + 8 * u); g.quadraticCurveTo(hx + s * 16 * u, hy + 4 * u, hx + s * 14 * u, hy - 14 * u); g.quadraticCurveTo(hx + s * 12 * u, hy - 2 * u, hx + s * 2 * u, hy + 2 * u); g.closePath(); g.fill(); }); }
+    if (m.mark === 'spikes') { g.fillStyle = C('#15101c'); for (i = -2; i <= 2; i++) { poly(g, [[hx + i * 7 * u - 3 * u, hy + 12 * u], [hx + i * 7 * u, hy - 2 * u - (2 - Math.abs(i)) * 3 * u], [hx + i * 7 * u + 3 * u, hy + 12 * u]]); g.fill(); } }
     if (pose.glow && k !== 'dragon') { var tp = pose.tip || { x: 0, y: -60 * u }; g.save(); g.globalCompositeOperation = 'lighter'; glowDot(g, tp.x, tp.y, 12 * u, pose.glow, 0.85); g.restore(); } // il lance un sort : la lueur sort de lui
     g.restore();
   }

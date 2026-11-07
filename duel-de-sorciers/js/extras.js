@@ -12,55 +12,98 @@
   function gold() { document.querySelectorAll('.gold-amt').forEach(function (el) { el.textContent = save.gold; }); }
 
   // ───────────────────────── La Tour des Épreuves ─────────────────────────
-  // save.tower = { floor : étage à jouer, best : record, next : { foe, mods } l'étage préparé (tiré une fois, pour qu'on ne puisse pas relancer les dés) }
-  // Une défaite ramène au dernier palier (tous les DS.TOWER_STEP étages). Quitter entre deux étages ne fait rien perdre.
-  function floorInfo(n) { return DS.towerFloorOf(n); }
-  function palier(n) { return n - (n - 1) % DS.TOWER_STEP; }
-  function prepFloor() {
-    var T = save.tower, info = floorInfo(T.floor);
-    if (T.next && T.next.floor === T.floor) return T.next;
-    var pool = DS.CHARACTERS.concat(DS.RIVALS).filter(function (c) { return c.id !== save.char; }).map(function (c) { return c.id; });
-    var mods = shuffle(DS.TOWER_MODS.map(function (m) { return m.id; })).slice(0, info.mods);
-    T.next = { floor: T.floor, foe: info.boss ? 'morgane' : pool[Math.floor(Math.random() * pool.length)], mods: mods };
-    host.persist(); return T.next;
-  }
+  // save.tower = { floor : étage à jouer, best : record, seed : la graine qui fixe tous les étages (DS.towerFloor), crowned : le dragon du sommet est vaincu }
+  // Comme une échelle de Mortal Kombat : on monte d'un étage à chaque victoire, on redescend d'un à chaque défaite (ou abandon). Quitter le jeu ne change rien.
+  var floorCache = {}, bgDone = '';
+  function floorOf(n) { var key = save.tower.seed + ':' + n; return floorCache[key] || (floorCache[key] = DS.towerFloor(save.tower.seed, n)); }
   function modsOf(ids) { return ids.map(function (id) { return DS.byId(DS.TOWER_MODS, id); }).filter(Boolean); }
-  function mergeMods(list, boss) { // les règles de l'étage réunies en un seul jeu de multiplicateurs (D.mod, js/duel.js)
+  function mergeMods(list) { // les règles de l'étage réunies en un seul jeu de multiplicateurs (D.mod, js/duel.js)
     var out = {};
     list.forEach(function (m) { for (var k in m) { if (k === 'id' || k === 'icon' || k === 'name' || k === 'desc') continue; out[k] = typeof m[k] === 'number' && typeof out[k] === 'number' ? out[k] * m[k] : m[k]; } });
-    if (boss) { out.foeHp = (out.foeHp || 1) * 1.5; out.gold = (out.gold || 1) * 3; }
     return out;
   }
+  function foeNames(fl) { return fl.foes.map(function (ch) { return ch.name + (ch.title ? ' ' + ch.title : ''); }).join(' & '); }
+  function hiddenTop(fl) { return fl.final && (save.tower.best || 0) < DS.TOWER_FLOORS - 10 && !save.tower.crowned; } // le dragon reste une ombre tant qu'on n'approche pas du sommet
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  function rowHtml(n, cur) {
+    var fl = floorOf(n), hid = hiddenTop(fl), cls = 'trow' + (n === cur ? ' cur' : '') + (fl.boss ? ' boss' : '') + (fl.final ? ' final' : '');
+    var small = 'Étage ' + n + (fl.final ? ' · Le sommet' : fl.boss ? ' · Maître de la tour' : ''), em = 'Niv. ' + fl.level + (fl.foes.length > 1 ? '<small>' + fl.foes.length + ' contre 1</small>' : '');
+    var pics = fl.foes.map(function (ch, k) { return '<canvas class="pic" width="64" height="64" data-n="' + n + '" data-k="' + k + '"></canvas>'; }).join('');
+    return '<li class="' + cls + '"><span class="num">' + n + '</span><span class="pics">' + pics + '</span><span class="txt"><small>' + small + '</small><b>' + (hid ? '? ? ?' : esc(foeNames(fl))) + '</b></span><em class="lvl">' + em + '</em></li>';
+  }
+  function drawFloorPortrait(cv, fl, k) {
+    var ch = fl.foes[k], g = cv.getContext('2d'), pose = { t: 0 }; g.clearRect(0, 0, cv.width, cv.height);
+    if (hiddenTop(fl)) pose.tint = ['#05030a', 0.94];
+    A.drawMonster(g, ch, cv.width / 2 - (ch.kind === 'dragon' ? cv.width * 0.04 : 0), cv.height * 0.96, cv.height * (fl.final ? 0.62 : ch.size > 1.2 ? 0.78 : 0.9), pose);
+  }
   function renderTower() {
-    var T = save.tower, n = prepFloor(), info = floorInfo(T.floor), foe = host.who(n.foe), list = modsOf(n.mods), rw = towerReward(T.floor, mergeMods(list, info.boss));
-    $('tower-floor').textContent = T.floor; $('tower-best').textContent = T.best ? 'Record : étage ' + T.best : 'Aucun étage gravi encore';
-    $('tower-foe').innerHTML = (info.boss ? '<b class="boss">👑 Maître de la tour</b>' : '') + '<b>' + foe.name + ' ' + foe.title + '</b><small>Niveau ' + info.level + (info.boss ? ' · 50 % de vie en plus · triple prix' : '') + '</small>';
-    var cv = $('tower-portrait'), g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
-    var fage = DS.ageOf(info.level); A.drawWizard(g, foe, cv.width / 2, cv.height * (fage === 'adult' ? 2.5 : 2.32), cv.height * 2.1, { portrait: true, age: fage });
-    $('tower-mods').innerHTML = list.length ? list.map(function (m) { return '<div class="mod"><span class="ico">' + m.icon + '</span><b>' + m.name + '</b><small>' + m.desc + '</small></div>'; }).join('')
-      : '<div class="mod plain"><span class="ico">✦</span><b>Un duel ordinaire</b><small>Les règles changent à partir du 3e étage, et il y en a deux à partir du 10e.</small></div>';
-    $('tower-reward').innerHTML = 'Cet étage rapporte <b>' + rw.gold + ' ' + coin + '</b> et <b>' + rw.xp + ' XP</b>' + (T.floor % DS.TOWER_STEP === 0 ? ', plus le <b>coffre du palier</b> : un point de sort et des ingrédients' : '') + '.';
-    $('tower-note').textContent = 'Une défaite te ramène à l’étage ' + palier(T.floor) + '. Tu peux redescendre quand tu veux : tu reprendras ici.';
-    var fl = []; for (var i = Math.max(1, T.floor - 4); i <= T.floor + 4; i++) fl.push('<i class="' + (i < T.floor ? 'done' : i === T.floor ? 'cur' : '') + (i % DS.TOWER_STEP === 0 ? ' step' : '') + (i % 10 === 0 ? ' boss' : '') + '">' + i + '</i>');
-    $('tower-steps').innerHTML = fl.join('');
-    $('btn-tower-go').textContent = '⚔ Monter à l’étage ' + T.floor;
+    var T = save.tower, cur = Math.min(DS.TOWER_FLOORS, T.floor), fl = floorOf(cur), rows = {}, i;
+    rows[DS.TOWER_FLOORS] = 1; var nb = Math.ceil((cur + 1) / DS.TOWER_BOSS_EVERY) * DS.TOWER_BOSS_EVERY; if (nb < DS.TOWER_FLOORS) rows[nb] = 1; // le sommet, le prochain maître, et les cinq étages au-dessus du nôtre
+    for (i = cur; i <= Math.min(cur + 5, DS.TOWER_FLOORS); i++) rows[i] = 1;
+    var ns = Object.keys(rows).map(Number).sort(function (a, b) { return b - a; }), html = '', prev = null;
+    ns.forEach(function (n) { if (prev !== null && prev - n > 1) html += '<li class="tgap">⋯</li>'; prev = n; html += rowHtml(n, cur); });
+    var box = $('tower-rows'); box.innerHTML = html;
+    box.querySelectorAll('canvas[data-n]').forEach(function (cv) { drawFloorPortrait(cv, floorOf(+cv.dataset.n), +cv.dataset.k); });
+    var list = modsOf(fl.mods), rw = towerReward(fl), who = esc(foeNames(fl));
+    $('tower-info').innerHTML = (list.length ? '<div class="mods-line">' + list.map(function (m) { return '<span class="mod-pill" title="' + esc(m.desc) + '">' + m.icon + ' ' + m.name + '</span>'; }).join('') + '</div>' : '') +
+      '<div class="rw">' + (fl.final ? (hiddenTop(fl) ? 'Quelque chose d’immense garde le sommet. ' : '<b>' + who + '</b> garde le sommet : feu, nuit et magie. ') : fl.boss ? 'Maître de la tour : <b>' + who + '</b>. ' : fl.foes.length > 1 ? 'Ils sont <b>' + fl.foes.length + ' contre toi</b>. ' : '') +
+      'Cet étage rapporte <b>' + rw.gold + ' ' + coin + '</b> et <b>' + rw.xp + ' XP</b>' + (fl.boss ? ', plus le <b>coffre du maître</b> (un point de sort, des ingrédients)' : '') + '.</div>' +
+      '<small class="note">' + (cur > 1 ? 'Une défaite te fait redescendre à l’étage ' + (cur - 1) + '.' : 'Une défaite te fait recommencer ici.') + ' Quitter le jeu ne fait rien perdre : tu reprendras à cet étage.</small>';
+    $('tower-best').textContent = (T.crowned ? '👑 Tour conquise · ' : '') + (T.best ? 'Record : étage ' + T.best + ' sur ' + DS.TOWER_FLOORS : 'Aucun étage gravi encore') + ' · Entrée pour monter';
+    $('btn-tower-go').textContent = fl.final ? (T.crowned ? '🐉 Défier Pyrrhax encore' : '🐉 Affronter le dragon') : '⚔️ Monter à l’étage ' + cur;
+    drawTowerBg(); box.scrollTop = box.scrollHeight;
   }
-  function towerReward(floor, mod) { var r = DS.reward(true, floor); return { gold: Math.round(r.gold * 0.8 * (mod.gold || 1)), xp: Math.round(r.xp * 0.8) }; }
-  function towerCfg() { // la configuration du duel pour l'étage à jouer
-    var T = save.tower, n = prepFloor(), info = floorInfo(T.floor), list = modsOf(n.mods);
-    return { level: info.level, foe: host.who(n.foe), mod: mergeMods(list, info.boss), modNames: list.map(function (m) { return m.icon + ' ' + m.name; }), boss: info.boss };
+  // Le donjon derrière l'échelle : un mur de pierre, deux piliers, le sol dallé et le tapis rouge, la lueur des torches (les flammes bougent en CSS). Dessiné une fois par taille d'écran.
+  function drawTowerBg() {
+    var cv = $('tower-bg'), sc = cv.parentNode, w = sc.clientWidth, h = sc.clientHeight; if (!w || !h) return; var key = w + 'x' + h; if (key === bgDone) return; bgDone = key;
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5); cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); var g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var r = DS.rng(4242), i, j, bh = 34, bw = 74, horizon = h * 0.76;
+    g.fillStyle = '#1d2018'; g.fillRect(0, 0, w, h);
+    for (j = 0; j * bh < horizon; j++) { var off = (j % 2) * bw / 2; for (i = -1; i * bw < w + bw; i++) { var x = i * bw + off, y = j * bh, k = 0.82 + r() * 0.32; g.fillStyle = 'rgb(' + Math.round(58 * k) + ',' + Math.round(63 * k) + ',' + Math.round(50 * k) + ')'; g.beginPath(); if (g.roundRect) g.roundRect(x + 2, y + 2, bw - 4, bh - 4, 4); else g.rect(x + 2, y + 2, bw - 4, bh - 4); g.fill(); } }
+    g.fillStyle = '#2b2e27'; g.fillRect(0, horizon, w, h - horizon); g.strokeStyle = 'rgba(0,0,0,0.4)'; g.lineWidth = 1.5;
+    for (i = 0; i < 9; i++) { var yy = horizon + Math.pow(i / 8, 1.6) * (h - horizon); g.beginPath(); g.moveTo(0, yy); g.lineTo(w, yy); g.stroke(); }
+    for (i = -7; i <= 7; i++) { g.beginPath(); g.moveTo(w / 2 + i * w * 0.045, horizon); g.lineTo(w / 2 + i * w * 0.2, h); g.stroke(); }
+    g.fillStyle = '#6a1e22'; g.beginPath(); g.moveTo(w * 0.43, horizon); g.lineTo(w * 0.57, horizon); g.lineTo(w * 0.72, h); g.lineTo(w * 0.28, h); g.closePath(); g.fill(); // le tapis rouge
+    g.strokeStyle = 'rgba(233,196,106,0.4)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.445, horizon); g.lineTo(w * 0.31, h); g.moveTo(w * 0.555, horizon); g.lineTo(w * 0.69, h); g.stroke();
+    [0.14, 0.86].forEach(function (px) { // les piliers
+      var x = w * px, pw = Math.max(50, w * 0.05), gr = g.createLinearGradient(x - pw / 2, 0, x + pw / 2, 0); gr.addColorStop(0, '#22251c'); gr.addColorStop(0.5, '#5a5f4d'); gr.addColorStop(1, '#1d2018');
+      g.fillStyle = gr; g.fillRect(x - pw / 2, 0, pw, horizon + 12); g.fillStyle = '#474b3d'; g.fillRect(x - pw * 0.7, horizon + 2, pw * 1.4, 12); g.fillRect(x - pw * 0.65, 0, pw * 1.3, 14);
+      g.fillStyle = 'rgba(0,0,0,0.2)'; for (i = 1; i * 40 < horizon; i++) g.fillRect(x - pw / 2, i * 40, pw, 2);
+    });
+    document.querySelectorAll('#screen-tour .torch').forEach(function (t) { // la lueur des torches, et leur support
+      var x = parseFloat(t.style.left) / 100 * w, y = parseFloat(t.style.top) / 100 * h, gl = g.createRadialGradient(x, y, 4, x, y, w * 0.15);
+      g.fillStyle = '#2a1a0a'; g.fillRect(x - 4, y + 8, 8, 28); g.fillStyle = '#3a2a1a'; g.fillRect(x - 9, y + 34, 18, 6);
+      gl.addColorStop(0, 'rgba(255,170,70,0.5)'); gl.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gl; g.fillRect(x - w * 0.15, y - w * 0.15, w * 0.3, w * 0.3);
+    });
+    var vg = g.createRadialGradient(w / 2, h * 0.45, h * 0.2, w / 2, h * 0.45, Math.max(w, h) * 0.72); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.85)'); g.fillStyle = vg; g.fillRect(0, 0, w, h); // la pénombre
   }
-  // Fin d'un duel de la tour : la suite (gagné : l'étage d'après ; perdu : retour au palier). Retourne ce que main.js affiche.
+  function towerReward(fl) { // l'or et l'expérience de l'étage : selon son niveau, sa hauteur, ses monstres (variantes, nombre) et ses règles
+    var r = DS.reward(true, fl.level), mg = 1; modsOf(fl.mods).forEach(function (m) { if (m.gold) mg *= m.gold; });
+    return { gold: Math.round(r.gold * (1 + fl.n / 60) * fl.gold * mg * (fl.final && save.tower.crowned ? 0.25 : 1)), xp: Math.round(r.xp * (1 + fl.n / 60) * (fl.final ? 3 : fl.boss ? 1.5 : 1)) };
+  }
+  function towerCfg() { // la configuration du duel pour l'étage à jouer : un monstre seul, ou une horde d'un seul coup (plusieurs monstres, ou le dragon et ses événements)
+    var fl = floorOf(Math.min(DS.TOWER_FLOORS, save.tower.floor)), list = modsOf(fl.mods), many = fl.foes.length > 1 || fl.final;
+    return { floor: fl, level: fl.level, foe: fl.foes[0], mod: mergeMods(list), modNames: list.map(function (m) { return m.icon + ' ' + m.name; }), boss: fl.boss, final: fl.final,
+      horde: many ? { waves: [fl.foes], events: fl.final ? DS.TOWER_DRAGON_EVENTS : [], hpK: fl.hpK, label: 'Étage ' + fl.n + ' · niveau ' + fl.level } : null };
+  }
+  // Fin d'un duel de la tour : gagné, l'étage d'après (ou la tour conquise) ; perdu, un étage plus bas. Retourne ce que main.js affiche.
   function towerEnd(win, cfg) {
-    var T = save.tower, floor = T.floor, news = [], rw = towerReward(floor, cfg.mod), out = { gold: 0, xp: 0, news: news, sub: '', next: '' };
+    var T = save.tower, fl = cfg.floor, n = fl.n, news = [], rw = towerReward(fl), who = foeNames(fl), many = fl.foes.length > 1, out = { gold: 0, xp: 0, news: news, title: '', sub: '', next: '', again: false };
     if (win) {
-      out.gold = rw.gold; out.xp = rw.xp; T.best = Math.max(T.best || 0, floor); T.floor = floor + 1; T.next = null;
-      if (floor % DS.TOWER_STEP === 0) { save.spts++; var got = giveIngredients(2); news.push('🎁 Coffre du palier : un point de sort et ' + got.join(', ')); }
-      if (floor === T.best) news.push('🏰 Nouveau record : étage ' + floor + ' !');
-      out.sub = 'Étage ' + floor + ' franchi' + (cfg.boss ? ' : le maître de la tour s’incline !' : '.'); out.next = 'Prochain : étage ' + T.floor + (T.floor % 10 === 0 ? ' — un maître de la tour t’attend' : '');
+      var rec = n > (T.best || 0); out.gold = rw.gold; out.xp = rw.xp; T.best = Math.max(T.best || 0, n);
+      if (fl.final) {
+        if (!T.crowned) { save.spts += 3; news.push('🐉 Pyrrhax est vaincu ! La tour est à toi : 3 points de sort, et un titre au miroir magique.'); }
+        T.crowned = true; out.title = 'La tour est conquise !'; out.sub = 'Au sommet des cent étages, ' + who + ' s’effondre dans un dernier souffle de feu.'; out.next = 'Tu peux redescendre quand tu veux… ou l’affronter encore.';
+      } else {
+        T.floor = n + 1; out.again = true;
+        if (fl.boss) { save.spts++; news.push('🎁 Coffre du maître : un point de sort et ' + giveIngredients(2).join(', ')); }
+        out.title = 'Étage ' + n + ' franchi !'; out.sub = fl.boss ? who + ', maître de la tour, s’incline.' : many ? who + ' sont vaincus.' : who + ' est vaincu' + (fl.foes[0].f ? 'e' : '') + '.';
+        var nx = floorOf(T.floor); out.next = 'Prochain : étage ' + T.floor + (nx.final ? ' — le dragon t’attend au sommet' : nx.boss ? ' — un maître de la tour t’attend' : nx.foes.length > 1 ? ' — ' + nx.foes.length + ' contre 1' : '');
+        if (rec) news.push('🏰 Nouveau record : étage ' + n + ' !');
+      }
     } else {
-      var back = palier(floor); out.gold = Math.round(rw.gold * 0.25); out.xp = Math.round(rw.xp * 0.4); T.floor = back; T.next = null;
-      out.sub = 'Battu à l’étage ' + floor + '.'; out.next = back < floor ? 'Tu redescends au palier : étage ' + back + '.' : 'Tu repars de l’étage ' + back + '.';
+      var back = Math.max(1, n - 1); out.gold = Math.round(rw.gold * 0.25); out.xp = Math.round(rw.xp * 0.4); T.floor = back;
+      out.title = 'Défaite…'; out.sub = who + (many ? ' ont' : ' a') + ' eu le dessus à l’étage ' + n + '.'; out.next = back < n ? 'Tu redescends à l’étage ' + back + '.' : 'Tu repars du premier étage.';
     }
     return out;
   }
@@ -233,12 +276,13 @@
   function init(h) {
     host = h; save = h.save;
     $('btn-tower-go').addEventListener('click', function () { host.startTower(towerCfg()); });
+    window.addEventListener('resize', function () { if (!$('screen-tour').classList.contains('hidden')) { bgDone = ''; drawTowerBg(); } });
     $('btn-brew').addEventListener('click', brew);
     $('lab-tabs').querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { labTab = b.dataset.tab; SFX.click(); renderLab(); }); });
   }
   DS.extras = {
     init: init, styled: styled, styledWand: styledWand, lookCfg: lookCfg, famCfg: famCfg, titleOf: titleOf, giveIngredients: giveIngredients, newUnlocks: newUnlocks, towerCfg: towerCfg,
-    renderTower: renderTower, towerEnd: towerEnd, renderLab: function () { labSaid = ''; renderLab(); startLabAnim(); }, renderFam: renderFam, renderLook: renderLook, pick: pick,
+    renderTower: renderTower, towerEnd: towerEnd, towerFloor: floorOf, renderLab: function () { labSaid = ''; renderLab(); startLabAnim(); }, renderFam: renderFam, renderLook: renderLook, pick: pick,
     mirrorTab: function (t) { mirrorTab = t; }
   };
 })();

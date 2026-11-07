@@ -131,7 +131,8 @@
     if (fam) { if (fam.regen) D.regen *= fam.regen; if (fam.cd) D.p.shieldCdMax *= fam.cd; if (fam.ring) D.guardR *= fam.ring; }
     // Chaque adversaire a ses goûts, tirés au hasard à chaque duel : des sorts qu'il ne lance jamais, d'autres qu'il adore. Deux duels ne se ressemblent pas.
     D.ai.taste = {}; DS.SPELLS.forEach(function (s) { D.ai.taste[s.id] = foeCh.spells ? (foeCh.spells.indexOf(s.id) >= 0 ? 1.5 : 0) : s.id === 'scintilla' ? 1 : s.id === 'fulgur' || s.id === 'ignis' ? rand(0.5, 2) : Math.random() < 0.35 ? 0 : rand(0.4, 2.6); }); // un monstre ne lance que ses sorts à lui
-    if (foeCh.monster) { D.f.hp = D.f.maxHp = Math.round(foeHp * (foeCh.hp || 1) / 5) * 5; }
+    D.ai.dmg0 = D.ai.dmg; // la force de base de l'adversaire ; un monstre a la sienne (dmg : variantes et maîtres de la tour, js/data.js)
+    if (foeCh.monster) { D.f.hp = D.f.maxHp = Math.round(foeHp * (foeCh.hp || 1) / 5) * 5; if (!cfg.horde && foeCh.dmg) D.ai.dmg *= foeCh.dmg; }
     D.baseFoeHp = foeHp; D.pack = null; D.horde = cfg.horde || null; // horde : l'aventure — des vagues de monstres peu résistants, et des événements (startHorde)
     if (D.horde) { D.ai.block *= 0.5; D.horde.wi = -1; D.horde.nextEv = 7 + rand(0, 5); D.horde.kills = 0; nextWave(true); }
     D.age = cfg.age || 'adult'; D.f.age = cfg.klass || foeCh.monster ? 'adult' : DS.ageOf(L); // l'adversaire a l'âge de son niveau ; les professeurs sont adultes
@@ -467,17 +468,17 @@
   function packAlive() { return D.pack ? D.pack.m.filter(function (mb) { return mb.hp > 0; }) : []; }
   function packSlot() { var off = viewOff(), best = D.pack.act, bd = Infinity; D.pack.m.forEach(function (mb, i) { if (mb.hp <= 0) return; var d = Math.abs(wand.x - (F.chest.x + off.x + foeSlotDx(i))); if (d < bd) { bd = d; best = i; } }); return best; }
   function packPace() { var n = packAlive().length; return D.pack ? 1 / (0.55 + 0.45 * Math.max(1, n)) : 1; } // plus ils sont nombreux, plus les sorts pleuvent
-  function nextWave(first) {
+  function nextWave(first) { // hd.hpK : la tour fixe la vie de chacun (js/extras.js towerCfg) ; sinon, une horde de l'aventure est faite de monstres peu résistants
     var f = D.f, hd = D.horde; hd.wi++;
-    var list = hd.waves[hd.wi], m = list.map(function (ch, i) { var hp = Math.round(D.baseFoeHp * (ch.hp || 1) * (ch.size > 1.2 ? 0.8 : 0.33) / 5) * 5; return { ch: ch, hp: Math.max(10, hp), maxHp: Math.max(10, hp), fall: 0, flash: 0, age: first ? 9 : 0 }; });
+    var list = hd.waves[hd.wi], m = list.map(function (ch, i) { var hp = Math.round(D.baseFoeHp * (ch.hp || 1) * (hd.hpK != null ? hd.hpK : ch.size > 1.2 ? 0.8 : 0.33) / 5) * 5; return { ch: ch, hp: Math.max(10, hp), maxHp: Math.max(10, hp), fall: 0, flash: 0, age: first ? 9 : 0 }; });
     D.pack = { m: m, act: Math.floor(Math.random() * m.length), pending: 0 };
     f.hp = f.maxHp = m.reduce(function (a, mb) { return a + mb.maxHp; }, 0); f.state = 'idle'; f.combo = []; f.timer = first ? f.timer : rand(0.7, 1.3); f.fall = 0;
     setActive(D.pack.act); if (!first) { f.offX = packDx(D.pack.act); packHud(); }
     if (!first) { SFX.crash(0.6); D.shake = Math.max(D.shake, 10); text(W / 2, H * 0.3, list.length > 1 ? '⚠ ' + list.length + ' autres arrivent !' : '⚠ En voilà un autre !', '#ff9a7a', 1.3); }
   }
-  function setActive(i) { var ch = D.pack.m[i].ch; D.pack.act = i; D.ai.taste = {}; DS.SPELLS.forEach(function (s) { D.ai.taste[s.id] = ch.spells && ch.spells.indexOf(s.id) >= 0 ? 1.5 : 0; }); }
+  function setActive(i) { var ch = D.pack.m[i].ch; D.pack.act = i; D.ai.dmg = D.ai.dmg0 * (ch.dmg || 1); D.ai.taste = {}; DS.SPELLS.forEach(function (s) { D.ai.taste[s.id] = ch.spells && ch.spells.indexOf(s.id) >= 0 ? 1.5 : 0; }); }
   function packNextActive() { var al = []; D.pack.m.forEach(function (mb, i) { if (mb.hp > 0) al.push(i); }); if (!al.length) return; setActive(al.length > 1 && Math.random() < 0.7 ? pickOne(al.filter(function (i) { return i !== D.pack.act; })) : al[0]); }
-  function packHud() { var m = packAlive(), hd = D.horde; $('foe-name').textContent = m.map(function (mb) { return mb.ch.name + (mb.ch.title ? ' ' + mb.ch.title : ''); }).join(' & '); $('foe-level').textContent = 'Vague ' + (hd.wi + 1) + ' / ' + hd.waves.length + ' · niveau ' + D.level; if (m.length) portrait('hud-foe', m[0].ch, 'adult'); }
+  function packHud() { var m = packAlive(), hd = D.horde; $('foe-name').textContent = m.map(function (mb) { return mb.ch.name + (mb.ch.title ? ' ' + mb.ch.title : ''); }).join(' & '); $('foe-level').textContent = hd.label || 'Vague ' + (hd.wi + 1) + ' / ' + hd.waves.length + ' · niveau ' + D.level; if (m.length) portrait('hud-foe', m[0].ch, 'adult'); }
   function packTick(dt) {
     var pk = D.pack, f = D.f, hd = D.horde, live = D.phase === 'fight', i;
     pk.m.forEach(function (mb, i) {
@@ -765,7 +766,7 @@
     if (an) { F = { x: an.x, fy: an.fy, h: an.h, h0: an.h, u: an.h / 100 }; F.chest = { x: an.cx, y: an.cy }; F.gc = an.gc || { x: an.x, y: an.cy }; F.gs = 30 * F.u; return; } // gc : d'où partent les sorts du professeur // décor de la classe : la cible est le mannequin de l'image
     var hh = geo.foe.h * (f.ch.monster ? f.ch.size || 1 : DS.AGES[f.age || 'adult'].h), u = hh / 100; // un enfant ou un ado est plus petit ; un monstre a sa taille à lui
     var tg = D.target, walk = tg && tg.move ? Math.sin(D.time * TAU / tg.move.per) * tg.move.amp * W : 0; // un mannequin sur rails
-    F = { x: geo.foe.x + walk + f.offX + Math.sin(f.swayT * 0.8) * W * 0.012 + (f.soaked > 0 ? Math.sin(f.swayT * 5) * W * 0.006 : 0) + (f.flash > 0 ? rand(-2, 2) * u : 0) + rand(-5, 5) * u * quakeK(f.quake), fy: geo.foe.y, h: hh, h0: geo.foe.h, u: u };
+    F = { x: geo.foe.x + walk + f.offX + Math.sin(f.swayT * 0.8) * W * 0.012 + (f.soaked > 0 ? Math.sin(f.swayT * 5) * W * 0.006 : 0) + (f.flash > 0 ? rand(-2, 2) * u : 0) + rand(-5, 5) * u * quakeK(f.quake), fy: geo.foe.y + (f.ch.monster && f.ch.sink ? hh * f.ch.sink : 0), h: hh, h0: geo.foe.h, u: u }; // sink : un monstre géant se tient plus bas (plus près), pour qu'on voie sa tête
     F.chest = { x: F.x, y: F.fy - (tg && tg.kind === 'caisse' ? 24 : tg ? 66 : 58) * u };
     F.gc = { x: F.x - 35 * u, y: F.fy - 101 * u }; F.gs = 30 * u; // centre et taille du tracé de l'adversaire
   }

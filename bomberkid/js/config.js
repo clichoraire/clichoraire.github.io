@@ -88,6 +88,7 @@ window.BK.VERSION = '0.35';   // à augmenter à chaque mise en ligne (affichée
     bomb:   { name: 'Bombe en plus',  icon: '💣', color: '#3f9cff', weight: 5, desc: 'Une bombe de plus à poser en même temps.' },
     fire:   { name: 'Grande flamme',  icon: '🔥', color: '#ff6a1f', weight: 5, desc: 'Les explosions vont plus loin.' },
     speed:  { name: 'Patins',         icon: '⚡', color: '#ffd54a', weight: 3, desc: 'Court plus vite.' },
+    throw: { name: 'Lancer de bombe', icon: '🤾', color: '#ffb347', weight: 0, desc: 'Ramasse ta bombe (Espace) et lance-la (Shift) trois cases devant toi. Les cibles rayées s’atteignent ainsi. Trouvé une fois, tu le gardes pour toujours.', adventureOnly: true },
     bombjump: { name: 'Saut sur bombe', icon: '🦘', color: '#69c9ff', weight: 2, desc: 'Monte sur une bombe puis choisis une direction pour bondir. Avec Coup de pied, cours pour monter dessus.' },
     kick:   { name: 'Coup de pied',   icon: '🦵', color: '#49e26a', weight: 2, desc: 'Pousse les bombes d’un coup de pied. Avec Saut sur bombe, cours pour sauter dessus.' },
     antidote: {name:'Antidote',icon:'🧪',color:'#84d6e2',weight:2,usable:true,adventureOnly:true,desc:'Guérit le poison, la diarrhée de bombes et la mèche courte en une dose. Sur la ceinture : utilisé automatiquement en cas de poison.'},
@@ -155,7 +156,7 @@ window.BK.VERSION = '0.35';   // à augmenter à chaque mise en ligne (affichée
   BK.setFriendlyFire = value => { BK.settings.friendlyFire=!!value; try {localStorage.setItem('bk.settings',JSON.stringify(BK.settings));} catch (_) {} };
   // Ajoute un seuil extérieur aux anciennes pièces dont la sortie était dans le mur du bas.
   BK.roomMap = (grid, preserve) => { if(preserve)return grid.slice(); const rows=grid.slice(), last=rows.length-1, c=rows[last].indexOf('G'); if(c>=0 && grid.join('').split('G').length===2 && !/^ *G *$/.test(rows[last])) {rows[last]=rows[last].slice(0,c)+'y'+rows[last].slice(c+1);rows.push(' '.repeat(c)+'G'+' '.repeat(rows[0].length-c-1));} return rows; };
-  BK.BOMB_POWERS = ['bombjump', 'inflate', 'longthrow', 'bomb2', 'safeitems', 'fusion', 'dome'];
+  BK.BOMB_POWERS = ['throw', 'bombjump', 'inflate', 'longthrow', 'bomb2', 'safeitems', 'fusion', 'dome'];
   BK.ITEM_SCORE = 50; BK.BLOCK_SCORE = 10;
 
   // Ennemis : speed en cases/s, hp = nombre de flammes à prendre, score à la mort. Comportements dans world.js.

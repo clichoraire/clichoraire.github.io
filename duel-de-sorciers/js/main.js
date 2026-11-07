@@ -25,8 +25,9 @@
   save.owned = (Array.isArray(save.owned) ? save.owned : []).filter(valid);
   STARTERS.forEach(function (id) { if (save.owned.indexOf(id) < 0) save.owned.push(id); });
   ['slv', 'stats', 'cups', 'lessons', 'medals', 'potions', 'ingr', 'recipes', 'seen', 'hints', 'look'].forEach(function (key) { if (!save[key] || typeof save[key] !== 'object') save[key] = {}; });
-  // tower : la Tour des Épreuves { floor, best, next } · ingr, recipes, hints : le laboratoire · fam : les familiers { owned, active } · look : chapeau, baguette, titre · seen : exploits déjà vus (js/extras.js)
-  if (!save.tower || typeof save.tower !== 'object') save.tower = {}; save.tower.floor = Math.max(1, Math.floor(+save.tower.floor || 1)); save.tower.best = Math.max(0, Math.floor(+save.tower.best || 0));
+  // tower : la Tour des Épreuves { floor, best, seed, crowned } · ingr, recipes, hints : le laboratoire · fam : les familiers { owned, active } · look : chapeau, baguette, titre · seen : exploits déjà vus (js/extras.js)
+  if (!save.tower || typeof save.tower !== 'object') save.tower = {}; save.tower.floor = Math.min(DS.TOWER_FLOORS, Math.max(1, Math.floor(+save.tower.floor || 1))); save.tower.best = Math.min(DS.TOWER_FLOORS, Math.max(0, Math.floor(+save.tower.best || 0)));
+  if (!save.tower.seed) save.tower.seed = 1 + Math.floor(Math.random() * 1e6); save.tower.crowned = !!save.tower.crowned; delete save.tower.next; // seed : les étages sont tirés une fois pour toutes
   if (!save.fam || typeof save.fam !== 'object') save.fam = {}; if (!save.fam.owned || typeof save.fam.owned !== 'object') save.fam.owned = {}; if (!DS.byId(DS.FAMILIARS, save.fam.active) || !save.fam.owned[save.fam.active]) save.fam.active = null;
   Object.keys(save.ingr).forEach(function (id) { if (!DS.byId(DS.INGREDIENTS, id) || !(save.ingr[id] > 0)) delete save.ingr[id]; });
   // adv : l'aventure (js/aventure.js) { biome, loop, x, y, key, cleared, seed }
@@ -83,7 +84,7 @@
   // ───────────────────────── Écrans ─────────────────────────
   var bookMode = 'view';  // le grimoire s'ouvre depuis la carte ('view'), avant un duel d'entraînement ('quick') ou avant un duel de tournoi ('cup')
   var duelMode = 'quick'; // 'quick' (salle d'entraînement), 'cup' (tournoi), 'tour' (un étage de la Tour des Épreuves) ou 'class' (cours : on s'exerce, rien ne compte)
-  var towerCfg = null;    // l'étage en cours de la tour : { level, foe, mod, modNames, boss } (js/extras.js towerCfg)
+  var towerCfg = null, towerOut = null; // l'étage en cours de la tour : { floor, level, foe, mod, modNames, boss, final, horde } (js/extras.js towerCfg), et le bilan du dernier (towerEnd)
   var advFight = null;    // le combat d'aventure en cours : { foe, level, horde, m } (js/aventure.js encounter)
   var shown = '';
   // Chaque endroit a son air, son ambiance et son bruit d'arrivée (js/music.js, js/audio.js). Le duel choisit sa musique selon sa phase (duelMusic).
@@ -207,7 +208,7 @@
     M.set('grimoire', save.spts ? plural(save.spts, 'point', 'points') + ' de sort à placer' : plural(save.owned.length, 'sort connu', 'sorts connus') + ' · ceinture ' + onBelt().length + ' / ' + beltSize(), save.spts);
     M.set('entrainement', 'Mannequin · duel de niveau ' + save.level);
     var T = save.tower, nIng = Object.keys(save.ingr).reduce(function (a, k) { return a + save.ingr[k]; }, 0), nRec = Object.keys(save.recipes).length, famOn = save.fam.active, fresh = DS.extras.newUnlocks();
-    M.set('tour', 'Étage ' + T.floor + (T.best ? ' · record ' + T.best : ''), T.floor % 10 === 0 ? '👑' : '');
+    M.set('tour', (T.crowned ? 'Conquise · ' : '') + 'Étage ' + T.floor + ' / ' + DS.TOWER_FLOORS + (T.best ? ' · record ' + T.best : ''), T.floor >= DS.TOWER_FLOORS ? '🐉' : T.floor % DS.TOWER_BOSS_EVERY === 0 ? '👑' : '');
     M.set('alchimie', nRec + ' / ' + DS.RECIPES.length + ' recettes · ' + plural(nIng, 'ingrédient', 'ingrédients'), nIng >= 2 && !save.hints.seenLab ? '!' : '');
     M.set('familiers', famOn ? DS.byId(DS.FAMILIARS, famOn).names[(save.fam.owned[famOn] || 1) - 1] : 'Adopte un familier', '');
     if (fresh) M.set('talents', plural(fresh, 'nouveauté', 'nouveautés') + ' au miroir', fresh); // un chapeau, un titre ou une couleur de baguette vient d'être débloqué
@@ -648,7 +649,7 @@
   // Un étage de la Tour des Épreuves (js/extras.js) : l'adversaire de l'étage, et ses règles.
   function startTower(tc) {
     var cfg = baseCfg();
-    towerCfg = tc; duelMode = 'tour'; cfg.level = tc.level; cfg.foe = tc.foe; cfg.mod = tc.mod;
+    towerCfg = tc; duelMode = 'tour'; cfg.level = tc.level; cfg.foe = tc.foe; cfg.mod = tc.mod; cfg.horde = tc.horde; // horde : plusieurs monstres d'un coup, ou le dragon et ses événements
     launch(cfg);
     if (tc.modNames.length) { var bub = $('prep-taunt'); bub.innerHTML = bub.textContent + '<br><small class="rules">Règles de l’étage : ' + tc.modNames.join(' · ') + '</small>'; }
   }
@@ -690,7 +691,7 @@
       if (kills > 1) news.unshift('⚔ ' + plural(kills, 'monstre vaincu', 'monstres vaincus') + (r.waves > 1 ? ' en ' + plural(r.waves, 'vague', 'vagues') : ''));
       if (boss && r.win) news.unshift('👑 Gardien du biome vaincu : la sortie est libre !');
       DS.aventure.onEnd(r.win, advFight.m);
-    } else if (towerMode) { tw = DS.extras.towerEnd(r.win, towerCfg); gold = Math.round(tw.gold * (1 + val('gold') / 100)); xp = tw.xp; news = tw.news.concat(news); }
+    } else if (towerMode) { tw = towerOut = DS.extras.towerEnd(r.win, towerCfg); gold = Math.round(tw.gold * (1 + val('gold') / 100)); xp = tw.xp; news = tw.news.concat(news); }
     else if (cupMode) {
       cup = DS.byId(DS.CUPS, save.run.cup); roundName = stepName(save.run, save.run.step);
       advance(r.win);
@@ -700,21 +701,21 @@
     var ups = addXp(xp);
     if (ups) news.push('⭐ Niveau ' + save.plv + ' ! ' + (ups > 1 ? ups + ' points de talent et ' + ups + ' points de sort' : 'Un point de talent et un point de sort') + ' à placer');
     persist();
-    $('end-title').textContent = final ? 'Coupe gagnée !' : towerMode && r.win ? 'Étage ' + (save.tower.floor - 1) + ' franchi !' : r.win ? 'Victoire !' : 'Défaite…';
+    $('end-title').textContent = final ? 'Coupe gagnée !' : towerMode ? tw.title : r.win ? 'Victoire !' : 'Défaite…';
     $('end-title').className = r.win ? 'win' : 'lose';
     $('end-sub').textContent = advMode ? (r.win ? 'La horde est vaincue. ' + r.foe.name + (r.foe.title ? ' ' + r.foe.title : '') + ' ne barrera plus la route.' : 'Les monstres ont eu le dessus… Tu te réveilles à l’entrée du biome.')
-      : towerMode ? tw.sub + ' ' + (r.win ? 'Tu as vaincu ' + r.foe.name + ' ' + r.foe.title + '.' : r.foe.name + ' ' + r.foe.title + ' a été plus rapide cette fois.')
+      : towerMode ? tw.sub
       : final ? 'Tu remportes la ' + cup.name + ' en battant ' + r.foe.name + ' ' + r.foe.title + ' en finale.'
       : r.win ? 'Tu as vaincu ' + r.foe.name + ' ' + r.foe.title + ' (niveau ' + r.level + ').' : r.foe.name + ' ' + r.foe.title + ' a été plus rapide cette fois.';
     var s = r.stats;
     $('end-stats').innerHTML = [['Sorts lancés', s.casts], ['Sorts qui ont touché', s.hits], ['Parades', s.blocks], ['Sorts renvoyés', s.perfects]].map(function (x) { return '<div><b>' + x[1] + '</b><span>' + x[0] + '</span></div>'; }).join('');
     $('end-loot').innerHTML = '<div class="gain"><span>+' + gold + ' <i class="coin"></i></span><span>+' + xp + ' XP</span></div>' + news.map(function (n) { return '<p>' + n + '</p>'; }).join('');
     $('end-level').textContent = advMode ? '' : towerMode ? tw.next : !cupMode ? 'Prochain adversaire : niveau ' + save.level : final ? '' : r.win ? 'Prochain duel : ' + stepName(save.run, save.run.step).toLowerCase() + ' (niveau ' + save.run.levels[save.run.step] + ')' : 'Éliminé en ' + roundName.toLowerCase();
-    $('btn-again').textContent = advMode ? 'Continuer l’aventure →' : towerMode ? (r.win ? 'Étage suivant →' : 'Retour à la tour') : cupMode ? 'Voir le tableau →' : r.win ? 'Duel suivant →' : 'Revanche !';
+    $('btn-again').textContent = advMode ? 'Continuer l’aventure →' : towerMode ? (tw.again ? 'Étage suivant →' : 'Retour à la tour') : cupMode ? 'Voir le tableau →' : r.win ? 'Duel suivant →' : 'Revanche !';
     $('btn-end-spells').classList.toggle('hidden', cupMode);
     $('duel-end').classList.remove('hidden');
     if (ups || final || news.length) setTimeout(SFX.levelUp, 700);
-    if (final) SFX.applause();
+    if (final || (towerMode && r.win && towerCfg.final)) SFX.applause();
   }
   function leaveDuel(to) { DS.school.close(); DS.classe.close(); DS.duel.stop(); $('duel-end').classList.add('hidden'); $('duel-pause').classList.add('hidden'); show(to); }
 
@@ -742,6 +743,7 @@
   document.querySelectorAll('[data-mute]').forEach(function (el) { el.addEventListener('click', function () { SFX.mute(!SFX.mute()); syncSound(); el.blur(); }); });
   $('btn-son').addEventListener('click', function () { $('son-panel').classList.toggle('hidden'); $('btn-son').blur(); });
   document.addEventListener('pointerdown', function (e) { if (!(e.target.closest && e.target.closest('#son-panel, #btn-son'))) $('son-panel').classList.add('hidden'); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Enter' && !e.repeat && !$('screen-tour').classList.contains('hidden')) $('btn-tower-go').click(); }); // à la tour, Entrée : monter
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyM' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) { SFX.mute(!SFX.mute()); syncSound(); } });
   syncSound();
   document.querySelectorAll('[data-go]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.go); }); });
@@ -772,7 +774,7 @@
     else if (duelMode === 'tour') { DS.extras.towerEnd(false, towerCfg); persist(); leaveDuel('tour'); }
     else if (duelMode === 'aventure') { DS.aventure.onEnd(false, advFight.m); leaveDuel('aventure'); } else leaveDuel('map');
   });
-  $('btn-again').addEventListener('click', function () { if (duelMode === 'cup') leaveDuel('cups'); else if (duelMode === 'aventure') leaveDuel('aventure'); else if (duelMode === 'tour') { leaveDuel('tour'); if (lastWin) startTower(DS.extras.towerCfg()); } else startDuel(false); });
+  $('btn-again').addEventListener('click', function () { if (duelMode === 'cup') leaveDuel('cups'); else if (duelMode === 'aventure') leaveDuel('aventure'); else if (duelMode === 'tour') { leaveDuel('tour'); if (lastWin && towerOut && towerOut.again) startTower(DS.extras.towerCfg()); } else startDuel(false); });
   $('btn-end-spells').addEventListener('click', function () { DS.duel.stop(); $('duel-end').classList.add('hidden'); openBook(duelMode === 'tour' ? 'tour' : duelMode === 'aventure' ? 'view' : 'quick'); });
   $('btn-end-menu').addEventListener('click', function () { leaveDuel('map'); });
 
