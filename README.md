@@ -61,3 +61,7 @@ une minute.
 2. Dans ce dossier : `git push -u origin main`.
 3. Sur GitHub : Settings → Pages → Source « Deploy from a branch », branche `main`, dossier `/ (root)`.
 4. Attendre une minute ou deux, puis ouvrir https://clichoraire.github.io/.
+
+## K.O. en Famille
+
+`ko-en-famille/` contient la copie publique de `../KOenFamille/` : `index.html`, `css/`, `js/` et `assets/`. La version est `BX.VERSION` dans `js/data.js`. Les outils et aperçus de développement ne sont pas publiés. Le jeu est annoncé en haut de l’accueil et présent dans le catalogue.

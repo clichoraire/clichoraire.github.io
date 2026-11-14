@@ -27,6 +27,19 @@ echo "{ \"bunker\": { \"version\": \"$VER_ZC\", \"commit\": \"$HEAD_ZC\" }, \"ho
 echo "window.GAME_VERSIONS = { 'go-godefroy-go/': '$VER_GG', 'bunker-zone/': '$VER_ZC', 'hockey-boisjoli/': '$VER_HK', 'snow-kids/': '$VER_SK', 'frigo-snap/': '$VER_FS', 'ballon-chasseur/': '$VER_BC', 'canon-big-boom/': '$VER_CB', 'bomberkid/': '$VER_BK', 'paper-run/': '$VER_PR', 'duel-de-sorciers/': '$VER_DS' };" > versions.js
 echo "▸ Versions : Bunker Zone $VER_ZC · Hockey Boisjoli $VER_HK · Snow Kids $VER_SK · Frigo Snap $VER_FS · Ballon Chasseur $VER_BC · Canon Big Boom $VER_CB · Bomberkid $VER_BK · Go Godefroy Go $VER_GG · Paper Run $VER_PR · Duel de Sorciers $VER_DS"
 
+echo "▸ K.O. en Famille (fichiers du jeu uniquement)"
+mkdir -p ko-en-famille
+rsync -a --delete --exclude .DS_Store "$PROJETS/KOenFamille/js/" ko-en-famille/js/
+rsync -a --delete --exclude .DS_Store "$PROJETS/KOenFamille/css/" ko-en-famille/css/
+rsync -a --delete --exclude .DS_Store "$PROJETS/KOenFamille/assets/" ko-en-famille/assets/
+cp "$PROJETS/KOenFamille/index.html" ko-en-famille/index.html
+node <<'KO_VERSION'
+const fs=require('fs');global.window={};require('./ko-en-famille/js/data.js');
+const version=window.BX.VERSION,versions=JSON.parse(fs.readFileSync('versions.json','utf8'));
+versions.ko={version};fs.writeFileSync('versions.json',JSON.stringify(versions,null,2)+'\n');
+fs.appendFileSync('versions.js',"window.GAME_VERSIONS['ko-en-famille/'] = "+JSON.stringify(version)+";\n");
+KO_VERSION
+
 echo "▸ Bunker Zone (copie de ZoneControl/)"
 rsync -a --delete --exclude .git --exclude .DS_Store --exclude '_extract.html' "$PROJETS/ZoneControl/" bunker-zone/
 

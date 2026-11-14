@@ -1,1 +1,42 @@
-{ "bunker": { "version": "3.4", "commit": "23c22e38634994e3cf9f20d7a11bd0fc1581a61e" }, "hockey": { "version": "1.9", "commit": "e917ed87a7df5fd190fb1ceaffff1622461400f7" }, "snow": { "version": "1.56", "commit": "91e3f83bc47df58dc5916d059f995cc57694fdf2" }, "frigo": { "version": "1.5", "commit": "714533601c87e098c99cff507f7e661a6d3eed82" }, "ballon": { "version": "2.30", "commit": "4006c97a7a45f98ca59a0053080178844ff013a6" }, "canon": { "version": "1.7", "commit": "9d59bc94cd38ec6d9e5a1b6d015cdb5ebef65116" }, "bomber": { "version": "0.35", "commit": "d61e55549d0b08af7c5bc327b5496f81ce4d0e72" }, "godefroy": { "version": "1.1" }, "paperrun": { "version": "0.3.0" }, "duel": { "version": "1.1" } }
+{
+  "bunker": {
+    "version": "3.4",
+    "commit": "23c22e38634994e3cf9f20d7a11bd0fc1581a61e"
+  },
+  "hockey": {
+    "version": "1.9",
+    "commit": "e917ed87a7df5fd190fb1ceaffff1622461400f7"
+  },
+  "snow": {
+    "version": "1.56",
+    "commit": "91e3f83bc47df58dc5916d059f995cc57694fdf2"
+  },
+  "frigo": {
+    "version": "1.5",
+    "commit": "714533601c87e098c99cff507f7e661a6d3eed82"
+  },
+  "ballon": {
+    "version": "2.30",
+    "commit": "4006c97a7a45f98ca59a0053080178844ff013a6"
+  },
+  "canon": {
+    "version": "1.7",
+    "commit": "9d59bc94cd38ec6d9e5a1b6d015cdb5ebef65116"
+  },
+  "bomber": {
+    "version": "0.35",
+    "commit": "d61e55549d0b08af7c5bc327b5496f81ce4d0e72"
+  },
+  "godefroy": {
+    "version": "1.1"
+  },
+  "paperrun": {
+    "version": "0.3.0"
+  },
+  "duel": {
+    "version": "1.1"
+  },
+  "ko": {
+    "version": "1.2"
+  }
+}

@@ -1,1 +1,1 @@
-window.GAME_VERSIONS = { 'go-godefroy-go/': '1.1', 'bunker-zone/': '3.4', 'hockey-boisjoli/': '1.9', 'snow-kids/': '1.56', 'frigo-snap/': '1.5', 'ballon-chasseur/': '2.30', 'canon-big-boom/': '1.7', 'bomberkid/': '0.35', 'paper-run/': '0.3.0', 'duel-de-sorciers/': '1.1' };
+window.GAME_VERSIONS = { 'ko-en-famille/': '1.2', 'go-godefroy-go/': '1.1', 'bunker-zone/': '3.4', 'hockey-boisjoli/': '1.9', 'snow-kids/': '1.56', 'frigo-snap/': '1.5', 'ballon-chasseur/': '2.30', 'canon-big-boom/': '1.7', 'bomberkid/': '0.35', 'paper-run/': '0.3.0', 'duel-de-sorciers/': '1.1' };

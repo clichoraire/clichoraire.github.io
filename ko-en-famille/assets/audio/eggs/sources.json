@@ -1,0 +1,50 @@
+{
+  "source": "gemini_generated_video_c8d8ee92.mp4 fourni par l’utilisateur",
+  "clips_seconds": {
+    "eggLay": [
+      0.22,
+      0.36
+    ],
+    "eggCatch": [
+      1.9,
+      0.4
+    ],
+    "eggGold": [
+      2.55,
+      0.6
+    ],
+    "eggRainbow": [
+      4.9,
+      0.7
+    ],
+    "eggSmash": [
+      3.48,
+      0.35
+    ],
+    "eggDeposit": [
+      8.55,
+      1.15
+    ]
+  },
+  "processing": "Extraits du mix original (effets et éventuel fond sonore), mono MP3, normalisation et fondus courts.",
+  "henClucks": {
+    "author": "alys",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Hen_announcing_shes_lain_an_egg.ogg",
+    "clips_seconds": [
+      [
+        0.4,
+        0.72
+      ],
+      [
+        2.2,
+        0.72
+      ],
+      [
+        4.5,
+        0.72
+      ]
+    ],
+    "processing": "Mono MP3, volume 45%, fondus courts. Aucune modification de hauteur."
+  }
+}

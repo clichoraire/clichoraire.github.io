@@ -140,13 +140,13 @@
       .ver { color: #7f8aa8; font-size: 12px; font-weight: 400; margin-left: 4px; }
   .locked .cover img{filter:grayscale(1) brightness(.55)}.locked .cover{cursor:default}.game-lock{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(70px,8vw,110px);z-index:2;text-shadow:0 5px 20px #000}.locked .play{background:#59616b;cursor:not-allowed}
 
-    .godefroy-news{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(180px,.6fr);align-items:center;gap:24px;margin:32px auto;padding:32px;border:3px solid #ffd468;border-radius:24px;background:linear-gradient(125deg,#293347,#17202d);box-shadow:0 10px 0 #101722;overflow:hidden}
-    .godefroy-news .news-badge{display:inline-block;background:#ffcf59;color:#26313a;font-weight:800;padding:7px 13px;border-radius:20px;font-size:13px;letter-spacing:1px}
-    .godefroy-news h2{font-size:clamp(29px,4vw,48px);line-height:1.08;color:#fff1bf;margin:15px 0}
-    .godefroy-news p{color:#dfe9f3;font-size:17px;line-height:1.65;margin:12px 0 22px;max-width:650px}
-    .godefroy-news img{width:100%;max-height:320px;object-fit:contain;filter:drop-shadow(0 12px 0 #0003)}
-    .godefroy-news .cta{background:#ffca51;color:#24313b;white-space:normal;text-align:center}
-    @media(max-width:650px){.godefroy-news{grid-template-columns:1fr;padding:24px;margin:20px 16px}.godefroy-news img{max-height:190px;grid-row:1}.godefroy-news .cta{display:block}}
+    .ko-news{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,1fr);align-items:center;gap:24px;margin:32px auto;padding:32px;border:3px solid #ffd468;border-radius:24px;background:linear-gradient(125deg,#293347,#17202d);box-shadow:0 10px 0 #101722;overflow:hidden}
+    .ko-news .news-badge{display:inline-block;background:#ffcf59;color:#26313a;font-weight:800;padding:7px 13px;border-radius:20px;font-size:13px;letter-spacing:1px}
+    .ko-news h2{font-size:clamp(29px,4vw,48px);line-height:1.08;color:#fff1bf;margin:15px 0}
+    .ko-news p{color:#dfe9f3;font-size:17px;line-height:1.65;margin:12px 0 22px;max-width:650px}
+    .ko-news img{width:100%;max-height:320px;object-fit:contain;filter:drop-shadow(0 12px 0 #0003)}
+    .ko-news .cta{background:#ffca51;color:#24313b;white-space:normal;text-align:center}
+    @media(max-width:650px){.ko-news{grid-template-columns:1fr;padding:24px;margin:20px 16px}.ko-news img{max-height:190px;grid-row:1}.ko-news .cta{display:block}}
   </style>
 </head>
 <body>
@@ -173,13 +173,13 @@
     </div>
   </section>
 
-  <aside class="wrap godefroy-news" aria-label="Les nouveautés des jeux">
-    <div><span class="news-badge">NOUVEAU JEU · ENCORE PLUS D’AVENTURES !</span>
-    <h2>85 kg d’armure.<br>Zéro peur du ridicule.</h2>
-    <p><strong>Go Godefroy, Go ! débarque !</strong> Dévale une rampe géante, envole-toi avec des équipements complètement fous et fais voler les briques ! Attrape des trésors, accroche-toi à un goéland paniqué et améliore ton chevalier pour aller toujours plus loin.</p>
-    <p>Les aventures s’améliorent : des tours à fracasser, des courants magiques et des surprises à ramasser. Ton prochain record t’attend !</p>
-    <a class="cta" href="go-godefroy-go/">À toi de jouer — Go Godefroy, Go ! ↗</a></div>
-    <img src="go-godefroy-go/assets/godefroy.png" alt="Godefroy, chevalier en armure et cape rouge" width="400" height="400" loading="lazy">
+  <aside class="wrap ko-news" aria-label="Nouveau jeu : K.O. en Famille">
+    <div><span class="news-badge">NOUVEAU JEU · MONTE SUR LE RING !</span>
+    <h2>La famille enfile<br>les gants !</h2>
+    <p><strong>K.O. en Famille est en ligne !</strong> Choisis ton boxeur, entraîne-toi dans 21 activités et affronte des adversaires hauts en couleur. Esquives, enchaînements et uppercuts : à toi de trouver le bon moment !</p>
+    <p>Remporte les tournois de bronze, d’argent et d’or, puis défie les Titans jusqu’au diamant. Tes gants prennent la couleur de tes victoires !</p>
+    <a class="cta" href="ko-en-famille/">Jouer à K.O. en Famille ↗</a></div>
+    <img src="covers/ko-en-famille.jpg" alt="K.O. en Famille : un jeune boxeur face au coach dans le ring" width="1280" height="720" loading="lazy">
   </aside>
 
   <section id="jeux">
@@ -217,6 +217,8 @@
     if (window.SITE_CONFIG && SITE_CONFIG.sosariaApi) fetch(SITE_CONFIG.sosariaApi + '/api/relais', { mode: 'no-cors' }).catch(() => {});
     // Pour ajouter un jeu : une entrée ici, un dossier à côté (avec son index.html) et une image dans covers/.
     const GAMES = [
+      {title: 'K.O. en Famille', path: 'ko-en-famille/', cover: 'covers/ko-en-famille.jpg', badge: 'Nouveau · Boxe', badgeClass: 'alpha',
+       desc: "Monte sur le ring avec la famille ! Entraîne-toi dans 21 activités, apprends les enchaînements et remporte les tournois jusqu’aux Titans. Des gants rouges au diamant, chaque victoire te fait grandir."},
       {
         title: 'Paper Run', path: 'paper-run/', cover: 'covers/paper-run.jpg', badge: 'Nouveau · Course', badgeClass: 'alpha',
         desc: "Courses de plateforme à quatre dans un monde de papier découpé : cubes d’objets, tuyaux secrets, glace et raccourcis pour qui a les bons pouvoirs. Gagne les coupes en Feuille, Carton et Origami. Avec Paper Loop, où tes clones refont la boucle pour toi.",
