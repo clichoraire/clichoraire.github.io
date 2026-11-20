@@ -29,29 +29,116 @@
     nav a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: 14px; margin-left: 22px; }
     nav a:hover { color: var(--text); }
 
-    /* ------------------------------------------------ bandeau */
-    .hero { position: relative; overflow: hidden; padding: 64px 0 64px; text-align: center; }
-    .hero::before { content: ""; position: absolute; inset: 0; background:
-      radial-gradient(600px 320px at 20% 10%, rgba(57,255,20,0.14), transparent 60%),
-      radial-gradient(700px 360px at 80% 20%, rgba(90,184,255,0.14), transparent 60%),
-      radial-gradient(500px 300px at 50% 100%, rgba(255,208,64,0.08), transparent 60%); }
-    .hero::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%); }
-    .hero .wrap { position: relative; }
-    .me { width: 150px; height: 150px; margin: 0 auto 18px; border-radius: 50%; padding: 4px; background: conic-gradient(from 200deg, var(--accent), var(--blue), var(--accent2), var(--accent)); box-shadow: 0 0 0 6px rgba(57,255,20,0.08), 0 20px 50px rgba(0,0,0,0.6); animation: spin 14s linear infinite; }
-    .me img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: 50% 30%; display: block; border: 3px solid var(--bg); animation: unspin 14s linear infinite; transform-origin: center; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes unspin { to { transform: rotate(-360deg); } }
-    .me-caption { color: var(--muted); font-size: 14px; margin: -6px 0 16px; }
-    .me-caption b { color: var(--text); font-weight: 600; }
-    @media (prefers-reduced-motion: reduce) { .me, .me img { animation: none; } }
-    .kicker { display: inline-block; font-family: Rajdhani, sans-serif; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; color: var(--accent); border: 1px solid rgba(57,255,20,0.35); padding: 4px 12px; border-radius: 999px; background: rgba(57,255,20,0.06); }
-    h1 { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: clamp(40px, 7vw, 76px); line-height: 1; margin: 18px 0 14px; letter-spacing: 1px; text-transform: uppercase; }
-    h1 span { color: transparent; background: linear-gradient(90deg, #fff, #9ad0ff); -webkit-background-clip: text; background-clip: text; }
-    .lead { max-width: 640px; margin: 0 auto 28px; color: var(--muted); font-size: 18px; }
-    .cta { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; padding: 12px 24px; border-radius: 10px; background: var(--accent); color: #06130a; box-shadow: 0 0 0 1px rgba(57,255,20,0.6), 0 10px 30px rgba(57,255,20,0.25); transition: transform .15s, box-shadow .15s; }
-    .cta:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(57,255,20,0.8), 0 14px 36px rgba(57,255,20,0.35); }
-    .facts { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin-top: 34px; color: var(--muted); font-size: 14px; }
-    .facts b { color: var(--text); font-weight: 600; }
+    /* ------------------------------------------------ vedette : le grand carrousel des derniers jeux */
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .hero { position: relative; padding: 0; overflow: hidden; background: #07090d; isolation: isolate; --sa: #39ff14; --dur: 7s; outline: none; }
+    .hs-slides { display: grid; }
+    .hs { grid-area: 1 / 1; position: relative; overflow: hidden; visibility: hidden; --a: #39ff14; }
+    .hs.on, .hs.out { visibility: visible; }
+    .hs.out { z-index: 1; }
+    .hs.on { z-index: 2; animation: hsWipe 1.05s cubic-bezier(.77,0,.18,1) both; }
+    .hero.rev .hs.on { animation-name: hsWipeR; }
+    .hero.first .hs.on { animation: none; }
+    @keyframes hsWipe { from { clip-path: polygon(100% 0, 130% 0, 130% 100%, 115% 100%); } to { clip-path: polygon(-15% 0, 130% 0, 130% 100%, 0 100%); } }
+    @keyframes hsWipeR { from { clip-path: polygon(-30% 0, 0 0, -15% 100%, -30% 100%); } to { clip-path: polygon(-30% 0, 115% 0, 100% 100%, -30% 100%); } }
+    .hs-bg { position: absolute; inset: -70px; background: #07090d center / cover no-repeat; filter: blur(34px) saturate(1.35) brightness(.6); }
+    .hs-shade { position: absolute; inset: 0; background:
+      linear-gradient(180deg, transparent 62%, var(--bg) 100%),
+      linear-gradient(100deg, rgba(7,9,13,.94) 0%, rgba(7,9,13,.78) 40%, rgba(7,9,13,.2) 100%),
+      radial-gradient(55% 75% at 76% 44%, color-mix(in srgb, var(--a) 30%, transparent), transparent 72%); }
+    .hs-shade::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size: 56px 56px; mask-image: linear-gradient(100deg, transparent 30%, #000 75%, transparent 100%); }
+    .hs-ghost { position: absolute; right: -1.5vw; bottom: 40px; font: 700 clamp(170px, 30vw, 430px)/.8 Rajdhani, sans-serif; color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,.07); letter-spacing: -6px; pointer-events: none; user-select: none; }
+    .hs.on .hs-ghost { animation: hsGhost 1.6s cubic-bezier(.2,.8,.2,1) .15s both; }
+    @keyframes hsGhost { from { transform: translateX(14%); opacity: 0; } }
+    .hs-in { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 52px; align-items: center; min-height: min(740px, calc(100vh - 61px)); min-height: min(740px, calc(100svh - 61px)); padding-top: 36px; padding-bottom: 118px; }
+    .hs-num { display: flex; align-items: baseline; gap: 10px; font-family: Rajdhani, sans-serif; font-weight: 700; color: var(--muted); letter-spacing: 3px; font-size: 14px; }
+    .hs-num b { color: var(--a); font-size: 22px; }
+    .hs-num u { display: block; width: 46px; height: 2px; background: var(--a); align-self: center; text-decoration: none; transform-origin: left; }
+    .hs-kick { display: inline-block; margin-top: 16px; font-family: Rajdhani, sans-serif; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; color: #06130a; background: var(--a); padding: 4px 12px 3px; border-radius: 4px; }
+    .hs-title { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: clamp(44px, 6.4vw, 92px); line-height: .92; margin: 12px 0 14px; letter-spacing: .5px; text-transform: uppercase; text-wrap: balance; }
+    .hs-title .w { display: inline-block; overflow: hidden; vertical-align: top; padding: .06em .12em .08em 0; margin-bottom: -.08em; }
+    .hs-title .w > span { display: inline-block; }
+    .hs-title .w:last-child > span { color: var(--a); }
+    .hs-slogan { margin: 0 0 10px; font-family: Rajdhani, sans-serif; font-weight: 600; font-size: clamp(20px, 2.1vw, 27px); line-height: 1.15; color: #fff; }
+    .hs-desc { margin: 0 0 22px; max-width: 560px; color: #b9c3d4; font-size: 16px; }
+    .hs-act { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .hs-play { position: relative; display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 21px; letter-spacing: 2px; text-transform: uppercase; padding: 14px 30px 13px 24px; background: var(--a); color: #06130a; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%); transition: transform .18s, filter .18s; overflow: hidden; }
+    .hs-play::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.75) 50%, transparent 65%); transform: translateX(-120%); }
+    .hs-play:hover { transform: translateY(-3px); filter: drop-shadow(0 12px 22px color-mix(in srgb, var(--a) 55%, transparent)); }
+    .hs-play:hover::after { transform: translateX(120%); transition: transform .6s; }
+    .hs-play svg { width: 16px; height: 16px; }
+    .hs-ver { font-family: Rajdhani, sans-serif; font-weight: 600; letter-spacing: 2px; font-size: 14px; color: var(--muted); }
+    /* l'entrée du texte, en cascade */
+    .hs.on .hs-num, .hs.on .hs-kick, .hs.on .hs-slogan, .hs.on .hs-desc, .hs.on .hs-act { animation: hsRise .8s cubic-bezier(.2,.9,.2,1) both; animation-delay: calc(.3s + var(--d) * .09s); }
+    .hs-num { --d: 0; } .hs-kick { --d: 1; } .hs-slogan { --d: 5; } .hs-desc { --d: 6; } .hs-act { --d: 7; }
+    .hs.on .hs-num u { animation: hsLine .9s cubic-bezier(.2,.9,.2,1) .45s both; }
+    .hs.on .hs-title .w > span { animation: hsUp .95s cubic-bezier(.16,1,.3,1) both; animation-delay: calc(.42s + var(--i) * .1s); }
+    .hs.out .hs-txt { animation: hsOut .45s ease-in both; }
+    @keyframes hsRise { from { opacity: 0; transform: translateY(26px); } }
+    @keyframes hsUp { from { transform: translateY(112%) rotate(5deg); } }
+    @keyframes hsLine { from { transform: scaleX(0); } }
+    @keyframes hsOut { to { opacity: 0; transform: translateX(-40px); } }
+    /* l'image du jeu */
+    .hs-vis { position: relative; }
+    .hs.on .hs-vis { animation: hsVis 1.2s cubic-bezier(.16,1,.3,1) .25s both; }
+    @keyframes hsVis { from { opacity: 0; transform: translateX(90px) scale(.9); } }
+    .hs-shot { display: block; position: relative; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 44px 90px -24px #000, 0 0 100px -14px color-mix(in srgb, var(--a) 60%, transparent); transform: perspective(1400px) rotateY(calc(-9deg + var(--rx, 0deg))) rotateX(calc(3deg + var(--ry, 0deg))); transition: transform .35s ease-out; }
+    .hs-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hs.on .hs-shot img { animation: hsKen 9s linear both; }
+    @keyframes hsKen { from { transform: scale(1.12); } to { transform: scale(1); } }
+    .hs-shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.32) 50%, transparent 60%); transform: translateX(-130%); }
+    .hs.on .hs-shot::after { animation: hsSheen 1.3s ease-out .9s both; }
+    @keyframes hsSheen { to { transform: translateX(130%); } }
+    .hs-shot .go { position: absolute; right: 14px; bottom: 14px; display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: var(--a); color: #06130a; box-shadow: 0 8px 24px rgba(0,0,0,.5); transform: scale(0); transition: transform .25s cubic-bezier(.2,1.5,.4,1); }
+    .hs-shot .go svg { width: 20px; height: 20px; margin-left: 3px; }
+    .hs-shot:hover .go, .hs-shot:focus-visible .go { transform: scale(1); }
+    .hs-shot.perso { aspect-ratio: auto; height: min(54vh, 480px); background: none; box-shadow: none; overflow: visible; border-radius: 0; }
+    .hs-shot.perso::before { content: ""; position: absolute; left: 50%; top: 52%; width: min(92%, 460px); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--a) 45%, transparent), transparent 68%); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--a) 55%, transparent); }
+    .hs-shot.perso::after { display: none; }
+    .hs-shot.perso img { position: relative; object-fit: contain; filter: drop-shadow(0 34px 30px rgba(0,0,0,.65)); }
+    .hs.on .hs-shot.perso img { animation: hsFloat 4.5s ease-in-out infinite; }
+    @keyframes hsFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+    /* le trait de lumière qui suit le volet */
+    .hs-streak { position: absolute; top: -12%; bottom: -12%; left: 0; width: 9vw; z-index: 4; pointer-events: none; opacity: 0; mix-blend-mode: screen; background: linear-gradient(90deg, transparent, var(--sa) 38%, #fff 50%, var(--sa) 62%, transparent); }
+    .hero.go .hs-streak { animation: hsStreak 1.05s cubic-bezier(.77,0,.18,1) both; }
+    .hero.go.rev .hs-streak { animation-name: hsStreakR; }
+    @keyframes hsStreak { from { opacity: .75; transform: translateX(104vw) skewX(18deg); } to { opacity: .75; transform: translateX(-24vw) skewX(18deg); } }
+    @keyframes hsStreakR { from { opacity: .75; transform: translateX(-24vw) skewX(-18deg); } to { opacity: .75; transform: translateX(104vw) skewX(-18deg); } }
+    /* la barre du bas : un onglet par jeu, avec sa jauge */
+    .hs-rail { position: absolute; left: 0; right: 0; bottom: 22px; z-index: 5; }
+    .hs-rail .wrap { display: flex; gap: 10px; align-items: stretch; }
+    .hs-tab { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 10px 11px; text-align: left; font: inherit; color: var(--muted); background: rgba(10,13,19,.78); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; cursor: pointer; overflow: hidden; transition: border-color .2s, color .2s, transform .2s, background .2s; }
+    .hs-tab:hover { transform: translateY(-3px); color: #fff; border-color: rgba(255,255,255,.3); }
+    .hs-tab.on { color: #fff; border-color: color-mix(in srgb, var(--a) 70%, transparent); background: rgba(16,20,28,.92); }
+    .hs-tab img { flex: none; width: 58px; height: 34px; object-fit: cover; border-radius: 6px; background: #000; filter: saturate(.5) brightness(.75); transition: filter .2s; }
+    .hs-tab.perso img { object-fit: contain; }
+    .hs-tab.on img, .hs-tab:hover img { filter: none; }
+    .hs-tab span { min-width: 0; display: flex; flex-direction: column; font-family: Rajdhani, sans-serif; text-transform: uppercase; line-height: 1.05; }
+    .hs-tab small { font-size: 11px; letter-spacing: 2px; color: var(--a); font-weight: 700; }
+    .hs-tab b { font-size: 15px; letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hs-tab i { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--a); transform: scaleX(0); transform-origin: left; }
+    .hs-tab.on i { animation: hsBar var(--dur) linear forwards; }
+    .hero.pause .hs-tab.on i { animation-play-state: paused; }
+    @keyframes hsBar { to { transform: scaleX(1); } }
+    .hs-arrow { flex: none; width: 50px; display: grid; place-items: center; color: #fff; background: rgba(10,13,19,.78); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; cursor: pointer; transition: background .2s, color .2s, transform .2s; }
+    .hs-arrow:hover { background: var(--sa); color: #06130a; transform: translateY(-3px); }
+    .hs-arrow svg { width: 18px; height: 18px; }
+    .hs-tab:focus-visible, .hs-arrow:focus-visible, .hs-play:focus-visible, .hs-shot:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    @media (max-width: 900px) {
+      .hs-in { grid-template-columns: 1fr; gap: 26px; min-height: 0; padding-top: 26px; padding-bottom: 96px; }
+      .hs-vis { order: -1; max-width: 560px; }
+      .hs-shot { transform: none; border-radius: 14px; }
+      .hs-shot.perso { height: 240px; }
+      .hs-ghost { bottom: auto; top: 10px; }
+      .hs-desc { font-size: 15px; margin-bottom: 20px; }
+      .hs-rail { bottom: 22px; } .hs-rail .wrap { gap: 8px; }
+      .hs-tab { padding: 0; height: 30px; border-radius: 8px; } .hs-tab img, .hs-tab span { display: none; } .hs-tab i { height: 100%; opacity: .55; }
+      .hs-arrow { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hs.on, .hs.on *, .hs.out .hs-txt, .hero.go .hs-streak, .hs-tab.on i { animation: none !important; }
+      .hs-tab.on i { transform: scaleX(1); } .hs-shot { transition: none; }
+    }
 
     /* ------------------------------------------------ jeux */
     section { padding: 40px 0 70px; }
@@ -114,19 +201,11 @@
     @media (max-width: 600px) {
       nav { white-space: nowrap; } nav a { margin-left: 14px; }
       .brand { font-size: 16px; }
-      .hero { padding: 56px 0 44px; } .facts { gap: 16px; }
       .section-title { flex-wrap: wrap; } h2 { white-space: nowrap; }
     }
       .ver { color: #7f8aa8; font-size: 12px; font-weight: 400; margin-left: 4px; }
   .locked .cover img{filter:grayscale(1) brightness(.55)}.locked .cover{cursor:default}.game-lock{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(70px,8vw,110px);z-index:2;text-shadow:0 5px 20px #000}.locked .play{background:#59616b;cursor:not-allowed}
 
-    .ko-news{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,1fr);align-items:center;gap:24px;margin:32px auto;padding:32px;border:3px solid #ffd468;border-radius:24px;background:linear-gradient(125deg,#293347,#17202d);box-shadow:0 10px 0 #101722;overflow:hidden}
-    .ko-news .news-badge{display:inline-block;background:#ffcf59;color:#26313a;font-weight:800;padding:7px 13px;border-radius:20px;font-size:13px;letter-spacing:1px}
-    .ko-news h2{font-size:clamp(29px,4vw,48px);line-height:1.08;color:#fff1bf;margin:15px 0}
-    .ko-news p{color:#dfe9f3;font-size:17px;line-height:1.65;margin:12px 0 22px;max-width:650px}
-    .ko-news img{width:100%;max-height:320px;object-fit:contain;filter:drop-shadow(0 12px 0 #0003)}
-    .ko-news .cta{background:#ffca51;color:#24313b;white-space:normal;text-align:center}
-    @media(max-width:650px){.ko-news{grid-template-columns:1fr;padding:24px;margin:20px 16px}.ko-news img{max-height:190px;grid-row:1}.ko-news .cta{display:block}}
   </style>
 </head>
 <body>
@@ -136,40 +215,16 @@
         <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#161c27" stroke="#27303f"/><path d="M8 21 L12 10 L16 15 L19 9 L24 21 Z" fill="#39ff14"/></svg>
         Les jeux de Matthieu
       </a>
-      <nav><a href="#jeux">Jeux</a><a href="#apropos">À propos</a></nav>
+      <nav><a href="#jeux">Jeux</a><a href="families/">Familles</a><a href="#apropos">À propos</a></nav>
     </div>
   </header>
 
-  <section class="hero">
-    <div class="wrap">
-      <div class="me"><img src="covers/matthieu.jpg" alt="Matthieu, le créateur des jeux" width="150" height="150"></div>
-      <p class="me-caption"><b>Matthieu</b> · le gars qui code ces jeux le soir</p>
-      <span class="kicker">Jouable dans le navigateur · gratuit</span>
-      <h1>Des jeux <span>faits maison</span></h1>
-      <p class="lead">Des jeux écrits en JavaScript, sans rien à installer : cliquez sur « Jouer » et c'est parti. Stratégie en temps réel, jeu de rôle en monde ouvert, et d'autres à venir.</p>
-      <a class="cta" href="#jeux">Voir les jeux ↓</a>
-      <p><a class="cta" href="families/" style="background:#9bdcff;color:#122c42">✨ Ajouter ou retirer des personnages</a> <a class="cta" href="families/member.html" style="background:#1b2230;color:#9bdcff;box-shadow:0 0 0 1px rgba(155,220,255,.5)">👤 Fiches des membres</a></p>
-    <div class="facts"><span><b>0</b> installation</span><span><b>0 $</b> pour jouer</span><span><b>100 %</b> navigateur</span></div>
-    </div>
+  <section class="hero first" id="vedette" tabindex="-1" aria-roledescription="carrousel" aria-label="Les derniers jeux">
+    <h1 class="sr">Les jeux de Matthieu : des jeux faits maison, gratuits, jouables dans le navigateur</h1>
+    <div class="hs-slides" id="hs-slides"></div>
+    <div class="hs-streak" aria-hidden="true"></div>
+    <div class="hs-rail"><div class="wrap" id="hs-rail"></div></div>
   </section>
-
-  <aside class="wrap ko-news" aria-label="Nouveau jeu : Goblin Malin" style="border-color:#8fd05a">
-    <div><span class="news-badge" style="background:#8fd05a">NOUVEAU JEU · DEVIENS CHEF DES GOBELINS !</span>
-    <h2>Un clan de gobelins<br>compte sur toi !</h2>
-    <p><strong>Goblin Malin est en ligne !</strong> Tu es le chef d’un petit clan caché dans la forêt. Bâtis tes huttes, donne un métier à chaque gobelin, apprivoise des animaux et défends ton village quand les ennemis arrivent.</p>
-    <p>Apprends des sorts dans ton grimoire, fais grandir ton arbre des technologies, pars à l’aventure dans les donjons… et garde l’œil ouvert : la forêt cache bien des secrets. Le jeu est encore en plein chantier, il grandit de semaine en semaine !</p>
-    <a class="cta" href="gobelin-malin/">Jouer à Goblin Malin ↗</a></div>
-    <img src="covers/gobelin-malin.jpg" alt="Goblin Malin : le village des gobelins au milieu de la forêt" width="1200" height="657" loading="lazy" style="border-radius:16px">
-  </aside>
-
-  <aside class="wrap ko-news" aria-label="Nouveau jeu : K.O. en Famille">
-    <div><span class="news-badge">NOUVEAU JEU · MONTE SUR LE RING !</span>
-    <h2>La famille enfile<br>les gants !</h2>
-    <p><strong>K.O. en Famille est en ligne !</strong> Choisis ton boxeur, entraîne-toi dans 21 activités et affronte des adversaires hauts en couleur. Esquives, enchaînements et uppercuts : à toi de trouver le bon moment !</p>
-    <p>Remporte les tournois de bronze, d’argent et d’or, puis défie les Titans jusqu’au diamant. Tes gants prennent la couleur de tes victoires !</p>
-    <a class="cta" href="ko-en-famille/">Jouer à K.O. en Famille ↗</a></div>
-    <img src="covers/ko-en-famille.jpg" alt="K.O. en Famille : un jeune boxeur face au coach dans le ring" width="1280" height="720" loading="lazy">
-  </aside>
 
   <section id="jeux">
     <div class="wrap">
@@ -184,6 +239,7 @@
       <div class="about">
         <div><h4>Fait maison</h4><p>Chaque jeu est codé à la main en JavaScript et HTML5, avec un canvas pour l'affichage. Pas de moteur du commerce, pas de gros téléchargement.</p></div>
         <div><h4>Vos sauvegardes</h4><p>Les parties, l'aventure et les options sont gardées dans votre navigateur (stockage local). Rien n'est envoyé sur un serveur.</p></div>
+        <div><h4>La famille</h4><p>Les personnages des jeux, c'est la famille ! <a href="families/">Ajouter ou retirer des personnages</a> · <a href="families/member.html">Fiches des membres</a></p></div>
         <div><h4>En évolution</h4><p>Les jeux s'améliorent régulièrement et d'autres s'ajouteront à cette page. Revenez de temps en temps.</p></div>
       </div>
     </div>
@@ -197,21 +253,22 @@
   <script>
     // Réveille le relais Sosaria (hébergement gratuit qui s'endort) pendant que le visiteur lit la page
     if (window.SITE_CONFIG && SITE_CONFIG.sosariaApi) fetch(SITE_CONFIG.sosariaApi + '/api/relais', { mode: 'no-cors' }).catch(() => {});
-    // Pour ajouter un jeu : une entrée ici, un dossier à côté (avec son index.html) et une image dans covers/.
+    // Pour ajouter un jeu : une entrée ici (en haut de la liste), un dossier à côté (avec son index.html) et une image dans covers/.
+    // Les cinq premiers jeux de la liste passent dans le grand carrousel du haut : « accent » est leur couleur, « slogan » leur phrase d'accroche.
     const GAMES = [
-      {title: 'Goblin Malin', path: 'gobelin-malin/', cover: 'covers/gobelin-malin.jpg', badge: 'Nouveau · Village', badgeClass: 'alpha',
+      {title: 'Goblin Malin', path: 'gobelin-malin/', cover: 'covers/gobelin-malin.jpg', badge: 'Nouveau · Village', badgeClass: 'alpha', accent: '#8fd05a', slogan: 'Un clan de gobelins compte sur toi !',
        desc: "Deviens le chef d’un clan de gobelins ! Bâtis ton village dans la forêt, donne un métier à chacun, apprivoise des animaux, apprends des sorts et repousse les attaques. Donjons, secrets et grandes fées t’attendent."},
-      {title: 'K.O. en Famille', path: 'ko-en-famille/', cover: 'covers/ko-en-famille.jpg', badge: 'Nouveau · Boxe', badgeClass: 'alpha',
+      {title: 'K.O. en Famille', path: 'ko-en-famille/', cover: 'covers/ko-en-famille.jpg', badge: 'Nouveau · Boxe', badgeClass: 'alpha', accent: '#ffca51', slogan: 'La famille enfile les gants !',
        desc: "Monte sur le ring avec la famille ! Entraîne-toi dans 21 activités, apprends les enchaînements et remporte les tournois jusqu’aux Titans. Des gants rouges au diamant, chaque victoire te fait grandir."},
       {
-        title: 'Paper Run', path: 'paper-run/', cover: 'covers/paper-run.jpg', badge: 'Nouveau · Course', badgeClass: 'alpha',
+        title: 'Paper Run', path: 'paper-run/', cover: 'covers/paper-run.jpg', badge: 'Nouveau · Course', badgeClass: 'alpha', accent: '#ff8a5c', slogan: 'Quatre coureurs, un monde de papier.',
         desc: "Courses de plateforme à quatre dans un monde de papier découpé : cubes d’objets, tuyaux secrets, glace et raccourcis pour qui a les bons pouvoirs. Gagne les coupes en Feuille, Carton et Origami. Avec Paper Loop, où tes clones refont la boucle pour toi.",
       },
       {
-        title: 'Duel de Sorciers', path: 'duel-de-sorciers/', cover: 'covers/duel-de-sorciers.jpg', badge: 'Nouveau · Magie', badgeClass: 'alpha',
+        title: 'Duel de Sorciers', path: 'duel-de-sorciers/', cover: 'covers/duel-de-sorciers.jpg', badge: 'Nouveau · Magie', badgeClass: 'alpha', accent: '#b89cff', slogan: 'Trace tes sorts, pare les siens.',
         desc: "Trace tes sorts dans les airs avec ta baguette, pare ceux de l’adversaire. Suis les cours de l’école, fouille le magasin, monte la tour, pars à l’aventure et remporte les tournois.",
       },
-      {title: 'Go Godefroy, Go !', path: 'go-godefroy-go/', cover: 'go-godefroy-go/assets/godefroy.png', badge: 'Nouveau · Ça décolle !', badgeClass: 'alpha',
+      {title: 'Go Godefroy, Go !', path: 'go-godefroy-go/', cover: 'go-godefroy-go/assets/godefroy.png', badge: 'Nouveau · Ça décolle !', badgeClass: 'alpha', accent: '#ff5a5a', slogan: 'Trop lourd pour voler, trop têtu pour abandonner.', perso: true,
        desc: "Un chevalier trop lourd pour voler… mais trop têtu pour abandonner ! Équipe-toi, rebondis sur les monstres, défonce les tours et découvre les trésors des remparts."},
       {
         title: 'Bunker Zone', path: 'bunker-zone/', cover: 'covers/bunker-zone.jpg', badge: 'Stratégie',
@@ -272,6 +329,62 @@
       </article>`).join('') + `
       <article class="game soon"><div class="body"><div class="big">+</div><h3>Prochain jeu</h3><p>D'autres jeux arriveront ici.</p></div></article>`;
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    // ------------------------------------------------ le grand carrousel : les cinq derniers jeux, un à la fois
+    (function () {
+      const hero = document.getElementById('vedette'), L = GAMES.filter(g => !g.locked).slice(0, 5), N = L.length; if (!N) return;
+      const deux = n => String(n).padStart(2, '0'), fleche = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2 L14 8 L3 14 Z" fill="currentColor"/></svg>';
+      document.getElementById('hs-slides').innerHTML = L.map((g, i) => `
+        <article class="hs" style="--a:${g.accent || '#39ff14'}" aria-roledescription="diapositive" aria-label="${i + 1} sur ${N} : ${esc(g.title)}" aria-hidden="true">
+          <div class="hs-bg" ${g.perso ? '' : `style="background-image:url('${g.cover}')"`}></div><div class="hs-shade"></div><div class="hs-ghost" aria-hidden="true">${deux(i + 1)}</div>
+          <div class="wrap hs-in">
+            <div class="hs-txt">
+              <div class="hs-num"><b>${deux(i + 1)}</b><u></u><span>${deux(N)}</span></div>
+              <span class="hs-kick">${esc(g.badge)}</span>
+              <h2 class="hs-title">${g.title.replace(/ ([!?:;])/g, '\u00a0$1').split(' ').map((w, k) => `<span class="w" style="--i:${k}"><span>${esc(w)}</span></span>`).join(' ')}</h2>
+              <p class="hs-slogan">${esc(g.slogan || '')}</p>
+              <p class="hs-desc">${esc(g.desc)}</p>
+              <div class="hs-act"><a class="hs-play" href="${g.path}">${fleche}Jouer</a><span class="hs-ver">${window.GAME_VERSIONS && GAME_VERSIONS[g.path] ? 'VERSION ' + esc(GAME_VERSIONS[g.path]) : ''}</span></div>
+            </div>
+            <div class="hs-vis"><a class="hs-shot ${g.perso ? 'perso' : ''}" href="${g.path}" aria-label="Jouer à ${esc(g.title)}" tabindex="-1"><img src="${g.cover}" alt="" ${i ? 'loading="lazy"' : ''}><span class="go" aria-hidden="true">${fleche}</span></a></div>
+          </div>
+        </article>`).join('');
+      const chevron = d => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      document.getElementById('hs-rail').innerHTML = L.map((g, i) => `<button class="hs-tab ${g.perso ? 'perso' : ''}" style="--a:${g.accent || '#39ff14'}" aria-label="Voir ${esc(g.title)}"><img src="${g.cover}" alt=""><span><small>${deux(i + 1)}</small><b>${esc(g.title)}</b></span><i></i></button>`).join('')
+        + `<button class="hs-arrow" data-d="-1" aria-label="Jeu précédent">${chevron('M10 3 L5 8 L10 13')}</button><button class="hs-arrow" data-d="1" aria-label="Jeu suivant">${chevron('M6 3 L11 8 L6 13')}</button>`;
+      const slides = [...hero.querySelectorAll('.hs')], tabs = [...hero.querySelectorAll('.hs-tab')];
+      let cur = -1, menage = 0;
+      function aller(n, sens) {
+        n = (n + N) % N; if (n === cur) return;
+        const avant = slides[cur];
+        if (cur >= 0) hero.classList.remove('first');
+        hero.classList.toggle('rev', sens < 0); hero.classList.remove('go');
+        slides.forEach(s => s.classList.remove('out'));
+        if (avant) { avant.classList.remove('on'); avant.classList.add('out'); avant.setAttribute('aria-hidden', 'true'); tabs[cur].classList.remove('on'); }
+        const s = slides[n]; void s.offsetWidth; // repart de zéro : les animations rejouent
+        s.classList.add('on'); s.removeAttribute('aria-hidden'); tabs[n].classList.add('on');
+        hero.style.setProperty('--sa', L[n].accent || '#39ff14'); if (avant) hero.classList.add('go');
+        cur = n; clearTimeout(menage); menage = setTimeout(() => slides.forEach(q => q.classList.remove('out')), 1150);
+      }
+      tabs.forEach((b, i) => { b.onclick = () => aller(i, i > cur ? 1 : -1); b.querySelector('i').addEventListener('animationend', () => aller(cur + 1, 1)); }); // la jauge pleine passe au jeu suivant
+      hero.querySelectorAll('.hs-arrow').forEach(b => { b.onclick = () => aller(cur + +b.dataset.d, +b.dataset.d); });
+      hero.addEventListener('keydown', e => { if (e.key === 'ArrowRight') aller(cur + 1, 1); else if (e.key === 'ArrowLeft') aller(cur - 1, -1); });
+      // en pause quand on regarde de près (souris dessus, clavier dedans), quand l'onglet est caché ou quand le carrousel sort de l'écran
+      const raisons = new Set(), pause = (r, oui) => { oui ? raisons.add(r) : raisons.delete(r); hero.classList.toggle('pause', raisons.size > 0); };
+      if (matchMedia('(hover: hover)').matches) { hero.addEventListener('mouseenter', () => pause('souris', true)); hero.addEventListener('mouseleave', () => pause('souris', false)); }
+      hero.addEventListener('focusin', () => pause('clavier', true)); hero.addEventListener('focusout', () => pause('clavier', false));
+      document.addEventListener('visibilitychange', () => pause('cache', document.hidden));
+      if (window.IntersectionObserver) new IntersectionObserver(l => pause('loin', l[0].intersectionRatio < 0.35), { threshold: [0, 0.35, 1] }).observe(hero);
+      // glisser du doigt
+      let x0 = null; hero.addEventListener('pointerdown', e => { x0 = e.pointerType === 'mouse' ? null : e.clientX; });
+      hero.addEventListener('pointerup', e => { if (x0 === null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 50) aller(cur + (d < 0 ? 1 : -1), d < 0 ? 1 : -1); });
+      // l'image penche un peu vers la souris
+      if (matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) { let prevu = false, mx = 0, my = 0;
+        hero.addEventListener('mousemove', e => { const r = hero.getBoundingClientRect(); mx = (e.clientX - r.left) / r.width - 0.5; my = (e.clientY - r.top) / r.height - 0.5; if (prevu) return; prevu = true; requestAnimationFrame(() => { prevu = false; hero.style.setProperty('--rx', (mx * 7).toFixed(2) + 'deg'); hero.style.setProperty('--ry', (-my * 6).toFixed(2) + 'deg'); }); });
+        hero.addEventListener('mouseleave', () => { hero.style.setProperty('--rx', '0deg'); hero.style.setProperty('--ry', '0deg'); }); }
+      window.HS = { aller, etat: () => cur };
+      aller(0, 1);
+    })();
 
   </script>
 </body>
