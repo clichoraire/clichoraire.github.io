@@ -111,26 +111,6 @@
     footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 13px; }
     footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 
-    /* ------------------------------------------------ l'œil qui surveille (easter egg) */
-    #scene { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 50; }
-    #oeil, #oeil2, #bouche { position: absolute; pointer-events: auto; width: 170px; height: 170px; border-radius: 50%; overflow: hidden; border: 4px solid #fff; box-shadow: 0 0 0 4px #000, 0 0 40px rgba(57,255,20,0.6), 0 20px 60px rgba(0,0,0,0.8); cursor: pointer; transition: transform .25s; display: none; }
-    #oeil.on, #oeil2.on, #bouche.on { display: block; animation: surgir .7s cubic-bezier(.2,1.6,.4,1) both, flotter 3s ease-in-out .7s infinite; }
-    #oeil img, #oeil2 img, #bouche img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.15); transition: transform .15s; }
-    #oeil.fuite, #oeil2.fuite, #bouche.fuite { animation: fuite .6s ease-in both !important; }
-    #oeil2 img { transform: scale(1.15) scaleX(-1); }
-    #bouche.parle img { animation: parler .22s ease-in-out infinite alternate; }
-    @keyframes parler { from { transform: scale(1.15, 1.05); } to { transform: scale(1.15, 1.3); } }
-    #bulle { position: absolute; z-index: 51; background: #fff; color: #0b0e14; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 14px; white-space: nowrap; max-width: calc(100vw - 16px); overflow: hidden; text-overflow: ellipsis; box-shadow: 0 6px 20px rgba(0,0,0,0.5); display: none; }
-    #bulle::after { content: ""; position: absolute; left: 18px; border: 8px solid transparent; }
-    #bulle.bas::after { bottom: -8px; border-top-color: #fff; border-bottom: 0; }    /* flèche vers le bas : l'œil est dessous */
-    #bulle.haut::after { top: -8px; border-bottom-color: #fff; border-top: 0; }   /* flèche vers le haut : l'œil est dessus */
-    @keyframes surgir { from { transform: scale(0) rotate(-540deg); } to { transform: scale(1) rotate(0); } }
-    @keyframes flotter { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
-    @keyframes fuite { to { transform: scale(0) rotate(720deg); opacity: 0; } }
-    @keyframes cligner { 0%, 100% { height: 170px; } 50% { height: 6px; } }
-    #oeil.cligne, #oeil2.cligne { animation: cligner .25s ease-in-out; }
-    @media (prefers-reduced-motion: reduce) { #oeil, #oeil.on, #oeil2, #oeil2.on, #bouche, #bouche.on { animation: none; } }
-
     @media (max-width: 600px) {
       nav { white-space: nowrap; } nav a { margin-left: 14px; }
       .brand { font-size: 16px; }
@@ -208,13 +188,6 @@
       </div>
     </div>
   </section>
-
-  <div id="scene">
-    <div id="oeil" title="…"><img src="covers/oeil.jpg" alt=""></div>
-    <div id="oeil2" title="…"><img src="covers/oeil.jpg" alt=""></div>
-    <div id="bouche" title="…"><img src="covers/bouche.jpg" alt=""></div>
-    <div id="bulle"></div>
-  </div>
   <footer>
     <div class="wrap"><span>© <span id="year"></span> Matthieu Boisjoli · Les jeux de Matthieu</span><span>Hébergé sur GitHub Pages</span></div>
   </footer>
@@ -299,68 +272,6 @@
       </article>`).join('') + `
       <article class="game soon"><div class="body"><div class="big">+</div><h3>Prochain jeu</h3><p>D'autres jeux arriveront ici.</p></div></article>`;
     document.getElementById('year').textContent = new Date().getFullYear();
-
-    // ------------------------------------------------ l'œil : apparaît après 6,5 s, suit la souris, se sauve au clic
-    (function () {
-      const oeil = document.getElementById('oeil'), img = oeil.querySelector('img'), bulle = document.getElementById('bulle');
-      const oeil2 = document.getElementById('oeil2'), img2 = oeil2.querySelector('img'), bouche = document.getElementById('bouche');
-      let visage = false, x2 = 0, y2 = 0; // mode visage : deux yeux côte à côte et la bouche en dessous
-      const PHRASES = ['Je te regarde jouer…', 'Tu vas cliquer sur Jouer, hein ?', 'Je vois TOUT.', 'Psst… Bunker Zone est vraiment bon.', 'Cligne pas, je gagne.', 'Mon frère ? C\'est toi mon frère ?', 'Les âmes parlent. Moi, je regarde.', 'J\'ai pas dormi. Je codais.'];
-      let x = 0, y = 0, mx = innerWidth / 2, my = innerHeight / 2, vivant = false, phrase = 0, timers = [];
-      const place = () => { // un bord au hasard, à moitié dehors
-        const bord = Math.floor(Math.random() * 4), W = innerWidth, Hh = innerHeight, s = 170;
-        if (bord === 0) { x = Math.random() * (W - s); y = -s * 0.45; }
-        else if (bord === 1) { x = Math.random() * (W - s); y = Hh - s * 0.55; }
-        else if (bord === 2) { x = -s * 0.45; y = 80 + Math.random() * (Hh - s - 120); }
-        else { x = W - s * 0.55; y = 80 + Math.random() * (Hh - s - 120); }
-        oeil.style.left = x + 'px'; oeil.style.top = y + 'px';
-      };
-      const regarder = () => { // le regard suit la souris
-        if (!vivant) return;
-        const dx = mx - (x + 85), dy = my - (y + 85), d = Math.hypot(dx, dy) || 1, k = Math.min(14, d / 20);
-        img.style.transform = 'scale(1.15) translate(' + (dx / d * k) + 'px,' + (dy / d * k) + 'px)';
-        if (visage) { const dx2 = mx - (x2 + 85), dy2 = my - (y2 + 85), d2 = Math.hypot(dx2, dy2) || 1, k2 = Math.min(14, d2 / 20); img2.style.transform = 'scale(1.15) scaleX(-1) translate(' + (-dx2 / d2 * k2) + 'px,' + (dy2 / d2 * k2) + 'px)'; }
-      };
-      // La bulle se pose sous l'ancre si elle est dans la moitié haute, au-dessus sinon, flèche tournée vers elle, et reste dans l'écran
-      const placerBulle = (texte, ax, ay, ah) => {
-        bulle.textContent = texte; bulle.style.display = 'block';
-        const sous = ay + ah / 2 < innerHeight / 2;
-        bulle.className = sous ? 'haut' : 'bas';
-        const bx = Math.max(8, Math.min(innerWidth - bulle.offsetWidth - 8, Math.max(8, ax) + 10));
-        const by = sous ? Math.min(innerHeight - bulle.offsetHeight - 8, ay + ah + 14) : Math.max(8, ay - bulle.offsetHeight - 14);
-        bulle.style.left = bx + 'px'; bulle.style.top = by + 'px';
-      };
-      const parler = () => {
-        const texte = PHRASES[phrase++ % PHRASES.length];
-        if (visage) placerBulle(texte, x + 95, y + 190, 170); else placerBulle(texte, x, y, 170);
-        if (visage) bouche.classList.add('parle');
-        timers.push(setTimeout(() => { bulle.style.display = 'none'; bouche.classList.remove('parle'); }, 2600));
-      };
-      const apparaitre = () => {
-        visage = Math.random() < 0.4 && innerWidth > 480; // parfois, le visage complet au milieu de l'écran
-        if (visage) {
-          const cx = innerWidth / 2, cy = Math.max(200, innerHeight / 2 - 40);
-          x = cx - 180; y = cy - 150; x2 = cx + 10; y2 = y;
-          oeil.style.left = x + 'px'; oeil.style.top = y + 'px'; oeil2.style.left = x2 + 'px'; oeil2.style.top = y2 + 'px';
-          bouche.style.left = (cx - 85) + 'px'; bouche.style.top = (cy + 40) + 'px';
-          oeil2.className = 'on'; bouche.className = 'on';
-        } else place();
-        vivant = true; oeil.className = 'on'; regarder();
-        timers.push(setTimeout(parler, 900));
-        timers.push(setTimeout(() => { for (const e of [oeil, oeil2]) { e.classList.add('cligne'); setTimeout(() => e.classList.remove('cligne'), 300); } }, 2200));
-        timers.push(setTimeout(partir, 4500));
-      };
-      const partir = (vite) => {
-        if (!vivant) return; vivant = false; bulle.style.display = 'none';
-        for (const e of [oeil, oeil2, bouche]) if (e.className) e.classList.add('fuite');
-        timers.push(setTimeout(() => { oeil.className = ''; oeil2.className = ''; bouche.className = ''; }, 650));
-        timers.push(setTimeout(apparaitre, vite ? 8000 : 5500 + Math.random() * 5000)); // revient toutes les 10 à 15 s
-      };
-      addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; regarder(); });
-      for (const e of [oeil2, bouche]) e.addEventListener('click', () => oeil.click());
-      oeil.addEventListener('click', () => { placerBulle('AÏE ! Mon œil !', x, y, 170); setTimeout(() => partir(true), 500); });
-      timers.push(setTimeout(apparaitre, 7000));
-    })();
 
   </script>
 </body>
