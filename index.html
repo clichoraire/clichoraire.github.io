@@ -173,6 +173,15 @@
     </div>
   </section>
 
+  <aside class="wrap ko-news" aria-label="Nouveau jeu : Goblin Malin" style="border-color:#8fd05a">
+    <div><span class="news-badge" style="background:#8fd05a">NOUVEAU JEU · DEVIENS CHEF DES GOBELINS !</span>
+    <h2>Un clan de gobelins<br>compte sur toi !</h2>
+    <p><strong>Goblin Malin est en ligne !</strong> Tu es le chef d’un petit clan caché dans la forêt. Bâtis tes huttes, donne un métier à chaque gobelin, apprivoise des animaux et défends ton village quand les ennemis arrivent.</p>
+    <p>Apprends des sorts dans ton grimoire, fais grandir ton arbre des technologies, pars à l’aventure dans les donjons… et garde l’œil ouvert : la forêt cache bien des secrets. Le jeu est encore en plein chantier, il grandit de semaine en semaine !</p>
+    <a class="cta" href="gobelin-malin/">Jouer à Goblin Malin ↗</a></div>
+    <img src="covers/gobelin-malin.jpg" alt="Goblin Malin : le village des gobelins au milieu de la forêt" width="1200" height="657" loading="lazy" style="border-radius:16px">
+  </aside>
+
   <aside class="wrap ko-news" aria-label="Nouveau jeu : K.O. en Famille">
     <div><span class="news-badge">NOUVEAU JEU · MONTE SUR LE RING !</span>
     <h2>La famille enfile<br>les gants !</h2>
@@ -217,6 +226,8 @@
     if (window.SITE_CONFIG && SITE_CONFIG.sosariaApi) fetch(SITE_CONFIG.sosariaApi + '/api/relais', { mode: 'no-cors' }).catch(() => {});
     // Pour ajouter un jeu : une entrée ici, un dossier à côté (avec son index.html) et une image dans covers/.
     const GAMES = [
+      {title: 'Goblin Malin', path: 'gobelin-malin/', cover: 'covers/gobelin-malin.jpg', badge: 'Nouveau · Village', badgeClass: 'alpha',
+       desc: "Deviens le chef d’un clan de gobelins ! Bâtis ton village dans la forêt, donne un métier à chacun, apprivoise des animaux, apprends des sorts et repousse les attaques. Donjons, secrets et grandes fées t’attendent."},
       {title: 'K.O. en Famille', path: 'ko-en-famille/', cover: 'covers/ko-en-famille.jpg', badge: 'Nouveau · Boxe', badgeClass: 'alpha',
        desc: "Monte sur le ring avec la famille ! Entraîne-toi dans 21 activités, apprends les enchaînements et remporte les tournois jusqu’aux Titans. Des gants rouges au diamant, chaque victoire te fait grandir."},
       {

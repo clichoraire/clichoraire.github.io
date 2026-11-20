@@ -40,6 +40,19 @@ versions.ko={version};fs.writeFileSync('versions.json',JSON.stringify(versions,n
 fs.appendFileSync('versions.js',"window.GAME_VERSIONS['ko-en-famille/'] = "+JSON.stringify(version)+";\n");
 KO_VERSION
 
+echo "▸ Goblin Malin (fichiers du jeu uniquement ; version : CG.VERSION dans js/core.js, à augmenter à chaque mise en ligne)"
+mkdir -p gobelin-malin
+rsync -a --delete --exclude .DS_Store "$PROJETS/GobelinMalin/js/" gobelin-malin/js/
+rsync -a --delete --exclude .DS_Store "$PROJETS/GobelinMalin/css/" gobelin-malin/css/
+rsync -a --delete --exclude .DS_Store "$PROJETS/GobelinMalin/assets/" gobelin-malin/assets/
+cp "$PROJETS/GobelinMalin/index.html" gobelin-malin/index.html
+node <<'CG_VERSION'
+const fs=require('fs');
+const version=/VERSION: '([^']+)'/.exec(fs.readFileSync('./gobelin-malin/js/core.js','utf8'))[1],versions=JSON.parse(fs.readFileSync('versions.json','utf8'));
+versions.gobelin={version};fs.writeFileSync('versions.json',JSON.stringify(versions,null,2)+'\n');
+fs.appendFileSync('versions.js',"window.GAME_VERSIONS['gobelin-malin/'] = "+JSON.stringify(version)+";\n");
+CG_VERSION
+
 echo "▸ Bunker Zone (copie de ZoneControl/)"
 rsync -a --delete --exclude .git --exclude .DS_Store --exclude '_extract.html' "$PROJETS/ZoneControl/" bunker-zone/
 

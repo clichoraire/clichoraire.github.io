@@ -1,0 +1,77 @@
+// Goblin Malin — les descriptions des sorts, écrites pour les enfants : drôles, simples, sans chiffres ni durées.
+// Chargé en dernier : il remplace les descriptions écrites ailleurs (les chiffres restent dans la petite fiche du grimoire).
+'use strict';
+(function (CG) {
+  const D = {
+    etincelle: 'Pfiou ! Une petite étincelle file tout droit et pique le premier ennemi qu\'elle touche.',
+    vision: 'Tes yeux deviennent magiques : tu vois d\'un coup ce que chaque gobelin fait bien… et ce qu\'il fait tout croche.',
+    feu: 'Tu lances une grosse boule de feu. BOUM ! Elle explose et roussit tous les ennemis autour.',
+    glace: 'Tu souffles un vent glacé tout autour de toi. Les ennemis grelottent et avancent comme des tortues.',
+    soin: 'Une douce lumière te guérit, toi et les gobelins tout près. Fini les bobos !',
+    racines: 'Des racines sortent du sol et attrapent les ennemis par les pieds. Ils ne peuvent plus bouger !',
+    eclair: 'Un éclair qui joue à saute-mouton : il bondit d\'un ennemi à l\'autre. Zap, zap, zap !',
+    bouclier: 'Une bulle magique t\'entoure et prend les coups à ta place. Quand elle en a trop pris, elle éclate.',
+    cri: 'Tu pousses un cri à faire trembler les arbres ! Tes gardes, tes animaux, tes monstres amis et ton golem deviennent enragés : ils tapent plus fort et plus vite.',
+    illusion: 'Un énorme monstre apparaît… mais c\'est un faux ! Les ennemis ont tellement peur qu\'ils se sauvent en courant. Quand ils comprennent la blague, ils reviennent.',
+    murfeu: 'Un mur de flammes se dresse devant toi. Les ennemis qui veulent passer se brûlent les fesses.',
+    retour: 'Un portail bleu s\'ouvre à côté de toi. Saute dedans : hop, te voilà au village, près du feu ! Reprends-le vite si tu veux retourner d\'où tu viens, car il finit par se refermer.',
+    meteore: 'Une énorme pierre en feu tombe du ciel. Mieux vaut ne pas être dessous !',
+    hate: 'Le vent te pousse dans le dos : tu cours comme une fusée pendant un petit moment.',
+    golem: 'Un gros bonhomme de roche sort de la terre pour se battre à tes côtés. Il reste un bon moment, sauf si les ennemis le cassent avant.',
+    charme: 'L\'ennemi le plus proche tombe sous ton charme et devient ton ami : il se bat pour toi ! Tu ne peux pas le frapper pendant ce temps-là. Ensuite, il redevient méchant. Les chefs ne se laissent pas charmer.',
+    onde: 'Un grand coup de vent part de toi. Tous les ennemis autour s\'envolent, retombent sur les fesses et voient des étoiles.',
+    repousse: 'La souche la plus proche redevient un grand arbre en un clin d\'œil. Pratique quand tes bûcherons ont tout coupé !',
+    sommeil: 'Tu chantes une berceuse et le monstre le plus proche s\'endort en ronflant. Un coup le réveille… mais ce premier coup fait très, très mal. Les chefs ne font qu\'une petite sieste.',
+    invisible: 'Pouf ! Tu deviens invisible et les ennemis te cherchent partout. Attention : si tu frappes ou si tu lances un autre sort, on te revoit.',
+    caboche: 'Juste pour rire : la tête du gobelin le plus proche devient grosse comme un ballon ! Si d\'autres gobelins le voient, ils rigolent et tout le clan est de meilleure humeur. Mais à force, la blague fait moins rire.',
+    poison: 'Un nuage vert qui pue se pose sur l\'ennemi le plus proche. Tous ceux qui restent dedans tombent malades.',
+    faucon: 'Tu vois comme un faucon, de tout là-haut : pendant un court instant, tous les ennemis apparaissent sur la carte, même ceux qui sont très loin.',
+    parefeu: 'Ta peau devient comme celle d\'une salamandre : le feu ne te fait presque plus rien. Les gobelins collés à toi sont un peu protégés, eux aussi.',
+    ombres: 'Tu vois ceux qui se cachent dans l\'ombre près de toi : les voleurs, les bandes en embuscade… Surpris, ils restent figés comme des statues un instant.',
+    cigogne: 'Tu enchantes la gobeline la plus proche (ou le gobelin, si tu es une cheffe) jusqu\'au matin. Si vous fondez une famille ce soir, la cigogne apporte des bébés en plus… s\'il reste de la place dans les huttes !',
+    electro: 'Ton corps crépite d\'éclairs ! Les ennemis qui s\'approchent se font zapper, et celui qui te frappe reçoit une décharge qui le laisse tout raide.',
+    verglas: 'Une grande plaque de glace apparaît par terre, sous l\'ennemi le plus proche ou devant toi. Les monstres avancent à petits pas pour ne pas tomber sur les fesses. Tes gobelins, eux, ne glissent pas.',
+    resurrection: 'Un des plus grands sorts : choisis un gobelin tombé au combat, ou un compagnon assommé, et il se relève près de toi. Plus il est fort, plus le sort coûte de mana.',
+    teleport: 'Pouf ! Tu disparais et tu réapparais un peu plus loin devant toi, même de l\'autre côté d\'un mur, d\'une rangée d\'arbres ou d\'une rivière.',
+    temps: 'Le soleil se met à traîner dans le ciel : la journée dure plus longtemps. Parfait pour explorer plus loin ou finir de bâtir avant la nuit. Toi et les autres, vous bougez comme d\'habitude.',
+    hatetemps: 'Le soleil file à toute vitesse dans le ciel : le soir, ou le matin, arrive plus vite. Toi et les autres, vous bougez comme d\'habitude.',
+    mondes: 'Un portail s\'ouvre à côté de toi et t\'emmène dans un de tes villages, près de son feu. Si tu as un village dans chaque monde (un feu de camp et une hutte de chef), tu choisis lequel. Le monde que tu quittes s\'endort jusqu\'à ton retour.',
+    antidote: 'Le poison s\'en va de ton corps et de tous tes amis autour de toi. Et pendant un moment, plus rien ne peut vous empoisonner.',
+    metaSquelette: 'Tu te changes en squelette qui fait clic-clac ! Tu tapes plus fort et les coups te font moins mal. Ta mana baisse tout le temps que tu es transformé : quand il n\'y en a plus, pouf, tu redeviens toi. Tes sorts sont remplacés par ses deux attaques, en bas à gauche : tu lances un os qui revient comme un boomerang, ou une nuée d\'os dans tous les sens. Le bouton tout à gauche te rend ta forme tout de suite.',
+    metaLoup: 'Tu te changes en loup-garou ! Tu cours très vite et tu tapes bien plus fort. Ta mana baisse tout le temps que tu es transformé : quand il n\'y en a plus, pouf, tu redeviens toi. Tes sorts sont remplacés par ses deux attaques, en bas à gauche : tu bondis en avant toutes griffes dehors, ou tu mords très fort l\'ennemi le plus proche. Le bouton tout à gauche te rend ta forme tout de suite.',
+    metaOurs: 'Tu te changes en gros ours ! Tu tapes très fort et les coups te font à peine mal, mais tu es un peu plus lent. Ta mana baisse tout le temps que tu es transformé : quand il n\'y en a plus, pouf, tu redeviens toi. Tes sorts sont remplacés par ses deux attaques, en bas à gauche : un grand coup de patte qui balaie tout autour, ou un rugissement qui fait fuir les ennemis. Le bouton tout à gauche te rend ta forme tout de suite.',
+    metaDemon: 'Tu te changes en démon ! C\'est la plus forte de toutes les transformations : tu frappes terriblement fort, tu vas plus vite et les coups te font moins mal. Ta mana baisse tout le temps que tu es transformé : quand il n\'y en a plus, pouf, tu redeviens toi. Tes sorts sont remplacés par ses deux attaques, en bas à gauche : tu craches une gerbe de feu, ou tu fais tomber une pluie de boules de feu. Le bouton tout à gauche te rend ta forme tout de suite.',
+    passe: 'Tu deviens comme un fantôme : tu passes à travers tout ! Les murs, les arbres, les rochers, l\'eau, les bâtiments… Si le sort finit pendant que tu es dans un mur, tu ressors juste à côté.',
+    fleche: 'Une petite flèche de lumière, très rapide, qui va très loin.',
+    paralysie: 'L\'ennemi le plus proche devient raide comme un piquet : il ne peut plus bouger ni frapper. Ça ne marche pas sur les chefs.',
+    bestiole: 'L\'ennemi le plus proche était une terreur. Pouf ! Le voilà changé en petite chose ridicule qui ne ferait pas peur à une salade. En quoi ? Surprise. Lui non plus ne s\'y attendait pas. Les chefs, trop fiers, refusent de se laisser faire.',
+    rayon: 'Deux doigts sur le front, tu te concentres… puis tu tends le bras : un énorme rayon traverse tous les ennemis devant toi ! Attention, il avale une grosse partie de ton mana.',
+    coeur: 'Ton cœur devient gros comme celui d\'un géant : tu as beaucoup plus de vie pendant un moment. Ensuite, tout redevient comme avant.',
+    bombe: 'Tu poses une bombe devant toi. Tic, tac, tic, tac… BOUM ! Elle blesse tout ce qui est autour : les ennemis, les constructions, ton clan... et toi ! Tes gobelins et tes animaux s\'en écartent tout seuls.',
+    armFeu: 'Des braises tournent autour de toi : les ennemis qui s\'approchent se brûlent, et celui qui te frappe prend feu !',
+    armPoison: 'Ta peau devient gluante de venin, comme celle d\'un crapaud. Les ennemis qui s\'approchent tombent malades, et celui qui te frappe, encore plus !',
+    armGlace: 'Un froid de canard t\'entoure : les ennemis qui s\'approchent grelottent et ralentissent, et celui qui te frappe se change en glaçon un instant.',
+    armVent: 'Un tourbillon tourne autour de toi : les flèches, les boules de feu et les crachats font demi-tour et retournent à l\'envoyeur ! Celui qui te frappe est soufflé plus loin.',
+    armRonces: 'Des ronces pleines d\'épines t\'enveloppent : les ennemis qui s\'approchent se piquent, et celui qui te frappe reçoit presque tout son coup en retour. Bien fait !'
+  };
+  // ce que disent les niveaux II et III
+  const N = {
+    etincelle: ['L\'étincelle pique plus fort.', 'Elle pique encore plus fort, et deux autres étincelles partent en éventail.'],
+    feu: ['Une boule plus grosse, qui explose plus fort et plus large.', 'Une boule énorme… et trois autres explosions éclatent juste après, tout autour !'],
+    glace: ['Un froid plus mordant, qui dure plus longtemps.', 'Un froid terrible : les ennemis touchés se changent en glaçons un instant.'],
+    soin: ['Soigne beaucoup plus.', 'Soigne encore plus, guérit aussi tes animaux, et chasse le poison.'],
+    racines: ['Des racines plus fortes, qui tiennent plus longtemps.', 'Des racines très tenaces, pleines d\'épines : même libérés, les ennemis restent ralentis.'],
+    eclair: ['Un éclair plus fort.', 'Un éclair encore plus fort, qui laisse chaque ennemi tout étourdi.'],
+    bouclier: ['Une bulle plus solide, qui dure plus longtemps.', 'Une bulle super solide, qui dure encore plus longtemps.'],
+    murfeu: ['Des flammes bleues, plus chaudes, qui brûlent plus longtemps.', 'Des flammes mauves, les plus chaudes de toutes : un mur plus long, qui brûle encore plus longtemps.'],
+    poison: ['Un venin plus fort.', 'Un venin terrible, et le nuage colle aux pattes des ennemis.'],
+    passe: ['Tu restes fantôme plus longtemps.', 'Tu restes fantôme encore bien plus longtemps.'],
+    meteore: ['Une pierre plus grosse, qui fait un plus grand trou.', 'Une pierre géante, un trou immense… et deux éclats retombent juste après.']
+  };
+  const Nv = CG.Niveaux, SP = CG.SPELLS;
+  Object.keys(D).forEach(id => { if (SP[id]) SP[id].desc = D[id]; if (Nv && Nv.BASE && Nv.BASE[id]) Nv.BASE[id].desc = D[id]; });
+  if (Nv && Nv.T) Object.keys(N).forEach(b => { if (!Nv.T[b]) return; Nv.T[b] = N[b]; const nom = (Nv.BASE && Nv.BASE[b] ? Nv.BASE[b].nom : SP[b].nom);
+    [2, 3].forEach(n => { const s = SP[b + '_' + n]; if (s) s.desc = 'Ton sort ' + nom + ' devient plus fort ! ' + N[b][n - 2] + ' Il remplace l\'ancien dans ton grimoire.'; }); });
+  if (Nv && Nv.rafraichir) Nv.rafraichir();
+  CG.SortsDesc = { D, N };
+})(window.CG);

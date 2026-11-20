@@ -1,0 +1,84 @@
+/* Grimoire : un vrai bouquin ouvert, deux pages de parchemin dans une reliure de cuir */
+#panel.grim { position: relative; width: min(1040px, 97vw); max-height: none; overflow: visible; background: none; border: 0; box-shadow: none; padding: 0; user-select: none; -webkit-user-select: none; }
+.gr-book { position: relative; display: grid; grid-template-columns: 1fr 1fr; height: min(640px, 86vh); padding: 16px 18px 20px; border-radius: 16px 16px 20px 20px; background: linear-gradient(90deg, #4a2412, #6b3519 8%, #5a2b14 46%, #2c1308 50%, #5a2b14 54%, #6b3519 92%, #4a2412); border: 3px solid #1c0c05; box-shadow: inset 0 2px 0 rgba(255, 200, 140, 0.22), inset 0 0 0 5px rgba(0, 0, 0, 0.16), 0 10px 0 #1c0c05, 0 24px 44px rgba(0, 0, 0, 0.7); }
+.gr-book::before, .gr-book::after { content: ""; position: absolute; width: 30px; height: 30px; border: 3px solid #e2b45a; opacity: 0.85; pointer-events: none; }
+.gr-book::before { left: 5px; top: 5px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; } .gr-book::after { right: 5px; top: 5px; border-left: 0; border-bottom: 0; border-radius: 0 10px 0 0; }
+.gr-page { position: relative; min-width: 0; display: flex; flex-direction: column; padding: 20px 26px 16px; color: #3a2710; font-family: Georgia, "Times New Roman", serif; background: radial-gradient(120% 90% at 50% 40%, #f8ebc6, #ecd9a6 70%, #d9bf82); box-shadow: 0 3px 0 #c9ac70, 0 6px 0 #b79a5e, 0 8px 0 #8a7040; }
+.gr-page.l { border-radius: 8px 3px 3px 10px; padding-right: 34px; background-image: linear-gradient(90deg, transparent 80%, rgba(90, 55, 20, 0.34)), radial-gradient(120% 90% at 50% 40%, #f8ebc6, #ecd9a6 70%, #d9bf82); }
+.gr-page.r { border-radius: 3px 8px 10px 3px; padding-left: 34px; background-image: linear-gradient(270deg, transparent 80%, rgba(90, 55, 20, 0.34)), radial-gradient(120% 90% at 50% 40%, #f8ebc6, #ecd9a6 70%, #d9bf82); }
+.gr-scroll { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -8px; padding: 2px 8px; scrollbar-width: thin; scrollbar-color: #b08a4a transparent; }
+.gr-h { margin: 0 0 2px; font: italic 700 25px Georgia, serif; color: #5a2410; text-align: center; letter-spacing: 0.5px; }
+.gr-orn { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px; color: #a8763a; font-size: 13px; } .gr-orn::before, .gr-orn::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, transparent, #a8763a, transparent); }
+.gr-sub { margin: 12px 0 6px; font: 700 13px "Trebuchet MS", system-ui, sans-serif; letter-spacing: 1.5px; text-transform: uppercase; color: #8a5a20; }
+.gr-note { margin: 6px 0; font-style: italic; font-size: 14px; line-height: 1.35; color: #6a4c26; }
+.gr-num { margin-top: 8px; text-align: center; font: italic 13px Georgia, serif; color: #9a7a48; }
+/* un sort : une ligne d'encre, qu'on attrape pour la changer de place */
+.gr-sp { position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 4px; margin-bottom: 5px; border-radius: 10px; border: 2px solid transparent; border-bottom-color: rgba(140, 100, 50, 0.28); cursor: grab; touch-action: none; transition: background 0.12s, box-shadow 0.12s; }
+.gr-sp:hover { background: rgba(255, 250, 225, 0.6); border-color: rgba(140, 100, 50, 0.35); }
+.gr-sp.drag { cursor: grabbing; background: #fff6d6; border-color: #a8763a; box-shadow: 0 8px 18px rgba(60, 30, 5, 0.42); z-index: 5; transition: none; }
+.gr-sp.moved { animation: grPop 0.3s ease-out; } @keyframes grPop { from { background: #ffe9a0; } }
+.gr-grip { flex: none; width: 12px; color: #b08a4a; font: 700 15px/0.55 system-ui, sans-serif; letter-spacing: -1px; text-align: center; }
+.gr-ic { flex: none; width: 42px; height: 42px; display: grid; place-items: center; font-size: 23px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #5a3c78, #2c1a44); border: 2px solid #e2b45a; box-shadow: 0 2px 4px rgba(40, 20, 0, 0.45); }
+.gr-ic.sc { background: radial-gradient(circle at 35% 30%, #a87840, #6a4418); }
+.gr-tx { flex: 1; min-width: 0; } .gr-tx b { display: block; font: 700 16.5px Georgia, serif; color: #3a1a0a; } .gr-tx small { display: block; font-size: 12.5px; line-height: 1.25; color: #6a4c26; }
+.gr-mp { flex: none; font: 700 12.5px "Trebuchet MS", system-ui, sans-serif; color: #2f5fb0; white-space: nowrap; }
+.gr-key { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font: 900 15px "Trebuchet MS", system-ui, sans-serif; color: #ffe9c0; background: radial-gradient(circle at 35% 30%, #d8452e, #8a1c10); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 2px 3px rgba(40, 20, 0, 0.5); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
+.gr-copy { flex: none; padding: 6px 10px; font: 700 12.5px "Trebuchet MS", system-ui, sans-serif; color: #fff4d2; background: linear-gradient(#8a5c26, #5e3b14); border: 2px solid #2a1808; border-radius: 9px; cursor: pointer; box-shadow: 0 2px 0 #2a1808; } .gr-copy:disabled { opacity: 0.5; cursor: default; }
+.gr-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; } .gr-stats span { display: flex; justify-content: space-between; gap: 6px; padding: 3px 2px; font-size: 14.5px; border-bottom: 1px dotted #a8763a; } .gr-stats b { color: #8a1c10; }
+/* le signet rouge et le fermoir */
+.gr-ribbon { position: absolute; left: 50%; top: -7px; width: 22px; height: 78px; margin-left: 12px; background: linear-gradient(90deg, #a81c1c, #d8362e 50%, #8a1414); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%); filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.4)); pointer-events: none; }
+.gr-close { position: absolute; right: -14px; top: -16px; width: 44px; height: 44px; border-radius: 50%; font: 900 20px system-ui, sans-serif; color: #fff4d2; background: radial-gradient(circle at 35% 30%, #d8452e, #8a1c10); border: 3px solid #1c0c05; box-shadow: 0 4px 0 #1c0c05, 0 8px 14px rgba(0, 0, 0, 0.5); cursor: pointer; z-index: 3; } .gr-close:hover { filter: brightness(1.15); }
+@media (max-width: 760px) { .gr-book { grid-template-columns: 1fr; height: 88vh; overflow-y: auto; } .gr-ribbon { display: none; } }
+
+/* ---- le grimoire qu'on feuillette : sélection, pages de sorts, écriture à la plume ---- */
+.gr-page { font-family: "Apple Chancery", "Lucida Calligraphy", "Segoe Script", "URW Chancery L", Georgia, cursive; animation: grTourne 0.28s ease-out; }
+.gr-page.l { transform-origin: 100% 50%; } .gr-page.r { transform-origin: 0 50%; }
+@keyframes grTourne { from { opacity: 0.2; transform: perspective(1400px) rotateY(var(--ry, 14deg)); } } .gr-page.l { --ry: 14deg; } .gr-page.r { --ry: -14deg; }
+.gr-h { font: 700 30px Luminari, "Apple Chancery", "Papyrus", Georgia, fantasy; font-style: normal; }
+.gr-num { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 6px; } .gr-num i { width: 38px; }
+#panel.grim button.gr-nav { width: 38px; height: 34px; padding: 0; box-shadow: none; text-shadow: none; font: 900 17px system-ui, sans-serif; color: #5a2410; background: rgba(168, 118, 58, 0.18); border: 2px solid #a8763a; border-radius: 50%; cursor: pointer; } #panel.grim button.gr-nav:hover { background: #a8763a; color: #fff4d2; }
+#panel.grim button.gr-home { position: absolute; left: 50%; bottom: -15px; transform: translateX(-50%); padding: 5px 16px; font: 700 13px "Trebuchet MS", system-ui, sans-serif; color: #fff4d2; background: linear-gradient(#8a5c26, #5e3b14); border: 2px solid #1c0c05; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 0 #1c0c05; z-index: 3; }
+/* la sélection : dix cases, deux colonnes */
+.gr-slots { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-flow: column; grid-template-rows: repeat(5, 1fr); gap: 7px 12px; flex: 1; min-height: 0; }
+.gr-slot { position: relative; display: flex; align-items: center; gap: 9px; min-height: 0; padding: 5px 8px 5px 6px; border-radius: 10px; border: 2px solid rgba(140, 100, 50, 0.4); background: rgba(255, 250, 225, 0.45); cursor: grab; touch-action: none; }
+.gr-slot:hover { background: rgba(255, 250, 225, 0.85); border-color: #a8763a; } .gr-slot.drag { z-index: 6; cursor: grabbing; background: #fff6d6; box-shadow: 0 8px 18px rgba(60, 30, 5, 0.42); } .gr-slot.vise { border-color: #d8452e; background: #ffe9c0; }
+.gr-slot.vide { cursor: default; border-style: dashed; background: none; } .gr-slot.vide em { font-size: 14px; color: #a88a5a; } .gr-slot.vide .gr-key { opacity: 0.45; }
+.gr-slot .gr-tx { min-width: 0; } .gr-slot .gr-tx b { font: 700 15.5px Georgia, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .gr-slot .gr-tx small { font: 700 12px "Trebuchet MS", system-ui, sans-serif; color: #2f5fb0; }
+.gr-sp { cursor: default; touch-action: auto; }
+/* la page d'un sort */
+.gr-page.sort { align-items: center; text-align: center; }
+.gr-page.sort .gr-h, .gr-page.sort .gr-orn { align-self: stretch; }
+.gr-art { width: min(215px, 30vh); height: min(215px, 30vh); flex: none; margin: -2px 0 2px; }
+.gr-art .ink { fill: none; stroke: #5a2410; stroke-width: 1.6; } .gr-art .ink.dash { stroke-dasharray: 2 5; stroke-width: 1.2; } .gr-art .ink.star { stroke-width: 2.2; stroke-linejoin: round; opacity: 0.9; }
+.gr-art .rn { font: 13px serif; fill: #5a2410; text-anchor: middle; } .gr-art .em { font-size: 44px; text-anchor: middle; dominant-baseline: middle; } .gr-art .ray line { stroke-width: 1.5; opacity: 0.8; }
+.gr-meta { display: flex; justify-content: center; gap: 16px; margin: 4px 0 8px; padding: 5px 12px; border-top: 1px dotted #a8763a; border-bottom: 1px dotted #a8763a; font: 14px Georgia, serif; color: #5a3a1a; } .gr-meta b { color: #8a1c10; } .gr-meta i { color: #9a7a48; }
+.gr-meta .gr-key { display: inline-grid; width: 24px; height: 24px; font-size: 13px; vertical-align: middle; }
+.gr-desc { margin: 0 4px; font-size: 17.5px; line-height: 1.32; color: #3a2710; text-align: left; } .gr-desc::first-letter { float: left; font: 700 44px/0.82 Luminari, Georgia, fantasy; color: #8a1c10; padding: 4px 6px 0 0; }
+.gr-marge { align-self: flex-end; max-width: 78%; margin: 10px 6px 0; font-size: 15px; line-height: 1.2; color: #2a4a8a; transform: rotate(-2.2deg); text-align: right; }
+.gr-place { margin-top: auto; padding-top: 8px; } .gr-place span { display: block; font: 700 11.5px "Trebuchet MS", system-ui, sans-serif; letter-spacing: 1.5px; text-transform: uppercase; color: #8a5a20; margin-bottom: 4px; }
+#panel.grim button.gr-kb { width: 30px; height: 30px; margin: 0 2px; padding: 0; box-shadow: none; text-shadow: none; border-radius: 50%; font: 900 14px "Trebuchet MS", system-ui, sans-serif; color: #5a2410; background: rgba(168, 118, 58, 0.16); border: 2px solid #a8763a; cursor: pointer; } #panel.grim button.gr-kb:hover { background: #e2b45a; }
+#panel.grim button.gr-kb.on { color: #ffe9c0; background: radial-gradient(circle at 35% 30%, #d8452e, #8a1c10); border-color: #5a1008; cursor: default; }
+.gr-page.blanche { justify-content: center; } .gr-vide { margin: auto; text-align: center; color: #a88a5a; font-size: 17px; } .gr-vide span { font-size: 44px; opacity: 0.5; }
+.gr-page.sort .gr-num { align-self: stretch; margin-top: 8px; }
+
+.gr-effet { margin: 0 0 8px; padding: 5px 14px; border-radius: 10px; border: 2px solid rgba(138, 28, 16, 0.35); background: rgba(255, 244, 210, 0.6); font: 15.5px Georgia, serif; color: #3a2710; } .gr-effet span { margin-right: 6px; } .gr-effet b { color: #8a1c10; font-size: 18px; } .gr-effet i { color: #2f5fb0; font-size: 13.5px; }
+
+.gr-page.sort .gr-orn { font: 700 12px "Trebuchet MS", system-ui, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #8a5a20; }
+
+/* ---- les cercles de magie : onglets sur la première page, page de garde par cercle ---- */
+.gr-ongs { display: flex; flex-wrap: wrap; gap: 6px; }
+#panel.grim button.gr-ong { width: 32px; height: 32px; padding: 0; font: 700 16px Georgia, serif; color: #fff4d2; background: radial-gradient(circle at 35% 30%, #b0562a, #7a1c10); border: 2px solid #3a1208; border-radius: 50%; box-shadow: 0 2px 0 #3a1208; text-shadow: none; cursor: pointer; transition: transform 0.1s; }
+#panel.grim button.gr-ong:hover { transform: translateY(-2px) scale(1.08); }
+.gr-page.garde { align-items: center; text-align: center; }
+.gr-g-haut { margin-top: 6px; font: 700 13px "Trebuchet MS", system-ui, sans-serif; letter-spacing: 4px; text-transform: uppercase; color: #8a5a20; }
+.gr-g-num { position: relative; display: grid; place-items: center; width: 118px; height: 118px; margin: 8px 0 6px; border-radius: 50%; border: 3px double #8a1c10; box-shadow: 0 0 0 6px rgba(168, 118, 58, 0.18), inset 0 0 22px rgba(138, 28, 16, 0.18); }
+.gr-g-num::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; border: 1.5px dashed #a8763a; animation: grCercleT 40s linear infinite; } @keyframes grCercleT { to { transform: rotate(360deg); } }
+.gr-g-num span { font: 700 74px/1 Luminari, "Apple Chancery", Georgia, fantasy; color: #8a1c10; text-shadow: 0 2px 0 rgba(255, 240, 200, 0.8); }
+.gr-g-nom { font: 700 25px Luminari, "Apple Chancery", Georgia, fantasy; color: #5a2410; }
+.gr-page.garde .gr-orn { align-self: stretch; }
+.gr-g-liste { flex: 1; min-height: 0; align-self: stretch; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; scrollbar-width: thin; scrollbar-color: #b08a4a transparent; }
+#panel.grim button.gr-g-sort { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 9px; text-align: left; color: #3a1a0a; background: rgba(255, 250, 225, 0.45); border: 2px solid rgba(140, 100, 50, 0.4); border-radius: 10px; cursor: pointer; font-family: inherit; }
+#panel.grim button.gr-g-sort:hover { background: rgba(255, 246, 200, 0.95); border-color: #8a1c10; }
+.gr-g-sort span { font-size: 20px; } .gr-g-sort b { flex: 1; min-width: 0; font: 700 15.5px Georgia, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .gr-g-sort i { font: 12px "Trebuchet MS", system-ui, sans-serif; font-style: normal; color: #8a5a20; }
+#panel.grim button.gr-versc { padding: 2px 10px; font: inherit; letter-spacing: inherit; text-transform: inherit; color: #8a1c10; background: rgba(255, 250, 225, 0.5); border: 1.5px solid rgba(138, 28, 16, 0.45); border-radius: 10px; cursor: pointer; } #panel.grim button.gr-versc:hover { background: #fff3c8; }
+@media (prefers-reduced-motion: reduce) { .gr-g-num::before { animation: none; } }

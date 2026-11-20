@@ -1,0 +1,18 @@
+/* Goblin Malin — liste déroulante maison (bouton de bois + liste). */
+select.ld-src { display: none !important; }
+.ld-btn, #panel button.ld-btn, #dbg button.ld-btn { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; text-align: left; font: bold 15px "Trebuchet MS", "Avenir Next", system-ui, sans-serif; color: #fbeccb; padding: 7px 10px; border-radius: 9px; border: 2px solid #33200c; cursor: pointer; background: repeating-linear-gradient(177deg, transparent 0 9px, rgba(0, 0, 0, 0.08) 9px 10px), linear-gradient(#64411f, #452a11); box-shadow: inset 0 2px 0 rgba(255, 214, 150, 0.22), 0 2px 0 #24160a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.ld-btn:hover:not(:disabled), #panel button.ld-btn:hover:not(:disabled) { border-color: #ffd75e; background: repeating-linear-gradient(177deg, transparent 0 9px, rgba(0, 0, 0, 0.08) 9px 10px), linear-gradient(#73491f, #4f3013); }
+.ld-btn.open, #panel button.ld-btn.open { border-color: #ffd75e; box-shadow: 0 0 0 2px rgba(255, 215, 94, 0.35), inset 0 2px 0 rgba(255, 214, 150, 0.22); }
+.ld-btn:disabled { opacity: 0.5; cursor: default; }
+.ld-lab { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; } .ld-lab .ld-tx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-ic { flex: none; width: 1.35em; text-align: center; text-shadow: none; }
+.ld-chev { flex: none; width: 9px; height: 9px; margin: -4px 3px 0 2px; border-right: 3px solid #f4dfae; border-bottom: 3px solid #f4dfae; border-radius: 2px; transform: rotate(45deg); transition: transform 0.15s; }
+.ld-btn.open .ld-chev { transform: rotate(-135deg); margin-top: 4px; }
+.ld-pop { position: fixed; z-index: 500; overflow-y: auto; padding: 6px; border-radius: 13px; border: 3px solid #33200c; background: repeating-linear-gradient(178deg, transparent 0 20px, rgba(0, 0, 0, 0.07) 20px 22px), linear-gradient(#5e3d1d, #432810); box-shadow: 0 0 0 2px #a8762e, 0 12px 30px rgba(0, 0, 0, 0.65), inset 0 2px 0 rgba(255, 214, 150, 0.2); font: bold 15.5px "Trebuchet MS", "Avenir Next", system-ui, sans-serif; color: #f6e8c4; user-select: none; -webkit-user-select: none; animation: ld-in 0.12s ease-out; transform-origin: top center; scrollbar-width: thin; scrollbar-color: #a8762e transparent; }
+.ld-pop.up { transform-origin: bottom center; } @keyframes ld-in { from { opacity: 0; transform: scaleY(0.85); } }
+.ld-row { display: flex; align-items: center; gap: 8px; line-height: 1.2; padding: 5px 14px 5px 6px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; white-space: nowrap; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.ld-row + .ld-row { margin-top: 1px; }
+.ld-ck { flex: none; width: 18px; text-align: center; font-style: normal; font-size: 14px; color: #a8ff5a; text-shadow: 0 0 6px rgba(140, 255, 80, 0.6); }
+.ld-row.on { background: rgba(0, 0, 0, 0.28); color: #ffe36b; }
+.ld-row:hover, .ld-row.hov { background: linear-gradient(#f8e6bd, #ecd09a); color: #4a2c10; border-color: #6fcf2e; text-shadow: none; } .ld-row:hover .ld-ck, .ld-row.hov .ld-ck { color: #2f8a12; text-shadow: none; }
+.ld-row.off { opacity: 0.4; cursor: default; }

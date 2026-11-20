@@ -1,0 +1,60 @@
+/* Goblin Malin — fenêtre du village : cadre de bois ficelé, onglets, fiches des gobelins. */
+#panel.vill { position: relative; width: min(1130px, 97vw); max-height: none; overflow: visible; padding: 50px 26px 0; border: 11px solid #7c5229; border-radius: 9px; background: repeating-linear-gradient(178deg, transparent 0 22px, rgba(0, 0, 0, 0.07) 22px 24px), linear-gradient(#5e3d1d, #4a2e14); box-shadow: 0 0 0 3px #33200c, inset 0 0 0 3px #33200c, inset 0 0 40px rgba(0, 0, 0, 0.45), 0 16px 44px rgba(0, 0, 0, 0.7); user-select: none; -webkit-user-select: none; }
+.vl-rope { position: absolute; z-index: 3; width: 30px; height: 30px; pointer-events: none; background: linear-gradient(45deg, transparent 41%, #8a6a3a 41% 44%, #dcbd82 44% 56%, #8a6a3a 56% 59%, transparent 59%), linear-gradient(-45deg, transparent 41%, #8a6a3a 41% 44%, #dcbd82 44% 56%, #8a6a3a 56% 59%, transparent 59%); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.vl-rope.tl { left: -20px; top: -20px; } .vl-rope.tr { right: -20px; top: -20px; } .vl-rope.bl { left: -20px; bottom: -20px; } .vl-rope.br { right: -20px; bottom: -20px; }
+.vl-vine { position: absolute; z-index: 3; left: 26px; top: -44px; pointer-events: none; } .vl-vine.r { left: auto; right: -30px; top: 60px; }
+.vl-title { position: absolute; z-index: 4; left: 50%; top: -40px; transform: translateX(-50%); white-space: nowrap; margin: 0; padding: 12px 70px 13px; font-size: 32px; color: #ffd75e; text-shadow: 0 2px 0 #5a3408, 0 4px 6px rgba(0, 0, 0, 0.6); background: repeating-linear-gradient(177deg, transparent 0 12px, rgba(0, 0, 0, 0.1) 12px 14px), linear-gradient(#80552b, #5f3c1c); border: 3px solid #33200c; border-radius: 9px; clip-path: polygon(0 8%, 2% 0, 98% 3%, 100% 22%, 99% 50%, 100% 80%, 98% 100%, 3% 97%, 0 78%, 1% 46%); }
+#panel.vill .tabs { gap: 14px; margin-bottom: 14px; }
+#panel.vill .tabs button { font-size: 23px; font-weight: bold; padding: 11px; border-radius: 12px; border: 3px solid #33200c; background: #3d2610; color: #a88a5c; }
+#panel.vill .tabs button:hover { color: #f4dfae; background: #4a2e14; }
+#panel.vill .tabs button.on { background: linear-gradient(#fbeec8, #f0d9a2); color: #7a4a10; border-color: #6fcf2e; box-shadow: 0 0 0 2px #3f8a18, 0 3px 8px rgba(0, 0, 0, 0.4); text-shadow: 0 1px 0 #fff; }
+#panel.vill .chips { gap: 9px; margin-bottom: 14px; }
+#panel.vill .chips span { font-size: 17px; font-weight: bold; padding: 5px 15px; border-radius: 18px; background: #3d2610; box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.4); }
+#panel.vill .chips span.zero { color: #a89572 !important; } #panel.vill .chips b { color: inherit; }
+#panel.vill .scroll { max-height: calc(100vh - 430px); min-height: 190px; margin: 0 -8px 0 -6px; padding: 14px 10px 14px 6px; border-top: 3px solid rgba(0, 0, 0, 0.28); border-radius: 0; scrollbar-width: thin; scrollbar-color: #2e1c0a #6b4623; }
+.vl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); gap: 13px; }
+.vl-card { position: relative; padding: 9px 10px 10px; border-radius: 12px; color: #4a2c10; background: linear-gradient(#f8e6bd, #efd5a0); border: 3px solid #c9a064; box-shadow: 0 0 0 2px #3a240e, 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.6); }
+.vl-top { display: flex; gap: 10px; min-height: 80px; }
+.vl-por { flex: none; width: 80px; height: 80px; border-radius: 9px; overflow: hidden; position: relative; background: radial-gradient(circle at 50% 35%, #8a6234, #5a3b1c); border: 2px solid #3a240e; box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5); }
+.vl-por canvas { position: absolute; left: -24px; top: -19px; width: 128px; height: 128px; }
+.vl-por.inc::after { content: '?'; position: absolute; inset: 0; text-align: center; font-weight: bold; font-size: 54px; line-height: 76px; color: #c9a875; }
+.vl-info { flex: 1; min-width: 0; padding-right: 36px; }
+.vl-info > b { display: block; font-size: 20px; line-height: 1.15; margin: 1px 0 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vl-info .f { color: #d83a8a; } .vl-info .m { color: #2a7ad8; }
+.vl-bar { display: flex; align-items: center; gap: 5px; margin: 0 -36px 5px 0; font-size: 15px; line-height: 1; }
+.vl-bar > span { width: 18px; text-align: center; }
+.vl-bar > div { flex: 1; position: relative; height: 18px; border-radius: 6px; background: #5a4326; border: 2px solid #3a2a12; overflow: hidden; }
+.vl-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(#8fe04a, #4fae22); } .vl-bar.xp i { background: linear-gradient(#ffe36b, #e0a020); } .vl-bar.low i { background: linear-gradient(#ff8a5a, #d8402a); }
+.vl-bar u { position: absolute; inset: 0; text-align: center; text-decoration: none; font-size: 12.5px; line-height: 14px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
+.vl-lvl { position: absolute; right: 6px; top: -5px; width: 42px; height: 50px; padding-top: 5px; text-align: center; font-size: 11.5px; line-height: 1.05; font-weight: bold; color: #fff3d0; text-shadow: 0 1px 2px #000; background: linear-gradient(#9a6a34, #6e4418); clip-path: polygon(0 12%, 12% 0, 88% 0, 100% 12%, 100% 66%, 50% 100%, 0 66%); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.vl-lvl b { display: block; font-size: 18px; } .vl-lvl.hob { background: linear-gradient(#6c7f96, #3f4f66); }
+.vl-eq { margin-top: 8px; padding: 6px 7px 7px; border-radius: 9px; background: rgba(150, 104, 50, 0.24); }
+.vl-eq > div { display: flex; gap: 6px; align-items: center; } .vl-eq > div + div { margin-top: 6px; justify-content: center; } .vl-eq > div small { font-size: 12.5px; font-weight: bold; color: #6a4520; margin-right: 4px; }
+.vl-eq .ld-btn { flex: 1; } .vl-fix { flex: 1; min-width: 0; -webkit-appearance: none; appearance: none; font-size: 15px; font-weight: bold; color: #fbeccb; padding: 6px 24px 6px 9px; border-radius: 8px; border: 2px solid #33200c; cursor: pointer; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M2 2l5 5 5-5' fill='none' stroke='%23f4dfae' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 8px center no-repeat, linear-gradient(#5e3d1d, #452a11); box-shadow: inset 0 2px 0 rgba(255, 214, 150, 0.2); text-overflow: ellipsis; }
+.vl-fix { background: linear-gradient(#5e3d1d, #452a11); cursor: default; padding-right: 9px; white-space: nowrap; overflow: hidden; }
+.vl-slot { flex: none; width: 33px; height: 33px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: linear-gradient(#7a5228, #5a3a1a); border: 2px solid #33200c; }
+.vl-slot.vide { background: none; border: 2px dashed #b08f5c; } .vl-slot.vide span { filter: grayscale(1); opacity: 0.28; }
+.vl-inc { font-size: 13.5px; font-style: italic; color: #6a4520; margin: 0; }
+.vl-body { min-height: 120px; padding-bottom: 14px; }
+.vl-foot { display: flex; align-items: center; gap: 16px; margin: 0 -26px; padding: 10px 14px 10px 26px; background: linear-gradient(#6b4623, #54351a); border-top: 3px solid #33200c; }
+.vl-foot p { flex: 1; margin: 0; font-size: 15.5px; color: #f4dfae; }
+#panel.vill .vl-foot button { font-size: 19px; font-weight: bold; padding: 9px 26px; margin: -2px 14px -2px 0; color: #ffe9a8; text-shadow: 0 2px 2px rgba(0, 0, 0, 0.6); border: 3px solid #3d464c; border-radius: 10px; background: linear-gradient(#8e99a0, #636e75); box-shadow: 0 4px 0 #2e363b, 0 6px 10px rgba(0, 0, 0, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.35); }
+#panel.vill .vl-foot button:hover { background: linear-gradient(#a3aeb5, #74808a); border-color: #ffe36b; }
+
+/* onglet Animaux : de grandes fiches de tanière, une couleur par espèce */
+.an-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 16px; }
+.an-card { position: relative; display: flex; gap: 14px; padding: 12px; border-radius: 18px; color: #f4ead0; background: radial-gradient(ellipse at 18% 40%, rgba(var(--c), 0.34), transparent 62%), linear-gradient(135deg, #2c2338, #1b1826 70%); border: 3px solid rgba(var(--c), 0.75); box-shadow: 0 0 0 2px #1a120a, 0 6px 12px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.35); overflow: hidden; }
+.an-card::after { content: '🐾'; position: absolute; right: 10px; bottom: -14px; font-size: 96px; opacity: 0.06; transform: rotate(-18deg); pointer-events: none; }
+.an-card.evo { border-color: #ffd75e; box-shadow: 0 0 0 2px #1a120a, 0 0 22px rgba(255, 215, 94, 0.4), 0 6px 12px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.35); }
+.an-card.ko .an-scene canvas { filter: grayscale(0.8) brightness(0.75); }
+.an-scene { position: relative; flex: none; width: 170px; height: 150px; border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%; background: radial-gradient(circle at 50% 38%, rgba(var(--c), 0.85), rgba(var(--c), 0.25) 58%, rgba(0, 0, 0, 0.35)); border: 3px solid rgba(255, 255, 255, 0.22); box-shadow: inset 0 -14px 22px rgba(0, 0, 0, 0.45), 0 0 18px rgba(var(--c), 0.35); }
+.an-scene canvas { position: absolute; left: 50%; bottom: 0; width: 196px; height: 170px; transform: translateX(-50%); }
+.an-etoile { position: absolute; left: 4px; top: 0; font-size: 26px; animation: an-twinkle 1.6s ease-in-out infinite alternate; } @keyframes an-twinkle { to { transform: scale(1.25) rotate(14deg); } }
+.an-lvl { position: absolute; right: -2px; bottom: -2px; width: 46px; height: 54px; padding-top: 6px; text-align: center; font-size: 11.5px; line-height: 1.05; font-weight: bold; color: #2a1c0a; background: linear-gradient(#ffe36b, #e0a020); clip-path: polygon(0 12%, 12% 0, 88% 0, 100% 12%, 100% 66%, 50% 100%, 0 66%); } .an-lvl b { display: block; font-size: 20px; }
+.an-info { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.an-ruban { display: inline-block; font-size: 13px; font-weight: bold; padding: 3px 12px; border-radius: 10px; color: #1a120a; background: rgb(var(--c)); }
+.an-info h3 { margin: 5px 0 7px; font-size: 27px; line-height: 1; color: #fff3c4; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.an-info .vl-bar { margin: 0 0 5px; } .an-info .vl-bar > div { background: #17131f; border-color: #0c0a12; }
+.an-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; } .an-chips span { font-size: 12.5px; padding: 3px 9px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); } .an-chips .bon { background: rgba(140, 255, 120, 0.22); }
+.an-sp { margin: 8px 0 0; font-size: 12.5px; line-height: 1.3; opacity: 0.92; } .an-sp b { display: block; color: #ffd75e; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px; }
+.an-vide { text-align: center; padding: 26px 20px 10px; color: #f4dfae; } .an-pattes { font-size: 64px; opacity: 0.55; } .an-vide b { display: block; font-size: 22px; margin: 6px 0; } .an-vide p { margin: 0 auto; max-width: 520px; font-size: 15px; opacity: 0.85; }
