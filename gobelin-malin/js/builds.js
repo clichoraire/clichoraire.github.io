@@ -14,9 +14,10 @@
     cloture: { nom: 'Clôture', icon: '🚧', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 3 }, hp: 45, barrier: true, low: true, repeat: true, desc: 'Basse : tes gardes à l\'arc tirent par-dessus, et on peut y fixer un mécanisme. Elle barre le passage à tout le monde : prévois un Portail.' },
     palissade: { nom: 'Palissade', icon: '🪵', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 7 }, hp: 110, barrier: true, tall: true, repeat: true, desc: 'Un mur de rondins, bien plus solide qu\'une clôture. Mais elle est haute : personne ne tire par-dessus, ni toi ni l\'ennemi.' },
     muret: { nom: 'Muret de pierre', icon: '🪨', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 3, minerai: 3 }, hp: 100, barrier: true, low: true, repeat: true, desc: 'Un muret bas en pierre : on tire par-dessus comme une clôture, et il tient deux fois mieux.' },
-    portail: { nom: 'Portail', icon: '🚪', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 8 }, hp: 70, barrier: true, tile: 'gate', repeat: true, desc: 'Toi et tes gobelins passez librement, pas les ennemis.' },
+    portail: { nom: 'Portail', icon: '🚪', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 8 }, hp: 35, barrier: true, tile: 'gate', repeat: true, desc: 'Toi et tes gobelins passez librement, pas les ennemis.' },
     clotureFer: { nom: 'Clôture en métal', icon: '⛓️', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 3, minerai: 8 }, hp: 190, barrier: true, low: true, repeat: true, desc: 'Des barreaux de métal : basse comme une clôture, on tire par-dessus, et presque incassable.' },
-    portailFer: { nom: 'Portail ferré', icon: '🚪', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 10, minerai: 2 }, hp: 140, barrier: true, tile: 'gate', repeat: true, desc: 'Un portail renforcé de fer, deux fois plus solide. Toi et tes gobelins passez librement, pas les ennemis.' },
+    portailPierre: { nom: 'Portail de pierre', icon: '🚪', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 8, minerai: 3 }, hp: 80, barrier: true, tile: 'gate', repeat: true, desc: 'Un portail aux piliers de pierre. Toi et tes gobelins passez, pas les ennemis.' },
+    portailFer: { nom: 'Portail en métal', icon: '🚪', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 8, minerai: 8 }, hp: 150, barrier: true, tile: 'gate', repeat: true, desc: 'Un portail tout en métal, presque incassable. Toi et tes gobelins passez, pas les ennemis.' },
     mur: { nom: 'Mur de pierre', icon: '🧱', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 7, minerai: 6 }, hp: 240, barrier: true, tall: true, repeat: true, desc: 'Une palissade rebâtie en pierre : très solide, et trop haute pour tirer par-dessus.' },
     murMetal: { nom: 'Mur de métal', icon: '🛡️', w: 1, h: 1, cat: 'defense', on: 'road', cout: { bois: 7, minerai: 16 }, hp: 420, barrier: true, tall: true, repeat: true, desc: 'Un mur plaqué de métal : le plus solide de tous.' },
     douve: { nom: 'Douve', icon: '💧', w: 1, h: 1, cat: 'terrain', on: 'road', cout: { bois: 1 }, tile: 'moat', flat: true, repeat: true, desc: 'Un fossé plein d\'eau : les ennemis y pataugent très lentement. Il te faut un pont pour traverser.' },
@@ -64,12 +65,14 @@
   };
 
   // Un ennemi dont le chemin est barré s'en prend à la clôture la plus proche qu'il peut atteindre.
+  G.SIEGE_PORTE = 340; G.SIEGE_LOIN = 900;
   G.siege = function (e, dt, spd) {
     const S = CG.S;
     if (e.sb && e.sb.gone) { e.sb = null; e.siege = 0; e.path = null; return; }
     if (!e.sb) {
-      const list = S.buildings.filter(b => CG.BUILDS[b.type] && CG.BUILDS[b.type].barrier).map(b => ({ b, d: Math.hypot((b.tx + 0.5) * T - e.x, (b.ty + 0.5) * T - e.y) })).sort((a, b) => a.d - b.d);
-      for (let i = 0; i < Math.min(5, list.length) && !e.sb; i++) { const b = list[i].b; if (G.goTo(e, (b.tx + 0.5) * T, (b.ty + 0.5) * T)) e.sb = b; }
+      // un portail est le point faible : il passe devant un mur, même s'il est un peu plus loin (G.SIEGE_PORTE, en pixels)
+      const list = S.buildings.filter(b => CG.BUILDS[b.type] && CG.BUILDS[b.type].barrier).map(b => { const d = Math.hypot((b.tx + 0.5) * T - e.x, (b.ty + 0.5) * T - e.y); return { b, d, s: d - (CG.BUILDS[b.type].tile === 'gate' ? G.SIEGE_PORTE : 0) }; }).filter(q => q.d < G.SIEGE_LOIN).sort((a, b) => a.s - b.s);
+      for (let i = 0; i < Math.min(8, list.length) && !e.sb; i++) { const b = list[i].b; if (G.goTo(e, (b.tx + 0.5) * T, (b.ty + 0.5) * T)) e.sb = b; }
       if (!e.sb) { e.siege = 0; e.repath = 2; return; }
     }
     const b = e.sb, bx = (b.tx + 0.5) * T, by = (b.ty + 0.5) * T, d = Math.hypot(bx - e.x, by - e.y);

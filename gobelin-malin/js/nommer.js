@@ -1,4 +1,4 @@
-// Clan Gobelin — le nom véritable : nommer un gobelin ou un animal le fait évoluer (le lendemain matin), mais ça coûte au chef.
+// Clan Gobelin — le nom officiel : nommer un gobelin ou un animal le fait évoluer (le lendemain matin), mais ça coûte au chef.
 'use strict';
 (function (CG) {
   const G = CG.G, P = CG.P;
@@ -9,13 +9,13 @@
   G.nameOpt = function (o) {
     if (!G.tech(G.NAME_TECH) || o.nomme) return [];
     const S = CG.S, c = G.nameCost(), need = o.pet ? G.PET_NAME_LVL : G.NAME_LVL, prix = '-' + c.food + ' 🍖 · -' + c.or + ' 🪙 · -' + c.hp + ' ❤';
-    if (o.naming) return [{ label: '🏷️ Son nom véritable : ' + o.naming, sub: 'Le changement se fera pendant la nuit : tu verras demain matin', disabled: true }];
-    if (o.lvl < need) return [{ label: '🏷️ Lui donner un nom véritable', sub: 'Pas encore prêt : il faut être de niveau ' + need + ' (niveau ' + o.lvl + ' en ce moment)', disabled: true }];
+    if (o.naming) return [{ label: '🏷️ Son nom officiel : ' + o.naming, sub: 'Le changement se fera pendant la nuit : tu verras demain matin', disabled: true }];
+    if (o.lvl < need) return [{ label: '🏷️ Lui donner un nom officiel', sub: 'Pas encore prêt : il faut être de niveau ' + need + ' (niveau ' + o.lvl + ' en ce moment)', disabled: true }];
     const why = S.res.food < c.food ? 'Il te manque de la nourriture' : S.res.or < c.or ? 'Il te manque de l\'or' : S.player.hp <= c.hp ? 'Tu es trop blessé : ça te coûterait la vie' : '';
-    return [{ label: '🏷️ Lui donner un nom véritable', sub: why ? why + ' (' + prix + ')' : 'Recevoir un nom, c\'est évoluer · ' + prix, disabled: !!why, fn: () => G.nameDialog(o) }];
+    return [{ label: '🏷️ Lui donner un nom officiel', sub: why ? why + ' (' + prix + ')' : 'Avec ce nom, il va se transformer · ' + prix, disabled: !!why, fn: () => G.nameDialog(o) }];
   };
   G.nameDialog = function (o, err) {
-    const c = G.nameCost(), d = { who: o.name, tag: '🏷️ nom véritable', text: (err ? err + ' ' : '') + 'Quel nom veux-tu donner à ' + o.name + ' ? Ça te coûtera ' + c.food + ' 🍖, ' + c.or + ' 🪙 et ' + c.hp + ' ❤ de ta propre énergie. Le changement se fera pendant la nuit.',
+    const c = G.nameCost(), d = { who: o.name, tag: '🏷️ nom officiel', text: (err ? err + ' ' : '') + 'Quel nom veux-tu donner à ' + o.name + ' ? Ça te coûtera ' + c.food + ' 🍖, ' + c.or + ' 🪙 et ' + c.hp + ' ❤ de ta propre énergie.',
       extra: '<p><input id="nm-in" type="text" maxlength="14" autocomplete="off" placeholder="Nouveau nom" style="font:inherit;padding:6px 10px;border-radius:8px;border:2px solid #6b4a2a;background:#fff8e4;color:#2a1c0e;width:220px"></p>',
       options: [{ label: '✨ Lui donner ce nom', fn: () => {
         const n = (document.getElementById('nm-in').value || '').trim().replace(/\s+/g, ' ');
@@ -31,7 +31,18 @@
     if (S.res.food < c.food || S.res.or < c.or || p.hp <= c.hp) return false;
     S.res.food -= c.food; S.res.or -= c.or; p.hp -= c.hp; CG.R.hurtFlash = 0.5; o.naming = n;
     G.text(p.x, p.y - 56, '-' + c.hp + ' ❤', '#ff6a5a', true); G.text(o.x, o.y - 50, '✨', '#fff', true); G.puff(o.x, o.y - 18, '#ffe9a8', 14, 80, 3); CG.sfx('spell');
-    CG.UI.toast('🏷️ Tu as nommé ' + o.name + ' : « ' + n + ' ». Le nom te vide de ton énergie... Rien ne change pour l\'instant.');
+    if (o.pet && CG.Accueil && CG.Accueil.evolvePet) return G.nomAnimal(o, n);
+    CG.UI.toast('🏷️ Tu as donné un nom officiel à ' + n + '. Tu te sens vidé de ton énergie...');
+    return true;
+  };
+  // un animal : le nom prend tout de suite, et on le voit se transformer sous nos yeux, comme un gobelin qui reçoit son nom officiel
+  G.nomAnimal = function (o, n) {
+    const K = P.KINDS[o.kind] || {}, st = q => ({ hp: P.maxHp(q), atk: P.dmg(q) }), av = st(o), evo0 = +o.evo || 0, grandit = !evo0 && !!K.evo && o.kind !== 'ame';
+    o.name = n; o.naming = null; o.nomme = true; if (grandit) { o.evo = 1; o._evo = 1; o.evoDemain = false; o.evoT = 0; o.cdS = 1; } o.hp = P.maxHp(o);
+    G.puff(o.x, o.y - 18, '#ffe9a8', 26, 150, 4); CG.R.rings.push({ x: o.x, y: o.y - 8, r: 80, life: 0.5, col: '#ffe36b' }); G.text(o.x, o.y - 64, '✨ ' + n + ' !', '#ffe36b', true);
+    CG.R.evoStats = { avant: av, apres: st(o) };
+    CG.Accueil.evolvePet(o, () => CG.UI.toast('🏷️ Tu as donné un nom officiel à ' + n + '. Tu te sens vidé de ton énergie...'), { vite: true, evo: [evo0, +o.evo || 0], s1: grandit ? 1.12 : 1.16, E: { nom: n, col: '255,227,107', sub: grandit ? 'Ton compagnon est devenu : ' + K.evo + ' !' : 'Plus grand, plus fort, plus brave.' } });
+    try { CG.save(); } catch (e) { /* rien */ }
     return true;
   };
   // pendant la nuit : le nom prend, et celui qui le porte évolue

@@ -1,5 +1,5 @@
 // Goblin Malin — améliorer une construction sur place : on bâtit toujours la version de base, puis on va à côté (E) pour lancer les travaux.
-// Les travaux prennent du temps : les bricoleurs s'en chargent (ou le chef, s'il reste à côté). Clôture → muret → clôture en métal ; palissade → mur de pierre → mur de métal.
+// Les travaux prennent du temps : les bricoleurs s'en chargent (ou le chef, s'il reste à côté). Clôture → muret → clôture en métal (et son portail : bois → pierre → métal) ; palissade → mur de pierre → mur de métal.
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, W = CG.W, Art = CG.Art, T = CG.TILE, Am = CG.Ameliorer = {};
@@ -10,7 +10,8 @@
     muret: [{ tech: 'd8', to: 'clotureFer', nom: 'Clôture en métal', cout: { minerai: 5 }, sec: 10, effet: 'presque incassable, et on tire toujours par-dessus' }],
     palissade: [{ tech: 'd3', to: 'mur', nom: 'Mur de pierre', cout: { minerai: 6 }, sec: 14, effet: 'deux fois plus solide' }],
     mur: [{ tech: 'd9', to: 'murMetal', nom: 'Mur de métal', cout: { minerai: 10 }, sec: 20, effet: 'le plus solide de tous' }],
-    portail: [{ tech: 'd8', to: 'portailFer', nom: 'Portail ferré', cout: { bois: 2, minerai: 2 }, sec: 8, effet: 'deux fois plus solide' }],
+    portail: [{ tech: 'd3', to: 'portailPierre', nom: 'Portail de pierre', cout: { minerai: 3 }, sec: 7, effet: 'plus solide' }], // le portail suit sa clôture : bois → pierre → métal, avec les mêmes technologies
+    portailPierre: [{ tech: 'd8', to: 'portailFer', nom: 'Portail en métal', cout: { minerai: 5 }, sec: 10, effet: 'presque incassable' }],
     hut: maison(1), chief: maison(1.5).map((m, i) => Object.assign(m, { effet: m.effet + ' ; ' + [7, 10][i] + ' gobelins sans toit peuvent s\'y cacher pendant une attaque (au lieu de ' + [4, 7][i] + ')' })),
     tower: [{ tech: 'd5', nom: 'Tour fortifiée', cout: { bois: 15, minerai: 8 }, sec: 18, effet: '+50 % de dégâts, portée accrue' }, { tech: 'd7', nom: 'Donjon d\'archers', cout: { bois: 20, minerai: 15, or: 30 }, sec: 26, effet: 'dégâts doublés, tir bien plus rapide' }],
     tourMagie: [{ tech: 's7', nom: 'Tour d\'archimage', cout: { minerai: 15, or: 60 }, sec: 24, effet: 'explosions plus larges, plus fortes, plus fréquentes' }]

@@ -8,7 +8,7 @@
     const p = CG.S.player, N = Nv(); if (p.pret) return false; p.scrolls = p.scrolls || {};
     if (p.spells.length < 10) { const c = CG.SCROLL_POOL.filter(id => CG.SPELLS[id] && !CG.SPELLS[id].amelio && !p.spells.includes(id) && !p.scrolls[id]);
       if (c.length) { const id = pick(c); p.spells.push(id); p.pret = { id }; return true; } }
-    if (!N) return false; const c = p.spells.slice(0, 10).filter(b => N.T[b] && N.niv(b) < 3 && !p.scrolls[b + '_' + (N.niv(b) + 1)]); if (!c.length) return false;
+    if (!N || (N.permis && !N.permis())) return false; /* pas de sort monté d'un niveau dans la forêt, même prêté */ const c = p.spells.slice(0, 10).filter(b => N.T[b] && N.niv(b) < 3 && !p.scrolls[b + '_' + (N.niv(b) + 1)]); if (!c.length) return false;
     const b = pick(c); p.sortNiv = p.sortNiv || {}; p.sortNiv[b] = N.niv(b) + 1; p.pret = { niv: b }; N.rafraichir(); return true;
   };
   St.pretTxt = function () {

@@ -64,7 +64,7 @@
   }
   P.hurt = function (p, dmg) {
     if (p.ko || p.evoT > 0) return; dmg *= (p.evo ? 0.75 : 1) * (p.buffT > 0 && p.buff === 'def' ? 0.55 : 1); p.hp -= dmg; G.text(p.x, p.y - 40, '-' + Math.round(dmg), '#ffb0a0'); G.puff(p.x, p.y - 14, '#ddd', 3);
-    if (p.hp <= 0) { p.hp = 0; p.ko = true; p.target = null; G.text(p.x, p.y - 54, p.name + ' est assommé', '#ffb0a0', true); G.puff(p.x, p.y - 14, '#ddd', 14, 90, 4); CG.sfx('die'); }
+    if (p.hp <= 0) { p.hp = 0; p.ko = true; p.target = null; G.text(p.x, p.y - 54, p.name + ' est mort', '#ffb0a0', true); G.puff(p.x, p.y - 14, '#ddd', 14, 90, 4); CG.sfx('die'); }
   };
 
   // ---------- comportement ----------
@@ -113,6 +113,7 @@
     const S = CG.S, R = CG.R, fire = G.firePos();
     for (const p of S.pets) {
       if (!p.nomme && K[p.kind]) { const n = P.title(p); if (p.name !== n) p.name = n; } /* tant que le chef ne lui a pas donné de nom, un animal s'appelle simplement « Loup », « Ours »... */
+      if (!p.ko && !(p.hp > 0) && !(p.evoT > 0)) { p.hp = 0; p.ko = true; p.target = null; p.path = null; p.moving = false; } // à 0 de vie, il est mort : son corps reste par terre (cet état n'était pas sauvegardé : après un rechargement ou un changement de monde, l'animal se relevait avec 0 de vie)
       if (p.ko || p.ridden) continue; // en selle : c'est le chef qui le mène (monture.js)
       p.atkCd -= dt; p.cdS -= dt; if (p.atkAnim > 0) p.atkAnim -= dt * 4; if (p.flash > 0) p.flash -= dt; p.moving = false;
       if (p.evoT > 0) { // la transformation : des étincelles convergent, puis l'éclair
@@ -147,6 +148,8 @@
   P.morning = function (lines, fed) {
     const S = CG.S, f = G.firePos();
     if (!fed) for (const p of S.pets.slice()) if (Math.random() < 0.3) { S.pets.splice(S.pets.indexOf(p), 1); lines.push(K[p.kind].icon + ' ' + p.name + ' n\'a rien eu à manger : il est reparti dans la forêt.'); }
+    // un compagnon tombé au combat est mort : son corps reste par terre jusqu'au matin (le temps d'une Résurrection), puis il n'est plus là
+    for (const p of S.pets.slice()) if (p.ko) { S.pets.splice(S.pets.indexOf(p), 1); if (CG.R && CG.R.mount === p) CG.R.mount = null; if (lines) lines.push('💀 ' + p.name + ' est mort au combat.'); }
     S.pets.forEach((p, i) => { p.ko = false; p.evoT = 0; p.hp = P.maxHp(p); P.reset(p); p.x = f.x + Math.cos(i * 1.3) * 110; p.y = f.y + 70 + Math.sin(i * 1.3) * 30; });
   };
   // ---------- l'onglet Animaux du village : une grande fiche par compagnon, avec son portrait vivant ----------
@@ -157,7 +160,7 @@
     let h = '<div class="scroll"><div class="an-grid">';
     S.pets.forEach(p => {
       const k = K[p.kind], mh = P.maxHp(p), hp = Math.max(0, Math.min(mh, Math.ceil(p.hp))), need = P.need(p), col = TEINTE[p.kind] || '200,200,200';
-      const etat = p.ko ? ['💫', 'Assommé jusqu\'à demain'] : R.mount === p ? ['🏇', 'Tu le montes'] : p.follow && G.tech('b24') ? ['🐾', 'Te suit partout'] : ['🏕️', 'Garde le village'];
+      const etat = p.ko ? ['💀', 'Mort'] : R.mount === p ? ['🏇', 'Tu le montes'] : p.follow && G.tech('b24') ? ['🐾', 'Te suit partout'] : ['🏕️', 'Garde le village'];
       h += '<div class="an-card' + (p.evo ? ' evo' : '') + (p.ko ? ' ko' : '') + '" style="--c:' + col + '"><div class="an-scene"><canvas data-pet="' + p.id + '" width="300" height="260"></canvas>' + (p.evo ? '<span class="an-etoile">✨</span>' : '') + '<div class="an-lvl">Niv.<b>' + p.lvl + '</b></div></div>'
         + '<div class="an-info"><div class="an-ruban">' + k.icon + ' ' + esc(P.title(p)) + (p.nomme ? ' · 🏷️' : '') + '</div><h3>' + esc(p.name) + '</h3>'
         + '<div class="vl-bar' + (hp < mh * 0.35 ? ' low' : '') + '" title="Vie"><span>❤️</span><div><i style="width:' + 100 * hp / mh + '%"></i><u>' + hp + '/' + mh + '</u></div></div>'
@@ -165,7 +168,7 @@
         + '<div class="an-chips"><span>' + etat[0] + ' ' + etat[1] + '</span><span>🍖 ' + P.eats(p) + ' par jour</span>' + (p.buffT > 0 ? '<span class="bon">' + P.BUFFS[p.buff].icon + ' ' + P.BUFFS[p.buff].nom + '</span>' : '') + '</div>'
         + (p.evo ? '<p class="an-sp"><b>Attaque spéciale</b> ' + esc(k.special) + '</p>' : '') + '</div></div>';
     });
-    return h + '</div></div><p class="note">Les compagnons gagnent de l\'expérience en se battant. Assommés, ils reviennent le lendemain. ' + S.pets.length + ' / ' + P.MAX + ' compagnons.</p>';
+    return h + '</div></div><p class="note">Les compagnons gagnent de l\'expérience en se battant. S\'ils tombent au combat, ils meurent. ' + S.pets.length + ' / ' + P.MAX + ' compagnons.</p>';
   };
   // les portraits bougent tant que la fenêtre est ouverte
   P.panelLive = function (root) {

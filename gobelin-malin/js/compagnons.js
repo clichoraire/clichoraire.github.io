@@ -8,6 +8,7 @@
     const av = stats(p); p.evo = 1; p._evo = 1; p.evoDemain = false; p.evoT = 0; p.hp = P.maxHp(p); p.cdS = 1; return { avant: av, apres: stats(p) };
   }
   const nd0 = D.nextDay; D.nextDay = function () {
+    CG.S.pets.forEach(p => { const k = P.KINDS[p.kind]; if (p.nomme && !p.evo && !p.ko && k && k.evo && p.kind !== 'ame') p.evoDemain = true; }); // il a reçu son nom sans jamais changer d'allure (anciennes parties) : c'est pour ce matin
     const r = nd0.apply(this, arguments), S = CG.S, R = CG.R, file = S.pets.filter(p => p.evoDemain && !p.evo).map(p => ({ p, st: transformer(p) }));
     S.pets.forEach(p => { if (p.evo) p.evoDemain = false; });
     if (!file.length || !(CG.Accueil && CG.Accueil.evolvePet)) return r;

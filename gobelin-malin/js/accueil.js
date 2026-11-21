@@ -108,7 +108,7 @@
     const gob = evoS && evoS.gob; if (gob) { const neu = o.look === evoS.newLook; return A8.goblin(g, Object.assign({}, o, { job: neu ? gob.job1 : gob.job0, chief: false, sex: gob.sex, look: gob.look, hue: gob.hue, cls: (neu ? gob.cls1 : gob.cls0) || null, evolved: neu ? true : !!gob.nomme0, noHat: !gob.hat, hatJob: gob.hat || undefined, fun: gob.fun, tool: null })); } // un gobelin du clan
     const pet = evoS && evoS.pet; if (!pet) return A8.goblin(g, o);
     const neu = o.look === evoS.newLook, k = (o.scale || 1) * (evoS.petK || 2.6);
-    g.save(); g.translate(o.x, o.y); g.scale(k, k); CG.Art.pet(g, Object.assign({}, pet, { x: 0, y: 0, face: 1, moving: false, step: 0, atkAnim: 0, flash: 0, evoT: 0, ko: false, ridden: false, sleep: false, evo: neu ? 1 : 0 }), o.t || 0); g.restore();
+    g.save(); g.translate(o.x, o.y); g.scale(k, k); CG.Art.pet(g, Object.assign({}, pet, { x: 0, y: 0, face: 1, moving: false, step: 0, atkAnim: 0, flash: 0, evoT: 0, ko: false, ridden: false, sleep: false, evo: evoS.petEvo ? evoS.petEvo[neu ? 1 : 0] : neu ? 1 : 0 }), o.t || 0); g.restore();
   }
   function evoAnim(t) {
     const c = root.querySelector('#acc-evo-cv'); if (!c) return;
@@ -170,9 +170,10 @@
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   };
   // la même scène pour un compagnon : sa silhouette, les éclairs, puis sa nouvelle forme
-  Acc.evolvePet = function (pet, done) {
-    const K = CG.P.KINDS[pet.kind] || {}; Acc.evolve(1, 'avant', 'apres', done);
-    evoS.pet = pet; evoS.petK = K.monstre ? 2.1 : 2.8; evoS.s0 = 1; evoS.s1 = 1.12; evoS.E = { nom: K.evo || 'Évolution', col: '255,227,107', sub: pet.name + ' a changé pendant la nuit. ' + (K.special || '') };
+  Acc.evolvePet = function (pet, done, o) { // o (facultatif) : { evo: [avant, après], E: le titre et la phrase, s1: sa taille après, vite: pas de silhouette mystère }
+    const K = CG.P.KINDS[pet.kind] || {}; Acc.evolve(1, 'avant', 'apres', done); o = o || {};
+    evoS.pet = pet; evoS.petK = K.monstre ? 2.1 : 2.8; evoS.s0 = 1; evoS.s1 = o.s1 || 1.12; evoS.petEvo = o.evo || null; evoS.E = o.E || { nom: K.evo || 'Évolution', col: '255,227,107', sub: pet.name + ' a changé pendant la nuit. ' + (K.special || '') };
+    if (o.vite) evoS.t0 = performance.now() - 4500;
   };
 
 

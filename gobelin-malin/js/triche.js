@@ -12,6 +12,7 @@
     p = document.createElement('div'); p.id = 'triche';
     p.innerHTML = '<h4>🧪 Debug suprême</h4>'
       + '<button id="tr-inv" class="' + (Tr.inv ? 'on' : '') + '">🛡️ Invincibilité : ' + (Tr.inv ? 'OUI' : 'non') + '</button>'
+      + '<button id="tr-paix" class="' + (Tr.paix ? 'on' : '') + '">🕊️ Aucune attaque au village : ' + (Tr.paix ? 'OUI' : 'non') + '</button>'
       + '<div class="tr-cols"><div><h5>Le chef et le clan</h5><div class="tr-res">' + Object.keys(CG.RES).map(r => '<button data-r="' + r + '" class="' + ((Tr.res || 'or') === r ? 'on' : '') + '" title="' + CG.RES[r].nom + '">' + CG.RES[r].icon + '</button>').join('') + '<button data-r="potion" class="' + (Tr.res === 'potion' ? 'on' : '') + '" title="Potions de vie">🧪</button></div>'
       + '<div class="tr-l"><span id="tr-rn">' + (Tr.res === 'potion' ? 'Potions' : CG.RES[Tr.res || 'or'].nom) + '</span><input id="tr-or" type="number" value="' + (Tr.resN || 500) + '" min="1"><button data-t="or">Donner</button></div>'
       + '<div class="tr-l"><span>⭐ XP</span><input id="tr-xp" type="number" value="100" min="1"><button data-t="xp">Donner</button></div>'
@@ -25,6 +26,7 @@
     document.getElementById('hud').appendChild(p);
     p.querySelectorAll('input').forEach(i => { ['keydown', 'keyup', 'keypress'].forEach(ev => i.addEventListener(ev, e => e.stopPropagation())); });
     p.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { Tr.res = b.dataset.r; Tr.resN = +p.querySelector('#tr-or').value || 500; CG.sfx('ok'); panneau(true); });
+    p.querySelector('#tr-paix').onclick = () => { Tr.paix = !Tr.paix; try { if (Tr.paix) localStorage.setItem(KEY + '-paix', '1'); else localStorage.removeItem(KEY + '-paix'); } catch (e) { /* rien */ } if (!Tr.paix && CG.R && (!CG.Mondes || CG.Mondes.ici() === 0)) CG.R.noNightRaid = false; CG.sfx('ok'); UI.toast(Tr.paix ? '🕊️ Plus aucune attaque au village (ni le jour, ni la nuit, ni les raids des repaires). Les monstres de la forêt restent là.' : 'Les attaques reprennent.'); panneau(true); };
     p.querySelector('#tr-inv').onclick = () => { Tr.inv = !Tr.inv; CG.sfx('ok'); UI.toast(Tr.inv ? '🛡️ Invincible : plus rien ne te blesse.' : 'Invincibilité coupée.'); panneau(true); };
     p.querySelector('#tr-spawn').onclick = () => { const S = CG.S, pl = S.player, type = p.querySelector('#tr-ent').value, n = CG.clamp(Math.floor(+p.querySelector('#tr-enn').value || 1), 1, 30); Tr.ent = type; Tr.entN = n; for (let i = 0; i < n; i++) { const a = i / n * 6.283 + Math.random() * 0.4; let x = pl.x, y = pl.y; for (const r of [150, 120, 190, 90]) { const xx = pl.x + Math.cos(a) * r, yy = pl.y + Math.sin(a) * r * 0.8; if (CG.W.walkPx(xx, yy)) { x = xx; y = yy; break; } } const e = G.spawnEnemy(type, x, y, { wild: true }); e.wild = null; e.target = pl; e.seek = 2; G.puff(x, y - 14, '#c070ff', 10, 90, 4); } CG.sfx('warning'); UI.toast('👹 ' + n + ' × ' + CG.ENEMIES[type].nom + ' autour de toi.'); };
     p.querySelector('#tr-b1').onclick = () => CG.Butin.essai('troll', 'oui'); p.querySelector('#tr-b2').onclick = () => CG.Butin.essai('troll', 'zut');
@@ -52,6 +54,19 @@
   // le bouton revient tout seul aux parties suivantes tant que le mode est actif
   const up0 = G.update; G.update = function (dt) { up0(dt); if (Tr._ok === undefined) { Tr._ok = on(); if (Tr._ok) bouton(); } };
   Tr.open = panneau;
+  // ---------- « aucune attaque au village » : pour essayer des choses tranquille ----------
+  // Les attaques prévues sont rayées, celles qui démarrent quand même (raid d'un repaire, de nuit...) sont annulées sur-le-champ.
+  // Le Demon Lord, lui, vient quand même : c'est le chef qui l'appelle en activant le portail.
+  try { Tr.paix = !!localStorage.getItem(KEY) && !!localStorage.getItem(KEY + '-paix'); } catch (e) { /* rien */ }
+  { const D = CG.D, du0 = D.update; D.update = function () {
+    const r = du0.apply(this, arguments), R = CG.R; if (!Tr.paix || !CG.S || !R) return r;
+    (R.schedule || []).forEach(e => { if (e.type === 'attack') e.done = true; }); R.noNightRaid = true;
+    const ev = R.event; if (ev && ev.type === 'attack' && !ev.demonLord && !ev.lord) {
+      for (const e of R.enemies) if (e.event && !e.dead && !e.struct) { if (e.campId) { e.event = false; e.wild = { x: e.x, y: e.y }; e.target = null; e.path = null; } else e.dead = true; }
+      R.spawnQ = []; R.event = null; R.alarm = false;
+    }
+    return r;
+  }; }
   // la fenêtre : deux colonnes, jamais plus haute que l'écran (elle défile s'il le faut)
   const css = document.createElement('style');
   css.textContent = '#triche{top:64px;right:216px;width:540px;max-width:calc(100vw - 240px);max-height:calc(100vh - 84px);overflow-y:auto;box-sizing:border-box}#triche .tr-cols{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-top:10px;align-items:start}#triche h5{margin:0 0 2px;font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;color:#c9a8f0;opacity:.85}#triche .tr-cols > div > button{margin-top:8px}#triche .tr-res{margin-top:6px}#triche button.low{margin-top:12px}#triche .tr-l:has(select){flex-wrap:wrap}#triche .tr-l .ld-btn{flex:1 1 100%;width:100%}#triche .tr-l .ld-btn span{width:auto}#triche .tr-l .ld-btn .ld-lab{flex:1}#triche .tr-l .ld-btn .ld-chev{width:9px}#triche .tr-l .ld-btn .ld-ic{width:1.35em}#triche .tr-l select{flex:1 1 100%}#triche .tr-l:has(select) input{flex:0 0 60px}#triche .tr-l:has(select) button{flex:1;width:auto}#triche #tr-b1,#triche #tr-b2{flex:1;width:auto;min-width:0}#triche .tr-l:has(#tr-b1){flex-wrap:wrap}#triche .tr-l:has(#tr-b1) span{flex:1 1 100%}@media (max-width:900px){#triche .tr-cols{grid-template-columns:1fr}}';

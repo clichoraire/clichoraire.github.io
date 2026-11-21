@@ -14,7 +14,7 @@
   CG.SPELLS.verglas = { nom: 'Plaque de verglas', icon: '🧊', mp: 12, prix: 500, desc: 'Une grande plaque de glace se forme par terre pendant 14 secondes, sous l\'ennemi le plus proche ou devant toi. Les monstres qui marchent dessus avancent tout doucement pour ne pas glisser. Tes gobelins, eux, ont le pied sûr.', color: '#a8e4ff' };
   // ================= Résurrection =================
   So.RES = { base: 30, parNiveau: 10, garde: 12 }; // mana = base + parNiveau × niveau ; on se souvient des 12 derniers tombés
-  CG.SPELLS.resurrection = { nom: 'Résurrection', icon: '🕊️', mp: 40, prix: 2500, desc: 'Un des plus grands sorts : choisis un gobelin tombé au combat, ou un compagnon assommé, et ramène-le à la vie près de toi. Plus il est de haut niveau, plus il faut de mana (30, plus 10 par niveau).', color: '#fff3b0' };
+  CG.SPELLS.resurrection = { nom: 'Résurrection', icon: '🕊️', mp: 40, prix: 2500, desc: 'Un des plus grands sorts : choisis un gobelin tombé au combat, ou un compagnon mort le jour même, et ramène-le à la vie près de toi. Plus il est de haut niveau, plus il faut de mana (30, plus 10 par niveau).', color: '#fff3b0' };
   // ================= Téléportation =================
   So.TP = { cases: 4.5, min: 40 };
   CG.SPELLS.teleport = { nom: 'Téléportation', icon: '💫', mp: 8, prix: 500, desc: 'Tu disparais et réapparais d\'un coup 4 à 5 cases devant toi, même par-dessus un mur, une rangée d\'arbres ou une rivière. S\'il n\'y a pas de place là-bas, tu arrives un peu avant.', color: '#9fd0ff' };
@@ -60,7 +60,7 @@
       opts.push({ label: '☠ ' + c.name + ' — ' + (c.sex === 'f' && job.nomF ? job.nomF : job.nom) + ' niv. ' + c.lvl, sub: plein ? 'Plus de place dans les huttes' : p.mp < cout ? 'Il te faut ' + cout + ' mana (tu en as ' + Math.floor(p.mp) + ')' : cout + ' mana · tombé au jour ' + c.jour, disabled: plein || p.mp < cout,
         fn: () => { if (p.mp < cout) return; p.mp -= cout; R.castCd = 0.8; R.castAnim = 1; const g = relever(c); lumiere(g.x, g.y, g.name); if (G.say) G.say(g, CG.pick(['Hein ? J\'ai dormi longtemps ?', 'J\'ai vu une grande lumière... et un buffet !', 'Chef ! Tu es venu me chercher !', 'Aïe. Tout est à sa place ? ... Oui. Ouf.', 'Là-bas, c\'était calme. Trop calme. Merci, chef.']), 4, 1.2); } }); });
     S.pets.filter(a => a.ko).forEach(a => { const cout = So.cout(a.lvl), K = CG.P.KINDS[a.kind];
-      opts.push({ label: (K.icon || '🐾') + ' ' + a.name + ' — ' + (a.evo ? K.evo : K.nom) + ' niv. ' + a.lvl, sub: p.mp < cout ? 'Il te faut ' + cout + ' mana (tu en as ' + Math.floor(p.mp) + ')' : cout + ' mana · assommé', disabled: p.mp < cout,
+      opts.push({ label: (K.icon || '🐾') + ' ' + a.name + ' — ' + (a.evo ? K.evo : K.nom) + ' niv. ' + a.lvl, sub: p.mp < cout ? 'Il te faut ' + cout + ' mana (tu en as ' + Math.floor(p.mp) + ')' : cout + ' mana · mort', disabled: p.mp < cout,
         fn: () => { if (p.mp < cout) return; p.mp -= cout; R.castCd = 0.8; R.castAnim = 1; a.ko = false; a.hp = CG.P.maxHp(a); lumiere(a.x, a.y, a.name); } }); });
     if (!opts.length) { CG.sfx('no'); G.text(p.x, p.y - 56, 'Personne à ramener', '#fff3b0'); return; }
     opts.push({ label: 'Pas maintenant', fn: () => { } });

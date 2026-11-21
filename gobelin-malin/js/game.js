@@ -188,7 +188,7 @@
     }
     if (g.hidden) { g.hidden = false; g.state = 'idle'; }
     if (g.state === 'flee') G.resetGoblin(g);
-    if (g.perch && g.job !== 'garde') G.unperch(g);
+    if (g.perch && g.job !== 'garde' && !(g.job === 'eclaireur' && g.perch.type === 'affut')) G.unperch(g); /* l'éclaireur reste dans son affût (sinon il en sortait et y rentrait à chaque image, dans un nuage de feuilles) */
     if (g.job === 'garde' && G.towerStep(g, dt)) return; // sa priorité : monter dans une tour de guet libre
     if (g.job === 'garde' || G.militia(g)) {
       let tgt = null, bd = 1e9;

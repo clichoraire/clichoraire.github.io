@@ -160,14 +160,18 @@
     const L = CG.S ? Fe.lvl() : 0, col = CG.S ? Fe.couleur() : null, fx = (b.tx + b.w / 2) * T, fy = (b.ty + b.h) * T - T / 2;
     // derrière : les pierres dressées du brasier des braves
     if (L >= 3) [[-34, -8], [34, -8]].forEach(([dx, dy]) => { ell(g, fx + dx, fy + dy + 8, 8, 3, 'rgba(0,0,0,0.25)'); g.fillStyle = '#7e7a72'; g.beginPath(); g.moveTo(fx + dx - 6, fy + dy + 8); g.lineTo(fx + dx - 4, fy + dy - 14); g.lineTo(fx + dx + 3, fy + dy - 18); g.lineTo(fx + dx + 6, fy + dy + 8); g.closePath(); g.fill(); g.fillStyle = lit ? '#ffcf6a' : '#a8a296'; g.fillRect(fx + dx - 1.5, fy + dy - 8, 3, 7); });
-    bu.apply(this, arguments);
-    if (L >= 1) { // un vrai cercle de pierres, plus large et plus clair
-      const n = L >= 2 ? 14 : 11, rx = L >= 2 ? 31 : 28, ry = L >= 2 ? 14 : 12.5;
-      for (let i = 0; i < n; i++) { const a = i / n * TAU + 0.2, x = fx + Math.cos(a) * rx, y = fy + 5 + Math.sin(a) * ry; if (Math.sin(a) < -0.2 && lit) continue; /* celles du fond passent derrière la flamme */ ell(g, x, y + 2, 6.5, 3, 'rgba(0,0,0,0.22)'); ell(g, x, y, 6.5, 5, i % 3 === 0 ? '#b4aea0' : i % 3 === 1 ? '#9a958a' : '#a8a498'); ell(g, x - 1.5, y - 1.5, 3, 2, 'rgba(255,255,255,0.28)'); }
-    }
-    if (L >= 2 && !lit) { const gl = 0.45 + Math.sin(t * 3) * 0.2; ell(g, fx, fy + 1, 9, 4, 'rgba(255,120,40,' + gl + ')'); } // des braises, même en plein jour
-    if (lit && (L >= 2 || col)) flammes(g, fx, fy, t, [1, 1, 1.22, 1.45][L], col ? Fe.POUDRES[col].cols : L >= 3 ? ['#ff9a1e', '#ffd23a', '#fff3b0'] : ['#ff8a1e', '#ffb432']);
-    if (L >= 1) for (let i = 0; i < 5; i++) { const a = (i / 5 * TAU + 0.2) * 0 + (0.35 + i * 0.6), x = fx + Math.cos(a) * (L >= 2 ? 31 : 28), y = fy + 5 + Math.sin(a) * (L >= 2 ? 14 : 12.5); ell(g, x, y, 6.5, 5, i % 2 ? '#b4aea0' : '#9a958a'); ell(g, x - 1.5, y - 1.5, 3, 2, 'rgba(255,255,255,0.28)'); } // celles de devant, par-dessus la flamme
+    if (L < 1) { bu.apply(this, arguments); if (lit && col) flammes(g, fx, fy, t, 1, Fe.POUDRES[col].cols); return; }
+    // le foyer de pierres : le cercle de pierres d'abord, la cendre au milieu, puis les bûches posées PAR-DESSUS les pierres, et la flamme
+    const n = L >= 2 ? 14 : 11, rx = L >= 2 ? 31 : 28, ry = L >= 2 ? 14 : 12.5;
+    Art.shadow(g, fx, fy + 7, rx + 6); ell(g, fx, fy + 5, rx - 3, ry - 2, '#3b332b'); ell(g, fx, fy + 5, rx - 9, ry - 5, '#2a2420');
+    const ps = []; for (let i = 0; i < n; i++) { const a = i / n * TAU + 0.2; ps.push({ i, x: fx + Math.cos(a) * rx, y: fy + 5 + Math.sin(a) * ry }); }
+    ps.sort((a, b) => a.y - b.y).forEach(q => { ell(g, q.x, q.y + 2.5, 7, 3.2, 'rgba(0,0,0,0.25)'); ell(g, q.x, q.y, 6.8, 5.2, q.i % 3 === 0 ? '#b4aea0' : q.i % 3 === 1 ? '#9a958a' : '#a8a498'); ell(g, q.x - 1.6, q.y - 1.6, 3, 2, 'rgba(255,255,255,0.28)'); });
+    if (L >= 2) { const gl = (lit ? 0.75 : 0.45) + Math.sin(t * 3) * 0.2; ell(g, fx, fy + 4, 11, 5, 'rgba(255,120,40,' + gl + ')'); } // des braises, même en plein jour
+    const buche = (x1, y1, x2, y2, c, c2, w) => { g.lineCap = 'round'; g.strokeStyle = 'rgba(0,0,0,0.28)'; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1 + 2.5); g.lineTo(x2, y2 + 2.5); g.stroke(); g.strokeStyle = c; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      g.strokeStyle = c2; g.lineWidth = w * 0.3; g.beginPath(); g.moveTo(x1 + (x2 - x1) * 0.15, y1 + (y2 - y1) * 0.15 - w * 0.2); g.lineTo(x1 + (x2 - x1) * 0.8, y1 + (y2 - y1) * 0.8 - w * 0.2); g.stroke(); ell(g, x1, y1, w * 0.42, w * 0.36, '#c9a06a'); ell(g, x1, y1, w * 0.2, w * 0.17, '#a87a48'); g.lineCap = 'butt'; };
+    const e = rx / 28; // les bouts des bûches reposent sur les pierres de devant, la pointe se rejoint au milieu
+    buche(fx - 25 * e, fy + 11, fx + 9, fy - 9, '#5a3d22', '#7a5632', 7); buche(fx + 25 * e, fy + 11, fx - 9, fy - 9, '#4a3018', '#6a4828', 7); buche(fx + 1, fy + 18, fx, fy - 11, '#5a3d22', '#7a5632', 6.5);
+    if (lit) flammes(g, fx, fy - 2, t, [1, 1, 1.22, 1.45][L], col ? Fe.POUDRES[col].cols : L >= 3 ? ['#ff9a1e', '#ffd23a', '#fff3b0'] : ['#ff8a1e', '#ffb432', '#fff2a0']);
   };
 
   // ---------- la fiole de vie : un vrai petit flacon rouge (plus tard viendront des potions plus grosses) ----------

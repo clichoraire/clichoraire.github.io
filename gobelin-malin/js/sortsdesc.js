@@ -31,7 +31,7 @@
     cigogne: 'Tu enchantes la gobeline la plus proche (ou le gobelin, si tu es une cheffe) jusqu\'au matin. Si vous fondez une famille ce soir, la cigogne apporte des bébés en plus… s\'il reste de la place dans les huttes !',
     electro: 'Ton corps crépite d\'éclairs ! Les ennemis qui s\'approchent se font zapper, et celui qui te frappe reçoit une décharge qui le laisse tout raide.',
     verglas: 'Une grande plaque de glace apparaît par terre, sous l\'ennemi le plus proche ou devant toi. Les monstres avancent à petits pas pour ne pas tomber sur les fesses. Tes gobelins, eux, ne glissent pas.',
-    resurrection: 'Un des plus grands sorts : choisis un gobelin tombé au combat, ou un compagnon assommé, et il se relève près de toi. Plus il est fort, plus le sort coûte de mana.',
+    resurrection: 'Un des plus grands sorts : choisis un gobelin tombé au combat, ou un compagnon mort le jour même, et il se relève près de toi. Plus il est fort, plus le sort coûte de mana.',
     teleport: 'Pouf ! Tu disparais et tu réapparais un peu plus loin devant toi, même de l\'autre côté d\'un mur, d\'une rangée d\'arbres ou d\'une rivière.',
     temps: 'Le soleil se met à traîner dans le ciel : la journée dure plus longtemps. Parfait pour explorer plus loin ou finir de bâtir avant la nuit. Toi et les autres, vous bougez comme d\'habitude.',
     hatetemps: 'Le soleil file à toute vitesse dans le ciel : le soir, ou le matin, arrive plus vite. Toi et les autres, vous bougez comme d\'habitude.',
@@ -51,7 +51,7 @@
     armFeu: 'Des braises tournent autour de toi : les ennemis qui s\'approchent se brûlent, et celui qui te frappe prend feu !',
     armPoison: 'Ta peau devient gluante de venin, comme celle d\'un crapaud. Les ennemis qui s\'approchent tombent malades, et celui qui te frappe, encore plus !',
     armGlace: 'Un froid de canard t\'entoure : les ennemis qui s\'approchent grelottent et ralentissent, et celui qui te frappe se change en glaçon un instant.',
-    armVent: 'Un tourbillon tourne autour de toi : les flèches, les boules de feu et les crachats font demi-tour et retournent à l\'envoyeur ! Celui qui te frappe est soufflé plus loin.',
+    armVent: 'Un tourbillon tourne autour de toi : les flèches, les boules de feu et les crachats font demi-tour et retournent à l\'envoyeur !',
     armRonces: 'Des ronces pleines d\'épines t\'enveloppent : les ennemis qui s\'approchent se piquent, et celui qui te frappe reçoit presque tout son coup en retour. Bien fait !'
   };
   // ce que disent les niveaux II et III

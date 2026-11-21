@@ -33,14 +33,23 @@
     let l = ns; const m = g && g.job === 'mineur' ? Fi.mode(g) : 'hasard'; if (m !== 'hasard' && ns && ns.length) { const ok = ns.filter(n => n.type === 'ore' && !!n.or === (m === 'or')); if (ok.length) l = ok; } // s'il n'en reste plus de la sorte voulue, il prend l'autre
     return ai0.call(this, g, l);
   }; }
+  // dans la discussion avec un mineur : « prioriser quelque chose », puis on choisit quoi
+  Fi.CHOIX = { or: ['🪙', 'L\'or'], minerai: ['🪨', 'Le minerai'], hasard: ['🎲', 'Peu importe'] };
+  Fi.demander = function (g) {
+    const m = Fi.mode(g);
+    CG.UI.dialog({ goblin: g, who: g.name, tag: '⛏️ mineur', text: 'Qu\'est-ce que je pioche en premier, chef ?',
+      options: Object.keys(Fi.CHOIX).map(k => ({ label: Fi.CHOIX[k][0] + ' ' + Fi.CHOIX[k][1], active: k === m, sub: k === m ? 'C\'est ce qu\'' + (g.sex === 'f' ? 'elle' : 'il') + ' fait déjà' : '', fn: () => { g.filon = k; if (g.state === 'idle' || g.state === 'toNode') G.resetGoblin(g); G.say(g, Fi.MODES[k][2], 3.5); CG.sfx('click'); } })).concat([{ label: '↩ Retour', fn: () => CG.UI.talkGoblin(g) }]) });
+  };
   const dl0 = CG.UI.dialog; CG.UI.dialog = function (o) {
     const g = o && o.goblin; if (g && g.job === 'mineur' && Array.isArray(o.options) && o.options.some(x => x && /^🛠/.test(x.label || '')) && Fi.liste().length) {
-      const m = Fi.mode(g), suiv = { hasard: 'or', or: 'minerai', minerai: 'hasard' }[m], M = Fi.MODES[m], opts = o.options.slice(), i = opts.findIndex(x => x && /^👋/.test(x.label || ''));
-      opts.splice(i < 0 ? opts.length : i, 0, { label: '⛏️ Tu pioches : ' + M[0] + ' ' + M[1], sub: 'Clique pour changer → ' + Fi.MODES[suiv][0] + ' ' + Fi.MODES[suiv][1], fn: () => { g.filon = suiv; if (g.state === 'idle' || g.state === 'toNode') G.resetGoblin(g); G.say(g, Fi.MODES[suiv][2], 3.5); CG.sfx('click'); CG.UI.talkGoblin(g); } });
+      const opts = o.options.slice(), i = opts.findIndex(x => x && /^👋/.test(x.label || ''));
+      opts.splice(i < 0 ? opts.length : i, 0, { label: '⛏️ Lui demander de prioriser quelque chose', fn: () => Fi.demander(g) });
       o = Object.assign({}, o, { options: opts });
     }
     return dl0.call(this, o);
   };
+  // la sauvegarde : ce que chaque mineur pioche en premier
+  { const pk = CG.pack; if (pk) CG.pack = function () { const d = pk.apply(this, arguments), S = CG.S; if (d && d.goblins && S) d.goblins.forEach((o, i) => { const g = S.goblins[i]; if (g && g.filon) o.filon = g.filon; }); return d; }; }
   // ---------- le chef ----------
   const ps0 = G.pickStep; G.pickStep = function () { const k = CG.R && CG.R.picking; Fi.chef = !!(k && k.n && k.n.or); try { return ps0.apply(this, arguments); } finally { Fi.chef = false; } };
   const fi0 = D.findInteract; D.findInteract = function () { const it = fi0.apply(this, arguments); if (it && it.type === 'ore' && it.obj && it.obj.or && !/pioches/.test(it.label)) it.label = 'Piocher le filon d\'or (+' + Fi.CHEF + ' ' + CG.RES.or.icon + ')'; return it; };
