@@ -46,7 +46,7 @@
         if (a.id === 'armFeu') { R.dmgCol = CG.DMG.feu; G.hurtEnemy(e, 5 * k, p); R.dmgCol = null; El.bruler(e, 5, 4 * k); G.puff(e.x, e.y - 18, '#ff8a1e', 10, 110, 4); }
         else if (a.id === 'armPoison') { El.empoisonner(e, 8, 6 * k); G.puff(e.x, e.y - 18, '#9be04a', 10, 90, 4); }
         else if (a.id === 'armGlace') { G.hurtEnemy(e, 5 * k, p); e.rooted = Math.max(e.rooted || 0, 2); e.slow = Math.max(e.slow || 0, 4); G.puff(e.x, e.y - 18, '#cfeeff', 12, 110, 4); G.text(e.x, e.y - 58, '❄️ Gelé !', '#cfeeff'); }
-        else if (a.id === 'armVent') { const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1; for (let i = 0; i < 10; i++) if (!G.slide(e, dx / d * 7, dy / d * 7)) break; e.path = null; e.slow = Math.max(e.slow || 0, 1); G.hurtEnemy(e, 3 * k, p); G.puff(e.x, e.y - 18, '#ffffff', 10, 130, 3); }
+        else if (a.id === 'armVent') { const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1; const b = CG.ENEMIES[e.type] && CG.ENEMIES[e.type].boss; if (!e.struct) e.kb = { vx: dx / d * (b ? 190 : 340), vy: dy / d * (b ? 190 : 340), t: 0.3 }; /* soufflé en arrière, en glissant (comme l'onde de choc) : plus de saut d'un coup */ e.path = null; e.slow = Math.max(e.slow || 0, 1); G.hurtEnemy(e, 3 * k, p); G.puff(e.x, e.y - 18, '#ffffff', 10, 130, 3); }
         else { G.hurtEnemy(e, Math.max(3, dmg * 0.8), p); G.puff(e.x, e.y - 18, '#6fbf4a', 10, 110, 3); } } }
     return hp0.apply(this, arguments);
   };

@@ -13,7 +13,7 @@
   Lp.stock = function (gros) {
     const S = CG.S, p = S.player, Bq = CG.Banque, l = [];
     if (Bq) ['epee', 'arc', 'armure'].forEach(k => [2, 3].forEach(n => { if (Math.random() > (n === 2 ? 0.8 : gros ? 0.75 : 0.4)) return;
-      l.push({ icon: Bq.IC[k], label: Bq.NOMS[k][n], desc: 'Sur un gobelin : ' + Bq.effet(k, n) + '. Va dans ton sac.', prix: Lp.PRIX[k][n], stock: n === 2 ? (gros ? 3 : 2) : 1, buy: () => { const z = Bq.deposer(k, n, 1, 'sac'); UI.toast(Bq.IC[k] + ' ' + Bq.NOMS[k][n] + ' : rangé ' + (CG.Inventaire ? CG.Inventaire.ou(z) : 'dans le coffre du camp') + '.'); } }); }));
+      l.push({ icon: Bq.IC[k], label: Bq.NOMS[k][n], desc: '★'.repeat(n) + ' ' + ((CG.Objets && CG.Objets.PHRASE[k]) || 'Pour un gobelin.'), prix: Lp.PRIX[k][n], stock: n === 2 ? (gros ? 3 : 2) : 1, buy: () => { const z = Bq.deposer(k, n, 1, 'sac'); UI.toast(Bq.IC[k] + ' ' + Bq.NOMS[k][n] + ' : rangé ' + (CG.Inventaire ? CG.Inventaire.ou(z) : 'dans le coffre du camp') + '.'); } }); }));
     const vus = {}; for (let i = 0; i < (gros ? 3 : 2); i++) { const id = G.newScroll && G.newScroll(); if (!id || vus[id] || Math.random() < 0.25) continue; vus[id] = 1; const sp = CG.SPELLS[id]; l.push({ scroll: id, icon: '📜', label: 'Parchemin : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: Math.round(sp.prix * Lp.PARCHEMIN), stock: 1 }); }
     l.push({ icon: '🥕', label: 'Panier de carottes', desc: '+25 nourriture.', prix: 20, stock: gros ? 5 : 3, buy: () => { S.res.food += 25; } });
     l.push({ icon: '🧪', label: 'Fiole de vie', desc: 'Une potion de plus dans ta besace.', prix: 30, stock: 2, buy: () => { p.potions = (p.potions || 0) + 1; } });

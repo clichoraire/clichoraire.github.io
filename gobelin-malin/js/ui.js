@@ -95,7 +95,7 @@
 
   // ---------- barre du haut ----------
   const pad = n => (n < 10 ? '0' : '') + n;
-  UI.RES_LISTE = ['food', 'bois', 'minerai', 'cuir', 'or', 'os', 'slime']; UI.RES_VU = 6; UI.resPos = 0;
+  UI.RES_LISTE = ['food', 'bois', 'minerai', 'cuir', 'or']; UI.RES_VU = 6; UI.resPos = 0; // cinq ressources, toujours les mêmes : plus de barre qui glisse (les os et la glu se voient là où on s'en sert)
   UI.refresh = function (hint) {
     sync(); if (!S) return;
     const p = S.player, h = Math.floor(S.hour) % 24, m = Math.floor((S.hour % 1) * 6) * 10, night = S.hour >= 19.5 || S.hour < 6;
@@ -418,7 +418,7 @@
         tip.className = st; tip.innerHTML = '<div class="tt-h"><span></span><b></b></div><p></p><em></em>';
         tip.querySelector('span').textContent = n.icon; tip.querySelector('b').textContent = n.nom;
         tip.querySelector('p').textContent = ferme ? 'Tu sauras ce que ça fait quand tu pourras l\'apprendre.' : n.desc;
-        tip.querySelector('em').textContent = st === 'own' ? (sousPlan(n) ? '📐 Débloqué par un plan : tu peux le bâtir, mais cette case n\'ouvre pas ses voisines' : '✔ Déjà appris') : sousPlan(n) ? '📐 Tu as déjà le plan · ⭐ ' + n.cout + ' point' + (n.cout > 1 ? 's' : '') + ' pour l\'apprendre pour de bon et ouvrir ses voisines' + (st === 'can' ? ' (clique)' : '') : ferme ? '🔒 Apprends d\'abord : ' + CG.Vues.manque(n) : st === 'can' ? '⭐ ' + n.cout + ' point' + (n.cout > 1 ? 's' : '') + ' · clique pour l\'apprendre' : '⭐ ' + n.cout + ' point' + (n.cout > 1 ? 's' : '') + ' · il t\'en manque ' + (n.cout - t.points);
+        tip.querySelector('em').textContent = st === 'own' ? (sousPlan(n) ? '📐 Appris grâce à un plan' : '✔ Déjà appris') : sousPlan(n) ? '📐 Tu as déjà le plan · ⭐ ' + n.cout + ' point' + (n.cout > 1 ? 's' : '') + ' pour l\'apprendre pour de bon et ouvrir ses voisines' + (st === 'can' ? ' (clique)' : '') : ferme ? '🔒 Apprends d\'abord : ' + CG.Vues.manque(n) : st === 'can' ? '⭐ ' + n.cout + ' point' + (n.cout > 1 ? 's' : '') + ' · clique pour l\'apprendre' : '⭐ ' + n.cout + ' point' + (n.cout > 1 ? 's' : '') + ' · il t\'en manque ' + (n.cout - t.points);
         tip.hidden = false; const r = b.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight, droite = r.right + 12 + tw < window.innerWidth - 8;
         tip.style.left = Math.round(droite ? r.right + 12 : Math.max(8, r.left - tw - 12)) + 'px'; tip.style.top = Math.round(Math.max(8, Math.min(window.innerHeight - th - 8, r.top + r.height / 2 - th / 2))) + 'px';
       };

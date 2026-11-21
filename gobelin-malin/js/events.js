@@ -85,20 +85,20 @@
   }
   function scrollItem(id, mul) { const sp = CG.SPELLS[id]; return { scroll: id, icon: '📜', label: 'Parchemin : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: Math.round(sp.prix * mul), stock: 1 }; }
   function stockFor(role) { const l = stockFor0(role), i = l.findIndex(q => q.label === 'Fiole de vie'); /* à côté de la fiole de vie : la fiole de mana */
-    if (i >= 0) l.splice(i + 1, 0, { icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('mana') : '💧', label: 'Fiole de mana', desc: 'Rend ' + (CG.Alchimie ? CG.Alchimie.MANA[1] : 25) + ' points de mana (touche Z).', prix: l[i].prix + 2, stock: 2, buy: () => { const p = S.player; p.fioles = p.fioles || {}; p.fioles.mana1 = (p.fioles.mana1 || 0) + 1; } });
-    if (!S.chefHatOwned && CG.Mode && CG.Mode.CHEF) l.push({ icon: '🪶', label: 'Coiffe de chef', desc: 'Trois grandes plumes, la coiffe des vrais chefs : +15 % de dégâts, +0,2 mana par seconde.', prix: CG.Mode.CHEF.marchand || 45, stock: 1, buy: () => { S.chefHatOwned = true; S.chefHat = true; } }); /* dès le début, tout marchand peut vendre la coiffe à plumes */
+    if (i >= 0) l.splice(i + 1, 0, { icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('mana') : '💧', label: 'Fiole de mana', desc: 'Te redonne du mana.', prix: l[i].prix + 2, stock: 2, buy: () => { const p = S.player; p.fioles = p.fioles || {}; p.fioles.mana1 = (p.fioles.mana1 || 0) + 1; } });
+    if (!S.chefHatOwned && CG.Mode && CG.Mode.CHEF) l.push({ icon: '🪶', label: 'Coiffe de chef', desc: 'La coiffe des vrais chefs : tu frappes plus fort.', prix: CG.Mode.CHEF.marchand || 45, stock: 1, buy: () => { S.chefHatOwned = true; S.chefHat = true; } }); /* dès le début, tout marchand peut vendre la coiffe à plumes */
     return l.concat(CG.Outils ? CG.Outils.stock(role) : []); } /* et les objets spéciaux des gobelins (outils.js) */
   function stockFor0(role) {
-    const p = S.player, potion = (prix, n) => ({ icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('vie') : '🧪', label: 'Fiole de vie', desc: 'Rend ' + (CG.fiole ? CG.fiole() : 45) + ' points de vie (touche Q).', prix, stock: n, buy: () => { p.potions++; } });
+    const p = S.player, potion = (prix, n) => ({ icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('vie') : '🧪', label: 'Fiole de vie', desc: 'Te redonne de la vie.', prix, stock: n, buy: () => { p.potions++; } });
     // un marchand n'a des parchemins que parfois (ch = chance par parchemin), et de préférence des sorts que tu n'as pas
     const sc = (ids, n, mul, ch) => CG.shuffle(ids.slice()).sort((a, b) => (!!(p.spells.includes(a) || p.scrolls[a])) - (!!(p.spells.includes(b) || p.scrolls[b]))).slice(0, n).filter(() => Math.random() < ch).map(id => scrollItem(id, mul));
     if (role === 'nain') return [potion(12, 3),
-      { icon: '🗡️', label: 'Lame naine', desc: 'Arme du chef +1 (+3 dégâts).', prix: 40 + 35 * p.weapon, stock: 1, buy: () => { p.weapon++; } },
-      { icon: '🛡️', label: 'Cotte renforcée', desc: 'Armure du chef +1 (-8 % de dégâts reçus).', prix: 40 + 35 * p.armor, stock: 1, buy: () => { p.armor++; } },
+      { icon: '🗡️', label: 'Lame naine', desc: 'Ton arme frappe plus fort.', prix: 40 + 35 * p.weapon, stock: 1, buy: () => { p.weapon++; } },
+      { icon: '🛡️', label: 'Cotte renforcée', desc: 'Ton armure te protège mieux.', prix: 40 + 35 * p.armor, stock: 1, buy: () => { p.armor++; } },
       { icon: '🪨', label: '10 minerais', desc: 'Pour ton forgeron.', prix: 22, stock: 2, buy: () => { S.res.minerai += 10; } }].concat(sc(['feu', 'bouclier', 'cri', 'retour', 'murfeu', 'golem'], 1, 1, 0.35));
     if (role === 'elfe') return sc(['etincelle', 'soin', 'racines', 'glace', 'bouclier', 'eclair', 'illusion', 'retour', 'hate'], 2, 1, 0.5).concat([potion(10, 3)]);
     if (role === 'sorciere') return sc(CG.SCROLL_POOL.filter(i => i !== 'meteore'), 2, 0.75, 0.55).concat([potion(9, 3)]).concat(CG.Feu ? CG.Feu.stock() : []); // et ses poudres pour le feu de camp
-    return sc(['feu', 'meteore', 'cri', 'eclair', 'murfeu'], 2, 1, 0.45).concat([{ icon: '❤️', label: 'Pacte de vigueur', desc: '+10 vie maximum, pour toujours.', prix: 80, stock: 1, buy: () => { p.maxhp += 10; p.hp += 10; } }]);
+    return sc(['feu', 'meteore', 'cri', 'eclair', 'murfeu'], 2, 1, 0.45).concat([{ icon: '❤️', label: 'Pacte de vigueur', desc: 'Plus de vie, pour toujours.', prix: 80, stock: 1, buy: () => { p.maxhp += 10; p.hp += 10; } }]);
   }
   // ce que disent les gobelins errants en arrivant : une histoire différente à chaque groupe
   const ERRANTS = [

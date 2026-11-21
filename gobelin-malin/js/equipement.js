@@ -40,14 +40,14 @@
   { const pk = CG.pack; CG.pack = function () { const d = pk.apply(this, arguments), S = CG.S; if (d && d.goblins && S) d.goblins.forEach((o, i) => { const g = S.goblins[i]; if (g && g.travail) o.travail = g.travail; }); return d; }; }
   // ---------- où on les trouve ----------
   const qualite = () => { const q = Math.random(); return q < Eq.QUAL[0] ? 1 : q < Eq.QUAL[1] ? 2 : 3; };
-  Eq.article = function (k, n) { const o = Eq.L[k]; return { icon: o.ic, label: o.noms[n], desc: 'Sur toi : ' + pc(n) + ' ' + o.chef + '. Sur un gobelin : ' + Bq.effet(k, n) + '.', prix: Eq.PRIX[n], stock: 1, buy: () => { const z = Bq.deposer(k, n, 1, 'sac'); CG.UI.toast(o.ic + ' ' + o.noms[n] + ' : rangé ' + Iv.ou(z) + '.'); } }; };
+  Eq.COURT = { pioche: 'Pour ramasser plus de minerai.', hache: 'Pour ramasser plus de bois et abattre des arbres.', gant: 'Pour cueillir plus de baies.' }; // chez les marchands : une phrase, sans chiffres
+  Eq.article = function (k, n) { const o = Eq.L[k]; return { icon: o.ic, label: o.noms[n], desc: '★'.repeat(n) + ' ' + Eq.COURT[k], prix: Eq.PRIX[n], stock: 1, buy: () => { const z = Bq.deposer(k, n, 1, 'sac'); CG.UI.toast(o.ic + ' ' + o.noms[n] + ' : rangé ' + Iv.ou(z) + '.'); } }; };
   if (CG.Outils && CG.Outils.stock) { const s0 = CG.Outils.stock; CG.Outils.stock = function (role) { const l = s0.apply(this, arguments) || [];
       const ks = role === 'nain' ? ['pioche', 'hache'] : role === 'elfe' ? ['gant'] : role === 'sorciere' ? [] : Math.random() < 0.6 ? [CG.pick(Object.keys(Eq.L))] : [];
       return l.concat(ks.map(k => Eq.article(k, qualite()))); }; }
   if (CG.Lapins && CG.Lapins.stock) { const s1 = CG.Lapins.stock; CG.Lapins.stock = function () { const l = s1.apply(this, arguments) || []; if (Math.random() < 0.7) { const k = CG.pick(Object.keys(Eq.L)); l.push(Eq.article(k, Math.random() < 0.6 ? 2 : 3)); } return l; }; }
   // très rarement, au fond d'un coffre (un peu moins rarement dans un donjon)
   { const oc0 = D.openChest; D.openChest = function (c) { const r = oc0.apply(this, arguments);
-      if (c && c.kind !== 'piege' && Math.random() < (c.biome ? Eq.DONJON : Eq.COFFRE)) { const k = CG.pick(Object.keys(Eq.L)), n = qualite(), o = Eq.L[k], z = Bq.deposer(k, n, 1, 'sac'); G.puff(c.x, c.y - 20, '#ffe9b8', 24, 150, 4); CG.sfx('discovery');
-        G.banner(o.ic + ' ' + o.noms[n] + ' !', 'Une trouvaille très rare au fond du coffre (' + pc(n) + ' ' + o.chef + '). Elle est rangée ' + Iv.ou(z) + '.', '#ffe9b8'); }
+      if (c && c.kind !== 'piege' && Math.random() < (c.biome ? Eq.DONJON : Eq.COFFRE)) { const k = CG.pick(Object.keys(Eq.L)), n = qualite(); if (CG.Objets && CG.Objets.lacher) CG.Objets.lacher(c.x, c.y, k, n); else Bq.deposer(k, n, 1, 'sac'); } // l'outil tombe par terre avec le reste (objets.js)
       return r; }; }
 })(window.CG);

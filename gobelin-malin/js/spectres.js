@@ -60,9 +60,9 @@
     const sec = CG.Secrets ? CG.Secrets.liste()[0] : null, xp = 25 + 5 * S.day, opts = [];
     opts.push({ label: '🛡️ Veille sur moi', sub: 'Jusqu\'à demain matin, tu reçois 20 % de dégâts en moins', fn: () => { S.veille = S.day; parti('👻 Les ancêtres veillent sur toi jusqu\'à demain matin : 20 % de dégâts en moins.'); } });
     if (sec) opts.push({ label: '🗝️ Dis-moi un secret', sub: 'Les morts voient ce que les vivants ne remarquent pas', fn: () => { const dx = sec.x * T - f.x, dy = sec.y * T - f.y, d = Math.round(Math.hypot(dx, dy) / T), dir = DIRS[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
-      parti(); UI.dialog({ who: 'L\'ancien chef', tag: '👻 un murmure', text: '« Il y a ' + (sec.k === 'arbre' ? 'un arbre au tronc creux' : 'un rocher fendu') + ', ' + dir + ' de ton feu, à ' + d + ' cases à peu près. Pousse dedans, petit. Tu verras bien. »', options: [{ label: 'Merci, ancêtre' }] }); } });
+      parti(); UI.dialog({ who: 'L\'ancien chef', tag: '👻 un murmure', text: '« Il y a ' + CG.Secrets.nom(sec) + ', ' + dir + ' de ton feu, à ' + d + ' cases à peu près. Va voir ça de près, petit. Tu verras bien. »', options: [{ label: 'Merci, ancêtre' }] }); } });
     opts.push({ label: '✨ Raconte-moi ta vie', sub: 'Tu apprends de ses batailles : +' + xp + ' XP', fn: () => { G.addXp(xp); parti('👻 L\'ancien chef t\'a raconté ses batailles : +' + xp + ' XP.'); } });
-    opts.push({ label: '🙏 Repose en paix', sub: 'Tu le laisses tranquille pour l\'instant' });
+    opts.push({ label: '💭 Laisse-moi y réfléchir', sub: 'L\'ancien chef t\'attendra ici' });
     UI.dialog({ visitor: v, who: 'L\'ancien chef', tag: '👻 un spectre qui ne te veut aucun mal', text: '« N\'aie pas peur, petit. J\'ai porté le bâton de chef bien avant toi, quand ces arbres n\'étaient que des glands. Ça fait du bien de voir un gobelin debout. Laisse-moi t\'aider, une fois. Que veux-tu ? »', options: opts });
   };
   const tk0 = D.talk; D.talk = function (v) { if (v.spectre) return Sp.parler(v); return tk0.apply(this, arguments); };

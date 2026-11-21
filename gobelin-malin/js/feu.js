@@ -7,8 +7,8 @@
   Fe.RAYON = [160, 180, 200, 225]; // jusqu'où il réchauffe
   Fe.TECHS = ['f1', 'f2', 'f3'];
   Fe.POUDRES = {
-    bleu: { nom: 'Poudre d\'ardeur', icon: '🔵', prix: 260, jusqua: 13, cols: ['#2f8fff', '#9fe0ff', '#e8fbff'], desc: 'Ce soir, ton feu brûle bleu. Demain jusqu\'à 13 h, tout le clan travaille 50 % plus vite, marche plus vite et ne vient plus te poser de questions.', matin: 'La flamme bleue a donné de l\'ardeur au clan : tout le monde travaille plus fort jusqu\'à 13 h.' },
-    mauve: { nom: 'Poudre de bravoure', icon: '🟣', prix: 340, jusqua: 20, cols: ['#9a4ae0', '#d8a8ff', '#f6e8ff'], desc: 'Ce soir, ton feu brûle mauve. Demain toute la journée, tes gardes frappent 30 % plus fort, toi 15 %, et tes gobelins encaissent 30 % de dégâts en moins.', matin: 'La flamme mauve a rendu le clan brave : gardes plus forts et gobelins plus résistants jusqu\'au soir.' }
+    bleu: { nom: 'Poudre d\'ardeur', icon: '🔵', court: 'Demain matin, tout le clan travaille plus vite.', prix: 260, jusqua: 13, cols: ['#2f8fff', '#9fe0ff', '#e8fbff'], desc: 'Ce soir, ton feu brûle bleu. Demain jusqu\'à 13 h, tout le clan travaille 50 % plus vite, marche plus vite et ne vient plus te poser de questions.', matin: 'La flamme bleue a donné de l\'ardeur au clan : tout le monde travaille plus fort jusqu\'à 13 h.' },
+    mauve: { nom: 'Poudre de bravoure', icon: '🟣', court: 'Demain, tout le clan se bat mieux.', prix: 340, jusqua: 20, cols: ['#9a4ae0', '#d8a8ff', '#f6e8ff'], desc: 'Ce soir, ton feu brûle mauve. Demain toute la journée, tes gardes frappent 30 % plus fort, toi 15 %, et tes gobelins encaissent 30 % de dégâts en moins.', matin: 'La flamme mauve a rendu le clan brave : gardes plus forts et gobelins plus résistants jusqu\'au soir.' }
   };
   // le niveau du feu : il ne vient plus de l'arbre, on l'améliore au feu lui-même (E), contre des ressources et un niveau de chef suffisant.
   // Les anciennes parties gardent les crans déjà appris dans l'arbre (et leurs points de technologie sont rendus).
@@ -101,7 +101,7 @@
   };
 
   // ---------- les poudres : achetées à la sorcière, elles agissent le lendemain ----------
-  Fe.stock = () => Object.keys(Fe.POUDRES).map(k => { const P = Fe.POUDRES[k]; return { icon: P.icon, label: P.nom, desc: P.desc, prix: P.prix, stock: 1, buy: () => { CG.S.feuPoudre = k; CG.UI.toast(P.icon + ' ' + P.nom + ' : tu la jetteras dans le feu ce soir. Son effet commence demain matin.'); } }; });
+  Fe.stock = () => Object.keys(Fe.POUDRES).map(k => { const P = Fe.POUDRES[k]; return { icon: P.icon, label: P.nom, desc: P.court || P.desc, prix: P.prix, stock: 1, buy: () => { CG.S.feuPoudre = k; CG.UI.toast(P.icon + ' ' + P.nom + ' : tu la jetteras dans le feu ce soir. Son effet commence demain matin.'); } }; });
   const nd = D.nextDay;
   D.nextDay = function () {
     const S0 = CG.S, k = S0.feuPoudre; const r = nd.apply(this, arguments);

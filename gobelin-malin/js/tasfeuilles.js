@@ -17,7 +17,7 @@
       if (S.buildings.some(b => x >= b.tx - 2 && x <= b.tx + b.w + 1 && y >= b.ty - 2 && y <= b.ty + b.h + 1)) continue;
       try { if (W.reachable && !W.reachable(x, y)) continue; } catch (e) { /* rien */ }
       const q = pos(x, y), k = Math.random(); let c = null;
-      if (!trou && S.day >= Ta.JOUR_TROU && k < Ta.TROU && (!CG.Secrets || !CG.Secrets.bonTrou || CG.Secrets.bonTrou(x, y))) { c = 'trou'; trou = true; } else if (k < Ta.TROU + Ta.OBJET) c = 'objet';
+      if (!trou && S.day >= Ta.JOUR_TROU && k < Ta.TROU && (!CG.Secrets || !CG.Secrets.bonTrou || CG.Secrets.bonTrou(x, y)) && !(CG.Secrets && CG.Secrets.repos && CG.Secrets.repos('trouFeuilles'))) { c = 'trou'; trou = true; } else if (k < Ta.TROU + Ta.OBJET) c = 'objet';
       l.push({ tx: x, ty: y, x: q.x, y: q.y, c, v: Math.floor(Math.random() * 3), f: 0, fini: false }); }
     S.tas = { day: S.day, l }; return l;
   };
@@ -25,7 +25,7 @@
   // ---------- ce qu'il y avait dessous ----------
   function decouvrir(s) {
     const S = CG.S, d = S.day;
-    if (s.c === 'trou' && CG.Secrets) { CG.Secrets.liste(); if (S.secrets && S.secrets.l && !S.secrets.l.some(o => o.k === 'trou' && o.x === s.tx && o.y === s.ty)) S.secrets.l.push({ x: s.tx, y: s.ty, k: 'trou', fait: false }); return; }
+    if (s.c === 'trou' && CG.Secrets) { CG.Secrets.liste(); if (S.secrets && S.secrets.l && !S.secrets.l.some(o => o.k === 'trou' && o.x === s.tx && o.y === s.ty)) S.secrets.l.push({ x: s.tx, y: s.ty, k: 'trou', tas: true, fait: false }); return; }
     if (s.c !== 'objet') return; const k = Math.random();
     if (k < 0.4) G.dropRes(s.x, s.y, 'or', CG.irand(8, 16) + d * 2); else if (k < 0.58) G.dropRes(s.x, s.y, 'food', CG.irand(4, 8)); else if (k < 0.72) G.dropRes(s.x, s.y, 'minerai', CG.irand(3, 6));
     else if (k < 0.87) G.drop(s.x, s.y, { kind: 'potion', n: 1 }); else for (let i = 0; i < 3; i++) G.drop(s.x, s.y, { kind: 'xp', n: 3 + d });

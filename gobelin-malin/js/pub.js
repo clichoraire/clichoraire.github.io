@@ -18,7 +18,7 @@
   const sh0 = UI.shop; UI.shop = function (v) {
     const S = CG.S;
     if (v && v.shop && v.pubVu === undefined && Pu.ROLES.includes(v.role)) { v.pubVu = Math.random() < Pu.OFFRE;
-      if (v.pubVu) [1, 2, 3].forEach(n => { const N = Pu.NIV[n]; v.shop.push({ pub: n, icon: N.icon, label: 'Publicité : ' + N.nom, desc: N.desc + ' Pendant ' + N.jours + ' jours, ' + Math.round(N.chance * 100) + ' % de chances chaque matin que des gobelins errants viennent frapper à ta porte. Il repart tout de suite faire sa tournée.', prix: N.prix, stock: 1,
+      if (v.pubVu) [1, 2, 3].forEach(n => { const N = Pu.NIV[n]; v.shop.push({ pub: n, icon: N.icon, label: 'Publicité : ' + N.nom, desc: ['', 'Attire peut-être de nouveaux gobelins.', 'Attire souvent de nouveaux gobelins.', 'Attire presque à coup sûr de nouveaux gobelins.'][n], prix: N.prix, stock: 1,
         buy: () => { v.pub = n; v.shop.forEach(it => { if (it.pub) it.stock = 0; }); const a = S.pub, f = S.day + N.jours; S.pub = { niv: a && a.fin >= S.day ? Math.max(a.niv, n) : n, jour: S.day, fin: a && a.fin >= S.day ? Math.max(a.fin, f) : f }; UI.toast(N.icon + ' ' + N.nom + ' : le marchand part vanter ton clan. Des gobelins errants pourraient arriver dès demain.'); } }); }); }
     return sh0.apply(this, arguments);
   };

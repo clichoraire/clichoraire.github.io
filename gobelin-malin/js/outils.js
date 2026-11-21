@@ -30,7 +30,7 @@
   // chez les marchands
   Ou.stock = function (role) {
     const l = role === 'nain' ? ['brouette', 'traineau'] : role === 'elfe' ? ['panier', 'gibeciere'] : role === 'sorciere' ? [] : CG.shuffle(Object.keys(Ou.L)).slice(0, 2);
-    return l.map(k => { const o = Ou.L[k]; return { icon: o.ic, label: o.nom, desc: 'Un objet spécial à confier à un gobelin (sa fiche, troisième case). ' + o.effet + '.', prix: o.prix, stock: 1, buy: () => { const z = CG.Inventaire ? CG.Inventaire.ajouter(k, 1, 'sac') : 'coffre'; if (CG.UI && CG.Inventaire) CG.UI.toast(o.ic + ' ' + o.nom + ' : rangé ' + CG.Inventaire.ou(z) + '.'); } }; });
+    return l.map(k => { const o = Ou.L[k]; return { icon: o.ic, label: o.nom, desc: 'Pour un ' + CG.JOBS[o.job].nom.toLowerCase() + ' : il rapporte plus à chaque voyage.', prix: o.prix, stock: 1, buy: () => { const z = CG.Inventaire ? CG.Inventaire.ajouter(k, 1, 'sac') : 'coffre'; if (CG.UI && CG.Inventaire) CG.UI.toast(o.ic + ' ' + o.nom + ' : rangé ' + CG.Inventaire.ou(z) + '.'); } }; });
   };
   // ---------- dessin : l'outil suit le gobelin au travail ----------
   const rr = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); }, el = (g, x, y, rx, ry, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); g.fill(); };

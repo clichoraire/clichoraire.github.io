@@ -16,7 +16,7 @@
     const p = CG.S.player, n = tirer(Tr.POIDS), vie = Math.random() < 0.5;
     G.drop(c.x, c.y, { kind: vie ? 'coeurOr' : 'manaOr', n }); void p; // il ne va plus tout seul dans la poche : il tombe par terre, à ramasser (objets.js)
     G.puff(c.x, c.y - 20, '#ffd84a', 26, 150, 4); CG.sfx('discovery');
-    G.banner(vie ? '💛 Un cœur d\'or !' : '💛 Une perle d\'or !', 'Un objet rare est tombé du coffre : ramasse-le pour gagner +' + n + (vie ? ' de vie' : ' de mana') + ' maximum, pour toujours.', '#ffe9a8');
+    G.banner(vie ? '💛 Un cœur d\'or !' : '💛 Une perle d\'or !', 'Un objet rare est tombé du coffre. Ramasse-le !', '#ffe9a8');
     return r;
   };
 

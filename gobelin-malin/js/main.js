@@ -49,7 +49,7 @@
   function majZoom() { const m = document.getElementById('zoom-moins'), p = document.getElementById('zoom-plus'); if (m) m.disabled = zoom === ZOOMS[0]; if (p) p.disabled = zoom === ZOOMS[ZOOMS.length - 1]; }
   { const m = document.getElementById('zoom-moins'), p = document.getElementById('zoom-plus'); if (m) m.onclick = () => CG.zoomer(-1); if (p) p.onclick = () => CG.zoomer(1); majZoom(); }
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, 2) * (window.GMPerf ? window.GMPerf.res : 1); // la finesse du dessin baisse toute seule sur un ordinateur qui peine (perf.js)
     const w = window.innerWidth, h = window.innerHeight;
     scale = Math.max(h / 640, w / 1320) * zoom; vw = w / scale; vh = h / scale;
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);

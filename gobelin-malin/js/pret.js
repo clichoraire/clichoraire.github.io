@@ -13,8 +13,8 @@
   };
   St.pretTxt = function () {
     const p = CG.S.player, pr = p.pret; if (!pr) return '';
-    if (pr.id) { const i = p.spells.lastIndexOf(pr.id), sp = CG.SPELLS[pr.id]; return 'Tu connais le sort ' + sp.icon + ' ' + sp.nom + (i >= 0 && i < 10 ? ' (touche ' + touche(i) + ')' : '') + '. ' + sp.desc; }
-    const sp = CG.SPELLS[pr.niv]; return 'Toutes tes touches sont prises : ton sort ' + sp.icon + ' ' + sp.nom + ' gagne un niveau.';
+    if (pr.id) { const i = p.spells.lastIndexOf(pr.id), sp = CG.SPELLS[pr.id]; return 'La statue te prête le sort ' + sp.icon + ' ' + sp.nom + ' !'; }
+    const sp = CG.SPELLS[pr.niv]; return 'Ton sort ' + sp.icon + ' ' + sp.nom + ' devient plus fort !';
   };
   St.finPret = function () {
     const p = CG.S.player, pr = p.pret, N = Nv(); if (!pr) return; delete p.pret;

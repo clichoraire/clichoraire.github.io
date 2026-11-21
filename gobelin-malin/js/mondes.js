@@ -6,7 +6,7 @@
   const G = CG.G, D = CG.D, W = CG.W, UI = CG.UI, Art = CG.Art, T = CG.TILE, Mo = CG.Mondes = {};
   const rand = CG.rand, pick = CG.pick, dist = CG.dist, TAU = Math.PI * 2;
   // ce qui suit le chef d'un monde à l'autre ; tout le reste de la sauvegarde appartient au monde où l'on est
-  const GLOBAL = ['v', 'seed', 'name', 'player', 'tech', 'nextId', 'diff', 'stats', 'chefEvo', 'chefFun', 'chefHat', 'chefHatOwned', 'statBuffs', 'autelsDone', 'policy', 'monde', 'ailleurs', 'demon', 'chef2', 'dehors', 'pyramide'];
+  const GLOBAL = ['v', 'seed', 'name', 'player', 'tech', 'nextId', 'diff', 'stats', 'chefEvo', 'chefFun', 'chefHat', 'chefHatOwned', 'statBuffs', 'autelsDone', 'policy', 'monde', 'ailleurs', 'demon', 'chef2', 'dehors', 'pyramide', 'secretsVu'];
   Mo.GLOBAL = GLOBAL;
   Mo.NOMS = ['la forêt', 'le marais'];
   Mo.ici = () => (CG.S && CG.S.monde) || 0;

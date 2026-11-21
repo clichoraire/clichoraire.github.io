@@ -7,7 +7,7 @@
   const COUL = { def: '#6f93a8', clan: '#c98a3a', guer: '#d04a34', sorc: '#8f6fe0', mode: '#35b3a0', bonus: '#ffd84a' };
   const BY = () => CG.TECH_BY_ID;
   V.vue = () => 2; // un seul visuel : les anneaux
-  const enPlan = id => !!(CG.S && CG.S.tech && CG.S.tech.plans && CG.S.tech.plans[id]); // débloquée par un plan acheté (plans.js) : elle ne compte pas pour atteindre ses voisines
+  const enPlan = id => false; // une case débloquée par un plan acheté (plans.js) compte maintenant comme une case apprise : elle ouvre ses voisines
   const vraie = id => G.tech(id) && !enPlan(id);
   // un coin n'est plus une case à apprendre : c'est une simple jointure, qu'on franchit dès qu'on tient une de ses deux voisines
   const tenu = id => id === 'centre' || (BY()[id] && BY()[id].vide ? (plan(2).acces[id] || []).some(a => a !== 'centre' && !(BY()[a] && BY()[a].vide) && vraie(a)) : vraie(id));

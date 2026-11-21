@@ -8,7 +8,7 @@
   const G = CG.G, D = CG.D, W = CG.W, Art = CG.Art, T = CG.TILE, TAU = Math.PI * 2;
   const Pa = CG.Parasol = { SOIN: 5, PRES: 26, BLESSE: 0.7, POUSSE: 1.6, COUT: { bois: 12, cuir: 4 } };
   CG.BUILDS.parasol = { nom: 'Parasol', icon: '⛱️', w: 1, h: 1, cat: 'clan', on: 'road', cout: Pa.COUT, tile: 'flat', flat: true,
-    desc: 'Un coin d\'ombre pour se reposer. Une seule personne à la fois : toi, ou un gobelin blessé. On y regagne ' + Pa.SOIN + ' points de vie toutes les 15 minutes. On peut marcher dessous.' };
+    desc: 'Un point sombre pour se reposer.' };
   if (CG.START_BUILDS && !CG.START_BUILDS.includes('parasol')) CG.START_BUILDS.push('parasol');
   const pied = b => ({ x: (b.tx + 0.5) * T, y: (b.ty + 0.5) * T + 6 }), milieu = b => ({ x: (b.tx + b.w / 2) * T, y: (b.ty + b.h / 2) * T + 12 });
   const parasols = () => CG.S.buildings.filter(b => b.type === 'parasol' && !b.site);

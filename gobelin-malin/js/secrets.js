@@ -5,42 +5,52 @@
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, UI = CG.UI, W = CG.W, Art = CG.Art, T = CG.TILE, TAU = Math.PI * 2, rand = CG.rand;
-  const Se = CG.Secrets = { MAX: 2, DON: 10, POUSSE: 0.4, LOIN: 9, COUPS: 4, MAGIE: 3, ECART: 18, MEMOIRE: 16, FEUILLES: 0.15, SOIN: 150 }; // COUPS : coups pour briser un rocher fendu ; MAGIE : secondes que dure le don de la fée
+  const Se = CG.Secrets = { MAX: 2, DON: 10, POUSSE: 0.4, LOIN: 9, COUPS: 4, MAGIE: 3, ECART: 18, MEMOIRE: 16, FEUILLES: 0.15, SOIN: 150, REPOS: 7 }; // COUPS : coups pour briser un rocher fendu ; MAGIE : secondes que dure le don de la fée
   const ici = () => (CG.Mondes ? CG.Mondes.ici() : 0);
+  const SOL = { trou: 1, animal: 1, rond: 1, fleur: 1, papillon: 1 }; // les secrets posés au ras du sol, sur une case libre
   // où est le passage, au pixel près : le pied du tronc, ou le milieu du rocher
-  Se.pos = s => { if (s.k === 'feuilles') return { x: s.px, y: s.py }; if (s.k === 'trou' || s.k === 'animal') return { x: s.x * T + T / 2 + (W.hash(s.x, s.y) - 0.5) * 14, y: s.y * T + T / 2 + (W.hash(s.y, s.x) - 0.5) * 10 }; if (s.k === 'arbre') { const h = W.hash(s.x, s.y); return { x: s.x * T + T / 2 + (W.hash(s.y, s.x) - 0.5) * 12, y: s.y * T + T / 2 + (h * 7 % 1 - 0.5) * 8 + 14 }; } return { x: s.x * T + T / 2, y: s.y * T + T / 2 + 8 }; };
+  Se.pos = s => { if (s.k === 'feuilles') return { x: s.px, y: s.py }; if (s.k === 'papillon' && s.ox !== undefined) return { x: s.ox, y: s.oy }; if (SOL[s.k]) return { x: s.x * T + T / 2 + (W.hash(s.x, s.y) - 0.5) * 14, y: s.y * T + T / 2 + (W.hash(s.y, s.x) - 0.5) * 10 }; if (s.k === 'arbre') { const h = W.hash(s.x, s.y); return { x: s.x * T + T / 2 + (W.hash(s.y, s.x) - 0.5) * 12, y: s.y * T + T / 2 + (h * 7 % 1 - 0.5) * 8 + 14 }; } return { x: s.x * T + T / 2, y: s.y * T + T / 2 + 8 }; };
   Se.TROU = { VILLAGE: 22, ROUTE: 4, BORD: 16, CACHE: 0.5, CACHE_VILLAGE: 11 }; /* le trou de la fée : loin du feu (cases), loin de tout sentier, pas trop loin du bord de la carte ; CACHE : une fois sur deux, il est sous un rocher ou un buisson à récolter */
   Se.bonTrou = function (x, y, cache) { let f; try { f = G.firePos(); } catch (e) { f = null; } const L = Se.TROU; /* cache : sous un rocher ou un buisson, il suffit d'être hors du village (il n'y a guère de buissons au bord de la carte) */
     if (f && Math.hypot(x - f.x / T, y - f.y / T) < (cache ? L.CACHE_VILLAGE : L.VILLAGE)) return false; if (cache) return true; if (Math.min(x, y, CG.MW - 1 - x, CG.MH - 1 - y) > L.BORD) return false;
     for (let dy = -L.ROUTE; dy <= L.ROUTE; dy++) for (let dx = -L.ROUTE; dx <= L.ROUTE; dx++) { const X = x + dx, Y = y + dy; if (W.inMap(X, Y) && W.tile[W.idx(X, Y)] === W.PATH) return false; } return true; };
   const dessus = s => (W.nodes || []).find(n => n.x === s.x && n.y === s.y && (n.type === 'bush' || n.type === 'ore')); /* ce qui cache le trou, tant qu'on ne l'a pas récolté */
-  const tient = s => s.k === 'trou' && s.sous ? (() => { const n = dessus(s); return !n || !!n.gone; })() : s.k === 'trou' || s.k === 'animal' ? W.walkTile(s.x, s.y) : W.tile[W.idx(s.x, s.y)] === (s.k === 'arbre' ? W.TREE : W.ROCK);
-  // Le tirage du jour. Quatre sortes de secrets : l'arbre creux, le rocher fendu, le trou dans l'herbe, l'animal blessé.
-  // Jamais deux fois de suite au même endroit : on garde en mémoire les derniers endroits (S.secretsHist) et on s'en tient loin,
-  // et on évite autant que possible les sortes de la veille.
+  const tient = s => s.k === 'trou' && s.sous ? (() => { const n = dessus(s); return !n || !!n.gone; })() : SOL[s.k] ? W.walkTile(s.x, s.y) : W.tile[W.idx(s.x, s.y)] === (s.k === 'arbre' ? W.TREE : W.ROCK);
+  // Le tirage du jour. Dix sortes de secrets : l'arbre creux, le rocher fendu, le trou dans l'herbe, le trou sous un rocher à miner,
+  // le trou sous un buisson, le trou sous un tas de feuilles (tasfeuilles.js), l'animal blessé, le rond de champignons, la fleur
+  // bleue, le papillon doré — et les feuilles d'or. Une sorte qu'on vient de DÉCOUVRIR se repose : on ne la revoit pas avant
+  // Se.REPOS jours (S.secretsVu). S'il ne reste aucune sorte reposée, il n'y a pas de secret ce jour-là.
+  // Jamais deux fois de suite au même endroit non plus : on garde en mémoire les derniers endroits (S.secretsHist) et on s'en
+  // tient loin, et on évite autant que possible les sortes de la veille (même pas trouvées).
+  Se.sorte = s => s.k === 'trou' ? (s.tas ? 'trouFeuilles' : s.sous ? ((s.cache || (dessus(s) || {}).type) === 'bush' ? 'trouBuisson' : 'trouRoche') : 'trou') : s.k;
+  Se.repos = k => { const S = CG.S, v = S && S.secretsVu; return !!v && v[k] !== undefined && S.day >= v[k] && S.day - v[k] < Se.REPOS; };
+  Se.noter = s => { const S = CG.S; if (S) (S.secretsVu = S.secretsVu || {})[Se.sorte(s)] = S.day; };
+  Se.NOMS = { arbre: 'un arbre au tronc creux', roche: 'un rocher fendu', trou: 'un trou dans l\'herbe', trouRoche: 'quelque chose sous un rocher à miner', trouBuisson: 'quelque chose sous un buisson', trouFeuilles: 'quelque chose sous un tas de feuilles', animal: 'un petit faon blessé', rond: 'un rond de champignons', fleur: 'une fleur bleue qui brille', papillon: 'un papillon doré' };
+  Se.nom = s => Se.NOMS[Se.sorte(s)] || 'quelque chose d\'étrange';
   Se.tirer = function () {
-    const S = CG.S, f = G.firePos(), fx = Math.floor(f.x / T), fy = Math.floor(f.y / T), n = Math.random() < 0.5 ? Se.MAX : 1, l = [], C = { arbre: [], roche: [], trou: [], animal: [] };
-    const hist = S.secretsHist || (S.secretsHist = []), hier = S.secrets && S.secrets.l ? S.secrets.l.map(s => s.k) : [];
+    const S = CG.S, f = G.firePos(), fx = Math.floor(f.x / T), fy = Math.floor(f.y / T), n = Math.random() < 0.5 ? Se.MAX : 1, l = [], C = { arbre: [], roche: [], trou: [], trouRoche: [], trouBuisson: [], animal: [] };
+    const hist = S.secretsHist || (S.secretsHist = []), hier = S.secrets && S.secrets.l ? S.secrets.l.map(Se.sorte) : [];
     const acces = (x, y) => { try { return !W.reachable || W.reachable(x, y); } catch (e) { return true; } };
     for (let y = 3; y < CG.MH - 3; y++) for (let x = 3; x < CG.MW - 3; x++) {
       const t = W.tile[W.idx(x, y)]; if (Math.hypot(x - fx, y - fy) < Se.LOIN) continue;
-      if ((t === W.GRASS || t === W.CLEAR) && W.walkTile(x, y)) { // du sol libre : un trou, ou un animal blessé
+      if ((t === W.GRASS || t === W.CLEAR) && W.walkTile(x, y)) { // du sol libre : un trou, un animal blessé, un rond de champignons, une fleur, un papillon
         if (S.buildings.some(b => x >= b.tx - 2 && x <= b.tx + b.w + 1 && y >= b.ty - 2 && y <= b.ty + b.h + 1) || !acces(x, y)) continue;
-        if (Se.bonTrou(x, y)) C.trou.push({ x, y, k: 'trou', fait: false }); C.animal.push({ x, y, k: 'animal', fait: false }); continue; }
+        if (Se.bonTrou(x, y)) C.trou.push({ x, y }); C.animal.push({ x, y }); continue; }
       const k = t === W.TREE ? 'arbre' : t === W.ROCK ? 'roche' : null; if (!k || !W.walkTile(x, y + 1)) continue;
       let cache = false; for (let dy = 1; dy <= 3 && !cache; dy++) for (let dx = -1; dx <= 1; dx++) if (W.tile[W.idx(x + dx, y + dy)] === W.TREE) { cache = true; break; } if (cache) continue; // un arbre devant le cacherait
       if (S.buildings.some(b => x >= b.tx - 1 && x <= b.tx + b.w && y >= b.ty - 1 && y <= b.ty + b.h)) continue;
-      C[k].push({ x, y, k, fait: false });
+      C[k].push({ x, y });
     }
+    C.rond = C.fleur = C.papillon = C.animal; // n'importe quel coin d'herbe libre
+    (W.nodes || []).forEach(o => { if (o.gone || !Se.bonTrou(o.x, o.y, true)) return; if (o.type === 'ore') C.trouRoche.push(o); else if (o.type === 'bush') C.trouBuisson.push(o); }); /* caché : on ne le verra qu'une fois le rocher miné ou le buisson cueilli */
+    const mk = (k, o) => k === 'trouRoche' || k === 'trouBuisson' ? { x: o.x, y: o.y, k: 'trou', sous: true, cache: o.type, fait: false } : { x: o.x, y: o.y, k, fait: false };
     const loin = (c, r) => !hist.some(h => Math.hypot(h.x - c.x, h.y - c.y) < r) && !l.some(o => Math.hypot(o.x - c.x, o.y - c.y) < Math.max(r, 12));
-    const sortes = CG.shuffle(Object.keys(C).filter(k => C[k].length)).sort((a, b) => hier.includes(a) - hier.includes(b)); // les sortes d'hier passent en dernier
-    for (const r of [Se.ECART, Se.ECART / 2, 5]) { // d'abord bien loin des derniers endroits, quitte à changer de sorte ; on ne se rapproche que s'il n'y a vraiment rien d'autre
-      for (const k of sortes) { if (l.length >= n) break; if (l.some(o => o.k === k)) continue; const c = C[k].filter(o => loin(o, r)); if (c.length) l.push(c[Math.floor(Math.random() * c.length)]); }
-      if (l.length >= n) break; }
-    l.forEach(s => { if (s.k !== 'trou' || Math.random() >= Se.TROU.CACHE) return; const c = (W.nodes || []).filter(n => (n.type === 'bush' || n.type === 'ore') && !n.gone && Se.bonTrou(n.x, n.y, true)); if (!c.length) return; const n = c[Math.floor(Math.random() * c.length)]; s.x = n.x; s.y = n.y; s.sous = true; }); /* caché : il n'apparaît qu'une fois le buisson cueilli ou le rocher pioché */
+    const sortes = CG.shuffle(Object.keys(C).filter(k => C[k].length && !Se.repos(k))).sort((a, b) => hier.includes(a) - hier.includes(b)); // les sortes au repos sont écartées ; celles d'hier passent en dernier
+    for (const k of sortes) { if (l.length >= n) break; // la variété d'abord : chaque sorte à son tour, le plus loin possible des derniers endroits (on ne se rapproche que s'il n'y a rien d'autre)
+      for (const r of [Se.ECART, Se.ECART / 2, 5]) { const c = C[k].filter(o => loin(o, r)); if (c.length) { l.push(mk(k, c[Math.floor(Math.random() * c.length)])); break; } } }
     l.forEach(s => hist.push({ x: s.x, y: s.y })); while (hist.length > Se.MEMOIRE) hist.shift();
     S.secrets = { day: S.day, l };
-    if (!S.feuilles && S.day >= 2 && Math.random() < Se.FEUILLES) Se.semer(); // rare : des feuilles dorées à retrouver
+    if (!S.feuilles && S.day >= 2 && Math.random() < Se.FEUILLES && !Se.repos('feuilles')) Se.semer(); // rare : des feuilles dorées à retrouver
     return l;
   };
   // les feuilles dorées : quatre à six, semées loin les unes des autres. Elles restent jusqu'à ce qu'on les ait toutes trouvées.
@@ -57,6 +67,60 @@
   // ---------- la chambre : une scène à part, par-dessus le jeu ----------
   let cv = null, gx = null, raf = 0;
   const ell = (g, x, y, rx, ry, f, r) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, rx, ry, r || 0, 0, TAU); g.fill(); };
+  // la tête de la Grande Fée : de longs cheveux d'or qui ondulent, de grands yeux violets qui clignent, des oreilles pointues,
+  // une frange de côté et une couronne de fleurs. Quand elle fait son don (don > 0), elle ferme les yeux et rit.
+  const feeOr = (g, cx, fy) => { const or = g.createLinearGradient(cx, fy - 112, cx, fy + 72); or.addColorStop(0, '#ffe994'); or.addColorStop(0.45, '#f7c444'); or.addColorStop(1, '#de962a'); return or; };
+  // les cheveux du dos, dessinés avant la robe et les bras : deux grandes vagues qui descendent jusqu'à la taille
+  function feeDos(g, cx, fy, t) {
+    const sw = Math.sin(t * 1.3) * 4, sw2 = Math.sin(t * 1.3 + 0.9) * 3, or = feeOr(g, cx, fy);
+    g.fillStyle = or; g.beginPath(); g.moveTo(cx - 28, fy - 92);
+    g.bezierCurveTo(cx - 54, fy - 70, cx - 50, fy - 20, cx - 56 + sw, fy + 14); g.bezierCurveTo(cx - 60 + sw, fy + 40, cx - 42 + sw2, fy + 52, cx - 47 + sw2, fy + 72);
+    g.bezierCurveTo(cx - 30 + sw2, fy + 60, cx - 22, fy + 44, cx - 16, fy + 30); g.lineTo(cx + 16, fy + 30);
+    g.bezierCurveTo(cx + 22, fy + 44, cx + 30 + sw2, fy + 60, cx + 47 + sw2, fy + 72); g.bezierCurveTo(cx + 42 + sw2, fy + 52, cx + 60 + sw, fy + 40, cx + 56 + sw, fy + 14);
+    g.bezierCurveTo(cx + 50, fy - 20, cx + 54, fy - 70, cx + 28, fy - 92); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(186,116,20,0.4)'; g.lineWidth = 1.4; g.lineCap = 'round';
+    [-1, 1].forEach(s => [0.6, 0.8, 0.95].forEach((k, i) => { g.beginPath(); g.moveTo(cx + s * 30 * k, fy - 56); g.bezierCurveTo(cx + s * 47 * k, fy - 20, cx + s * 45 * k + sw * 0.6, fy + 20, cx + s * 50 * k + sw2 * 0.8, fy + 58 - i * 6); g.stroke(); }));
+  }
+  function feeTete(g, cx, fy, t, don) {
+    const sw = Math.sin(t * 1.3) * 4, sw2 = Math.sin(t * 1.3 + 0.9) * 3, hy = fy - 70, joie = don > 0.3, cligne = (t % 4.3) < 0.13, or = feeOr(g, cx, fy);
+    // le cou, le haut de la robe et son petit bijou
+    g.fillStyle = '#f2cdb0'; g.fillRect(cx - 7, fy - 47, 14, 13);
+    g.fillStyle = '#f6f0ff'; g.beginPath(); g.moveTo(cx - 22, fy - 44); g.lineTo(cx - 6, fy - 40); g.lineTo(cx, fy - 35); g.lineTo(cx + 6, fy - 40); g.lineTo(cx + 22, fy - 44); g.lineTo(cx + 16, fy - 14); g.lineTo(cx - 16, fy - 14); g.closePath(); g.fill();
+    ell(g, cx, fy - 30, 3.4, 3.4, '#ffd86a'); ell(g, cx, fy - 30, 2, 2, '#8ad8ff'); ell(g, cx - 0.7, fy - 30.8, 0.7, 0.7, '#fff');
+    // les oreilles pointues
+    [-1, 1].forEach(s => { g.fillStyle = '#fbd9bd'; g.beginPath(); g.moveTo(cx + s * 24, hy - 8); g.quadraticCurveTo(cx + s * 40, hy - 15, cx + s * 46, hy - 27); g.quadraticCurveTo(cx + s * 35, hy - 1, cx + s * 25, hy + 7); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(238,150,140,0.5)'; g.beginPath(); g.moveTo(cx + s * 27, hy - 6); g.quadraticCurveTo(cx + s * 37, hy - 11, cx + s * 41, hy - 20); g.quadraticCurveTo(cx + s * 34, hy - 3, cx + s * 27, hy + 2); g.closePath(); g.fill(); });
+    // le visage : des joues rondes et un petit menton
+    const peau = g.createRadialGradient(cx - 6, hy - 10, 4, cx, hy, 38); peau.addColorStop(0, '#fff2e4'); peau.addColorStop(1, '#fbd9bd');
+    g.fillStyle = peau; g.beginPath(); g.moveTo(cx - 27, hy - 6); g.bezierCurveTo(cx - 28, hy + 20, cx - 12, hy + 32, cx, hy + 32); g.bezierCurveTo(cx + 12, hy + 32, cx + 28, hy + 20, cx + 27, hy - 6); g.bezierCurveTo(cx + 27, hy - 36, cx - 27, hy - 36, cx - 27, hy - 6); g.closePath(); g.fill();
+    [-1, 1].forEach(s => ell(g, cx + s * 17, hy + 13, 6.2, 3.5, 'rgba(255,128,150,0.38)'));
+    const ey = hy + 2;
+    [-1, 1].forEach(s => { const ex = cx + s * 11.5; g.lineCap = 'round';
+      if (joie || cligne) { g.strokeStyle = '#3a2244'; g.lineWidth = 2.4; g.beginPath(); if (joie) { g.moveTo(ex - 6, ey + 2); g.quadraticCurveTo(ex, ey - 7, ex + 6, ey + 2); } else { g.moveTo(ex - 6, ey); g.quadraticCurveTo(ex, ey + 4, ex + 6, ey); } g.stroke(); }
+      else { ell(g, ex, ey, 6.4, 7.6, '#ffffff');
+        const iris = g.createLinearGradient(ex, ey - 6, ex, ey + 7); iris.addColorStop(0, '#5a2fb0'); iris.addColorStop(1, '#b997ff');
+        ell(g, ex + s * 0.4, ey + 0.8, 4.8, 6, iris); ell(g, ex + s * 0.4, ey + 1, 2.3, 3.1, '#1e1238'); ell(g, ex - 1.6, ey - 2.4, 1.9, 2.1, '#fff'); ell(g, ex + 1.8, ey + 3.2, 0.9, 0.9, 'rgba(255,255,255,0.85)');
+        g.strokeStyle = '#3a2244'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(ex - s * 6.6, ey - 2.5); g.quadraticCurveTo(ex, ey - 10.5, ex + s * 7.2, ey - 3.5); g.stroke(); // la paupière et ses cils
+        g.lineWidth = 1.5; g.beginPath(); g.moveTo(ex + s * 7.2, ey - 3.5); g.lineTo(ex + s * 10.4, ey - 6.5); g.moveTo(ex + s * 5.6, ey - 6.6); g.lineTo(ex + s * 8, ey - 10.2); g.stroke(); }
+      g.strokeStyle = '#cf9632'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(ex - s * 5.5, ey - 13); g.quadraticCurveTo(ex + s, ey - 16.5 - (joie ? 1.5 : 0), ex + s * 7.5, ey - 12.5); g.stroke(); }); // les sourcils
+    g.strokeStyle = 'rgba(214,140,116,0.9)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx - 1.6, hy + 12); g.quadraticCurveTo(cx, hy + 14, cx + 1.8, hy + 12); g.stroke(); // le bout du nez
+    if (joie) { g.fillStyle = '#b2304e'; g.beginPath(); g.moveTo(cx - 7, hy + 19); g.quadraticCurveTo(cx, hy + 31, cx + 7, hy + 19); g.quadraticCurveTo(cx, hy + 22, cx - 7, hy + 19); g.fill(); ell(g, cx, hy + 25, 3, 1.8, '#ff8aa0'); }
+    else { g.strokeStyle = '#d2506e'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(cx - 6.5, hy + 19.5); g.quadraticCurveTo(cx, hy + 25.5, cx + 6.5, hy + 19.5); g.stroke(); ell(g, cx, hy + 24.6, 2.4, 1, 'rgba(255,170,185,0.8)'); }
+    // les mèches de devant, qui encadrent le visage et tombent sur les épaules
+    g.fillStyle = or; [-1, 1].forEach(s => { g.beginPath(); g.moveTo(cx + s * 24, hy - 14); g.bezierCurveTo(cx + s * 35, hy + 6, cx + s * 31, hy + 22, cx + s * 34 + sw * 0.4, hy + 38); g.bezierCurveTo(cx + s * 34 + sw * 0.5, hy + 48, cx + s * 28 + sw2 * 0.5, hy + 56, cx + s * 30 + sw2 * 0.8, hy + 66);
+      g.bezierCurveTo(cx + s * 23 + sw2 * 0.5, hy + 56, cx + s * 25, hy + 40, cx + s * 26, hy + 26); g.bezierCurveTo(cx + s * 27, hy + 14, cx + s * 29, hy + 2, cx + s * 24, hy - 14); g.closePath(); g.fill(); });
+    g.strokeStyle = 'rgba(255,250,215,0.55)'; g.lineWidth = 1.6; [-1, 1].forEach(s => { g.beginPath(); g.moveTo(cx + s * 29.5, hy + 2); g.bezierCurveTo(cx + s * 31.5, hy + 14, cx + s * 29, hy + 28, cx + s * 30.5 + sw * 0.4, hy + 44); g.stroke(); });
+    // la frange, peignée sur le côté, et son reflet
+    g.fillStyle = or; g.beginPath(); g.moveTo(cx - 30, hy - 2); g.bezierCurveTo(cx - 38, hy - 51, cx + 38, hy - 51, cx + 30, hy - 2);
+    g.quadraticCurveTo(cx + 27, hy - 18, cx + 10, hy - 27); g.quadraticCurveTo(cx + 2, hy - 17, cx - 14, hy - 17); g.quadraticCurveTo(cx - 26, hy - 16, cx - 30, hy - 2); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(186,116,20,0.4)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(cx + 9, hy - 27); g.quadraticCurveTo(cx - 6, hy - 30, cx - 22, hy - 20); g.moveTo(cx + 11, hy - 28); g.quadraticCurveTo(cx + 20, hy - 26, cx + 26, hy - 18); g.stroke();
+    g.strokeStyle = 'rgba(255,255,235,0.6)'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx - 19, hy - 28); g.quadraticCurveTo(cx - 3, hy - 38, cx + 15, hy - 31); g.stroke();
+    // la couronne de fleurs : cinq petites fleurs à cinq pétales, des feuilles entre elles
+    for (let i = 0; i < 4; i++) { const x = cx - 16.5 + i * 11, y = hy - 30 - Math.sin((i + 0.5) / 4 * Math.PI) * 5; ell(g, x, y, 3.6, 1.7, '#58a84a', i % 2 ? 0.5 : -0.5); }
+    for (let i = 0; i < 5; i++) { const x = cx - 22 + i * 11, y = hy - 30 - Math.sin(i / 4 * Math.PI) * 6, col = ['#ff8aa8', '#ffffff', '#8ad8ff', '#ffffff', '#ff8aa8'][i], r = i === 2 ? 1.25 : 1;
+      for (let k = 0; k < 5; k++) { const a = k / 5 * TAU - Math.PI / 2 + Math.sin(t * 0.8 + i) * 0.1; ell(g, x + Math.cos(a) * 3.1 * r, y + Math.sin(a) * 3.1 * r, 2.5 * r, 2.5 * r, col); } ell(g, x, y, 1.9 * r, 1.9 * r, '#ffd84a'); }
+    for (let i = 0; i < 4; i++) { const tw = Math.pow(Math.max(0, Math.sin(t * 2.2 + i * 1.7)), 8); if (tw < 0.03) continue; g.globalAlpha = tw; const x = cx + [-34, 30, -22, 38][i], y = hy + [-20, -8, 40, 30][i]; ell(g, x, y, 2.4, 0.7, '#fffbe0'); ell(g, x, y, 0.7, 2.4, '#fffbe0'); } g.globalAlpha = 1;
+  }
   function scene() {
     const R = CG.R, c = R && R.chambre; if (!c) { cancelAnimationFrame(raf); if (cv) cv.style.display = 'none'; return; }
     raf = requestAnimationFrame(scene); const now = performance.now() / 1000, dt = Math.min(0.05, now - (c.h || now)); c.h = now; c.t += dt;
@@ -82,15 +146,12 @@
     const fy = sol - 170 + Math.sin(t * 1.5) * 10, bat = Math.sin(t * 9) * 0.22, don = c.don ? Math.min(1, (t - c.donT) / 0.8) : 0;
     const hl = g.createRadialGradient(cx, fy, 10, cx, fy, 230); hl.addColorStop(0, 'rgba(255,240,200,' + (0.42 + don * 0.3) + ')'); hl.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = hl; g.fillRect(cx - 240, fy - 240, 480, 480);
     [-1, 1].forEach(s => { [[-0.5, 150, 56, 'rgba(200,240,255,0.42)'], [0.42, 104, 42, 'rgba(230,200,255,0.4)']].forEach(a => { g.save(); g.translate(cx + s * 14, fy - 30); g.rotate(s * (a[0] + bat * (a[0] < 0 ? 1 : -0.7)) + (s < 0 ? Math.PI : 0)); ell(g, a[1] * 0.55, 0, a[1] * 0.55, a[2] * 0.5, a[3]); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, 0); g.lineTo(a[1] * 1.02, 0); g.stroke(); g.restore(); }); });
+    feeDos(g, cx, fy, t);
     g.fillStyle = '#f6f0ff'; g.beginPath(); g.moveTo(cx - 22, fy - 44); g.quadraticCurveTo(cx - 62, fy + 70, cx - 40 + Math.sin(t * 2) * 5, fy + 112); g.quadraticCurveTo(cx, fy + 126, cx + 40 + Math.sin(t * 2 + 1) * 5, fy + 112); g.quadraticCurveTo(cx + 62, fy + 70, cx + 22, fy - 44); g.closePath(); g.fill(); // la robe
     g.fillStyle = 'rgba(190,170,255,0.4)'; g.beginPath(); g.moveTo(cx + 2, fy - 40); g.quadraticCurveTo(cx + 46, fy + 60, cx + 34, fy + 112); g.quadraticCurveTo(cx + 54, fy + 60, cx + 22, fy - 44); g.closePath(); g.fill();
     g.fillStyle = '#ffd86a'; g.fillRect(cx - 21, fy - 14, 42, 6);
     const lev = c.don ? -0.9 * don : Math.sin(t * 1.5) * 0.1; [-1, 1].forEach(s => { g.strokeStyle = '#ffe4cc'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx + s * 22, fy - 38); g.lineTo(cx + s * 52, fy - 8 + lev * 30); g.lineTo(cx + s * (70 - don * 30), fy + 8 + lev * 70); g.stroke(); });
-    g.fillStyle = '#f0c040'; g.beginPath(); g.moveTo(cx - 30, fy - 86); g.quadraticCurveTo(cx - 52, fy - 10, cx - 26, fy + 26); g.lineTo(cx + 26, fy + 26); g.quadraticCurveTo(cx + 52, fy - 10, cx + 30, fy - 86); g.closePath(); g.fill(); // les cheveux
-    ell(g, cx, fy - 70, 28, 30, '#ffe4cc'); ell(g, cx, fy - 92, 30, 14, '#f0c040'); g.fillStyle = '#f6f0ff'; g.beginPath(); g.moveTo(cx - 22, fy - 44); g.lineTo(cx + 22, fy - 44); g.lineTo(cx + 16, fy - 10); g.lineTo(cx - 16, fy - 10); g.closePath(); g.fill();
-    [-1, 1].forEach(s => { ell(g, cx + s * 11, fy - 68, 3.4, 4.6, '#3a2a5a'); ell(g, cx + s * 11 + 1, fy - 69.6, 1.2, 1.4, '#fff'); ell(g, cx + s * 17, fy - 58, 5, 3, 'rgba(255,140,160,0.45)'); });
-    g.strokeStyle = '#c0607a'; g.lineWidth = 2.2; g.beginPath(); g.arc(cx, fy - 58, 7, 0.25, Math.PI - 0.25); g.stroke();
-    for (let i = 0; i < 5; i++) ell(g, cx - 24 + i * 12, fy - 98 - Math.sin(i / 4 * Math.PI) * 6, 5, 5, ['#ff8aa8', '#ffe36b', '#8ad8ff', '#ffe36b', '#ff8aa8'][i]); // sa couronne de fleurs
+    feeTete(g, cx, fy, t, don); // les cheveux, le visage, la couronne de fleurs
     // les poussières de lumière
     for (let i = 0; i < 26; i++) { const a = i * 2.4 + t * (0.3 + (i % 5) * 0.08), r = 90 + ((i * 61) % 190), x = cx + Math.cos(a) * r * 1.5, y = fy + 20 + Math.sin(a * 1.3) * r * 0.7; g.globalAlpha = 0.35 + Math.sin(t * 3 + i) * 0.3; ell(g, x, y, 2.2, 2.2, i % 3 ? '#fff6c0' : '#c8f0ff'); } g.globalAlpha = 1;
     if (c.don) { const col = c.don === 'vie' ? '#ff6a7a' : '#6aa8ff'; for (let i = 0; i < 16; i++) { const k = ((t - c.donT) * 0.9 + i / 16) % 1, x = cx + Math.sin(i * 2.4) * 40 * (1 - k), y = fy + 30 + k * (sol - 30 - fy); g.globalAlpha = 1 - k; ell(g, x, y, 4, 4, col); } g.globalAlpha = 1; }
@@ -145,7 +206,7 @@
     /* très très rarement, elle offre plutôt une construction, au choix entre deux */ if (c.s.tech === undefined) { const Dn = CG.DonTech; c.s.tech = (Dn && Math.random() < Dn.FEE && Dn.deux()) || null; } const T2 = c.s.tech && c.s.tech.every(id => !CG.G.tech(id)) ? c.s.tech.map(id => CG.TECH_BY_ID[id]) : null;
     const touche = e => { if (e.key === '1') { e.stopPropagation(); choix(T2 ? T2[0].id : 'vie'); } else if (e.key === '2') { e.stopPropagation(); choix(T2 ? T2[1].id : 'mana'); } };
     el = document.createElement('div'); el.id = 'chambre-ui';
-    const M = { trou: ['Tu es tombé chez la Grande Fée !', 'Oh ! Un visiteur qui tombe du plafond... Personne ne regarde jamais où il met les pieds, et toi tu trouves ma porte.'], animal: ['La Grande Fée t\'a vu faire !', 'Tu as soigné mon petit faon sans rien demander en retour. Les bois entiers l\'ont vu, et moi aussi.'], feuilles: ['Toutes les feuilles d\'or !', 'Mes feuilles ! Le vent les avait semées aux quatre coins des bois, et tu les as toutes retrouvées.'] }[c.s.k] || ['Tu as trouvé la Grande Fée !', 'Il y a si longtemps que personne n\'a remarqué ma porte...'];
+    const M = { rond: ['Tu es entré dans le rond des fées !', 'Un pas au milieu de mes champignons, et te voilà chez moi. Bien peu osent y mettre le pied.'], fleur: ['C\'était la fleur de la Grande Fée !', 'Tu t\'es penché sur ma fleur au lieu de marcher dessus sans la voir. Elle m\'a tout raconté.'], papillon: ['Tu as rattrapé le papillon d\'or !', 'Mon petit messager t\'a bien fait courir, hi hi ! Mais tu ne l\'as pas quitté des yeux.'], trou: ['Tu es tombé chez la Grande Fée !', 'Oh ! Un visiteur qui tombe du plafond... Personne ne regarde jamais où il met les pieds, et toi tu trouves ma porte.'], animal: ['La Grande Fée t\'a vu faire !', 'Tu as soigné mon petit faon sans rien demander en retour. Les bois entiers l\'ont vu, et moi aussi.'], feuilles: ['Toutes les feuilles d\'or !', 'Mes feuilles ! Le vent les avait semées aux quatre coins des bois, et tu les as toutes retrouvées.'] }[c.s.k] || ['Tu as trouvé la Grande Fée !', 'Il y a si longtemps que personne n\'a remarqué ma porte...'];
     el.innerHTML = '<div class="fe-msg">' + M[0] + '<small>« ' + M[1] + ' Tu mérites un cadeau, petit chef. Un seul, mais il est à toi pour toujours. »</small></div>'
       + '<div class="fe-choix"><button class="fe-c vie"><u>1</u><i>❤️</i><b>+' + Se.DON + ' vie</b><span>Vie maximum, pour toujours (tu en as ' + Math.round(p.maxhp) + ')</span></button><button class="fe-c mana"><u>2</u><i>💧</i><b>+' + Se.DON + ' mana</b><span>Mana maximum, pour toujours (tu en as ' + Math.round(p.maxmp) + ')</span></button></div>';
     if (T2) { const nb = n => (n.unlock || []).filter(b => CG.BUILDS[b]).map(b => CG.BUILDS[b].nom).join(', '); el.querySelector('.fe-choix').innerHTML = T2.map((n, i) => '<button class="fe-c ' + (i ? 'mana' : 'vie') + '"><u>' + (i + 1) + '</u><i>' + n.icon + '</i><b>' + n.nom + '</b><span>Tu sauras bâtir : ' + nb(n) + '</span></button>').join(''); }
@@ -167,7 +228,7 @@
   };
   { const us = G.update; G.update = function () { const S = CG.S, p = S && S.player, h0 = p ? p.hp : 0, m0 = p ? p.mp : 0, r = us.apply(this, arguments); if (p && CG.S === S) { if (h0 > p.maxhp && p.hp === p.maxhp) p.hp = h0; if (m0 > p.maxmp && p.mp === p.maxmp) p.mp = m0; } return r; }; } /* au-dessus du maximum, un soin ne fait pas redescendre : seuls les coups et les sorts entament le surplus */
   Se.entrer = function (s) {
-    const R = CG.R; if (R.chambre) return; const q = Se.pos(s);
+    const R = CG.R; if (R.chambre) return; const q = Se.pos(s); Se.noter(s); // découverte : cette sorte de cachette se repose Se.REPOS jours
     if (s.k === 'trou' && s.sous) { if (s.source === undefined) s.source = Math.random() < Se.SOURCE; if (s.source) return Se.source(s); }
     if (!cv) { cv = document.createElement('canvas'); cv.id = 'chambre'; cv.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:10;display:none;opacity:0;pointer-events:auto'; document.body.appendChild(cv); gx = cv.getContext('2d'); }
     G.puff(q.x, q.y - 14, '#fff6c0', 22, 140, 4); CG.sfx('discovery'); CG.keys.clear(); CG.S.player.path = null;
@@ -183,7 +244,10 @@
     for (const s of l) if (s.k === 'trou' && s.sous && !s.vu && tient(s)) { s.vu = true; const q = Se.pos(s); if (CG.onScreen(q.x, q.y)) { CG.sfx('secret'); G.text(q.x, q.y - 40, '✨ Un trou secret !', '#fff6c0', true); G.puff(q.x, q.y - 8, '#fff6c0', 18, 120, 3); for (let i = 0; i < 2; i++) R.rings.push({ x: q.x, y: q.y - 4, r: 40 + i * 34, life: 0.5 + i * 0.2, col: '#fff6c0' }); } } /* le buisson ou le rocher vient de partir : le petit air de la découverte */
     for (const s of l) { // le trou : on tombe dedans en marchant dessus ; l'animal soigné : la fée vient ensuite
       if (s.k === 'trou') { const q = Se.pos(s); if (Math.hypot(q.x - p.x, q.y - p.y) < 9) { G.text(p.x, p.y - 56, 'Aaah !', '#fff6c0', true); p.x = q.x; p.y = q.y; Se.entrer(s); return; } }
-      else if (s.k === 'animal' && s.gueri !== undefined) { s.gueri += dt; if (s.gueri > 1.8) { Se.entrer(s); return; } } }
+      else if (s.k === 'animal' && s.gueri !== undefined) { s.gueri += dt; if (s.gueri > 1.8) { Se.entrer(s); return; } }
+      else if (s.k === 'rond') { const q = Se.pos(s); if (Math.hypot(q.x - p.x, (q.y - p.y) * 1.7) < 9) { s.d = (s.d || 0) + dt; if (s.d > 0.45) { s.d = 0; Se.entrer(s); return; } } else s.d = 0; } // il faut s'arrêter un instant au milieu du rond
+      else if (s.k === 'fleur') { const q = Se.pos(s); if (Math.hypot(q.x - p.x, q.y - p.y) < 11) { G.text(q.x, q.y - 36, 'Oh ! La belle fleur...', '#bfe8ff', true); Se.entrer(s); return; } }
+      else if (s.k === 'papillon') { if (papillon(s, p, dt)) { G.text(p.x, p.y - 56, 'Je te tiens !', '#ffe36b', true); Se.entrer(s); return; } } }
     const F = S.feuilles; if (!F || ici() === 2) return;
     if (F.fini !== undefined) { F.fini += dt; if (F.fini > 1.1) { S.feuilles = null; Se.entrer({ k: 'feuilles', px: p.x, py: p.y, x: Math.floor(p.x / T), y: Math.floor(p.y / T) }); } return; }
     for (const q of F.l) { if (q.pris || Math.hypot(q.px - p.x, q.py - p.y) > 15) continue; q.pris = true; const k = F.l.filter(o => o.pris).length;
@@ -201,6 +265,39 @@
     return r;
   };
   // ---------- le trou, l'animal blessé, les feuilles dorées : au ras du sol, sans rien qui les annonce ----------
+  // le papillon doré : il s'envole un peu plus loin chaque fois qu'on s'approche ; à la quatrième, il se laisse attraper
+  Se.PAPILLON = { PEUR: 34, FUITES: 3, SAUT: 120 };
+  function papillon(s, p, dt) {
+    if (s.vol > 0) { s.vol -= dt * 1.3; return false; } const q = Se.pos(s), L = Se.PAPILLON; if (Math.hypot(q.x - p.x, q.y - p.y) > L.PEUR) return false;
+    if ((s.fuites || 0) >= L.FUITES) return true;
+    const a0 = Math.atan2(q.y - p.y, q.x - p.x);
+    for (let i = 0; i < 14; i++) { const a = a0 + (i ? (Math.random() - 0.5) * 2.6 : 0), d = L.SAUT * (0.8 + Math.random() * 0.5), x = q.x + Math.cos(a) * d, y = q.y + Math.sin(a) * d; if (x < 3 * T || y < 3 * T || x > (CG.MW - 3) * T || y > (CG.MH - 3) * T || !W.walkPx(x, y)) continue;
+      s.fx = q.x; s.fy = q.y; s.ox = x; s.oy = y; s.vol = 1; s.fuites = (s.fuites || 0) + 1; return false; }
+    return true; // nulle part où s'enfuir : il se laisse prendre
+  }
+  function papi(g, s, t) {
+    let q = Se.pos(s); const vole = s.vol > 0; if (vole) { const u = 1 - s.vol, e = u * u * (3 - 2 * u); q = { x: s.fx + (s.ox - s.fx) * e, y: s.fy + (s.oy - s.fy) * e - Math.sin(u * Math.PI) * 26 }; } if (!CG.onScreen(q.x, q.y)) return;
+    const b = Math.abs(Math.sin(t * (vole ? 24 : 7) + s.x)), x = q.x + (vole ? 0 : Math.sin(t * 2.3 + s.y) * 3), y = q.y - 15 + Math.sin(t * 3.1 + s.x) * 2.5;
+    if (!vole) ell(g, q.x, q.y + 1, 3, 1.1, 'rgba(0,0,0,0.14)');
+    [-1, 1].forEach(d => { ell(g, x + d * 3.1 * b, y - 1, 3.3 * b + 0.4, 3.5, '#ffd24a', d * 0.4); ell(g, x + d * 2.3 * b, y + 2.3, 2.1 * b + 0.3, 2.1, '#ffb02a', -d * 0.3); ell(g, x + d * 3.3 * b, y - 1.4, 1.2 * b, 1.2, '#fff3b0'); });
+    ell(g, x, y + 0.4, 0.8, 3, '#5a3a10');
+    const tw = Math.pow(Math.max(0, Math.sin(t * 1.7 + s.x)), 10); if (tw > 0.02) { g.globalAlpha = tw; ell(g, x + 4, y - 4, 1.2, 1.2, '#fffbe0'); g.globalAlpha = 1; }
+  }
+  // le rond de champignons : huit tout petits champignons en cercle dans l'herbe
+  function rond(g, q, s, t) {
+    const h0 = W.hash(s.x, s.y) * 6;
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + h0, x = q.x + Math.cos(a) * 15, y = q.y + Math.sin(a) * 8, k = 0.8 + W.hash(s.x + i, s.y + 2) * 0.5;
+      g.fillStyle = '#efe6d2'; g.fillRect(x - 0.7 * k, y - 3 * k, 1.4 * k, 3 * k); ell(g, x, y - 3.2 * k, 2.6 * k, 1.7 * k, i % 3 ? '#c8553a' : '#d98a3a'); ell(g, x - 0.7 * k, y - 3.7 * k, 0.6 * k, 0.4 * k, 'rgba(255,255,255,0.75)'); }
+    const tw = Math.pow(Math.max(0, Math.sin(t * 0.9 + s.x * 1.3 + s.y)), 16); if (tw > 0.02) { g.globalAlpha = tw * 0.8; ell(g, q.x, q.y - 1, 1.1, 0.8, '#ffe9a0'); g.globalAlpha = 1; }
+  }
+  // la fleur bleue : toute seule, avec une lueur très légère
+  function fleur(g, q, s, t) {
+    const x = q.x + Math.sin(t * 1.4 + s.x) * 1.2, y = q.y - 10, pu = 0.5 + Math.sin(t * 2 + s.y) * 0.5;
+    g.strokeStyle = '#3f8a3a'; g.lineWidth = 1.3; g.lineCap = 'round'; g.beginPath(); g.moveTo(q.x, q.y); g.quadraticCurveTo(q.x, q.y - 6, x, y); g.stroke();
+    ell(g, q.x - 2.4, q.y - 3.4, 2.4, 1, '#4c9c40', -0.5); ell(g, q.x + 2.4, q.y - 4.6, 2.4, 1, '#4c9c40', 0.5);
+    ell(g, x, y, 8, 8, 'rgba(150,215,255,' + (0.08 + pu * 0.12).toFixed(3) + ')');
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU - Math.PI / 2; ell(g, x + Math.cos(a) * 2.6, y + Math.sin(a) * 2.6, 2.1, 2.1, '#9ad6ff'); } ell(g, x, y, 1.5, 1.5, '#fff2a0');
+  }
   function faon(g, q, s, t) {
     const gu = s.gueri, up = gu !== undefined, f = W.hash(s.x + 3, s.y) < 0.5 ? -1 : 1, B = '#b9824a', F = '#9a6a3a';
     g.save(); g.translate(q.x, q.y);
@@ -216,8 +313,8 @@
   }
   const gr0 = CG.Magie.ground; CG.Magie.ground = function (g, t) {
     gr0.apply(this, arguments); const S = CG.S; if (!S || !CG.R) return;
-    for (const s of Se.liste()) { if (s.k !== 'trou' && s.k !== 'animal') continue; const q = Se.pos(s); if (!CG.onScreen(q.x, q.y)) continue;
-      if (s.k === 'animal') { faon(g, q, s, t); continue; }
+    for (const s of Se.liste()) { if (!SOL[s.k] || s.k === 'papillon') continue; const q = Se.pos(s); if (!CG.onScreen(q.x, q.y)) continue;
+      if (s.k === 'animal') { faon(g, q, s, t); continue; } if (s.k === 'rond') { rond(g, q, s, t); continue; } if (s.k === 'fleur') { fleur(g, q, s, t); continue; }
       ell(g, q.x, q.y, 7.6, 3.7, 'rgba(46,34,20,0.5)'); ell(g, q.x, q.y + 0.5, 6, 2.8, '#1a120a'); ell(g, q.x + 0.5, q.y + 1.1, 4, 1.6, '#090503');
       const tw = Math.pow(Math.max(0, Math.sin(t * 0.9 + s.x * 1.3 + s.y)), 18); if (tw > 0.02) { g.globalAlpha = tw * 0.8; ell(g, q.x + 0.6, q.y + 0.8, 1, 0.7, '#ffe9a0'); g.globalAlpha = 1; } }
     const F = S.feuilles; if (!F || ici() === 2) return;
@@ -237,7 +334,7 @@
   // ---------- ce qui les trahit : presque rien ----------
   const mk0 = CG.Magie.marks; CG.Magie.marks = function (g, t) {
     mk0.apply(this, arguments); if (!CG.S || !CG.R) return; const p = CG.S.player;
-    for (const s of Se.liste()) { if (s.k !== 'arbre' && s.k !== 'roche') continue; const q = Se.pos(s); if (!CG.onScreen(q.x, q.y)) continue; if (s.k === 'arbre' && p.y > q.y - 8 && p.y < q.y + 40 && Math.abs(p.x - q.x) < 14) continue; // le chef est devant le trou de l'arbre (les fissures du rocher, elles, restent toujours visibles)
+    for (const s of Se.liste()) { if (s.k === 'papillon') { papi(g, s, t); continue; } if (s.k !== 'arbre' && s.k !== 'roche') continue; const q = Se.pos(s); if (!CG.onScreen(q.x, q.y)) continue; if (s.k === 'arbre' && p.y > q.y - 8 && p.y < q.y + 40 && Math.abs(p.x - q.x) < 14) continue; // le chef est devant le trou de l'arbre (les fissures du rocher, elles, restent toujours visibles)
       const tw = Math.pow(Math.max(0, Math.sin(t * 1.1 + s.x * 1.7 + s.y)), 14), pousse = (s.p || 0) / Se.POUSSE;
       if (s.k === 'arbre') { ell(g, q.x, q.y - 15, 4.2, 6, '#2e1d0e'); ell(g, q.x + 0.4, q.y - 14.6, 3.2, 5, '#140c06'); if (tw > 0.02) { g.globalAlpha = tw * 0.9; ell(g, q.x - 0.8, q.y - 15.4, 0.9, 0.9, '#ffe9a0'); ell(g, q.x + 1.4, q.y - 15.4, 0.9, 0.9, '#ffe9a0'); g.globalAlpha = 1; } }
       else { const nc = s.coups || 0, sx = s.choc > 0 ? Math.sin(t * 90) * 1.6 : 0; if (s.choc > 0) s.choc -= 0.016; g.save(); g.translate(sx, 0);

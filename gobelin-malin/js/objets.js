@@ -6,24 +6,30 @@
 (function (CG) {
   const G = CG.G, D = CG.D, Art = CG.Art, W = CG.W, TAU = Math.PI * 2, rand = CG.rand;
   const Ob = CG.Objets = { SOIN: 2, MANA: 2, COEUR: 0.06, GOUTTE: 0.045, COFFRE: 0.45, ARME: 0.04, LANCEUR: 0.4, DELAI: [15, 24], VITESSE: 165, PORTEE: [90, 270], ALLER: 250, PREP: 0.8 };
-  const MIENS = { coeur: 1, mana: 1, coeurOr: 1, manaOr: 1 };
+  const MIENS = { coeur: 1, mana: 1, coeurOr: 1, manaOr: 1, objet: 1 };
+  // les objets trouvés (arme, armure, outil) : ils tombent par terre comme le reste, et c'est en les ramassant qu'on apprend ce que c'est.
+  // Une phrase toute courte, sans chiffres ; la qualité se lit en étoiles à côté du nom.
+  Ob.PHRASE = { epee: 'Donne-la à un gobelin : il frappera plus fort.', arc: 'Donne-le à un gobelin : il tirera de loin.', armure: 'Donne-la à un gobelin : il sera plus solide.', pioche: 'Pour ramasser plus de minerai.', hache: 'Pour ramasser plus de bois.', gant: 'Pour cueillir plus de baies.' };
+  Ob.lacher = function (x, y, k, n) { G.drop(x, y, { kind: 'objet', k, n }); G.puff(x, y - 20, '#bfe8ff', 24, 150, 4); CG.sfx('discovery'); };
   // ---------- ramasser ----------
   const pk0 = G.pickUp; G.pickUp = function (d) {
     if (!d || !MIENS[d.kind]) return pk0.apply(this, arguments); const p = CG.S.player, n = d.n || 1;
+    if (d.kind === 'objet') { const Bq = CG.Banque, z = Bq.deposer(d.k, n, 1, 'sac'), nom = Bq.IC[d.k] + ' ' + Bq.NOMS[d.k][n];
+      G.text(p.x, p.y - 84, nom, '#d0ecff', true); G.puff(p.x, p.y - 24, '#bfe8ff', 18, 140, 4); CG.R.rings.push({ x: p.x, y: p.y - 10, r: 50, life: 0.5, col: '#bfe8ff' }); CG.sfx('heal');
+      G.banner(nom + ' ' + '★'.repeat(n), Ob.PHRASE[d.k] || (z === 'sac' ? 'C\'est dans ton sac.' : 'C\'est au coffre du camp.'), '#d0ecff'); if (z !== 'sac') CG.UI.toast('🎒 Ton sac est plein : ' + nom + ' est au coffre du camp.'); return; }
     if (d.kind === 'coeur') { const v = Ob.SOIN * n; p.hp = Math.min(p.maxhp, p.hp + v); G.text(d.x, d.y - 30, '+' + v + ' ❤', '#ff9ac0'); CG.sfx('ok'); }
     else if (d.kind === 'mana') { const v = Ob.MANA * n; p.mp = Math.min(p.maxmp, p.mp + v); G.text(d.x, d.y - 30, '+' + v + ' 💧', '#9ad0ff'); CG.sfx('ok'); }
     else { const vie = d.kind === 'coeurOr'; if (vie) { p.maxhp += n; p.hp += n; } else { p.maxmp += n; p.mp += n; }
       G.text(p.x, p.y - 84, (vie ? '💛 +' + n + ' vie max' : '💛 +' + n + ' mana max'), '#ffe36b', true); G.puff(p.x, p.y - 24, '#ffd84a', 22, 150, 4); for (let i = 0; i < 2; i++) CG.R.rings.push({ x: p.x, y: p.y - 10, r: 46 + i * 34, life: 0.45 + i * 0.15, col: '#ffe36b' }); CG.sfx('heal');
-      G.banner(vie ? '💛 Cœur d\'or' : '💛 Goutte d\'or', '+' + n + (vie ? ' de vie' : ' de mana') + ' maximum, pour toujours.', '#ffe9a8'); }
+      G.banner(vie ? '💛 Cœur d\'or' : '💛 Goutte d\'or', vie ? 'Tu as plus de vie, pour toujours !' : 'Tu as plus de mana, pour toujours !', '#ffe9a8'); }
   };
   // ---------- où on en trouve ----------
   const he0 = G.hurtEnemy; G.hurtEnemy = function (e) { const r = he0.apply(this, arguments);
     if (e && e.dead && !e.objLache && !e.struct) { e.objLache = true; const boss = CG.ENEMIES[e.type] && CG.ENEMIES[e.type].boss, k = Math.random(); if (k < Ob.COEUR) G.drop(e.x, e.y, { kind: 'coeur', n: boss ? 3 : 1 }); else if (k < Ob.COEUR + Ob.GOUTTE) G.drop(e.x, e.y, { kind: 'mana', n: boss ? 3 : 1 }); }
     return r; };
   const oc0 = D.openChest; D.openChest = function (c) { const r = oc0.apply(this, arguments); if (c && c.kind !== 'piege' && Math.random() < Ob.COFFRE) { const n = CG.irand(1, 3); for (let i = 0; i < n; i++) G.drop(c.x, c.y, { kind: Math.random() < 0.55 ? 'coeur' : 'mana', n: 1 }); }
-    const Bq = CG.Banque; if (c && c.kind !== 'piege' && Bq && Math.random() < Ob.ARME) { // très rarement : une arme ou une armure pour un gobelin, qui va dans le sac du chef
-      const k = ['epee', 'arc', 'armure'][CG.irand(0, 2)], q = Math.random(), n = q < 0.5 ? 1 : q < 0.85 ? 2 : 3, z = Bq.deposer(k, n, 1, 'sac'); G.puff(c.x, c.y - 20, '#bfe8ff', 24, 150, 4); CG.sfx('discovery');
-      G.banner(Bq.IC[k] + ' ' + Bq.NOMS[k][n] + ' !', 'Une trouvaille rare au fond du coffre (' + Bq.effet(k, n) + '). Elle est rangée ' + (CG.Inventaire ? CG.Inventaire.ou(z) : 'dans le coffre du camp') + '.', '#d0ecff'); }
+    const Bq = CG.Banque; if (c && c.kind !== 'piege' && Bq && Math.random() < Ob.ARME) { // très rarement : une arme ou une armure pour un gobelin
+      const k = ['epee', 'arc', 'armure'][CG.irand(0, 2)], q = Math.random(), n = q < 0.5 ? 1 : q < 0.85 ? 2 : 3; Ob.lacher(c.x, c.y, k, n); } // elle tombe par terre avec le reste : on la ramasse en marchant dessus
     return r; };
   // ---------- leurs dessins ----------
   const ell = (g, x, y, rx, ry, f, rot) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); g.fill(); };
@@ -31,11 +37,12 @@
   function goutte(g, s, a, b, c) { const p = () => { g.beginPath(); g.moveTo(0, -9 * s); g.bezierCurveTo(8 * s, 0, 7 * s, 8 * s, 0, 8 * s); g.bezierCurveTo(-7 * s, 8 * s, -8 * s, 0, 0, -9 * s); g.closePath(); }; g.fillStyle = b; p(); g.fill(); g.save(); g.clip(); ell(g, -1.5 * s, 0.5 * s, 5 * s, 7 * s, a); g.restore(); ell(g, -2.2 * s, 1 * s, 1.5 * s, 2.4 * s, c, 0.3); }
   const dr0 = Art.drops; Art.drops = function (g, list, t) {
     const autres = [], moi = []; for (const d of list) (MIENS[d.kind] ? moi : autres).push(d); dr0.call(this, g, autres, t);
-    for (const d of moi) { if (d.d > 0 || !CG.onScreen(d.x, d.y)) continue; const fly = d.f < 1, or = d.kind === 'coeurOr' || d.kind === 'manaOr', bob = fly ? 0 : Math.sin(t * 3 + d.seed) * 2, y = d.y - d.h - 8 - bob, s = or ? 1.25 : 0.95;
+    for (const d of moi) { if (d.d > 0 || !CG.onScreen(d.x, d.y)) continue; const fly = d.f < 1, obj = d.kind === 'objet', or = obj || d.kind === 'coeurOr' || d.kind === 'manaOr', bob = fly ? 0 : Math.sin(t * 3 + d.seed) * 2, y = d.y - d.h - 8 - bob, s = or ? 1.25 : 0.95;
       ell(g, d.x, d.y + 2, 8 * (fly ? 0.6 : 1), 3, 'rgba(0,0,0,0.26)');
-      if (!fly) ell(g, d.x, y, (or ? 17 : 11) + Math.sin(t * 4 + d.seed) * 2, (or ? 17 : 11) + Math.sin(t * 4 + d.seed) * 2, or ? 'rgba(255,220,90,0.32)' : d.kind === 'coeur' ? 'rgba(255,130,180,0.25)' : 'rgba(110,180,255,0.25)');
+      if (!fly) ell(g, d.x, y, (or ? 17 : 11) + Math.sin(t * 4 + d.seed) * 2, (or ? 17 : 11) + Math.sin(t * 4 + d.seed) * 2, obj ? 'rgba(150,215,255,0.34)' : or ? 'rgba(255,220,90,0.32)' : d.kind === 'coeur' ? 'rgba(255,130,180,0.25)' : 'rgba(110,180,255,0.25)');
       g.save(); g.translate(d.x, y); if (fly) g.rotate(d.f * 9 + d.seed); else g.scale(1 + Math.sin(t * 5 + d.seed) * 0.06, 1 + Math.sin(t * 5 + d.seed) * 0.06);
-      if (d.kind === 'coeur') coeur(g, s, '#ff9ac6', '#f0609a', '#ffe0ee'); else if (d.kind === 'coeurOr') coeur(g, s, '#ffe680', '#e0a81e', '#fffbe0'); else if (d.kind === 'mana') goutte(g, s, '#8fd0ff', '#3a8cf0', '#e0f4ff'); else goutte(g, s, '#ffe680', '#e0a81e', '#fffbe0');
+      if (obj) { g.fillStyle = '#fff'; g.font = '23px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(CG.Banque.IC[d.k] || '🎁', 0, 0); g.textBaseline = 'alphabetic'; }
+      else if (d.kind === 'coeur') coeur(g, s, '#ff9ac6', '#f0609a', '#ffe0ee'); else if (d.kind === 'coeurOr') coeur(g, s, '#ffe680', '#e0a81e', '#fffbe0'); else if (d.kind === 'mana') goutte(g, s, '#8fd0ff', '#3a8cf0', '#e0f4ff'); else goutte(g, s, '#ffe680', '#e0a81e', '#fffbe0');
       if (or && !fly) { const k = (t * 1.3 + d.seed) % 1; g.globalAlpha = 1 - k; g.fillStyle = '#fff'; g.beginPath(); g.arc(9 * Math.cos(t * 2 + d.seed), -4 - k * 14, 1.4, 0, TAU); g.fill(); }
       g.restore(); }
   };

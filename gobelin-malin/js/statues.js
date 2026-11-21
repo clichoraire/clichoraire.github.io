@@ -5,13 +5,13 @@
   const G = CG.G, D = CG.D, W = CG.W, UI = CG.UI, T = CG.TILE, TAU = Math.PI * 2, pick = CG.pick, St = CG.Statues = { AUCUNE: 0.3, DEUX: 0.25 };
   // k : [icône, nom, durée (s), couleur, ce que ça fait]
   St.DONS = {
-    force: { ic: '💪', nom: 'Statue de la Force', dur: 120, col: '#ff8a5a', txt: 'Tu frappes 40 % plus fort.' },
-    vent: { ic: '🍃', nom: 'Statue du Vent', dur: 150, col: '#9be8ff', txt: 'Tu marches 30 % plus vite.' },
-    vie: { ic: '💗', nom: 'Statue de la Source', dur: 60, col: '#ff8ab0', txt: 'Tu récupères 1,5 point de vie par seconde.' },
-    mana: { ic: '🔷', nom: 'Statue des Étoiles', dur: 60, col: '#7aa8ff', txt: 'Tu récupères 2 points de mana par seconde.' },
-    pierre: { ic: '🗿', nom: 'Statue de Pierre', dur: 120, col: '#c8c8d0', txt: 'Ta peau durcit comme le roc ! +30 % de protection.' },
-    sage: { ic: '📖', nom: 'Statue du Sage', dur: 180, col: '#ffe36b', txt: 'Tu gagnes 50 % d\'expérience en plus.' },
-    hate: { ic: '⚡', nom: 'Statue de l\'Éclair', dur: 90, col: '#fff08a', txt: 'Tes sorts coûtent 30 % de mana en moins.' },
+    force: { ic: '💪', nom: 'Statue de la Force', dur: 120, col: '#ff8a5a', txt: 'Tu frappes plus fort !' },
+    vent: { ic: '🍃', nom: 'Statue du Vent', dur: 150, col: '#9be8ff', txt: 'Tu marches plus vite !' },
+    vie: { ic: '💗', nom: 'Statue de la Source', dur: 60, col: '#ff8ab0', txt: 'Ta vie remonte toute seule !' },
+    mana: { ic: '🔷', nom: 'Statue des Étoiles', dur: 60, col: '#7aa8ff', txt: 'Ton mana remonte tout seul !' },
+    pierre: { ic: '🗿', nom: 'Statue de Pierre', dur: 120, col: '#c8c8d0', txt: 'Ta peau durcit comme le roc !' },
+    sage: { ic: '📖', nom: 'Statue du Sage', dur: 180, col: '#ffe36b', txt: 'Tu apprends plus vite !' },
+    hate: { ic: '⚡', nom: 'Statue de l\'Éclair', dur: 90, col: '#fff08a', txt: 'Tes sorts coûtent moins de mana !' },
     sort: { ic: '📜', nom: 'Statue du Savoir', dur: 120, col: '#d0a8ff', txt: () => (St.pretTxt ? St.pretTxt() : '') } // un sort prêté (pret.js)
   };
   const b = k => { const S = CG.S; return S && S.statBuffs && S.statBuffs[k] > 0 ? S.statBuffs[k] : 0; };
@@ -55,7 +55,7 @@
     a.use = true; a.k = k; (S.statBuffs = S.statBuffs || {})[k] = Dn.dur; CG.sfx('discovery'); CG.sfx('heal'); W.miniDirty = true;
     R.rings.push({ x: c.x, y: c.y - 30, r: 130, life: 0.6, col: Dn.col }, { x: p.x, y: p.y - 10, r: 90, life: 0.5, col: '#ffffff' }); R.bolts.push({ x1: c.x, y1: c.y - 58, x2: p.x, y2: p.y - 26, life: 0.3 });
     for (let i = 0; i < 22; i++) { const an = Math.random() * TAU, v = 50 + Math.random() * 110; R.parts.push({ x: p.x, y: p.y - 26, vx: Math.cos(an) * v, vy: Math.sin(an) * v - 40, life: 0.9, max: 0.9, col: i % 2 ? Dn.col : '#ffffff', size: 3.5 }); }
-    const m = Math.floor(Dn.dur / 60), s = Dn.dur % 60; G.banner(Dn.ic + ' ' + Dn.nom, txt + ' Pendant ' + (m ? m + ' min' + (s ? ' ' + s : '') : s + ' secondes') + '.', Dn.col);
+    G.banner(Dn.ic + ' ' + Dn.nom, txt, Dn.col); // ni chiffres ni durée : la petite icône de la bénédiction montre le temps qui reste
   };
   // ---------- le dessin ----------
   const ell = (g, x, y, rx, ry, f) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); g.fill(); };
