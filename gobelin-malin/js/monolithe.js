@@ -35,7 +35,7 @@
     up0.apply(this, arguments); const S = CG.S, R = CG.R; if (!S || !R || R.night || R.cine) return; const l = liste(); if (choisi && !l.includes(choisi)) choisi = null; if (!l.length) { R.monoVerse = null; return; } const p = S.player, Om = CG.Ombre;
     const v = R.monoVerse; /* le chef verse sa mana : il doit rester à côté */
     if (v) { const c = centre(v), q = Math.min(Mn.DEBIT * dt, p.mp, Mn.PLEIN - (v.charge || 0));
-      if (!l.includes(v) || R.ko > 0 || Math.hypot(p.x - c.x, p.y - c.y) > Mn.PRES + 14 || q <= 0.0001) { R.monoVerse = null; if (l.includes(v)) { G.text(c.x, c.y - 96, (v.charge || 0) >= Mn.PLEIN - 0.01 ? '🔮 Plein !' : '🔮 ' + Math.floor(v.charge || 0) + ' / ' + Mn.PLEIN, '#d8b8ff', true); if ((v.charge || 0) >= Mn.PLEIN - 0.01) { v.charge = Mn.PLEIN; CG.sfx('level'); } } }
+      if (!l.includes(v) || R.ko > 0 || Math.hypot(p.x - c.x, p.y - c.y) > Mn.PRES + 14 || q <= 0.0001 || p.mp < 1) { /* plus de mana (moins d'un point) : ça s'arrête tout seul, sans boire au goutte-à-goutte ce qui revient */ R.monoVerse = null; if (l.includes(v)) { G.text(c.x, c.y - 96, (v.charge || 0) >= Mn.PLEIN - 0.01 ? '🔮 Plein !' : '🔮 ' + Math.floor(v.charge || 0) + ' / ' + Mn.PLEIN, '#d8b8ff', true); if ((v.charge || 0) >= Mn.PLEIN - 0.01) { v.charge = Mn.PLEIN; CG.sfx('level'); } } }
       else { p.mp -= q; v.charge = (v.charge || 0) + q; p.face = c.x > p.x ? 1 : -1; R.monoT = (R.monoT || 0) - dt; if (R.monoT <= 0) { R.monoT = 0.5; CG.sfx('zap'); }
         for (let i = 0; i < 2; i++) if (Math.random() < dt * 30) { const a = Math.random() * TAU, sx = p.x + Math.cos(a) * 16, sy = p.y - 22 + Math.sin(a) * 14, tx = c.x, ty = c.y - 56, life = 0.45; R.parts.push({ x: sx, y: sy, vx: (tx - sx) / life, vy: (ty - sy) / life, life, max: life, col: Math.random() < 0.5 ? '#7db8ff' : '#c9a0ff', size: rand(2.5, 4.5), float: true }); } /* la mana quitte le chef et file vers la pierre */
         if (Math.random() < dt * 9) R.rings.push({ x: p.x, y: p.y - 6, r: 26, life: 0.35, col: '#7db8ff' }); } }
@@ -62,5 +62,11 @@
       g.moveTo(c.x - 4, c.y - 30); g.lineTo(c.x, c.y - 20); g.lineTo(c.x + 5, c.y - 31); g.moveTo(c.x - 5, c.y - 24); g.lineTo(c.x + 5, c.y - 24); g.stroke();
       if (k > 0 || verse || b === choisi) { const w = 34, x = c.x - w / 2, y = c.y - 104; g.fillStyle = 'rgba(10,8,20,0.6)'; g.fillRect(x - 1, y - 1, w + 2, 6); g.fillStyle = '#9a6aff'; g.fillRect(x, y, w * k, 4); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x, y, w * k, 1.2); } }
   };
+  // ---------- le prix : chaque monolithe déjà posé dans ce monde ajoute Mn.OR pièces d'or au suivant (les roches ne bougent pas) ----------
+  Mn.OR = 250;
+  Mn.prix = function () { const S = CG.S, n = S ? S.buildings.filter(b => b.type === 'monolithe').length : 0; CG.BUILDS.monolithe.cout.or = Mn.OR * (n + 1); return CG.BUILDS.monolithe.cout; };
+  Mn.prix();
+  { const up1 = G.update; G.update = function () { Mn.prix(); return up1.apply(this, arguments); };
+    const ir0 = G.initRuntime; G.initRuntime = function () { const r = ir0.apply(this, arguments); Mn.prix(); return r; }; }
   Mn.essai = function () { const S = CG.S, p = S.player, b = { type: 'monolithe', tx: Math.floor(p.x / T) + 2, ty: Math.floor(p.y / T), w: 1, h: 1, variant: 0 }; S.buildings.push(b); W.blockBuilding(b); return b; };
 })(window.CG);

@@ -53,7 +53,7 @@
     if (p.lvl >= P.NIV_MAX || p.evoT > 0) return; p.xp += n; const need = P.need(p);
     if (p.xp < need) return;
     p.xp -= need; p.lvl++; if (CG.R.dayStats) (CG.R.dayStats.petUps = CG.R.dayStats.petUps || []).push(p.name + ' (niv. ' + p.lvl + ')'); G.text(p.x, p.y - 50, p.name + ' niv. ' + p.lvl + ' !', '#c8ffb0'); CG.sfx('ok');
-    if (p.lvl >= CG.seuilEvo(p) && !p.evo && !p.evoDemain) { p.evoDemain = true; CG.sfx('spell'); G.banner('Quelque chose couve chez ' + p.name + '...', 'On verra bien demain matin, au réveil.', '#ffe36b'); } // la transformation se fera pendant la nuit (compagnons.js)
+    if (p.kind === 'ame' && p.lvl >= CG.seuilEvo(p) && !p.evo && !p.evoDemain) { p.evoDemain = true; CG.sfx('spell'); G.banner('Quelque chose couve chez ' + p.name + '...', 'On verra bien demain matin, au réveil.', '#ffe36b'); } // la transformation se fera pendant la nuit (compagnons.js)
   };
   function evolve(p) {
     const R = CG.R; p.evo = 1; p.evoT = 0; p.hp = P.maxHp(p); p.cdS = 1; p.flash = 0.6;

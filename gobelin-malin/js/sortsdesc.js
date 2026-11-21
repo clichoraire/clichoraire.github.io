@@ -68,10 +68,64 @@
     passe: ['Tu restes fantôme plus longtemps.', 'Tu restes fantôme encore bien plus longtemps.'],
     meteore: ['Une pierre plus grosse, qui fait un plus grand trou.', 'Une pierre géante, un trou immense… et deux éclats retombent juste après.']
   };
+  // la phrase courte (10 mots au plus) : celle qu'on lit quand on gagne le parchemin. La longue reste dans le grimoire.
+  const C = {
+    etincelle: 'Une petite étincelle qui pique le premier ennemi touché.',
+    vision: 'Tu vois ce que chaque gobelin fait bien ou mal.',
+    feu: 'Une boule de feu qui explose. BOUM !',
+    glace: 'Un vent glacé qui ralentit les ennemis autour.',
+    soin: 'Une douce lumière te guérit, toi et tes voisins.',
+    racines: 'Des racines attrapent les ennemis par les pieds.',
+    eclair: 'Un éclair qui saute d\'un ennemi à l\'autre.',
+    bouclier: 'Une bulle magique prend les coups à ta place.',
+    cri: 'Un grand cri qui rend tes amis plus forts.',
+    illusion: 'Un faux monstre qui fait fuir les ennemis.',
+    murfeu: 'Un mur de flammes qui brûle ceux qui passent.',
+    retour: 'Un portail bleu qui te ramène au village.',
+    meteore: 'Une énorme pierre en feu tombe du ciel.',
+    hate: 'Tu cours comme une fusée pendant un moment.',
+    golem: 'Un bonhomme de roche se bat à tes côtés.',
+    charme: 'L\'ennemi le plus proche devient ton ami.',
+    onde: 'Un coup de vent qui fait voler les ennemis.',
+    repousse: 'Une souche redevient un grand arbre.',
+    sommeil: 'Le monstre le plus proche s\'endort en ronflant.',
+    invisible: 'Pouf ! Tu deviens invisible.',
+    caboche: 'Pour rire : une tête de gobelin grosse comme un ballon.',
+    poison: 'Un nuage vert qui rend les ennemis malades.',
+    faucon: 'Tu vois tous les ennemis sur la carte.',
+    parefeu: 'Le feu ne te fait presque plus rien.',
+    ombres: 'Tu vois ceux qui se cachent près de toi.',
+    cigogne: 'Un bébé gobelin arrivera au matin.',
+    electro: 'Des éclairs zappent les ennemis qui s\'approchent.',
+    verglas: 'Une plaque de glace : les ennemis glissent dessus.',
+    resurrection: 'Tu ramènes un ami tombé au combat.',
+    teleport: 'Pouf ! Tu réapparais un peu plus loin.',
+    temps: 'La journée dure plus longtemps.',
+    hatetemps: 'Le soir, ou le matin, arrive plus vite.',
+    mondes: 'Un portail vers un de tes villages.',
+    antidote: 'Le poison s\'en va, pour toi et tes amis.',
+    metaSquelette: 'Tu te changes en squelette. Clic-clac !',
+    metaLoup: 'Tu te changes en loup-garou, rapide et féroce.',
+    metaOurs: 'Tu te changes en gros ours, très costaud.',
+    metaDemon: 'Tu te changes en démon, la plus forte des formes.',
+    passe: 'Comme un fantôme, tu passes à travers les murs.',
+    fleche: 'Une flèche de lumière, rapide, qui va très loin.',
+    paralysie: 'L\'ennemi le plus proche ne peut plus bouger.',
+    bestiole: 'L\'ennemi le plus proche devient une bestiole ridicule.',
+    rayon: 'Un énorme rayon qui traverse tout devant toi.',
+    coeur: 'Tu as beaucoup plus de vie pendant un moment.',
+    bombe: 'Tu poses une bombe. Tic, tac… BOUM !',
+    armFeu: 'Des braises brûlent les ennemis qui s\'approchent.',
+    armPoison: 'Ta peau empoisonne les ennemis qui s\'approchent.',
+    armGlace: 'Un froid ralentit les ennemis qui s\'approchent.',
+    armVent: 'Un tourbillon renvoie les tirs des ennemis.',
+    armRonces: 'Des épines piquent les ennemis qui s\'approchent.'
+  };
   const Nv = CG.Niveaux, SP = CG.SPELLS;
   Object.keys(D).forEach(id => { if (SP[id]) SP[id].desc = D[id]; if (Nv && Nv.BASE && Nv.BASE[id]) Nv.BASE[id].desc = D[id]; });
   if (Nv && Nv.T) Object.keys(N).forEach(b => { if (!Nv.T[b]) return; Nv.T[b] = N[b]; const nom = (Nv.BASE && Nv.BASE[b] ? Nv.BASE[b].nom : SP[b].nom);
     [2, 3].forEach(n => { const s = SP[b + '_' + n]; if (s) s.desc = 'Ton sort ' + nom + ' devient plus fort ! ' + N[b][n - 2] + ' Il remplace l\'ancien dans ton grimoire.'; }); });
   if (Nv && Nv.rafraichir) Nv.rafraichir();
-  CG.SortsDesc = { D, N };
+  Object.keys(SP).forEach(id => { const m = /^(.*)_(\d)$/.exec(id); if (C[id]) SP[id].court = C[id]; else if (m && SP[m[1]]) SP[id].court = 'Ton sort devient plus fort !'; });
+  CG.SortsDesc = { D, N, C };
 })(window.CG);

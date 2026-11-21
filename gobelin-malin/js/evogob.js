@@ -4,9 +4,9 @@
 'use strict';
 (function (CG) {
   const G = CG.G, UI = CG.UI, Eg = CG.EvoGob = { file: [] };
-  // À quel niveau on évolue : entre 7 et 15, tiré au sort pour chacun (le chef, chaque gobelin, chaque compagnon), et
+  // À quel niveau on évolue : entre 7 et 12, tiré au sort pour chacun (le chef, chaque gobelin, chaque compagnon), et
   // toujours le même pour lui dans une partie. On ne l'affiche nulle part : on ne sait jamais exactement quand.
-  CG.EVO_MIN = 7; CG.EVO_MAX = 15;
+  CG.EVO_MIN = 7; CG.EVO_MAX = 12;
   CG.seuilEvo = function (o) { const S = CG.S, id = o && o.id !== undefined ? o.id + (o.pet ? 7919 : 0) : -1, v = Math.sin(((S && S.seed) || 1) * 12.9898 + id * 78.233) * 43758.5453; return CG.EVO_MIN + Math.floor((v - Math.floor(v)) * (CG.EVO_MAX - CG.EVO_MIN + 1)); };
   const stats = g => ({ hp: G.gobMaxHp(g), atk: G.guardDmg(g) });
   Eg.ajouter = function (g, avant, st) { Eg.file.push({ g, avant, st }); };

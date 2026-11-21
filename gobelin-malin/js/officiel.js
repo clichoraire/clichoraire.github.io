@@ -1,5 +1,5 @@
-// Goblin Malin — le nom officiel : ça ne se décide plus en pleine journée. Le matin, au réveil, chaque gobelin qui est prêt
-// attend son nom : on lui en écrit un nouveau, ou on garde le sien. C'est ce nom-là qui le transforme, sur-le-champ :
+// Goblin Malin — le nom officiel. Quand un gobelin est prêt, un nouveau choix apparaît dans sa discussion : « Le renommer
+// officiellement ». Rien ne dit à quoi ça sert. On lui écrit un nom, ou on garde le sien. C'est ce nom-là qui le transforme, sur-le-champ :
 // hobgobelin, ou chevaucheur de loup si le clan a une monture pour lui (mêmes critères qu'avant).
 'use strict';
 (function (CG) {
@@ -26,13 +26,13 @@
   Of.demander = function (g) {
     const A = CG.Accueil; if (!(A && A.nommerGob && CG.EvoGob)) return Of.demanderVieux(g);
     A.nommerGob(CG.EvoGob.corps(g, { cls: g.cls, job: g.job, nomme: !!g.nomme }), {
-      nom: g.name, phrase: g.name + ' a bien grandi. Écris son nom officiel, ou garde le sien : avec ce nom, ' + (fem(g) ? 'elle' : 'il') + ' va se transformer.',
+      nom: g.name, phrase: 'Écris le nom officiel de ' + g.name + ', ou garde le sien.',
       verifier: n => n.length < 2 ? 'Il faut au moins deux lettres.' : pris(n, g) ? 'Ce nom est déjà porté dans le clan.' : null,
       confirmer: n => Of.nommer(g, n, true) });
   };
   Of.demanderVieux = function (g, err) {
     const il = fem(g) ? 'elle' : 'il';
-    UI.dialog({ goblin: g, who: g.name, tag: '🏷️ nom officiel', text: (err ? err + ' ' : '') + g.name + ' a bien grandi. Ce matin, ' + il + ' attend son nom officiel : écris-en un nouveau, ou garde le sien. Avec ce nom, ' + il + ' va se transformer.',
+    UI.dialog({ goblin: g, who: g.name, tag: '🏷️ nom officiel', text: (err ? err + ' ' : '') + g.name + ' : écris son nom officiel, ou garde le sien.',
       extra: '<p><input id="of-in" type="text" maxlength="14" autocomplete="off" style="font:inherit;padding:6px 10px;border-radius:8px;border:2px solid #6b4a2a;background:#fff8e4;color:#2a1c0e;width:220px"></p>',
       options: [{ label: '✨ C\'est son nom officiel', fn: () => {
         const n = (document.getElementById('of-in').value || '').trim().replace(/\s+/g, ' ');
@@ -42,24 +42,10 @@
       } }, { label: '👍 Garder « ' + g.name + ' »', sub: 'Son nom de toujours devient son nom officiel', fn: () => Of.nommer(g, g.name) }] });
     const el = document.getElementById('of-in'); if (el) { el.value = g.name; el.focus(); el.select(); el.onkeydown = ev => { ev.stopPropagation(); if (ev.key === 'Enter') document.querySelector('#dialog .opts button').click(); }; }
   };
-  // au réveil : un par un, une fois la nuit et les autres scènes passées
-  const nd0 = D.nextDay; D.nextDay = function () {
-    const r = nd0.apply(this, arguments), jeu = CG.S, file = Of.prets().slice();
-    const suite = () => {
-      if (CG.S !== jeu || !file.length) return;
-      if (UI.modal || CG.R.night || CG.R.fade > 0.3) return void setTimeout(suite, 300);
-      const g = file.shift(); if (jeu.goblins.includes(g) && Of.pret(g)) Of.demander(g);
-      setTimeout(suite, 400);
-    };
-    if (file.length) setTimeout(suite, 600);
-    return r;
-  };
-  // dans la discussion : plus de nom à donner en plein jour, juste où il en est
+  // dans la discussion : quand il est prêt (et seulement là), un nouveau choix apparaît. On ne dit pas à quoi ça sert.
   const n0 = G.nameOpt; G.nameOpt = function (o) {
     if (o.pet) return n0.apply(this, arguments);
     const reste = n0.apply(this, arguments).filter(x => !/^🏷️/.test(x.label || ''));
-    if (o.nomme) return reste;
-    if (o.naming) return reste.concat([{ label: '🏷️ Son nom officiel : ' + o.naming, sub: 'Tu verras demain matin', disabled: true }]);
-    return reste.concat([{ label: '🏷️ Nom officiel', sub: Of.pret(o) ? 'Prêt' + e(o) + ' : ça se passera demain matin, au réveil' : 'Pas encore prêt' + e(o) + ' : ça vient quelque part entre le niveau ' + CG.EVO_MIN + ' et le niveau ' + CG.EVO_MAX + ', on ne sait jamais quand (niveau ' + o.lvl + ' en ce moment)', disabled: true }]);
+    return Of.pret(o) ? reste.concat([{ label: '🏷️ ' + (fem(o) ? 'La' : 'Le') + ' renommer officiellement', fn: () => Of.demander(o) }]) : reste;
   };
 })(window.CG);

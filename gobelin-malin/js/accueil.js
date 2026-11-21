@@ -188,6 +188,7 @@
   Acc.nommerGob = function (gob, o, done) {
     if (!root) build();
     evoS = { t0: performance.now(), stage: 1, oldLook: 'avant', newLook: 'apres', oldCls: null, newCls: null, s0: 1, s1: 1, gob, pre: true, E: { nom: '', col: '255,227,107', sub: '' } };
+    if (o.pet) { const K = CG.P.KINDS[o.pet.kind] || {}, e0 = +o.pet.evo || 0; evoS.gob = null; evoS.pet = o.pet; evoS.petK = K.monstre ? 2.1 : 2.8; evoS.petEvo = [e0, e0]; } // un compagnon : la même page, avec lui au milieu
     view = 'evo'; root.className = 'creer'; root.hidden = false; Acc.open = true; UI.modal = { name: 'evo', closable: false, pauses: true }; CG.keys.clear();
     box().innerHTML = '<div class="acc-evo"><p class="evo-s on" style="margin:1vh 0 0;max-width:760px;text-align:center">' + esc(o.phrase || '') + '</p>'
       + '<input id="evo-nom" type="text" maxlength="14" autocomplete="off" spellcheck="false" style="font:900 clamp(26px,5vh,46px) \'Trebuchet MS\',system-ui,sans-serif;text-align:center;width:min(560px,90%);padding:1.2vh 18px;border-radius:16px;border:4px solid #8a6a2a;background:#fff8e4;color:#2a1c0e;box-shadow:0 6px 0 #5a421a,0 10px 24px rgba(0,0,0,.5);outline:none">'
@@ -196,7 +197,7 @@
     const valider = () => {
       const n = (inp.value || '').trim().replace(/\s+/g, ' '), err = o.verifier ? o.verifier(n) : null; if (err) { box().querySelector('#evo-err').textContent = err; CG.sfx('no'); inp.focus(); return; }
       const k = o.confirmer(n); if (!k) { Acc.hide(); UI.modal = null; if (done) done(); return; }
-      if (CG.R) CG.R.evoStats = k.st; Acc.evolveGob(k.gob, k.E, done); evoS.t0 = performance.now() - 4500; // on sait déjà qui c'est : pas de silhouette mystère, la lumière tout de suite
+      if (CG.R) CG.R.evoStats = k.st; if (k.pet) return Acc.evolvePet(k.pet, done, Object.assign({ vite: true }, k.opt)); Acc.evolveGob(k.gob, k.E, done); evoS.t0 = performance.now() - 4500; // on sait déjà qui c'est : pas de silhouette mystère, la lumière tout de suite
     };
     box().querySelector('.acc-evo').insertAdjacentHTML('beforeend', SKIP); box().querySelector('#evo-skip').onclick = () => { o.confirmer(o.nom); Acc.hide(); UI.modal = null; if (done) done(); }; // il garde son nom, sans la scène
     ok.onclick = valider; inp.onkeydown = ev => { ev.stopPropagation(); if (ev.key === 'Enter') valider(); }; inp.onkeyup = ev => ev.stopPropagation();

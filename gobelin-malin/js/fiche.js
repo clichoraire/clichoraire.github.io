@@ -25,7 +25,7 @@
     h += ligne('⚔️', 'Dégâts', n1(P.dmg(p)) + ' par coup') + ligne('🍖', 'Appétit', P.eats(p) + ' par jour');
     h += ligne('📍', 'En ce moment', p.ko ? 'Mort' : R.mount === p ? 'Tu le montes' : p.follow && G.tech('b24') ? 'Te suit partout' : 'Garde le village');
     if (p.buffT > 0 && P.BUFFS[p.buff]) h += ligne(P.BUFFS[p.buff].icon, 'Bonus', P.BUFFS[p.buff].nom + ' (encore ' + Math.ceil(p.buffT) + ' s)');
-    h += ligne('🌟', 'Évolution', p.evo ? 'Déjà évolué : ' + k.evo : 'Au niveau ' + (k.evoLvl || P.EVO_LVL)); if (p.evo && k.special) h += ligne('💥', 'Attaque spéciale', k.special);
+    if (p.evo) h += ligne('🌟', 'Évolution', k.evo); if (p.evo && k.special) h += ligne('💥', 'Attaque spéciale', k.special);
     UI.dialog({ visitor: { role: 'animal', look: 'animal', kind: p.kind, evo: p.evo }, fiche: true, who: p.name, tag: '📊 sa fiche' + (p.nomme ? ' · 🏷️ nommé' : ''), text: 'Voilà où il en est.', extra: cadre(h), options: [{ label: '↩ Retour', fn: () => P.talkPet(p) }] });
   };
   // le bouton, ajouté à la fenêtre de discussion d'un gobelin du clan ou d'un compagnon

@@ -78,7 +78,6 @@
     N('s1', 'sorc', 1, 1, 1, '🧠', 'Esprit vif', '+15 mana maximum.', { onBuy: () => { const p = CG.S.player; p.maxmp += 15; p.mp += 15; } }),
     N('s6', 'sorc', 2, 0, 1, '💎', 'Cristaux', 'Révèle le Cristal de mana.', { req: ['s1'], unlock: ['cristal'] }),
     N('s12', 'sorc', 2, 3, 2, '👁️', 'Regard perçant', 'Tu vois en permanence les forces et les faiblesses de chaque gobelin, sans lancer le sort.', { req: ['s1'] }),
-    N('s13', 'sorc', 3, 3, 2, '🏷️', 'Nom officiel', 'Nouveau pouvoir : parle à un animal ou à un allié de niveau 5 ou plus pour lui donner un nom officiel. Il se transforme sous tes yeux. Chaque nom te coûte de la nourriture, de l\'or et de ta propre vie.', { req: ['s12'] }),
     N('s2', 'sorc', 2, 1, 1, '🌊', 'Source de mana', 'Ton mana remonte de 0,5 par seconde au départ. Avec ce pouvoir : +0,5 par seconde de plus.', { req: ['s1'] }),
     N('s3', 'sorc', 2, 2, 2, '✨', 'Étincelles jumelles', 'Étincelle lance trois traits en éventail.', { req: ['s1'] }),
     N('s10', 'sorc', 3, 0, 2, '🔮', 'Aura protectrice', 'Tu reçois 15 % de dégâts en moins.', { req: ['s6'] }),

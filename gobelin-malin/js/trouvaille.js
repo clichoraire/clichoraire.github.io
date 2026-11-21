@@ -30,7 +30,7 @@
     const p = CG.S.player, sc = p.scrolls || {}, ids = (f.ids || Object.keys(sc).filter(id => sc[id] && !f.avant.includes(id))).filter(id => CG.SPELLS[id]); if (!ids.length) return;
     const sp = CG.SPELLS[ids[0]]; fermer(); const el = document.createElement('div'); el.id = 'tv-sort'; el.innerHTML = '<small></small><b></b><p></p><i>Espace ou Entrée pour passer</i>';
     el.querySelector('small').textContent = ids.length > 1 ? 'Nouveaux sorts (' + ids.length + ')' : 'Nouveau sort'; el.querySelector('b').textContent = sp.icon + ' ' + sp.nom + (ids.length > 1 ? ' …' : '');
-    document.body.appendChild(el); f.el = el; f.txt = sp.desc || ''; f.t0 = f.t + 0.45; f.vu = -1; f.dur = Math.max(Tv.DUR, f.t0 + f.txt.length / Tv.LETTRES + Tv.LIRE);
+    document.body.appendChild(el); f.el = el; f.txt = sp.court || sp.desc || ''; f.t0 = f.t + 0.45; f.vu = -1; f.dur = Math.max(Tv.DUR, f.t0 + f.txt.length / Tv.LETTRES + Tv.LIRE);
   }
   window.addEventListener('keydown', e => { const f = CG.R && CG.R.trouve; if (!f || !f.txt || !(e.code === 'Space' || e.code === 'Enter')) return; const fin = f.t0 + f.txt.length / Tv.LETTRES; if (f.t < fin) f.t0 = f.t - f.txt.length / Tv.LETTRES - 0.01; else f.t = Math.max(f.t, f.dur - 0.5); }, true); // une pression : tout le texte ; une autre : on continue
   { const upF = G.update; G.update = function () { const r = upF.apply(this, arguments); if (!(CG.R && CG.R.trouve) && document.getElementById('tv-sort')) fermer(); return r; }; }

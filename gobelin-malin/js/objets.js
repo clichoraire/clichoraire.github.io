@@ -12,13 +12,20 @@
   Ob.PHRASE = { epee: 'Donne-la à un gobelin : il frappera plus fort.', arc: 'Donne-le à un gobelin : il tirera de loin.', armure: 'Donne-la à un gobelin : il sera plus solide.', pioche: 'Pour ramasser plus de minerai.', hache: 'Pour ramasser plus de bois.', gant: 'Pour cueillir plus de baies.' };
   Ob.lacher = function (x, y, k, n) { G.drop(x, y, { kind: 'objet', k, n }); G.puff(x, y - 20, '#bfe8ff', 24, 150, 4); CG.sfx('discovery'); };
   // ---------- ramasser ----------
+  // ---------- deux technologies : les cœurs et les gouttes ramassés rendent deux fois plus, puis encore deux fois plus ----------
+  Ob.TECHS = ['g20', 'g21'];
+  Ob.fois = () => Ob.TECHS.reduce((k, id) => k * (G.tech(id) ? 2 : 1), 1);
+  [{ id: 'g20', br: 'guer', t: 6, r: 2, cout: 1, icon: '💗', nom: 'Cœurs généreux I', desc: 'Les cœurs et les gouttes de mana que tu ramasses par terre te rendent 2 fois plus.', req: ['g1'] },
+    { id: 'g21', br: 'guer', t: 6, r: 3, cout: 2, icon: '💖', nom: 'Cœurs généreux II', desc: 'Les cœurs et les gouttes de mana que tu ramasses par terre te rendent encore 2 fois plus (4 fois en tout).', req: ['g20'] }
+  ].forEach(n => { CG.TECH.push(n); if (CG.TECH_BY_ID) CG.TECH_BY_ID[n.id] = n; if (CG.TECH_PARENT) CG.TECH_PARENT[n.id] = n.req[0]; });
+  if (CG.Vues && CG.Vues.NIVEAU) CG.Vues.NIVEAU.g21 = 'g20'; // le niveau II attend le niveau I
   const pk0 = G.pickUp; G.pickUp = function (d) {
     if (!d || !MIENS[d.kind]) return pk0.apply(this, arguments); const p = CG.S.player, n = d.n || 1;
     if (d.kind === 'objet') { const Bq = CG.Banque, z = Bq.deposer(d.k, n, 1, 'sac'), nom = Bq.IC[d.k] + ' ' + Bq.NOMS[d.k][n];
       G.text(p.x, p.y - 84, nom, '#d0ecff', true); G.puff(p.x, p.y - 24, '#bfe8ff', 18, 140, 4); CG.R.rings.push({ x: p.x, y: p.y - 10, r: 50, life: 0.5, col: '#bfe8ff' }); CG.sfx('heal');
       G.banner(nom + ' ' + '★'.repeat(n), Ob.PHRASE[d.k] || (z === 'sac' ? 'C\'est dans ton sac.' : 'C\'est au coffre du camp.'), '#d0ecff'); if (z !== 'sac') CG.UI.toast('🎒 Ton sac est plein : ' + nom + ' est au coffre du camp.'); return; }
-    if (d.kind === 'coeur') { const v = Ob.SOIN * n; p.hp = Math.min(p.maxhp, p.hp + v); G.text(d.x, d.y - 30, '+' + v + ' ❤', '#ff9ac0'); CG.sfx('ok'); }
-    else if (d.kind === 'mana') { const v = Ob.MANA * n; p.mp = Math.min(p.maxmp, p.mp + v); G.text(d.x, d.y - 30, '+' + v + ' 💧', '#9ad0ff'); CG.sfx('ok'); }
+    if (d.kind === 'coeur') { const v = Ob.SOIN * n * Ob.fois(); p.hp = Math.min(p.maxhp, p.hp + v); G.text(d.x, d.y - 30, '+' + v + ' ❤', '#ff9ac0'); CG.sfx('ok'); }
+    else if (d.kind === 'mana') { const v = Ob.MANA * n * Ob.fois(); p.mp = Math.min(p.maxmp, p.mp + v); G.text(d.x, d.y - 30, '+' + v + ' 💧', '#9ad0ff'); CG.sfx('ok'); }
     else { const vie = d.kind === 'coeurOr'; if (vie) { p.maxhp += n; p.hp += n; } else { p.maxmp += n; p.mp += n; }
       G.text(p.x, p.y - 84, (vie ? '💛 +' + n + ' vie max' : '💛 +' + n + ' mana max'), '#ffe36b', true); G.puff(p.x, p.y - 24, '#ffd84a', 22, 150, 4); for (let i = 0; i < 2; i++) CG.R.rings.push({ x: p.x, y: p.y - 10, r: 46 + i * 34, life: 0.45 + i * 0.15, col: '#ffe36b' }); CG.sfx('heal');
       G.banner(vie ? '💛 Cœur d\'or' : '💛 Goutte d\'or', vie ? 'Tu as plus de vie, pour toujours !' : 'Tu as plus de mana, pour toujours !', '#ffe9a8'); }

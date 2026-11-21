@@ -28,9 +28,19 @@
   };
   const fi0 = D.findInteract; D.findInteract = function () {
     const it = fi0.apply(this, arguments), R = CG.R; if (R.ko > 0 || R.cine || R.build || !Cr.ouvert()) return it; const q = Cr.porte(), p = CG.S.player;
-    if (Math.hypot(p.x - q.x, p.y - (q.y + 14)) < 46 && (!it || it.type !== 'visitor')) return { type: 'crypte', obj: { x: q.x, y: q.y - 40 }, label: 'Entrer dans le portail magique' }; return it;
+    if (Math.hypot(p.x - q.x, p.y - (q.y + 14)) < 46 && (!it || it.type !== 'visitor')) return Cr.propre() ? { type: 'crypte', obj: { x: q.x, y: q.y - 40 }, label: 'Entrer dans le portail magique' } : { type: 'crypteGardee', obj: { x: q.x, y: q.y - 40 }, label: 'Le portail est gardé : nettoie d\'abord le cimetière' }; return it;
   };
-  const in0 = D.interact; D.interact = function () { const it = D.findInteract(); if (!it || it.type !== 'crypte') return in0.apply(this, arguments); Ar.partir('crypte'); };
+  // le portail ne s'ouvre qu'une fois le cimetière nettoyé ; et au retour, il reste vide pour la journée
+  const gardien = e => !e.dead && (e.site === 'cimetiere' || e.cimetiere);
+  Cr.propre = () => !CG.R.enemies.some(gardien);
+  const in0 = D.interact; D.interact = function () { const it = D.findInteract(); if (it && it.type === 'crypteGardee') { CG.sfx('no'); return UI.toast('Des morts rôdent encore entre les tombes. Le portail ne te laissera passer qu\'une fois le cimetière nettoyé.'); }
+    if (!it || it.type !== 'crypte') return in0.apply(this, arguments); const S = CG.S; if (S.crypte) S.crypte.net = true; Ar.partir('crypte'); };
+  { let tic = 0; const up0 = G.update; G.update = function (dt) {
+    up0.apply(this, arguments); const S = CG.S, R = CG.R; if (!S || !R || (tic -= dt) > 0) return; tic = 0.5;
+    if (!foret() || !S.crypte || S.crypte.day !== S.day || !S.crypte.net) return;
+    if (R.enemies.some(gardien)) R.enemies = R.enemies.filter(e => !gardien(e)); // ceux que le retour dans la forêt aurait ramenés
+    (R.siteDone || (R.siteDone = {})).cimetiere = true; if (R.siteCoffre) delete R.siteCoffre.cimetiere;
+  }; }
   // ---------- les vagues : la même horde qu'un piédestal, mais de morts ----------
   function vague(h) {
     const w = h.wave; let budget = (7 + h.pw * 1.3) * (0.6 + 0.4 * w); const pool = ['squelette', 'spectre'].concat(h.pw >= 3 || w >= 2 ? ['wraith'] : []).filter(t => CG.ENEMIES[t]), out = [];
