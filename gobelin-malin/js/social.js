@@ -1,7 +1,7 @@
 // Clan Gobelin — vie sociale : questions des villageois, cour aux danseuses le soir, chantiers.
 'use strict';
 (function (CG) {
-  const G = CG.G, W = CG.W, T = CG.TILE, Soc = CG.Soc = { timer: 50 };
+  const G = CG.G, W = CG.W, T = CG.TILE, Soc = CG.Soc = { timer: 120 };
   const pick = CG.pick, rand = CG.rand;
 
   // ---------- questions des villageois : [réponse, effet sur le moral] ----------
@@ -179,6 +179,10 @@
 
   Soc.inVillage = () => CG.dist(CG.S.player, G.firePos()) < 480;
   Soc.combat = () => { const R = CG.R; return R.playerCombatUntil > R.t || !!R.horde; };
+  // combien de temps entre deux questions, selon la difficulté : ×1 = une toutes les 55 à 95 secondes (comme avant).
+  // Plus c'est facile, plus on laisse le chef tranquille ; en Élite et en Cauchemar, les gobelins restent bavards.
+  Soc.CALME = { facile: 5, normal: 4, difficile: 3, elite: 1.4, cauchemar: 1 }; Soc.REPIT = 30;
+  Soc.calme = () => Soc.CALME[CG.Diff ? CG.Diff.id() : 'difficile'] || 1;
   Soc.update = function (dt) {
     const S = CG.S, R = CG.R, p = S.player, c = R.cine;
     if (c) {
@@ -194,10 +198,11 @@
     }
     // un villageois vient poser une question (de jour, au calme)
     if (R.alarm || S.hour < 7 || S.hour > 18.3 || R.ko > 0) return;
+    if (CG.UI.modal) { Soc.timer = Math.max(Soc.timer, Soc.REPIT); return; } // le chef lit ou discute déjà : l'attente ne court pas, et on lui laisse un répit ensuite
     Soc.timer -= dt; if (Soc.timer > 0) return;
     if (Soc.combat()) { Soc.timer = 6; return; } // le chef se bat : personne ne vient le déranger
     if (!Soc.inVillage()) { Soc.timer = 4; return; } // on ne dérange le chef que dans le village
-    Soc.timer = rand(55, 95);
+    Soc.timer = rand(55, 95) * Soc.calme();
     if (S.goblins.some(g => g.ask)) return;
     const cand = S.goblins.filter(g => g.met && !g.hidden && !g.exile && !g.carry && !g.log && g.state !== 'fight' && CG.dist(g, p) < 900);
     if (cand.length) { const g = pick(cand); G.resetGoblin(g); g.ask = { t: 50 }; g.repath = 0; }

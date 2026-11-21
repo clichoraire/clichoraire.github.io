@@ -574,10 +574,11 @@
     if (K.has('a') || K.has('ArrowLeft')) mx -= 1; if (K.has('d') || K.has('ArrowRight')) mx += 1;
     if (K.has('w') || K.has('ArrowUp')) my -= 1; if (K.has('s') || K.has('ArrowDown')) my += 1;
     if (mx || my) {
+      { const v = CG.Tactile && CG.Tactile.vec; if (v) { mx = v.x; my = v.y; } } // manette tactile : la direction exacte du pouce, pas seulement les huit du clavier
       const l = Math.hypot(mx, my), run = G.tech('g13') && K.has('Shift'), spd = 80 * G.heroMul() * (run ? 1.7 : 1) * (onPath(p) ? 1.2 : 1); R.running = run; R.dir = { x: mx / l, y: my / l };
       if (R.passe > 0) { p.x += mx / l * spd * dt; p.y += my / l * spd * dt; } /* Passe-muraille : rien ne l'arrête */ else { W.surEau = R.surEau > 0; /* potion de nénuphar : l'eau porte le chef, et lui seul */ slide(p, mx / l * spd * dt, my / l * spd * dt, 9); W.surEau = false; }
       p.x = CG.clamp(p.x, 12, CG.MW * T - 12); p.y = CG.clamp(p.y, 12, CG.MH * T - 12);
-      if (mx) p.face = mx; p.step += dt * 2.6 * G.heroMul() * (run ? 1.6 : 1); p.moving = true; if (run && Math.random() < dt * 14) R.parts.push({ x: p.x - R.dir.x * 8, y: p.y - 2, vx: rand(-12, 12), vy: rand(-22, -6), life: 0.4, max: 0.4, col: '#d8c8a0', size: 3, float: true });
+      if (Math.abs(mx) > 0.2) p.face = mx > 0 ? 1 : -1; p.step += dt * 2.6 * G.heroMul() * (run ? 1.6 : 1); p.moving = true; if (run && Math.random() < dt * 14) R.parts.push({ x: p.x - R.dir.x * 8, y: p.y - 2, vx: rand(-12, 12), vy: rand(-22, -6), life: 0.4, max: 0.4, col: '#d8c8a0', size: 3, float: true });
     } else p.moving = false;
     // le mana ne remonte plus tout seul, comme la vie : une nuit de sommeil, ou des pouvoirs de l'arbre et des cristaux qui en redonnent un peu
     if (p.mp < p.maxmp) { const rg = G.manaRegen(); if (rg) p.mp = Math.min(p.maxmp, p.mp + rg * dt); }
