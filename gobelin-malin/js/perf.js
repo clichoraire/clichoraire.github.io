@@ -14,7 +14,12 @@
 'use strict';
 (function () {
   const NON = /perf-non/.test(location.hash), CLE = 'goblin-malin-finesse';
-  const Pf = window.GMPerf = { IMAGES: 60, PALIERS: [{ res: 1, gob: 0 }, { res: 0.8, gob: 20 }, { res: 0.65, gob: 12 }], LENT: 18.5, MARGE: 1.12, FENETRE: 150, res: 1, gob: 0, palier: 0, plafond: !NON, auto: !NON, mesure: null };
+  const Pf = window.GMPerf = { IMAGES: 60, PALIERS: [{ res: 1, gob: NON ? 0 : 24 }, { res: 0.8, gob: 16 }, { res: 0.65, gob: 12 }], LENT: 17.9, MARGE: 1.07, FENETRE: 150, IMMOBILE: 10, res: 1, gob: NON ? 0 : 24, palier: 0, plafond: !NON, auto: !NON, mesure: null };
+  // Le nombre de points dessinés : un écran très fin (iPad, MacBook) demande quatre fois plus de points qu'un écran ordinaire, pour
+  // un dessin à peine plus net. On plafonne le total : c'est le plus gros gain sur une tablette. PIXELS se règle ici.
+  const TACTILE = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  Pf.PIXELS = NON ? 1e9 : TACTILE ? 2.2e6 : 3.2e6;
+  Pf.dpr = (w, h, max) => Math.max(1, Math.min(max || 2, window.devicePixelRatio || 1, Math.sqrt(Pf.PIXELS / Math.max(1, w * h))));
   const pose = p => { Pf.palier = Math.max(0, Math.min(Pf.PALIERS.length - 1, p | 0)); Pf.res = Pf.PALIERS[Pf.palier].res; Pf.gob = Pf.PALIERS[Pf.palier].gob; };
   try { if (/finesse/.test(location.hash)) localStorage.removeItem(CLE); const f = /palier=(\d)/.exec(location.hash), p = f ? +f[1] : +localStorage.getItem(CLE); if (!NON && p > 0) pose(p); if (f) Pf.auto = false; } catch (e) { /* rien */ }
 
@@ -56,12 +61,12 @@
       const m = g.getTransform(); if (m.b || m.c || m.a !== m.d || m.a <= 0) return g0.apply(this, arguments);
       const sc = m.a, w = Math.ceil(L * sc), h = Math.ceil(H * sc), now = performance.now(), cle = (o.pose || '') + (o.moving ? 'm' : 's') + (o.face < 0 ? 'g' : 'd') + (o.tool || '') + (o.job || '');
       let c = garde.get(e);
-      if (!c) { c = { cv: document.createElement('canvas'), t: -1e9, cle: null, sc: 0 }; c.gx = c.cv.getContext('2d'); garde.set(e, c); }
-      if (c.sc !== sc || c.cle !== cle || now - c.t >= 1000 / Pf.gob - 3) {
+      if (!c) { c = { cv: document.createElement('canvas'), t: -1e9, cle: null, sc: 0 }; e._pfDec = Math.random() * 40; /* pas tous redessinés à la même image */ c.gx = c.cv.getContext('2d'); garde.set(e, c); }
+      if (c.sc !== sc || c.cle !== cle || now - c.t >= 1000 / (o.moving ? Pf.gob : Math.min(Pf.gob, Pf.IMMOBILE)) - 3) { /* celui qui ne bouge pas est redessiné moins souvent */
         if (c.cv.width !== w || c.cv.height !== h) { c.cv.width = w; c.cv.height = h; }
         const x = c.gx; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, w, h); x.setTransform(sc, 0, 0, sc, (GA - o.x) * sc, (HA - o.y) * sc);
         try { g0.call(this, x, o); } catch (er) { garde.delete(e); return g0.apply(this, arguments); }
-        c.t = now; c.cle = cle; c.sc = sc; Pf.dessins++;
+        c.t = c.cle === null ? now - (e._pfDec || 0) : now; c.cle = cle; c.sc = sc; Pf.dessins++;
       } else if (e._px !== undefined) { e._px = e.x; e._py = e.y; } // (le dessin retient où était le gobelin pour savoir de quel côté il regarde)
       g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(c.cv, Math.round((o.x - GA) * sc + m.e), Math.round((o.y - HA) * sc + m.f)); g.setTransform(m); Pf.collages++;
     };

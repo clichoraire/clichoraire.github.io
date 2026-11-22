@@ -183,7 +183,6 @@
     g.fillStyle = '#d81e2c'; g.beginPath(); g.arc(0, 0, 6.3, -0.25, Math.PI + 0.25); g.closePath(); g.fill(); g.fillRect(-6.1, -1.6, 12.2, 1.8); // le liquide rouge
     g.fillStyle = '#ff5a62'; g.beginPath(); g.ellipse(0, -1.4, 6, 1.5, 0, 0, TAU); g.fill();   // la surface
     g.fillStyle = 'rgba(255,255,255,0.75)'; g.beginPath(); g.ellipse(-3, -1.5, 1.4, 3, 0.5, 0, TAU); g.fill(); // le reflet
-    g.strokeStyle = '#5a1018'; g.lineWidth = 1.1; g.beginPath(); g.arc(0, 0, 7.6, -1.2, Math.PI + 1.2); g.lineTo(-2.6, -11.5); g.moveTo(2.6, -11.5); g.lineTo(2.75, -7.1); g.stroke();
     g.restore();
   };
   Fe.FIOLE_SVG = '<svg class="fiole" viewBox="-10 -17 20 27" width="20" height="27"><rect x="-3" y="-15.5" width="6" height="4.5" rx="1" fill="#8a5a2a"/><rect x="-2.6" y="-11.5" width="5.2" height="6" fill="#e4f2ff"/><circle r="7.8" fill="#e4f2ff" stroke="#5a1018" stroke-width="1.2"/><path d="M-6.4 -1.2 A6.5 6.5 0 0 0 6.4 -1.2 Z" fill="#d81e2c"/><ellipse cy="-1.2" rx="6.3" ry="1.5" fill="#ff5a62"/><ellipse cx="-3.2" cy="-1.6" rx="1.3" ry="2.8" fill="#fff" opacity="0.75" transform="rotate(25 -3.2 -1.6)"/></svg>';

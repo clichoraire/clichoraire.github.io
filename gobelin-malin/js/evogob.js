@@ -6,8 +6,8 @@
   const G = CG.G, UI = CG.UI, Eg = CG.EvoGob = { file: [] };
   // À quel niveau on évolue : entre 7 et 12, tiré au sort pour chacun (le chef, chaque gobelin, chaque compagnon), et
   // toujours le même pour lui dans une partie. On ne l'affiche nulle part : on ne sait jamais exactement quand.
-  CG.EVO_MIN = 7; CG.EVO_MAX = 12;
-  CG.seuilEvo = function (o) { const S = CG.S, id = o && o.id !== undefined ? o.id + (o.pet ? 7919 : 0) : -1, v = Math.sin(((S && S.seed) || 1) * 12.9898 + id * 78.233) * 43758.5453; return CG.EVO_MIN + Math.floor((v - Math.floor(v)) * (CG.EVO_MAX - CG.EVO_MIN + 1)); };
+  CG.EVO_MIN = 7; CG.EVO_MAX = 12; CG.EVO_PET = [5, 8]; /* les animaux et compagnons : plus tôt que les gobelins */
+  CG.seuilEvo = function (o) { const S = CG.S, id = o && o.id !== undefined ? o.id + (o.pet ? 7919 : 0) : -1, v = Math.sin(((S && S.seed) || 1) * 12.9898 + id * 78.233) * 43758.5453; const pet = !!(S && S.pets && S.pets.includes(o)), a = pet ? CG.EVO_PET[0] : CG.EVO_MIN, b = pet ? CG.EVO_PET[1] : CG.EVO_MAX; return a + Math.floor((v - Math.floor(v)) * (b - a + 1)); };
   const stats = g => ({ hp: G.gobMaxHp(g), atk: G.guardDmg(g) });
   Eg.ajouter = function (g, avant, st) { Eg.file.push({ g, avant, st }); };
   // les voies choisies la veille s'appliquent pendant la nuit : on note qui a changé

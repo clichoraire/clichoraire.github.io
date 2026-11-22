@@ -158,8 +158,11 @@
     } else if (b.type === 'stock' || b.type === 'depot') {
       const s = sprite('stock', 110, 70, c => {
         ell(c, 55, 60, 50, 9, 'rgba(0,0,0,0.25)');
-        for (let i = 0; i < 3; i++) { ell(c, 22 + i * 4, 52 - i * 9, 18, 6, '#6b4a2a'); circ(c, 6 + i * 4, 52 - i * 9, 5.5, '#c9a56b'); }
-        rrect(c, 44, 30, 26, 26, 3, '#a87a40'); c.strokeStyle = '#6a4a20'; c.lineWidth = 2; c.strokeRect(46, 32, 22, 22); c.beginPath(); c.moveTo(46, 32); c.lineTo(68, 54); c.stroke();
+        [[10, 52], [25, 52], [17.5, 39.5]].forEach(([x, y]) => { /* trois bûches en petit tas : deux en dessous, une par-dessus, vues par le bout */
+          c.fillStyle = '#5a3d22'; c.beginPath(); c.moveTo(x - 5.4, y - 5.4); c.lineTo(x + 6.6, y - 13.4); c.arc(x + 12, y - 8, 7.6, -Math.PI * 0.75, Math.PI * 0.25); c.lineTo(x + 5.4, y + 5.4); c.closePath(); c.fill();
+          c.fillStyle = 'rgba(255,255,255,0.1)'; c.beginPath(); c.moveTo(x - 4, y - 6.6); c.lineTo(x + 8, y - 14.4); c.lineTo(x + 11, y - 13.6); c.lineTo(x - 1, y - 6); c.closePath(); c.fill();
+          circ(c, x, y, 7.6, '#6b4a2a'); circ(c, x, y, 6.2, '#d8b478'); circ(c, x, y, 4, '#c9a060'); circ(c, x, y, 2, '#d8b478'); circ(c, x, y, 0.8, '#8a6234'); });
+        rrect(c, 44, 30, 26, 26, 3, '#a87a40'); rrect(c, 44, 30, 26, 5, 2, '#8a6030'); rrect(c, 44, 51, 26, 5, 2, '#8a6030'); c.fillStyle = '#8a6030'; c.fillRect(44, 30, 5, 26); c.fillRect(65, 30, 5, 26); c.strokeStyle = '#8a6030'; c.lineWidth = 3.5; c.beginPath(); c.moveTo(48, 34); c.lineTo(66, 52); c.stroke(); c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(60, 30, 10, 26);
         rrect(c, 76, 26, 22, 32, 8, '#8a5a2a'); c.fillStyle = '#b8bcc8'; c.fillRect(76, 34, 22, 3); c.fillRect(76, 48, 22, 3);
         ell(c, 58, 28, 10, 5, '#d8264a'); circ(c, 54, 26, 3, '#f04a6a'); circ(c, 61, 25, 3, '#c01a3a');
       });
@@ -348,7 +351,12 @@
       const bx = dir * 5; g.fillStyle = o.skin; g.beginPath(); g.moveTo(bx, hy - 3.4); g.quadraticCurveTo(bx + dir * 6.5, hy - 9.5, bx + dir * 13, hy - 9.5 + Math.sin(t * 3 + dir) * 0.8); g.quadraticCurveTo(bx + dir * 8, hy - 1, bx + dir, hy + 4); g.closePath(); g.fill();
       g.fillStyle = 'rgba(110,20,40,0.24)'; g.beginPath(); g.moveTo(bx + dir * 2.4, hy - 2); g.quadraticCurveTo(bx + dir * 6.2, hy - 6.6, bx + dir * 10, hy - 7.8); g.quadraticCurveTo(bx + dir * 6.5, hy - 1.6, bx + dir * 2.4, hy + 1.6); g.closePath(); g.fill();
     };
-    const horn = dir => { g.fillStyle = o.horns; g.beginPath(); g.moveTo(dir * 3.2, hy - 6.6); g.quadraticCurveTo(dir * 12.5, hy - 8, dir * 9.2, hy - 19); g.quadraticCurveTo(dir * 7.4, hy - 11, dir * 6.6, hy - 5); g.closePath(); g.fill(); g.strokeStyle = dk; g.lineWidth = 1; g.beginPath(); g.moveTo(dir * 6, hy - 8.4); g.lineTo(dir * 8.8, hy - 9.4); g.moveTo(dir * 7.6, hy - 11.6); g.lineTo(dir * 9.8, hy - 12.6); g.stroke(); };
+    const dem = !!(o.horns && o.fangs && !o.skull); /* un démon : il a son propre visage (cornes annelées, yeux de braise, sourire plein de crocs) */
+    const hornD = dir => { const gr = g.createLinearGradient(dir * 4, hy - 6, dir * 10, hy - 23); gr.addColorStop(0, '#2a1416'); gr.addColorStop(0.45, o.horns); gr.addColorStop(1, '#fff6dc'); g.fillStyle = gr;
+      g.beginPath(); g.moveTo(dir * 2.6, hy - 6.2); g.bezierCurveTo(dir * 11, hy - 6.5, dir * 16.5, hy - 13, dir * 10.6, hy - 23.5); g.bezierCurveTo(dir * 11.6, hy - 15, dir * 8.6, hy - 11, dir * 6.8, hy - 4.6); g.closePath(); g.fill(); g.save(); g.clip();
+      g.strokeStyle = 'rgba(20,6,8,0.4)'; g.lineWidth = 0.9; g.lineCap = 'round'; g.beginPath(); [[6.2, -7.6, 9.4, -9.2], [8.6, -10.2, 11.8, -11.8], [10.2, -13.4, 12.9, -14.6], [10.8, -17, 12.6, -17.8]].forEach(q => { g.moveTo(dir * q[0], hy + q[1]); g.lineTo(dir * q[2], hy + q[3]); }); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(dir * 8.4, hy - 7.4); g.quadraticCurveTo(dir * 13.6, hy - 12, dir * 11.4, hy - 20); g.stroke(); g.restore(); };
+    const horn = dir => { if (dem) return hornD(dir); g.fillStyle = o.horns; g.beginPath(); g.moveTo(dir * 3.2, hy - 6.6); g.quadraticCurveTo(dir * 12.5, hy - 8, dir * 9.2, hy - 19); g.quadraticCurveTo(dir * 7.4, hy - 11, dir * 6.6, hy - 5); g.closePath(); g.fill(); g.strokeStyle = dk; g.lineWidth = 1; g.beginPath(); g.moveTo(dir * 6, hy - 8.4); g.lineTo(dir * 8.8, hy - 9.4); g.moveTo(dir * 7.6, hy - 11.6); g.lineTo(dir * 9.8, hy - 12.6); g.stroke(); };
     const dome = (col, r, dy) => { g.fillStyle = col; g.beginPath(); g.arc(0, hy + dy, r, Math.PI, 0); g.closePath(); g.fill(); g.fillStyle = dk; g.beginPath(); g.arc(0, hy + dy, r, Math.PI * 1.5, 0); g.lineTo(0, hy + dy); g.closePath(); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 1.2; g.beginPath(); g.arc(0, hy + dy, r - 2.2, Math.PI * 1.15, Math.PI * 1.4); g.stroke(); };
     if (o.hair && o.longHair) { rrect(g, -9.6, hy - 6, 10, 23, 4.5, o.hair); g.fillStyle = 'rgba(255,255,255,0.2)'; g.fillRect(-7.6, hy - 2, 1.4, 16); }
     if (o.horns && !o.hat) horn(-1);
@@ -358,6 +366,21 @@
     if (o.skull) {
       ell(g, 1.2, hy + 4.6, 5, 3.6, o.skin); ell(g, 3.7, hy - 1, 2.5, 2.8, '#221'); ell(g, -1.9, hy - 1, 2.2, 2.6, '#221'); circ(g, 4.1, hy - 0.8, 0.9, '#ff5a3a'); circ(g, -1.6, hy - 0.8, 0.8, '#ff5a3a');
       poly(g, [1, hy + 1.6, 2.2, hy + 3.6, -0.2, hy + 3.6], '#221'); g.fillStyle = '#221'; g.fillRect(-2.6, hy + 5, 8.4, 0.9); for (let i = 0; i < 4; i++) g.fillRect(-1.6 + i * 2, hy + 4.2, 0.8, 3); line(g, -3, hy - 6.5, -1, hy - 4, 'rgba(0,0,0,0.3)', 0.9);
+    } else if (dem) {
+      const feu = o.eye && o.eye !== '#221' ? o.eye : '#ffb030', pu = 0.5 + Math.sin(t * 3.2) * 0.5, noir = '#22060a';
+      poly(g, [0.4, hy + 5.6, 2.6, hy + 10.4, 5.6, hy + 5.8], o.skin); poly(g, [2.6, hy + 10.4, 5.6, hy + 5.8, 3, hy + 6.4], dk); /* menton pointu */
+      ell(g, 0.8, hy - 6.2, 4.6, 0.7, 'rgba(0,0,0,0.12)'); ell(g, 0.2, hy + 2.6, 2.6, 1.1, 'rgba(255,255,255,0.1)'); /* front plissé, pommette */
+      poly(g, [-5.2, hy - 5, 0.9, hy - 2.9, 7.2, hy - 5.8, 7.4, hy - 2, 1, hy + 0.9, -5, hy - 1.4], 'rgba(40,0,10,0.42)'); /* l'ombre des arcades : un regard sombre */
+      ell(g, 4.2, hy - 1.5, 3.9 + pu * 0.5, 2.7 + pu * 0.4, 'rgba(255,190,60,' + (0.16 + pu * 0.1) + ')'); ell(g, -1.7, hy - 1.5, 3.4 + pu * 0.5, 2.5 + pu * 0.4, 'rgba(255,190,60,' + (0.14 + pu * 0.1) + ')'); /* la braise qui luit */
+      g.fillStyle = feu; g.beginPath(); g.moveTo(1.7, hy - 0.9); g.quadraticCurveTo(4.2, hy - 3.6, 7, hy - 3.2); g.quadraticCurveTo(5.8, hy + 0.5, 1.7, hy - 0.9); g.fill(); /* deux yeux en amande, tirés vers les tempes */
+      g.beginPath(); g.moveTo(0.1, hy - 0.9); g.quadraticCurveTo(-2, hy - 3.5, -4.4, hy - 3.2); g.quadraticCurveTo(-3.4, hy + 0.4, 0.1, hy - 0.9); g.fill();
+      ell(g, 4.5, hy - 1.7, 0.6, 1.25, '#1c0608'); ell(g, -2, hy - 1.7, 0.55, 1.15, '#1c0608'); circ(g, 5.3, hy - 2.4, 0.4, '#fffbe0'); circ(g, -1.3, hy - 2.4, 0.36, '#fffbe0');
+      line(g, 1.9, hy - 2.9, 7.4, hy - 5.4, noir, 1.5); line(g, -4.9, hy - 5, -0.2, hy - 2.9, noir, 1.5); /* sourcils épais, en V */
+      circ(g, 5.9, hy + 1.6, 0.6, noir); circ(g, 4, hy + 1.8, 0.55, noir); line(g, 4.9, hy - 0.4, 5.3, hy + 0.9, 'rgba(255,255,255,0.18)', 0.9); /* petit nez plat : deux narines */
+      g.fillStyle = noir; g.beginPath(); g.moveTo(-1.6, hy + 3.5); g.quadraticCurveTo(2.6, hy + 4.7, 7, hy + 3); g.quadraticCurveTo(5.6, hy + 7.2, 2.4, hy + 7.3); g.quadraticCurveTo(-0.2, hy + 6.6, -1.6, hy + 3.5); g.fill(); /* un grand sourire mauvais */
+      ell(g, 2.9, hy + 6.3, 1.7, 0.7, '#c8323a');
+      for (let i = 0; i < 5; i++) { const x = -0.6 + i * 1.45, grand = i === 0 || i === 4; poly(g, [x, hy + 3.9 - (i - 2) * (i - 2) * 0.05, x + 0.7, hy + (grand ? 6.9 : 5.5), x + 1.4, hy + 3.9 - (i - 2) * (i - 2) * 0.05], '#fffbe8'); } /* une rangée de crocs, deux grands aux coins */
+      poly(g, [1.1, hy + 7, 1.8, hy + 5.7, 2.5, hy + 7.1], '#f2e8c8'); poly(g, [3.4, hy + 7.1, 4.1, hy + 5.8, 4.8, hy + 6.8], '#f2e8c8');
     } else {
       const lit = o.eye && o.eye !== '#221';
       ell(g, 3.9, hy - 0.8, 2.3, 2.6, lit ? o.eye : '#fffdf2'); ell(g, -1.3, hy - 0.8, 2, 2.4, lit ? o.eye : '#fffdf2');

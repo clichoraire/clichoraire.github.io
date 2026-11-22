@@ -140,13 +140,16 @@
     g.strokeStyle = foe ? '#ff5a4a' : '#ffe36b'; g.lineWidth = 1; g.stroke();
     g.font = Math.round(8.5 * s) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(icon, x, y + 0.5);
   }
+  // un lieu nettoyé aujourd'hui (cimetière, nid, ruines...) : un petit crochet vert à côté de son rond
+  Sc.fait = t => { const R = CG.R; return !!(t && t.key && t.key.indexOf('lieu:') === 0 && R && R.siteDone && R.siteDone[t.key.slice(5)]); };
+  Sc.coche = function (g, x, y, s) { g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = '#1f7a2e'; g.beginPath(); g.arc(0, 0, 5, 0, TAU); g.fill(); g.fillStyle = '#4ad85a'; g.beginPath(); g.arc(0, 0, 4, 0, TAU); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.7; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(-2.1, 0.2); g.lineTo(-0.5, 1.9); g.lineTo(2.3, -1.6); g.stroke(); g.restore(); };
   Sc.mini = function (g, dot) {
     const S = CG.S, R = CG.R, p = S.player, F = found(), k = 2 / T, now = performance.now();
     // les ennemis ne se voient que de près, ou une fois l'alerte donnée
     for (const e of R.enemies) { if (e.struct || e.dead) continue; if (e.seen) dot(e.x, e.y, e.wild ? '#ffb0a0' : '#ff3020', e.wild ? 2 : 4); }
     for (const c of R.chests) if (!c.open && (c.vu || d2(c, p) < 420)) dot(c.x, c.y, '#ffe36b', 3); // vus par le chef, ou signalés par un villageois
     const fresh = {}; R.pings = R.pings.filter(q => now - q.t0 < (q.dur || 3400)); R.pings.forEach(q => { fresh[Math.round(q.x) + ':' + Math.round(q.y)] = q; });
-    for (const t of Sc.targets()) { if (!F[t.key] || fresh[Math.round(t.x) + ':' + Math.round(t.y)]) continue; if (t.small) { const x = Math.round(t.x * k), y = Math.round(t.y * k); g.fillStyle = '#3a2408'; g.fillRect(x - 3, y - 2, 6, 5); g.fillStyle = '#ffd84a'; g.fillRect(x - 2, y - 1, 4, 3); g.fillStyle = '#8a5a14'; g.fillRect(x - 2, y, 4, 1); } else if (t.beast) dot(t.x, t.y, '#ffb0a0', 3); else badge(g, t.x * k, t.y * k, t.icon, 0.85, t.foe); }
+    for (const t of Sc.targets()) { if (!F[t.key] || fresh[Math.round(t.x) + ':' + Math.round(t.y)]) continue; if (t.small) { const x = Math.round(t.x * k), y = Math.round(t.y * k); g.fillStyle = '#3a2408'; g.fillRect(x - 3, y - 2, 6, 5); g.fillStyle = '#ffd84a'; g.fillRect(x - 2, y - 1, 4, 3); g.fillStyle = '#8a5a14'; g.fillRect(x - 2, y, 4, 1); } else if (t.beast) dot(t.x, t.y, '#ffb0a0', 3); else { badge(g, t.x * k, t.y * k, t.icon, 0.85, t.foe); if (Sc.fait(t)) Sc.coche(g, t.x * k + 7, t.y * k + 6, 1); } }
     // l'animation d'une découverte : le trait part du village, les anneaux s'ouvrent, l'icône rebondit
     const f = G.firePos();
     for (const q of R.pings) {
@@ -206,7 +209,9 @@
     const vg = g.createRadialGradient(ox + mw / 2, oy + mh / 2, Math.min(mw, mh) * 0.42, ox + mw / 2, oy + mh / 2, Math.max(mw, mh) * 0.74); vg.addColorStop(0, 'rgba(110,70,25,0)'); vg.addColorStop(1, 'rgba(110,70,25,0.5)'); g.fillStyle = vg; g.fillRect(ox, oy, mw, mh); g.restore();
     g.strokeStyle = '#4a2e12'; g.lineWidth = 3 * u; rr(ox, oy, mw, mh, 12 * u); g.stroke(); g.lineWidth = 1.2 * u; g.strokeStyle = 'rgba(74,46,18,0.7)'; rr(ox - 6 * u, oy - 6 * u, mw + 12 * u, mh + 12 * u, 16 * u); g.stroke();
     // rose des vents
-    const cx = ox + mw - 62 * u, cy = oy + 66 * u, R1 = 40 * u; g.save(); g.translate(cx, cy);
+    // dans le coin de la carte le plus dégagé : jamais par-dessus un lieu (le nid d'araignées est souvent en haut à droite)
+    const R1 = 40 * u, coins = [[ox + mw - 62 * u, oy + 66 * u], [ox + 62 * u, oy + 66 * u], [ox + mw - 62 * u, oy + mh - 62 * u], [ox + 62 * u, oy + mh - 62 * u]]; let lieux = []; try { lieux = Sc.targets().filter(q => !q.beast && !q.small).map(q => [ox + q.x * s, oy + q.y * s]); const f = G.firePos(); lieux.push([ox + f.x * s, oy + f.y * s]); } catch (e) { lieux = []; }
+    const libre = q => lieux.reduce((m, l) => Math.min(m, Math.hypot(l[0] - q[0], l[1] - q[1])), 1e9), coin = coins.find(q => libre(q) > 120 * u) || coins.slice().sort((a, b) => libre(b) - libre(a))[0], cx = coin[0], cy = coin[1]; g.save(); g.translate(cx, cy);
     g.fillStyle = 'rgba(246,232,192,0.82)'; g.beginPath(); g.arc(0, 0, R1 * 1.12, 0, TAU); g.fill(); g.strokeStyle = '#4a2e12'; g.lineWidth = 1.6 * u; g.stroke(); g.beginPath(); g.arc(0, 0, R1 * 0.62, 0, TAU); g.stroke();
     for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, L = i % 2 ? R1 * 0.58 : R1, wd = i % 2 ? R1 * 0.13 : R1 * 0.2; g.save(); g.rotate(a); g.fillStyle = i === 0 ? '#a8261c' : '#4a2e12'; g.beginPath(); g.moveTo(0, -L); g.lineTo(wd, 0); g.lineTo(0, 0); g.closePath(); g.fill(); g.fillStyle = i === 0 ? '#e0685a' : '#b89460'; g.beginPath(); g.moveTo(0, -L); g.lineTo(-wd, 0); g.lineTo(0, 0); g.closePath(); g.fill(); g.restore(); }
     g.fillStyle = '#f6e8c0'; g.beginPath(); g.arc(0, 0, 3.4 * u, 0, TAU); g.fill(); g.strokeStyle = '#4a2e12'; g.stroke();

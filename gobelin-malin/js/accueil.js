@@ -94,8 +94,8 @@
     A8.goblin(g, { x: w / 2, y: h * 0.86, scale: (evoCls ? 1.05 : 1.25) * s, dir: pdir, t, pose: 'idle', walk: 0, job: 'chef', chief: true, sex: 'm', look, cls: evoCls });
   }
   function loop(ms) {
-    raf = requestAnimationFrame(loop); if (!Acc.open || (CG.Debug && CG.Debug.open)) return;
-    const t = (ms - t0) / 1000, dpr = Math.min(1.5, window.devicePixelRatio || 1), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+    raf = requestAnimationFrame(loop); if (!Acc.open || (CG.Debug && CG.Debug.open) || (CG.Intro && CG.Intro.actif && CG.Intro.actif())) return; /* caché derrière l'histoire du début : on ne dessine pas pour rien */
+    const t = (ms - t0) / 1000, dpr = window.GMPerf ? window.GMPerf.dpr(innerWidth, innerHeight, 1.5) : Math.min(1.5, window.devicePixelRatio || 1), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
     if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
     scene(t); if (view === 'creer') preview(t); if (view === 'evo') evoAnim((ms - evoS.t0) / 1000);
   }

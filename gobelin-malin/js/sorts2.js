@@ -54,6 +54,7 @@
     G.puff(x, y - 20, '#fff3b0', 30, 200, 5); G.text(x, y - 84, '🕊️ ' + nom + ' revient parmi nous !', '#fff8d8', true);
     CG.S.goblins.forEach(o => { if (!o.hidden && Math.hypot(o.x - x, o.y - y) < 420) o.emoteT = 2.5; });
   }
+  So.relever = relever; So.lumiere = lumiere; /* pour les pierres tombales (tombes.js) */
   function choisir() {
     const S = CG.S, R = CG.R, p = S.player, opts = [];
     (S.morts || []).slice().reverse().forEach(c => { const cout = So.cout(c.lvl), job = CG.JOBS[c.job] || CG.JOBS.aucun, plein = S.goblins.length >= G.capacity();

@@ -55,7 +55,7 @@
       if (g.chA <= 0) {
         g.chA = 0.4; let tg = null, bd = 270;
         for (const e of R.enemies) { if (e.dead || e.struct || e.calm || (e.wild && !e.target)) continue; const d = CG.dist(g, e); if (d < bd && CG.W.lineClear(g.x, g.y, e.x, e.y)) { bd = d; tg = e; } }
-        if (tg) { g.chA = 1.7; g.atkAnim = 1; g.face = tg.x > g.x ? 1 : -1; G.shoot({ x: g.x, y: g.y - 10 }, tg, 'bolt', 5 + g.lvl * 1.6, 'g', g); if (CG.onScreen(g.x, g.y)) CG.sfx('zap'); }
+        if (tg) { const bt = !!(g.equip && g.equip.baton); /* avec un bâton magique : il lance plus souvent, et plus fort */ g.chA = bt ? 1.2 : 1.7; g.atkAnim = 1; g.face = tg.x > g.x ? 1 : -1; G.shoot({ x: g.x, y: g.y - 10 }, tg, 'bolt', (5 + g.lvl * 1.6) * (bt ? 1.4 : 1), 'g', g); if (CG.onScreen(g.x, g.y)) CG.sfx('zap'); }
       }
       if (g.chH <= 0) {
         g.chH = 4.5; let who = null, worst = 0.999; const p = S.player;

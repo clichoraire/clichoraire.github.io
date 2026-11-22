@@ -53,6 +53,14 @@
   const visible = (e, o) => o && !o.dead && !o.hidden && o.ko !== true && !(o === CG.S.player && (CG.R.ko > 0 || CG.R.invis > 0));
   function lancerTir(e, k, tg, v) { const d = dist(e, tg) || 1; tirs().push({ k, x0: e.x, y0: e.y - 14, x1: tg.x, y1: tg.y, t: 0, dur: Math.max(0.25, d / v), by: e, dmg: e.dmg, tg }); }
   Ma.lancerTir = lancerTir; Ma.TOILE_CD = [14, 17]; Ma.TOILE_V = 120;
+  // une boule de toile qui rencontre quelqu'un ou quelque chose en chemin s'écrase là, tout de suite : la toile s'étale à cet endroit
+  function touche(s) {
+    if ((s.k !== 'toile' && s.k !== 'toileP') || s.renvoi) return false; const k = s.t / s.dur; if (k < 0.1) return false;
+    const x = lerp(s.x0, s.x1, k), y = lerp(s.y0 + 14, s.y1, k);
+    for (const o of nous()) if (Math.hypot(o.x - x, o.y - y) < 17) { s.x1 = o.x; s.y1 = o.y; return true; }
+    if (!W.walkPx(x, y) && !(W.isWater && W.isWater(Math.floor(x / CG.TILE), Math.floor(y / CG.TILE)))) { s.x1 = x; s.y1 = y; return true; }
+    return false;
+  }
   function arrive(s) {
     const R = CG.R, x = s.x1, y = s.y1;
     if (s.k === 'toileP') { toiles().push({ x, y, r: 24, t: 6, seed: Math.random() * 9 }); G.puff(x, y - 4, '#eef2ff', 5, 50, 2.5); } // la petite toile des araignées de la forêt : elle colle un peu, sans faire mal
@@ -104,7 +112,7 @@
       const d = dist(e, tg); if (d < 70 || d > 240 || !W.lineClear(e.x, e.y, tg.x, tg.y)) continue;
       e.toCd = rand(Ma.TOILE_CD[0], Ma.TOILE_CD[1]); e.atkAnim = 1; e.rooted = Math.max(e.rooted, 0.4); e.face = tg.x > e.x ? 1 : -1; lancerTir(e, 'toileP', tg, Ma.TOILE_V); if (CG.onScreen(e.x, e.y)) CG.sfx('swing'); }
     // projectiles
-    const Ti = R.tirsM; if (Ti && Ti.length) { for (const s of Ti) { s.t += dt; if (s.t >= s.dur) arrive(s); } R.tirsM = Ti.filter(s => s.t < s.dur); }
+    const Ti = R.tirsM; if (Ti && Ti.length) { for (const s of Ti) { s.t += dt; if (s.t < s.dur && touche(s)) s.t = s.dur; if (s.t >= s.dur) arrive(s); } R.tirsM = Ti.filter(s => s.t < s.dur); }
     // toiles : gobelins et animaux s'y empêtrent aussi (le chef et les ennemis : voir nid.js et game.js)
     const To = R.toilesM; if (To && To.length) { for (const o of To) o.t -= dt; R.toilesM = To.filter(o => o.t > 0);
       for (const o of S.goblins.concat(S.pets)) { const q = prev.get(o); if (q && !o.hidden && dansToileM(o.x, o.y)) { o.x = q.x + (o.x - q.x) * 0.5; o.y = q.y + (o.y - q.y) * 0.5; } if (q) { q.x = o.x; q.y = o.y; } else prev.set(o, { x: o.x, y: o.y }); } }

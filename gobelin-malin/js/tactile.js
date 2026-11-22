@@ -89,7 +89,7 @@
     bTourne = bouton('tc-tourne', '↻', 'Tourner la construction', () => Ta.touche('r'));
     // les sorts et les pouvoirs de la barre, et l'indice d'action : on les touche comme on appuierait sur leur touche
     const sorts = e => {
-      if (!Ta.on) return; const s = e.target.closest && e.target.closest('.spell'); if (!s || s.classList.contains('meta')) return; e.preventDefault();
+      if (!Ta.on) return; const s = e.target.closest && e.target.closest('.spell'); if (!s || s.classList.contains('meta') || s.dataset.i !== undefined) return; e.preventDefault(); /* les sorts de la barre : barre.js s'en occupe (toucher = lancer, glisser = déplacer) */
       if (s.classList.contains('new')) return Ta.touche('g'); const i = s.querySelector('i'), k = i ? i.textContent.trim().toLowerCase() : ''; if (k.length === 1) Ta.touche(k);
     };
     const indice = e => { if (!Ta.on || !/<b>E<\/b>/.test($('hint').innerHTML)) return; e.preventDefault(); Ta.touche('e'); };

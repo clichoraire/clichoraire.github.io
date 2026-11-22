@@ -34,7 +34,7 @@
   // un marais d'avant l'agrandissement : ses cases étaient numérotées sur 96 de large, on les renumérote (rien ne bouge de place)
   function agrandir() {
     const S = CG.S; if (!S || S.carteL === CG.MW1) return; const L0 = CG.MW0, L1 = CG.MW1, f = i => { i = +i; const x = i % L0; return (i - x) / L0 * L1 + x; };
-    if (S.cuts) S.cuts = S.cuts.map(f); if (S.young) S.young = S.young.map(f); if (S.terra) { const t = {}; Object.keys(S.terra).forEach(k => { t[f(k)] = S.terra[k]; }); S.terra = t; }
+    if (S.cuts) S.cuts = S.cuts.map(f); if (S.young) S.young = S.young.map(f); if (S.terra) { const t = {}; Object.keys(S.terra).forEach(k => { t[f(k)] = S.terra[k]; }); S.terra = t; } if (S.cheminM) { const t = {}; Object.keys(S.cheminM).forEach(k => { t[f(k)] = 1; }); S.cheminM = t; }
     S.carteL = L1;
   }
   function poser(P, GR, C) { Object.keys(W.POI).forEach(k => { if (!P[k]) delete W.POI[k]; }); Object.keys(P).forEach(k => { W.POI[k] = Object.assign(W.POI[k] || {}, P[k]); }); Object.assign(W.GRAVE, GR); W.CX = C.x; W.CY = C.y; }
@@ -172,7 +172,7 @@
     N.pets.forEach(o => { if (suiv.includes(o.id)) { o.x = q.x - 30 + rand(-14, 14); o.y = q.y + 16; o.path = null; } });
     N.goblins.forEach(o => { if (demG.includes(o.id)) { o.x = q.x + 30 + rand(-16, 16); o.y = q.y + 18 + rand(-6, 10); o.path = null; o.hidden = false; G.unstick(o, 8); } });
     W.drawMini(); R.invuln = 2.5; G.puff(q.x, q.y - 20, '#e0b0ff', 34, 190, 4); for (let i = 0; i < 3; i++) R.rings.push({ x: q.x, y: q.y - 10, r: 60 + i * 44, life: 0.5 + i * 0.15, col: '#e0b0ff' });
-    if (cible === 1) G.banner(premier ? 'Le marais' : 'De retour au marais', premier ? 'Un autre monde, de l\'autre côté du portail. Tu es seul : bâtis ta hutte de chef et un feu de camp (B).' : 'Rien n\'a bougé depuis ton départ.', '#b8e8c0');
+    if (cible === 1) G.banner(premier ? 'Le marais' : 'De retour au marais', premier ? 'Un autre monde, de l\'autre côté du portail. Tu es seul : bâtis ta hutte de chef (B). Pour le feu de camp, va voir le Feu du clan dans tes technologies (T).' : 'Rien n\'a bougé depuis ton départ.', '#b8e8c0');
     else G.banner('De retour dans la forêt', 'Ton village t\'attendait : rien n\'a bougé depuis ton départ.', '#ffe9a8');
     if (premier && cible === 1) setTimeout(() => { if (CG.S === N) UI.toast('🌀 Le portail derrière toi s\'est refermé. Il ne se rouvrira que lorsque ta hutte de chef sera bâtie ici.'); }, 5200);
     try { CG.save(); } catch (e) { /* rien */ }

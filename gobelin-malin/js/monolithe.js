@@ -7,7 +7,9 @@
   const Mn = CG.Monolithe = { RAYON: 300, PLEIN: 100, DEBIT: 14, PRES: 74, CD: 0.9, DMG: [7, 0.6], COUT: 1 }; /* RAYON : ce qu'il détecte et jusqu'où il tire ; PLEIN : sa charge complète ; DEBIT : mana versée par seconde ; DMG : dégâts d'un tir + par jour */
   CG.BUILDS.monolithe = { nom: 'Monolithe magique', icon: '🗿', w: 1, h: 1, cat: 'magie', cout: { minerai: 25, or: 40 },
     desc: 'Débusque les voleurs et tout ce qui se cache près de lui. Verse-lui ta mana (E, en restant à côté) : il tire une boule magique par point de mana. Clique dessus pour voir jusqu\'où il porte.' };
-  if (CG.START_BUILDS && !CG.START_BUILDS.includes('monolithe')) CG.START_BUILDS.push('monolithe');
+  // il se débloque dans l'arbre des technologies (branche magie) : on ne sait plus le bâtir dès le départ
+  Mn.TECH = 's21'; CG.BUILDS.monolithe.tech = Mn.TECH;
+  { const n = { id: Mn.TECH, br: 'sorc', rang: 0.6, cout: 2, t: 5, r: 1, icon: '🗿', nom: 'Monolithe magique', desc: 'Révèle le Monolithe magique : une pierre dressée qui débusque ce qui se cache et tire des boules magiques.', unlock: ['monolithe'] }; CG.TECH.push(n); if (CG.TECH_BY_ID) CG.TECH_BY_ID[n.id] = n; }
   const poly = (g, p, f) => { g.fillStyle = f; g.beginPath(); g.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) g.lineTo(p[i], p[i + 1]); g.closePath(); g.fill(); };
   if (Art.extra) Art.extra.monolithe = { w: 48, h: 104, draw(c) { const m = 24, b = 96;
     c.fillStyle = 'rgba(0,0,0,0.28)'; c.beginPath(); c.ellipse(m, b, 20, 6, 0, 0, TAU); c.fill();
@@ -30,6 +32,9 @@
   const in0 = D.interact; D.interact = function () { const it = D.findInteract(); if (!it || it.type !== 'monolithe') return in0.apply(this, arguments); const R = CG.R, b = it.obj.b, p = CG.S.player;
     if (R.monoVerse === b) { R.monoVerse = null; return; } if ((b.charge || 0) >= Mn.PLEIN) { CG.sfx('no'); return CG.UI.toast('Le monolithe est déjà plein de mana.'); } if (p.mp < 1) { CG.sfx('no'); return CG.UI.toast('Tu n\'as plus de mana à lui donner.'); }
     R.monoVerse = b; CG.sfx('spell'); };
+  // depuis sa fiche : où en est-il, et le bouton pour verser (il faut être à côté)
+  Mn.etat = function (b) { const R = CG.R, p = CG.S.player, c = centre(b), n = Math.floor(b.charge || 0); return { n, plein: n >= Mn.PLEIN, verse: R.monoVerse === b, pres: Math.hypot(p.x - c.x, p.y - c.y) < Mn.PRES, mana: p.mp >= 1 }; };
+  Mn.verser = function (b) { const R = CG.R, e = Mn.etat(b); if (e.verse) { R.monoVerse = null; return true; } if (e.plein || !e.pres || !e.mana) { CG.sfx('no'); return false; } R.monoVerse = b; CG.sfx('spell'); return true; };
   // ---------- chaque instant : il débusque, il boit la mana du chef, il tire ----------
   const up0 = G.update; G.update = function (dt) {
     up0.apply(this, arguments); const S = CG.S, R = CG.R; if (!S || !R || R.night || R.cine) return; const l = liste(); if (choisi && !l.includes(choisi)) choisi = null; if (!l.length) { R.monoVerse = null; return; } const p = S.player, Om = CG.Ombre;

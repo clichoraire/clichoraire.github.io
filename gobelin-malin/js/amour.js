@@ -74,7 +74,7 @@
   };
   Am.flirt = function (g) {
     const S = CG.S, R = CG.R, st = Am.stage(g);
-    if (g.flirtDay === S.day) return UI.dialog({ goblin: g, who: g.name, tag: '💗', text: fillA(pick(DEJA), g), options: [{ label: 'À demain, ' + g.name + '.' }] });
+    /* plus de limite d'un mot doux par jour (demande de Matthieu) : on peut lui en dire autant qu'on veut */
     if ((g.ami || 0) <= -2) return UI.dialog({ goblin: g, who: g.name, tag: '💢', text: 'Des mots doux ? Après ce que tu m\'as dit l\'autre jour ? Sois d\'abord gentil' + (cheffe() ? 'le' : '') + ' avec moi, chef.', options: [{ label: 'Je ferai mieux, promis.' }] });
     R.flirtSeen = R.flirtSeen || []; let pool = F.filter(f => f.s === st && !R.flirtSeen.includes(f)); if (!pool.length) { R.flirtSeen = R.flirtSeen.filter(f => f.s !== st); pool = F.filter(f => f.s === st); }
     const topic = pick(pool); R.flirtSeen.push(topic); const autres = S.goblins.filter(x => x !== g && x.met), autre = autres.length ? pick(autres).name : null;
@@ -102,7 +102,7 @@
     const g = enCours; enCours = null;
     if (g && o && o.goblin === g && Am.cible(g) && o.options && o.options.length > 1) {
       const st = Am.stage(g), a = Math.round(g.amour || 0), R = CG.R, fait = g.flirtDay === CG.S.day;
-      o.options = o.options.slice(); o.options.splice(o.options.length - 1, 0, { label: '💗 Lui dire des mots doux', sub: R.alarm ? 'Pas pendant une attaque !' : fait ? 'C\'est déjà fait aujourd\'hui' : st >= 3 ? 'Votre amour est au plus fort' : (fem(g) ? 'Elle' : 'Il') + ' pourrait tomber en amour avec toi', disabled: !!R.alarm, fn: () => Am.flirt(g) });
+      /* les mots doux se disent maintenant dans « Discuter », sans rien annoncer (discuter.js) */
       if (a > 0) {
         o.extra = (o.extra || '') + '<div class="am-bar"><span>' + (st ? '💗 ' + g.name.replace(/[<&>]/g, '') + ' ' + (st === 1 ? 'a le béguin pour toi' : st === 2 ? 'est en amour avec toi' : (fem(g) ? 'est folle d\'amour pour toi' : 'est fou d\'amour pour toi')) : '💗 Affection') + '</span><b><i style="width:' + a + '%"></i>' + Am.SEUILS.slice(0, 2).map(s => '<u style="left:' + s + '%"></u>').join('') + '</b><em>' + a + ' / 100</em></div>';
         if (st && !R.alarm && !G.partyTime() && Math.random() < 0.6) o.text = fillA(pick(SALUT[st]), g);

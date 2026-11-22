@@ -7,7 +7,7 @@
   const Ab = CG.Abattre = { ARBRE: 3.2, TRONC: 2.4, GAIN: 3, PRES: 48, COUP: 0.42 };
   const hache = () => { const q = CG.S.player.porte; return q && q.hache ? q.hache : null; };
   const centre = (x, y) => ({ x: x * T + T / 2, y: y * T + T / 2 });
-  function arbrePres() { const R = CG.R, p = CG.S.player, px = Math.floor(p.x / T), py = Math.floor(p.y / T); let best = null, bd = Ab.PRES;
+  function arbrePres() { if (CG.GrotteNid && CG.GrotteNid.bois && CG.GrotteNid.bois()) return null; /* les arbres du bois des loups sont ses murs : on ne les abat pas */ const R = CG.R, p = CG.S.player, px = Math.floor(p.x / T), py = Math.floor(p.y / T); let best = null, bd = Ab.PRES;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = px + dx, y = py + dy; if (!W.inMap(x, y) || W.tile[W.idx(x, y)] !== W.TREE || (R.reserved && R.reserved.has(W.idx(x, y)))) continue; const c = centre(x, y), d = Math.hypot(c.x - p.x, c.y - p.y) - (R.dir && (R.dir.x * (c.x - p.x) + R.dir.y * (c.y - p.y)) > 0 ? 8 : 0); if (d < bd) { bd = d; best = { x, y }; } }
     return best; }
   function troncPres() { const S = CG.S, R = CG.R, p = S.player; let best = null, bd = 54;

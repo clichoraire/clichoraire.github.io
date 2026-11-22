@@ -35,8 +35,9 @@
     if (c) { e.stopImmediatePropagation(); e.preventDefault();
       if (Math.hypot(c.o.x - p.x, c.o.y - p.y) > Vi.PORTEE) { G.text(c.o.x, c.o.y - 62, 'Trop loin', '#ffe9a8'); return; }
       p.face = c.o.x > p.x ? 1 : -1; Vi.parler(c); return; }
-    const b = !R.alarm && bati(m.x, m.y);
-    if (b && Math.hypot((b.tx + b.w / 2) * T - p.x, (b.ty + b.h / 2) * T - p.y) < Vi.BATI) { e.stopImmediatePropagation(); e.preventDefault(); CG.Ameliorer.ask(b); }
+    // une construction : sa fiche s'ouvre (fichebati.js), d'où qu'on soit. Pas en plein combat.
+    const Fb = CG.FicheBati, b = Fb && Fb.calme() ? Fb.sous(m.x, m.y) : null;
+    if (b) { e.stopImmediatePropagation(); e.preventDefault(); Fb.ouvrir(b); }
   }, true);
   document.addEventListener('mousemove', e => { souris = e.target && e.target.id === 'game' ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; }, true);
   // ---------- les repères : l'anneau sous celui qu'on survole, le cadre autour de la construction visée par E ----------
@@ -50,8 +51,9 @@
     M.marks = function (g, t) {
       mk0.apply(this, arguments); const R = CG.R, cv = document.getElementById('game'); if (!libre()) { if (cv && cv.style.cursor) cv.style.cursor = ''; return; }
       // le survol (souris seulement : après quelques secondes sans bouger, on n'affiche plus rien)
-      let c = null; if (souris && performance.now() - souris.t < Vi.SURVOL * 1000) { const k = CG.viewScale ? CG.viewScale() : 1, x = souris.x / k + R.cam.x, y = souris.y / k + R.cam.y; if (!ennemi(x, y)) c = Vi.sous(x, y); }
-      if (cv) { const cur = c ? 'pointer' : ''; if (cv.style.cursor !== cur) cv.style.cursor = cur; }
+      let c = null, bs = null; if (souris && performance.now() - souris.t < Vi.SURVOL * 1000) { const k = CG.viewScale ? CG.viewScale() : 1, x = souris.x / k + R.cam.x, y = souris.y / k + R.cam.y; if (!ennemi(x, y)) { c = Vi.sous(x, y); const Fb = CG.FicheBati; if (!c && Fb && Fb.calme()) bs = Fb.sous(x, y); } }
+      if (cv) { const cur = c || bs ? 'pointer' : ''; if (cv.style.cursor !== cur) cv.style.cursor = cur; }
+      if (bs) { const a = 0.6 + Math.sin(t * 5) * 0.15, w = bs.w * T; g.strokeStyle = 'rgba(255,255,255,' + a + ')'; g.lineWidth = 2.2; g.beginPath(); g.ellipse((bs.tx + bs.w / 2) * T, (bs.ty + bs.h) * T - 5, w * 0.5 + 5, Math.min(16, w * 0.18 + 5), 0, 0, TAU); g.stroke(); } /* le même anneau sous une construction qu'on peut cliquer */
       if (c) { const o = c.o, a = 0.6 + Math.sin(t * 5) * 0.15; g.strokeStyle = 'rgba(255,255,255,' + a + ')'; g.lineWidth = 2.2; g.beginPath(); g.ellipse(o.x, o.y + 1, 19, 7.5, 0, 0, TAU); g.stroke(); }
       // la construction que E va toucher
       if (R.t - viseT > 0.15 || R.t < viseT) { viseT = R.t; const it = D.findInteract(); vise = it && (it.type === 'ameliorer' || it.type === 'travaux') && it.obj && it.obj.tx !== undefined ? it.obj : null; }

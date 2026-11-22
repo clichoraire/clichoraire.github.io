@@ -369,3 +369,4 @@ body.menu-icones #buttons #btn-triche { width: auto; padding: 0 9px; font-size: 
 .pz-diff small { opacity: .75; font-size: 12.5px; }
 
 #panel .quote:empty { display: none; }
+.opts button i.ech { background: #8a3a2a; letter-spacing: 0.3px; }

@@ -4,6 +4,9 @@
 (function (CG) {
   const G = CG.G, W = CG.W, T = CG.TILE, TAU = Math.PI * 2, Ni = CG.Nid = { RAYON: 7 };
   let deco = null, sprites = null, cle = null, cleJ = -1;
+  Ni.PETIT = 3; Ni.PLEIN = 5; /* PETIT : son rayon quand il vient d'être nettoyé ; PLEIN : jours sans nettoyage pour qu'il soit au plus gros */
+  Ni.age = () => { const S = CG.S; if (!S) return 0; const m = CG.Mondes && CG.Mondes.ici ? CG.Mondes.ici() : 0, pr = S.propre && S.propre[m + ':nid']; return Math.max(0, (S.day || 1) - 1 - (pr || 0)); }; /* jours passés sans que le nid soit nettoyé */
+  Ni.gros = () => Math.min(1, Ni.age() / Ni.PLEIN);
   function toile(n, R, seed) { // une toile ronde, dessinée une fois pour toutes
     const c = document.createElement('canvas'); c.width = c.height = R * 2 + 4; const g = c.getContext('2d'), r = CG.makeRng(seed), a0 = r() * TAU; g.translate(R + 2, R + 2); g.lineCap = 'round';
     const ray = []; for (let i = 0; i < n; i++) ray.push(R * (0.78 + r() * 0.22));
@@ -17,14 +20,14 @@
     const P = W.POI && W.POI.nid; if (!P || !W.tile) return false; deco = { sol: [], arbres: [], oeufs: [] };
     sprites = [toile(8, 30, 11), toile(7, 22, 23), toile(9, 38, 37), toile(6, 16, 51)];
     const S0 = CG.S, jour = S0 ? S0.day || 0 : 0; if (S0 && S0.nidJour !== jour) { S0.nidJour = jour; S0.nidBrule = {}; } // chaque matin les araignées retissent tout, ailleurs : ce qui a brûlé hier est oublié
-    const r = CG.makeRng(8807 + P.x * 131 + P.y + jour * 7919), RR = Ni.RAYON;
+    const gr = Ni.gros(), r = CG.makeRng(8807 + P.x * 131 + P.y + jour * 7919), RR = Math.round(Ni.PETIT + (Ni.RAYON - Ni.PETIT) * gr); /* un nid qu'on nettoie reste petit ; laissé tranquille, il s'étend et se couvre de toiles */
     for (let dy = -RR; dy <= RR; dy++) for (let dx = -RR - 1; dx <= RR + 1; dx++) {
       const x = P.x + dx, y = P.y + dy, d = Math.hypot(dx * 0.9, dy); if (!W.inMap(x, y) || d > RR) continue; const prox = 1 - d / RR, a = r(), b = r(), c = r(), e = r();
       const px = x * T + T / 2 + (b - 0.5) * 22, py = y * T + T / 2 + (c - 0.5) * 22;
       if (W.walkTile(x, y)) {
-        if (a < 0.3 + prox * 0.45) deco.sol.push({ x: px, y: py, s: Math.floor(e * 4), k: 0.8 + b * 0.5, rot: c * TAU });
-        if (e > 0.9 - prox * 0.14) { const n = 2 + Math.floor(a * 5), l = []; for (let i = 0; i < n; i++) l.push({ dx: (r() - 0.5) * 24, dy: (r() - 0.5) * 12, s: 4.5 + r() * 3.5, ph: r() * 6 }); l.sort((u, v) => u.dy - v.dy); deco.oeufs.push({ x: px, y: py + 6, l }); }
-      } else if (W.tile[W.idx(x, y)] === 1 && a < 0.45 + prox * 0.4) deco.arbres.push({ x: x * T + T / 2 + (b - 0.5) * 14, y: y * T + T / 2 - 16 - c * 14, s: Math.floor(e * 4), k: 0.7 + b * 0.4, rot: c * TAU, fil: 14 + e * 22 });
+        if (a < 0.1 + prox * 0.22 + gr * (0.2 + prox * 0.23)) deco.sol.push({ x: px, y: py, s: Math.floor(e * 4), k: 0.8 + b * 0.5, rot: c * TAU });
+        if (e > 0.975 - prox * 0.05 - gr * (0.075 + prox * 0.09)) { const n = 2 + Math.floor(a * 5), l = []; for (let i = 0; i < n; i++) l.push({ dx: (r() - 0.5) * 24, dy: (r() - 0.5) * 12, s: 4.5 + r() * 3.5, ph: r() * 6 }); l.sort((u, v) => u.dy - v.dy); deco.oeufs.push({ x: px, y: py + 6, l }); }
+      } else if (W.tile[W.idx(x, y)] === 1 && a < 0.14 + prox * 0.16 + gr * (0.31 + prox * 0.24)) deco.arbres.push({ x: x * T + T / 2 + (b - 0.5) * 14, y: y * T + T / 2 - 16 - c * 14, s: Math.floor(e * 4), k: 0.7 + b * 0.4, rot: c * TAU, fil: 14 + e * 22 });
     }
     deco.sol.forEach((o, i) => { o.i = 's' + i; }); deco.arbres.forEach((o, i) => { o.i = 'a' + i; });
     const br = CG.S && CG.S.nidBrule; if (br) { deco.sol = deco.sol.filter(o => !br[o.i]); deco.arbres = deco.arbres.filter(o => !br[o.i]); } // celles que le feu a déjà mangées ne reviennent pas
@@ -106,7 +109,8 @@
   const Au = CG.Autels; Ni.AUCUN = 0.4; Ni.DEUX = 0.2;
   function tirage() {
     const S = CG.S; if (!S || !S.autels || S.autelsJour === S.day || (CG.R && CG.R.horde)) return; S.autelsJour = S.day;
-    const libres = CG.shuffle(S.autels.filter(a => a.st === 'scelle')), r = Math.random(), n = r < Ni.AUCUN ? 0 : r < 1 - Ni.DEUX ? 1 : 2;
+    S.autels.forEach(a => { if (a.st === 'vide' && !a.crypte && a.day < S.day) { a.st = 'scelle'; a.id = null; a.repos = a.day + ((Au && Au.RECHARGE) || 3); } }); /* le piédestal vidé hier disparaît ce matin : il reviendra plus tard, ailleurs dans la liste */
+    const libres = CG.shuffle(S.autels.filter(a => a.st === 'scelle' && !(a.repos > S.day))), r = Math.random(), n = r < Ni.AUCUN ? 0 : r < 1 - Ni.DEUX ? 1 : 2;
     S.autels.forEach(a => { a.off = a.st === 'scelle'; }); libres.slice(0, n).forEach(a => { a.off = false; });
   }
   Ni.tirage = tirage;

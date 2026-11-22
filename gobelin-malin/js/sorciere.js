@@ -104,14 +104,26 @@
   const partir = v => { if (CG.R.visitors.includes(v)) { v.state = 'leave'; G.goTo(v, v.exit.x, v.exit.y); } };
   So.parler = function (v) {
     const S = CG.S, e = etat(), prix = v.prix || So.prix(), peut = S.res.or >= prix;
-    if (v.fait) return UI.dialog({ visitor: v, who: So.NOM, text: 'Hé hé hé... Un seul par visite, mon joli. On ne mélange pas mes bouillons.', options: [{ label: 'Bon...' }] });
+    if (v.fait) return UI.dialog({ visitor: v, who: So.NOM, text: 'Hé hé hé... Un seul par visite, mon joli. On ne mélange pas mes bouillons. Mais mon panier, lui, est toujours ouvert.', options: [{ label: '🛒 Voir ce que tu vends', fn: () => So.boutique(v) }, { label: 'Bon...' }] });
     UI.dialog({ visitor: v, who: So.NOM, tag: '🔮 un sortilège surprise',
       text: 'Approche, petit chef. Pour ' + prix + ' 🪙, je te jette un sortilège. Lequel ? Ha ! Ça, je ne le dis jamais. Il y a toujours du bon dedans... et un petit quelque chose en plus. Ça passe tout seul au bout de cinq minutes.' + (e ? ' (Tu portes déjà un sortilège : le nouveau le remplacera.)' : ''),
       options: [{ label: '🔮 Vas-y, jette-le (' + prix + ' 🪙)', sub: peut ? 'Tu ne sauras ce que c\'est qu\'après' : 'Tu n\'as que ' + Math.floor(S.res.or) + ' 🪙', disabled: !peut, fn: () => {
         if (S.res.or < prix || v.fait) return; S.res.or -= prix; v.fait = true; CG.sfx('coin'); G.say(v, pick(['Abracadabri, abracadabra... Hi hi hi !', 'Ne bouge pas... Voilà ! Bonne chance, mon joli.', 'Œil de triton, poil de troll... et hop !']), 4);
         So.jeter(); v.leaveAt = Math.min(v.leaveAt, S.hour + 0.4);
-      } }, { label: '🤔 Je vais y penser', sub: 'Elle reste encore un peu près du feu' }, { label: '👋 Non merci, garde tes bouillons', sub: 'Elle repart en ricanant', fn: () => partir(v) }] });
+      } }, { label: '🛒 Voir ce que tu vends', fn: () => So.boutique(v) }, { label: '🤔 Je vais y penser', sub: 'Elle reste encore un peu près du feu' }, { label: '👋 Non merci, garde tes bouillons', sub: 'Elle repart en ricanant', fn: () => partir(v) }] });
   };
+  // ---------- son panier : ce qui sert à la magie (fioles, os, poudres) et, parfois, très cher, le plan d'une construction magique ----------
+  So.PLAN = 0.3; So.PLAN_PRIX = 1.6; So.OS = [5, 30];
+  So.panier = function () {
+    const S = CG.S, p = S.player, A = CG.Alchimie, svg = k => (A && A.svg ? A.svg(k) : k === 'vie' ? '🧪' : '💧'), l = [
+      { icon: svg('vie'), label: 'Fiole de vie', desc: 'Te redonne de la vie.', prix: 10, stock: 3, buy: () => { p.potions++; } },
+      { icon: svg('mana'), label: 'Fiole de mana', desc: 'Te redonne du mana.', prix: 12, stock: 3, buy: () => { p.fioles = p.fioles || {}; p.fioles.mana1 = (p.fioles.mana1 || 0) + 1; } },
+      { icon: '🦴', label: So.OS[0] + ' os', desc: 'Pour les potions de tes alchimistes.', prix: So.OS[1], stock: 3, buy: () => { S.res.os = (S.res.os || 0) + So.OS[0]; } }];
+    if (CG.Feu && CG.Feu.stock) l.push.apply(l, CG.Feu.stock());
+    const Pl = CG.Plans; if (Pl && Math.random() < So.PLAN) { const m = Pl.dispo().filter(n => n.br === 'sorc' || (n.unlock || []).some(b => CG.BUILDS[b] && CG.BUILDS[b].cat === 'magie')); if (m.length) { const a = Pl.article(pick(m)); a.prix = Math.round(a.prix * So.PLAN_PRIX / 10) * 10; a.desc = 'Un secret de sorcière : tu pourras le bâtir.'; l.push(a); } }
+    return l;
+  };
+  So.boutique = function (v) { if (!v.shop) v.shop = So.panier(); UI.shop(v, { nom: So.NOM, hello: 'Des os, des fioles, des poudres... tout ce qu\'il faut pour la magie, mon joli.' }); };
   const sv0 = D.startVisit; D.startVisit = function (ev) { if (ev.role === 'ortie') return So.venir(); return sv0.apply(this, arguments); };
   const tk0 = D.talk; D.talk = function (v) { if (v.role === 'ortie') return So.parler(v); return tk0.apply(this, arguments); };
   // ---------- son dessin : robe rouge sombre, grand chapeau, et son chaudron qui bouillonne ----------

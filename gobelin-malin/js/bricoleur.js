@@ -33,7 +33,7 @@
   };
   // dans la discussion avec un bricoleur
   const dl0 = UI.dialog; UI.dialog = function (o) {
-    const g = o && o.goblin; if (g && g.job === 'aucun' && !g.child && Array.isArray(o.options) && o.options.some(x => x && /^🛠/.test(x.label || ''))) {
+    const g = o && o.goblin; if (false && g) { /* l'option est maintenant rangée dans « Discuter » (discuter.js) */
       const opts = o.options.slice(), i = opts.findIndex(x => x && /^👋/.test(x.label || ''));
       opts.splice(i < 0 ? opts.length : i, 0, { label: '🧱 Lui demander d\'améliorer des murs', fn: () => Br.demander(g) });
       o = Object.assign({}, o, { options: opts });

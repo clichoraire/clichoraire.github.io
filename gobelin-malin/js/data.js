@@ -16,7 +16,7 @@
     bucheron: { nom: 'Bûcheron', nomF: 'Bûcheronne', icon: '🪓', desc: 'Abat un arbre, le coupe en deux et rapporte chaque moitié : +bois et plus de place.', work: 8, gain: { bois: 2 } },
     mineur: { nom: 'Mineur', nomF: 'Mineuse', icon: '⛏️', desc: 'Pioche dans les collines : +minerai.', node: 'ore', work: 7, gain: { minerai: 2 } },
     forgeron: { nom: 'Forgeron', nomF: 'Forgeronne', icon: '⚒️', desc: 'Forge des épées chez lui (2 minerai + 1 bois).', craft: 'epee', work: 24, need: { minerai: 2, bois: 1 } },
-    arcier: { nom: 'Facteur d\'arcs', nomF: 'Factrice d\'arcs', icon: '🎯', desc: 'Taille des arcs chez lui (2 bois).', craft: 'arc', work: 24, need: { bois: 2 } },
+    arcier: { nom: 'Facteur d\'arcs', nomF: 'Factrice d\'arcs', icon: '🎯', desc: 'Taille des arcs chez lui (2 bois), et des flèches pour le chef.', craft: 'arc', work: 24, need: { bois: 2 } },
     tanneur: { nom: 'Tanneur', nomF: 'Tanneuse', icon: '🧥', desc: 'Coud des armures de cuir chez lui (2 cuir).', craft: 'armure', work: 24, need: { cuir: 2 } },
     garde: { nom: 'Garde', nomF: 'Garde', icon: '🛡️', desc: 'Patrouille et défend le village pendant les attaques.' },
     guerisseur: { tech: 'b25', nom: 'Guérisseur', nomF: 'Guérisseuse', icon: '🌿', desc: 'Reste à la hutte du guérisseur et soigne tous ceux qui s\'en approchent : gobelins, animaux et toi. Il faut d\'abord bâtir la hutte.' }

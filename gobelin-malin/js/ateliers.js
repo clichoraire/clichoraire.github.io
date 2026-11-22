@@ -12,7 +12,7 @@
   CG.BUILDS.archerie = { nom: 'Atelier d\'arcs', icon: '🎯', w: 2, h: 2, cat: 'clan', cout: { bois: 30 }, tech: 'b30', desc: 'L\'atelier du facteur d\'arcs : sans lui, personne ne peut tailler d\'arcs.' };
   CG.BUILDS.tannerie = { nom: 'Tannerie', icon: '🧥', w: 2, h: 2, cat: 'clan', cout: { bois: 22, cuir: 6 }, tech: 'b31', desc: 'L\'atelier du tanneur : sans tannerie, personne ne peut coudre d\'armures de cuir.' };
   Object.assign(CG.JOBS.forgeron, { tech: 'b29', lieu: 'forge', desc: 'Forge des épées à la forge (2 minerai + 1 bois). Il faut d\'abord bâtir la forge.' });
-  Object.assign(CG.JOBS.arcier, { tech: 'b30', lieu: 'archerie', desc: 'Taille des arcs à l\'atelier d\'arcs (2 bois). Il faut d\'abord bâtir l\'atelier.' });
+  Object.assign(CG.JOBS.arcier, { tech: 'b30', lieu: 'archerie', desc: 'Taille des arcs à l\'atelier d\'arcs (2 bois), et des flèches pour ton arc. Il faut d\'abord bâtir l\'atelier.' });
   Object.assign(CG.JOBS.tanneur, { tech: 'b31', lieu: 'tannerie', desc: 'Coud des armures de cuir à la tannerie (2 cuir). Il faut d\'abord bâtir la tannerie.' });
   CG.JOBS.guerisseur.lieu = 'guerisseur';
   CG.TECH.push(

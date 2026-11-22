@@ -21,6 +21,7 @@
       + '</div><div><h5>Le monde</h5><div class="tr-l"><select id="tr-ent">' + Object.keys(CG.ENEMIES).filter(k => !CG.ENEMIES[k].struct).map(k => '<option value="' + k + '"' + ((Tr.ent || 'brigand') === k ? ' selected' : '') + '>' + CG.ENEMIES[k].nom + '</option>').join('') + '</select><input id="tr-enn" type="number" value="' + (Tr.entN || 3) + '" min="1" max="30"><button id="tr-spawn">👹 Autour de moi</button></div>'
       + '<div class="tr-l"><span>🥁 Butin de chef</span><button id="tr-b1">Parchemin</button><button id="tr-b2">Or</button></div>'
       + '<button id="tr-sorts">📖 Tous les sorts dans le grimoire</button>'
+      + '<button id="tr-dl">👹 Scène du Demon Lord (jour 31)</button>'
       + '<button id="tr-monde" class="' + (CG.S.demon && CG.S.demon.mort ? 'on' : '') + '">🌀 ' + (CG.S.demon && CG.S.demon.mort ? '2e monde débloqué' : 'Débloquer le 2e monde') + '</button></div></div>'
       + '<button id="tr-off" class="low">Quitter le mode triche</button>';
     document.getElementById('hud').appendChild(p);
@@ -31,6 +32,7 @@
     p.querySelector('#tr-spawn').onclick = () => { const S = CG.S, pl = S.player, type = p.querySelector('#tr-ent').value, n = CG.clamp(Math.floor(+p.querySelector('#tr-enn').value || 1), 1, 30); Tr.ent = type; Tr.entN = n; for (let i = 0; i < n; i++) { const a = i / n * 6.283 + Math.random() * 0.4; let x = pl.x, y = pl.y; for (const r of [150, 120, 190, 90]) { const xx = pl.x + Math.cos(a) * r, yy = pl.y + Math.sin(a) * r * 0.8; if (CG.W.walkPx(xx, yy)) { x = xx; y = yy; break; } } const e = G.spawnEnemy(type, x, y, { wild: true }); e.wild = null; e.target = pl; e.seek = 2; G.puff(x, y - 14, '#c070ff', 10, 90, 4); } CG.sfx('warning'); UI.toast('👹 ' + n + ' × ' + CG.ENEMIES[type].nom + ' autour de toi.'); };
     p.querySelector('#tr-b1').onclick = () => CG.Butin.essai('troll', 'oui'); p.querySelector('#tr-b2').onclick = () => CG.Butin.essai('troll', 'zut');
     p.querySelector('#tr-sorts').onclick = () => { const pl = CG.S.player; let n = 0; Object.keys(CG.SPELLS).forEach(id => { if (!pl.spells.includes(id)) { pl.spells.push(id); n++; } delete pl.scrolls[id]; }); CG.sfx('level'); UI.toast('📖 ' + (n ? n + ' sorts ajoutés : ton grimoire contient maintenant tous les sorts du jeu (G pour choisir lesquels sont actifs).' : 'Ton grimoire contient déjà tous les sorts.')); };
+    p.querySelector('#tr-dl').onclick = () => { if (CG.DemonFeu && CG.DemonFeu.scene()) UI.toast('👹 Le portail du nord se réveille...'); };
     p.querySelector('#tr-monde').onclick = () => { const S = CG.S, pl = S.player; if (S.demon && S.demon.mort) return UI.toast('🌀 Le 2e monde est déjà débloqué : le portail démoniaque est au nord.'); S.demon = { mort: true, jour: S.day, triche: true }; if (!pl.spells.includes('mondes')) pl.spells.push('mondes'); if (CG.SPELLS.antidote && !pl.spells.includes('antidote') && !pl.scrolls.antidote) pl.scrolls.antidote = 1; CG.sfx('victory'); UI.toast('🌀 Comme si le Demon Lord était tombé : le portail démoniaque du nord est ouvert, tu connais Passage entre les mondes, et tu as le parchemin Antidote.'); panneau(true); };
     p.querySelector('#tr-off').onclick = () => { try { localStorage.removeItem(KEY); } catch (e) { /* rien */ } Tr.inv = false; p.remove(); const b = document.getElementById('btn-triche'); if (b) b.remove(); UI.toast('Mode triche fermé.'); };
     p.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
@@ -48,8 +50,7 @@
   UI.help = function () {
     help0.apply(this, arguments); n = 0;
     const k = [...document.querySelectorAll('#panel .keycap')].find(e => e.textContent.trim() === 'M'); if (!k) return;
-    k.style.cursor = 'pointer';
-    k.onclick = () => { const t = performance.now(); n = t - last < 1500 ? n + 1 : 1; last = t; k.style.transform = 'scale(' + (1 + n * 0.04) + ')'; if (n >= 10) { n = 0; k.style.transform = ''; Tr.enable(); } };
+    k.onclick = () => { const t = performance.now(); n = t - last < 1500 ? n + 1 : 1; last = t; if (n >= 10) { n = 0; Tr.enable(); } /* aucun signe : ni grossissement, ni curseur en main */ };
   };
   // le bouton revient tout seul aux parties suivantes tant que le mode est actif
   const up0 = G.update; G.update = function (dt) { up0(dt); if (Tr._ok === undefined) { Tr._ok = on(); if (Tr._ok) bouton(); } };

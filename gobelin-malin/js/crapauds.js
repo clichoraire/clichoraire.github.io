@@ -90,6 +90,6 @@
     el(g, 0, 0, 3.2, 3.2, c.light); g.restore();
     g.restore(); g.restore();
   }
-  const pet0 = Art.pet; Art.pet = function (g, o, t) { if (LOOKS[o.kind]) return dessin(g, o, t); return pet0.apply(this, arguments); };
+  const pet0 = Art.pet; Art.pet = function (g, o, t) { if (!LOOKS[o.kind]) return pet0.apply(this, arguments); if (!o.ko) return dessin(g, o, t); g.save(); g.translate(o.x, o.y); g.rotate(1.4); g.globalAlpha = 0.55; dessin(g, Object.assign({}, o, { x: 0, y: 0, moving: false, atkAnim: 0 }), 0); g.restore(); }; /* mort : couché par terre, pâle, comme les autres animaux */
   Cr.dessin = dessin;
 })(window.CG);

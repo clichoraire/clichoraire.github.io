@@ -12,12 +12,12 @@
   function demanderGob(g) {
     const il = fem(g) ? 'elle' : 'il';
     UI.dialog({ goblin: g, who: g.name, tag: '🏷️ une demande', text: pick(['Chef... j\'ai quelque chose à te demander. Tu voudrais me donner un nom officiel ?', 'Chef ! J\'y pense depuis des jours. Je voudrais un nom officiel. Un vrai. Tu veux bien ?', 'Chef, c\'est le moment, je le sens. Tu me donnes mon nom officiel ?']),
-      options: [{ label: '🏷️ D\'accord, ' + g.name, fn: () => { if (Of().pret(g)) Of().demander(g); } }, { label: '⏳ Plus tard', fn: () => { g.nomPlusTard = CG.S.day; G.say(g, pick(['D\'accord, chef. Je reviendrai.', 'Bon... demain, alors ?', 'Je comprends. Plus tard.']), 3); void il; } }] });
+      options: [{ label: '🏷️ D\'accord, ' + g.name, fn: () => { if (Of().pret(g)) Of().demander(g); } }, { label: '⏳ Je n\'ai pas le temps', echap: true, fn: () => { g.nomPlusTard = CG.S.day; G.say(g, pick(['D\'accord, chef. Je reviendrai.', 'Bon... demain, alors ?', 'Je comprends. Plus tard.']), 3); void il; } }] });
     if (UI.modal) UI.modal.closable = false;
   }
   function demanderPet(p) {
     UI.dialog({ visitor: { role: 'animal', look: 'animal', kind: p.kind, evo: p.evo }, who: p.name, tag: '🏷️ une demande', text: p.name + pick([' s\'assoit devant toi et te fixe sans bouger. On dirait qu\'il attend que tu lui donnes un nom officiel.', ' te barre le chemin et te regarde droit dans les yeux. Il veut quelque chose : un nom officiel, on dirait.', ' pose la tête contre ta main et ne te lâche plus du regard. Il attend un nom officiel.']),
-      options: [{ label: '🏷️ D\'accord', fn: () => { if (Co().pret(p)) Co().demander(p); } }, { label: '⏳ Plus tard', fn: () => { p.nomPlusTard = CG.S.day; G.text(p.x, p.y - 44, '...', '#fff', true); } }] });
+      options: [{ label: '🏷️ D\'accord', fn: () => { if (Co().pret(p)) Co().demander(p); } }, { label: '⏳ Je n\'ai pas le temps', echap: true, fn: () => { p.nomPlusTard = CG.S.day; G.text(p.x, p.y - 44, '...', '#fff', true); } }] });
     if (UI.modal) UI.modal.closable = false;
   }
   const lacher = o => { if (o.demNom && !o.pet) { o.cine = false; G.resetGoblin(o); } o.demNom = null; };

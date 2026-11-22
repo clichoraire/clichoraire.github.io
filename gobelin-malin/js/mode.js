@@ -56,7 +56,12 @@
       text: (g ? 'Qu\'est-ce que je mets, chef ?' : 'Choisis ce que tu portes. Pour habiller un gobelin, va lui parler.') + (items.length ? '' : ' Pour d\'autres vêtements, débloque-les dans l\'arbre (T), branche « Garde-robe du clan ».'), options: opts });
   };
   // l'option dans la discussion avec un gobelin (seulement une fois l'atelier bâti)
-  Mode.opt = g => Mode.atelier() ? [{ label: '👕 Changer sa tenue', sub: 'Lui coudre le chapeau de son métier (+20 % d\'efficacité), ou lui mettre un vêtement débloqué', fn: () => UI.tenue(g) }] : [];
+  // l'option est rangée dans « Discuter » (seulement une fois l'atelier bâti) : elle s'ajoute aux réponses du premier sujet
+  Mode.opt = g => [];
+  window.addEventListener('load', () => { const Soc = CG.Soc; if (!Soc || !Soc.chat) return; let premier = null;
+    const ch0 = Soc.chat; Soc.chat = function (g, topic) { premier = topic ? null : g; try { return ch0.apply(this, arguments); } finally { premier = null; } };
+    const dl0 = UI.dialog; UI.dialog = function (o) { const g = premier; if (g && o && o.goblin === g && Array.isArray(o.options) && Mode.atelier()) { premier = null; o = Object.assign({}, o, { options: o.options.concat([{ label: '👕 Changer sa tenue', fn: () => UI.tenue(g) }]) }); } return dl0.call(this, o); };
+  });
 
   // à la porte de l'atelier : la tenue du chef
   const find0 = D.findInteract;

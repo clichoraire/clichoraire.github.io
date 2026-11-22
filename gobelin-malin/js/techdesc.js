@@ -1,0 +1,50 @@
+// Goblin Malin — les cases de l'arbre qui donnent quelque chose à bâtir : une phrase toute simple, douze mots au plus, sans
+// chiffres. Elle dit ce que c'est et à quoi ça sert. Chargé en dernier : il remplace les descriptions écrites ailleurs.
+'use strict';
+(function (CG) {
+  const D = CG.TECH_DESC = {
+    d1: 'Un piège caché qui pique les ennemis qui marchent dessus.',
+    d16: 'Un petit piège pas cher qui blesse les pieds des ennemis.',
+    d18: 'Un filet qui tombe sur les ennemis et les bloque.',
+    d19: 'Un trou garni de pieux où les ennemis tombent.',
+    d15: 'Un baril qui explose quand les ennemis s\'approchent.',
+    d25: 'Un mur de rondins, bien plus solide qu\'une clôture.',
+    d23: 'Une cloche : sonne-la, tes gardes et gobelins armés sortent se battre.',
+    d20: 'Un lance-pieux à fixer sur une clôture : il tire tout seul.',
+    d21: 'Un lance-flammes à fixer sur une clôture.',
+    d22: 'Une rune à fixer sur une clôture : le sol devient collant.',
+    d4: 'Un fossé rempli d\'eau que les ennemis ne traversent pas.',
+    d17: 'Un pont pour traverser l\'eau et les douves.',
+    d11: 'Un totem qui donne du courage à ceux qui se battent près.',
+    d6: 'Une grosse arbalète qui tire de très loin sur les ennemis.',
+    d12: 'Une caserne où tes gardes s\'entraînent et deviennent plus solides.',
+    d26: 'Une cachette où un éclaireur surveille une route et repère les ennemis.',
+    b1: 'Un potager où poussent des champignons à manger.',
+    b2: 'Un enclos pour garder des sangliers : viande et cuir.',
+    b3: 'Une scierie : chaque arbre abattu donne plus de bois.',
+    b6: 'Une grande marmite : la fête du soir coûte moins de nourriture.',
+    b7: 'Une taverne : la fête du soir y est plus joyeuse.',
+    b8: 'Un marché : les marchands viennent plus souvent.',
+    b9: 'La hutte du chaman : il soigne les gobelins après les combats.',
+    b17: 'Des balançoires : tes gobelins s\'amusent et retrouvent le moral.',
+    b18: 'Une mangeoire : tes animaux y mangent et deviennent plus forts.',
+    b20: 'Un second dépôt pour raccourcir les trajets de tes gobelins.',
+    b21: 'Un puits d\'eau fraîche : le clan se réveille de bonne humeur.',
+    b22: 'Un étang où pêcher du poisson pour nourrir le clan.',
+    b23: 'Un grenier qui met tes réserves à l\'abri des pillards.',
+    b24: 'Une école où tes animaux apprennent à t\'obéir.',
+    b25: 'Une hutte de soins, et le métier de guérisseur.',
+    b29: 'Une forge, et le métier de forgeron : armes et armures.',
+    b30: 'Un atelier d\'arcs, et le métier de facteur d\'arcs.',
+    b31: 'Une tannerie, et le métier de tanneur : des armures de cuir.',
+    s5: 'Une tour qui lance des explosions magiques sur les ennemis.',
+    s6: 'Un cristal qui fait remonter ta mana plus vite.',
+    s20: 'Un chemin de runes où tes gobelins marchent encore plus vite.',
+    s21: 'Une pierre dressée qui débusque les cachés et tire des boules magiques.',
+    fm1: 'Une fontaine : tout près d\'elle, ta mana remonte bien plus vite.',
+    al1: 'Un chaudron et le métier d\'alchimiste : des potions de vie et mana.',
+    cm1: 'Les tombes de tes anciens chefs, et leurs fantômes le soir.',
+    m0: 'Un atelier pour coudre des chapeaux et changer de tenue.'
+  };
+  (CG.TECH || []).forEach(n => { if (D[n.id]) n.desc = D[n.id]; });
+})(window.CG);

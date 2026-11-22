@@ -30,6 +30,19 @@
   for (let i = 1; i <= 60; i++) bonus(i); // connus d'avance : une partie chargée retrouve les siens
   { const pd = G.playerDmg; G.playerDmg = function () { return pd.apply(this, arguments) + ((CG.S && CG.S.tech && CG.S.tech.force) || 0); }; }
 
+  // ---------- la place de chaque case, anneau par anneau (réglée à la main avec Matthieu) ----------
+  // Chaque ligne est un anneau, du centre vers le bord, dans l'ordre où les cases se posent : on part du haut et on tourne comme une
+  // horloge (les coins restent vides). Anneaux 1 à 5 : 4, 12, 20, 28 et 36 cases. Le dernier : deux ailes, à droite et à gauche.
+  // Pour déplacer une case, on change sa place ici. Une case absente de la liste (une nouveauté) va au bord.
+  V.ANNEAUX = [
+    ['d25', 'b1', 'd16', 'fm1'],
+    ['d4', 'g2', 'b3', 'b2', 'b21', 'b18', 'b25', 'd1', 'g3', 'b41', 's6', 'm0'],
+    ['d23', 'd26', 'd3', 'd17', 'x12', 'x11', 'b6', 'b4', 'b10', 'b42', 'd11', 'x16', 'g20', 'x1', 'g4', 's2', 'x9', 'al1', 's12', 'm1'],
+    ['d5', 'd10', 'd9', 'd27', 'x19', 'b17', 'd8', 'b22', 'x5', 'b23', 'b7', 'b11', 'x17', 'b8', 'b5', 'b29', 'g6', 'g5', 'g21', 'x13', 'g7', 'x2', 's20', 'cm1', 's3', 'x18', 'm2', 'm3'],
+    ['x3', 'd6', 'd7', 'd18', 'd12', 'x15', 'd28', 'd20', 'd19', 'x7', 'b13', 'b14', 'b24', 'b20', 'x14', 'b9', 'b19', 'b27', 'b12', 'b30', 'x4', 'g8', 'g10', 'g13', 'x8', 'g11', 'g15', 'al2', 's21', 's10', 's5', 's4', 's14', 's7', 'm4', 'm5'],
+    ['x6', 'd15', 'd13', 'd21', 'd22', 'b31', 'b15', 'b26', 'b40', 'b28', 'b16', 'g9', 'x20', 'g14', 'g12', 'x10', 's8', 'al3', 's9', 's11', 'm6', 'm7']];
+  V.ranger = function (files) { const tous = [].concat.apply([], files), par = {}, vu = {}, out = []; tous.forEach(n => { par[n.id] = n; });
+    [].concat.apply([], V.ANNEAUX).forEach(id => { if (par[id] && !vu[id]) { vu[id] = 1; out.push(par[id]); } }); tous.forEach(n => { if (!vu[n.id]) out.push(n); }); files.length = 0; files.push(out); };
   // ---------- la forme de chaque famille ----------
   function famille(br) {
     const nodes = CG.TECH.filter(n => n.br === br), ids = new Set(nodes.map(n => n.id)), kids = {}, roots = [];
@@ -44,6 +57,8 @@
     const files = CG.TECH_BRANCHES.map(br => { const A = famille(br.id), out = []; let l = A.roots.slice(); while (l.length) { out.push.apply(out, l); l = [].concat.apply([], l.map(n => A.kids[n.id] || [])); } return out; });
     files.forEach((f, i) => { const plus = f.filter(n => n.rang !== undefined).sort((x, y) => x.rang - y.rang), base = f.filter(n => n.rang === undefined); plus.forEach(n => base.splice(Math.min(base.length, Math.round(base.length * n.rang)), 0, n)); files[i] = base; }); // les cases à « rang » se glissent à leur place, du centre vers le bord
     V.ECHANGES.forEach(q => files.forEach(f => { const i = f.findIndex(n => n.id === q[0]), j = f.findIndex(n => n.id === q[1]); if (i >= 0 && j >= 0) { const t = f[i]; f[i] = f[j]; f[j] = t; } })); // deux cases qui échangent leur place
+    if (V.ranger) V.ranger(files);
+    V._files = files.map(f => f.map(n => n.id));
     let reste = files.reduce((s, f) => s + f.length, 0), nb = 0, K = 0, partiel = false; const grille = {}, acces = {}, liens = [], cle = (x, y) => x + ',' + y;
     grille[cle(0, 0)] = 'centre';
     for (let k = 1; reste > 0 && k < 12; k++) {
@@ -77,7 +92,7 @@
   // l'anneau d'une case (1 = autour du feu) ; 99 si elle n'est pas dans l'arbre
   V.anneau = id => { const P = plan(2), p = P.pos[id]; return p ? Math.max(Math.abs(Math.round((p.x - BORD) / SX) - P.K), Math.abs(Math.round((p.y - BORD) / SY) - P.K)) : 99; };
   // les suites : la case de gauche reste fermée tant que celle de droite n'est pas apprise, même si on la touche
-  V.NIVEAU = { d10: 'd1', d9: 'd3', d8: 'd3', d7: 'd5', d13: 'd12', b5: 'b4', b15: 'b14', b16: 'b15', b19: 'b25', g11: 'g3', g12: 'g11', g14: 'g6', s7: 's5', s14: 's2' };
+  V.NIVEAU = { d1: 'd16', d10: 'd1', d9: 'd3', d8: 'd3', d7: 'd5', d13: 'd12', b5: 'b4', b15: 'b14', b16: 'b15', b19: 'b25', g11: 'g3', g12: 'g11', g14: 'g6', s7: 's5', s14: 's2' };
   // une case offerte (dontech.js) ouvre ses voisines du même anneau seulement, tant qu'aucune case apprise avec des points ne la touche
   const offerte = id => !!(CG.S && CG.S.tech && CG.S.tech.dons && CG.S.tech.dons[id]);
   const reliee = id => (plan(2).acces[id] || []).some(a => a === 'centre' || (!offerte(a) && tenu(a)));
@@ -93,9 +108,13 @@
   };
   V.manque = n => n && V.NIVEAU[n.id] && !G.tech(V.NIVEAU[n.id]) ? '« ' + BY()[V.NIVEAU[n.id]].nom + ' » (c\'en est la suite)' : 'une case qui touche celle-ci';
 
+  // Les bonus permanents (« +quelque chose » : plus de vie, plus vite, plus d'expérience...) ne sont ni un pouvoir ni une chose à
+  // bâtir : dans l'arbre, ce sont des médaillons ronds et bleutés, pas des planches de bois. La liste se règle ici.
+  V.PASSIFS = ['g2', 'g3', 'g6', 'g7', 'g9', 'g11', 'g12', 'g14', 'g20', 'g21', 's2', 's4', 's8', 's10', 's14', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b27', 'b28', 'b41', 'b42', 'd13'];
+  V.passif = n => !!n && !n.vide && !(n.unlock && n.unlock.length) && (/^x\d+$/.test(n.id) || V.PASSIFS.includes(n.id));
   // ---------- le dessin ----------
   V.boutons = () => '';
-  const tuile = (n, x, y, w, h, st, cls) => '<button class="tn ' + st + ' ' + cls + '" data-tech="' + n.id + '" style="left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px"><u class="cb" style="background:' + COUL[n.br] + '"></u><span class="ti">' + n.icon + '</span><b>' + n.nom + '</b><em>' + (enPlan(n.id) ? '📐' : '') + (st === 'own' ? (enPlan(n.id) ? '' : '✔') : '⭐' + n.cout) + '</em>' + (st === 'can' || st === 'av' ? '<i class="st">★</i>' : '') + '</button>';
+  const tuile = (n, x, y, w, h, st, cls) => '<button class="tn ' + st + ' ' + cls + (V.passif(n) ? ' passif' : !(n.unlock && n.unlock.length) ? ' pouvoir' : '') + '" data-tech="' + n.id + '" style="left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px"><u class="cb" style="background:' + COUL[n.br] + '"></u><span class="ti">' + n.icon + '</span><b>' + n.nom + '</b><em>' + (enPlan(n.id) ? '📐' : '') + (st === 'own' ? (enPlan(n.id) ? '' : '✔') : '⭐' + n.cout) + '</em>' + (st === 'can' || st === 'av' ? '<i class="st">★</i>' : '') + '</button>';
   V.corps = function (state) {
     const v = V.vue(), P = plan(v), S = CG.S; let svg = '', vignes = '', cases = '', avant = '';
     {
@@ -107,7 +126,7 @@
         if (deux) vignes += '<path class="vine" d="' + d + '"/>';
       });
       avant = ''; // plus de légende des couleurs au-dessus de l'arbre
-      Object.keys(P.pos).forEach(id => { const p = P.pos[id]; if (id === 'centre') { cases += '<button class="tn own v2t centre" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + TW + 'px;height:' + TH + 'px"><span class="ti">🔥</span><b>Feu du clan</b></button>'; return; } const n = BY()[id]; if (n.vide) { cases += '<i class="tn-coin' + (tenu(id) ? ' on' : '') + '" style="left:' + (p.x + TW / 2 - 9) + 'px;top:' + (p.y + TH / 2 - 9) + 'px"></i>'; return; } cases += tuile(n, p.x, p.y, TW, TH, state(n), 'v2t' + (p.bn ? ' bn2' : '')); });
+      Object.keys(P.pos).forEach(id => { const p = P.pos[id]; if (id === 'centre') { cases += '<button class="tn own v2t centre' + (CG.Feu2 && CG.Feu2.brille() ? ' dore' : '') + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + TW + 'px;height:' + TH + 'px"><span class="ti">🔥</span><b>Feu du clan</b></button>'; return; } const n = BY()[id]; if (n.vide) { cases += '<i class="tn-coin' + (tenu(id) ? ' on' : '') + '" style="left:' + (p.x + TW / 2 - 9) + 'px;top:' + (p.y + TH / 2 - 9) + 'px"></i>'; return; } cases += tuile(n, p.x, p.y, TW, TH, state(n), 'v2t' + (p.bn ? ' bn2' : '')); });
       if (!document.getElementById('tn-coin-css')) { const st = document.createElement('style'); st.id = 'tn-coin-css'; st.textContent = '.tn-coin{position:absolute;width:18px;height:18px;border-radius:4px;transform:rotate(45deg);background:#6a5a3a;border:2px solid #3a2a14;box-shadow:inset 0 1px 0 rgba(255,255,255,.25);pointer-events:none}.tn-coin.on{background:#ffd84a;border-color:#8a6a1a;box-shadow:0 0 10px rgba(255,216,74,.8)}'; document.head.appendChild(st); }
     }
     return avant + '<div class="tree v2" style="width:' + P.W + 'px;height:' + P.H + 'px"><svg class="lk" width="' + P.W + '" height="' + P.H + '">' + svg + vignes + '</svg>' + cases + '</div>';

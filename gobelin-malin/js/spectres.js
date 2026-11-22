@@ -53,14 +53,27 @@
     if (attendu) { G.puff(x, y - 30, '#cfe0ff', 34, 170, 4); for (let i = 0; i < 3; i++) R.rings.push({ x, y: y - 10, r: 50 + i * 40, life: 0.5 + i * 0.15, col: '#cfe0ff' }); if (CG.onScreen(x, y)) CG.sfx('discovery'); UI.toast('👻 Le cimetière est enfin calme... Quelqu\'un t\'attend entre les tombes.'); }
   }
   Sp.poser = poser;
+  // le secret murmuré : une clé sur la mini-carte et une lueur bleue au-dessus de l'endroit, jusqu'à ce qu'on le trouve ou que le jour finisse
+  Sp.secret = function () { const S = CG.S, d = S && S.secretDit; if (!d || !CG.Secrets) return null; if (d.day !== S.day || d.monde !== (CG.Mondes ? CG.Mondes.ici() : 0)) { if (d.day !== S.day) S.secretDit = null; return null; }
+    const s = CG.Secrets.liste().find(q => { const c = CG.Secrets.pos(q); return c && Math.hypot(c.x - d.x, c.y - d.y) < 90; }); if (!s) { S.secretDit = null; return null; } const c = CG.Secrets.pos(s); d.x = c.x; d.y = c.y; return c; }; /* le papillon bouge un peu : la lueur le suit */
+  window.addEventListener('load', () => {
+    const Sc = CG.Scout; if (Sc && Sc.mini) { const mi0 = Sc.mini; Sc.mini = function (g) { mi0.apply(this, arguments); const c = Sp.secret(); if (!c) return; const x = c.x * 2 / T, y = c.y * 2 / T, k = 0.5 + Math.sin(performance.now() / 260) * 0.5;
+        g.fillStyle = 'rgba(120,190,255,' + (0.25 + k * 0.3) + ')'; g.beginPath(); g.arc(x, y, 6 + k * 3, 0, TAU); g.fill(); g.fillStyle = '#eaf6ff'; g.beginPath(); g.arc(x, y, 2.6, 0, TAU); g.fill(); g.strokeStyle = '#3a7ad0'; g.lineWidth = 1; g.stroke(); }; }
+    const M = CG.Magie; if (M && M.marks) { const mk0 = M.marks; M.marks = function (g, t) { mk0.apply(this, arguments); const c = Sp.secret(); if (!c || !CG.onScreen(c.x, c.y)) return;
+        const k = 0.5 + Math.sin(t * 2.6) * 0.5, gr = g.createLinearGradient(0, c.y - 150, 0, c.y); gr.addColorStop(0, 'rgba(150,210,255,0)'); gr.addColorStop(1, 'rgba(150,210,255,' + (0.3 + k * 0.2) + ')');
+        g.fillStyle = gr; g.beginPath(); g.moveTo(c.x - 5, c.y - 150); g.lineTo(c.x + 5, c.y - 150); g.lineTo(c.x + 16, c.y); g.lineTo(c.x - 16, c.y); g.closePath(); g.fill(); /* un fin rayon bleu qui descend du ciel */
+        g.strokeStyle = 'rgba(200,235,255,' + (0.5 + k * 0.4) + ')'; g.lineWidth = 2; g.beginPath(); g.ellipse(c.x, c.y, 20 + k * 4, 8 + k * 1.5, 0, 0, TAU); g.stroke();
+        for (let i = 0; i < 4; i++) { const a = t * 1.3 + i * 1.57, yy = c.y - 20 - ((t * 26 + i * 37) % 110); g.fillStyle = 'rgba(235,248,255,0.85)'; g.beginPath(); g.arc(c.x + Math.cos(a) * 9, yy, 1.6, 0, TAU); g.fill(); } }; }
+  });
   const du0 = D.update; D.update = function () { const r = du0.apply(this, arguments), S = CG.S, R = CG.R; if (S && R && R.visitors && !R.night && !R.cine && R.specJ !== S.day + ':' + (CG.Mondes ? CG.Mondes.ici() : 0) && !(R.specJ === 'attente' && (R.t || 0) < R.specAtt)) poser(); return r; };
   Sp.parler = function (v) {
     const S = CG.S, R = CG.R, p = S.player, f = G.firePos();
     const parti = txt => { if (!R.visitors.includes(v)) return; R.visitors.splice(R.visitors.indexOf(v), 1); S.spectreAmi.vu = true; G.puff(v.x, v.y - 30, '#cfe0ff', 30, 160, 4); R.rings.push({ x: v.x, y: v.y - 10, r: 80, life: 0.5, col: '#cfe0ff' }); CG.sfx('heal'); if (txt) UI.toast(txt); try { CG.save(); } catch (e) { /* rien */ } };
-    const sec = CG.Secrets ? CG.Secrets.liste()[0] : null, xp = 25 + 5 * S.day, opts = [];
+    const pos = q => CG.Secrets.pos(q), sec = CG.Secrets ? CG.Secrets.liste().filter(q => { const c = pos(q); return c && isFinite(c.x) && isFinite(c.y); }).sort((a, b) => Math.hypot(pos(a).x - f.x, pos(a).y - f.y) - Math.hypot(pos(b).x - f.x, pos(b).y - f.y))[0] || null : null, /* le secret le plus proche du feu, et dont on connaît l'endroit exact */ xp = 25 + 5 * S.day, opts = [];
     opts.push({ label: '🛡️ Veille sur moi', sub: 'Jusqu\'à demain matin, tu reçois 20 % de dégâts en moins', fn: () => { S.veille = S.day; parti('👻 Les ancêtres veillent sur toi jusqu\'à demain matin : 20 % de dégâts en moins.'); } });
-    if (sec) opts.push({ label: '🗝️ Dis-moi un secret', sub: 'Les morts voient ce que les vivants ne remarquent pas', fn: () => { const dx = sec.x * T - f.x, dy = sec.y * T - f.y, d = Math.round(Math.hypot(dx, dy) / T), dir = DIRS[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
-      parti(); UI.dialog({ who: 'L\'ancien chef', tag: '👻 un murmure', text: '« Il y a ' + CG.Secrets.nom(sec) + ', ' + dir + ' de ton feu, à ' + d + ' cases à peu près. Va voir ça de près, petit. Tu verras bien. »', options: [{ label: 'Merci, ancêtre' }] }); } });
+    if (sec) opts.push({ label: '🗝️ Dis-moi un secret', sub: 'Les morts voient ce que les vivants ne remarquent pas', fn: () => { const c = pos(sec), dx = c.x - f.x, dy = c.y - f.y, d = Math.round(Math.hypot(dx, dy) / T), dir = DIRS[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
+      parti(); S.secretDit = { day: S.day, monde: CG.Mondes ? CG.Mondes.ici() : 0, x: c.x, y: c.y }; if (R.pings) R.pings.push({ x: c.x, y: c.y, t0: performance.now(), icon: '🗝️', dur: 9000 });
+      UI.dialog({ who: 'L\'ancien chef', tag: '👻 un murmure', text: '« Il y a ' + CG.Secrets.nom(sec) + ', ' + dir + ' de ton feu, à ' + d + ' cases à peu près. Je te le marque sur ta carte, et une lueur bleue flotte au-dessus. Vas-y avant la nuit : demain, ce ne sera plus là. »', options: [{ label: 'Merci, ancêtre' }] }); } });
     opts.push({ label: '✨ Raconte-moi ta vie', sub: 'Tu apprends de ses batailles : +' + xp + ' XP', fn: () => { G.addXp(xp); parti('👻 L\'ancien chef t\'a raconté ses batailles : +' + xp + ' XP.'); } });
     opts.push({ label: '💭 Laisse-moi y réfléchir', sub: 'L\'ancien chef t\'attendra ici' });
     UI.dialog({ visitor: v, who: 'L\'ancien chef', tag: '👻 un spectre qui ne te veut aucun mal', text: '« N\'aie pas peur, petit. J\'ai porté le bâton de chef bien avant toi, quand ces arbres n\'étaient que des glands. Ça fait du bien de voir un gobelin debout. Laisse-moi t\'aider, une fois. Que veux-tu ? »', options: opts });

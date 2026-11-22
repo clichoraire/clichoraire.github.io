@@ -9,7 +9,7 @@
   const G = CG.G, D = CG.D, UI = CG.UI, pick = CG.pick, dist = CG.dist;
   const Bq = CG.Banque = { MAX: 3, PV: 15, EPEE: 4, ARC: 3, DUREE: 45, CHEF: [40, 10], CHEF_ARMURE: 7, VOIT: 260, PERDU_VIE: 0.45, PERDU_T: 6 };
   Bq.NOMS = { epee: ['', 'Épée', 'Épée fine', 'Lame de maître'], arc: ['', 'Arc', 'Arc long', 'Arc de maître'], armure: ['', 'Armure de cuir', 'Cotte de mailles', 'Armure d\'écailles'] };
-  Bq.IC = { epee: '🗡️', arc: '🏹', armure: '🧥' };
+  Bq.IC = { epee: '🗡️', arc: '🏹', armure: '🧥', chapeau: '🪶', baton: '🪄' }; Bq.NOMS.chapeau = ['', 'Coiffe de chef']; Bq.NOMS.baton = ['', 'Bâton magique', 'Bâton magique', 'Bâton magique'];
   Bq.effet = (k, n) => k === 'armure' ? '+' + (15 + Bq.PV * (n - 1)) + ' vie' : k === 'epee' ? '+' + (4 + Bq.EPEE * (n - 1)) + ' dégâts au corps à corps' : n > 1 ? 'tire de loin, +' + Bq.ARC * (n - 1) + ' dégâts' : 'tire de loin';
   const nom = (k, n) => Bq.NOMS[k][Math.min(Bq.MAX, n)], niv = (g, k) => (g.equip && +g.equip[k]) || 0;
   if (CG.Mondes && CG.Mondes.GLOBAL && !CG.Mondes.GLOBAL.includes('banque')) CG.Mondes.GLOBAL.push('banque'); // le coffre suit le chef d'un monde à l'autre

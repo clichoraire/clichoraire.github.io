@@ -8,7 +8,11 @@
   const INSULTES = ['Face de navet !', 'Voleur de champignons !', 'Tu sens le troll mouillé !', 'Répète un peu, pour voir !', 'C\'est MON coin !', 'Tiens ! Prends ça !', 'Aïe ! Pas les oreilles !', 'Tu travailles comme une limace !', 'Ma grand-mère cogne plus fort !', 'Rends-moi mon panier !', 'Espèce de vieux crapaud !', 'Ouille ! Tricheur !'];
   const ALERTES = ['Chef ! Vite ! {a} se bat avec {b} !', 'Chef, viens voir ! {a} et {b} se tapent dessus !', 'Au secours, chef ! {a} et {b} vont s\'arracher les oreilles !', 'Chef ! Ça cogne entre {a} et {b} ! Fais quelque chose !'];
   const MORT = ['Tu l\'auras voulu !', 'Cette fois, c\'est pour de vrai !', 'Un de nous deux ne mangera pas ce soir !', 'Le chef l\'a dit. Désolé{e}... non, pas désolé{e} !'];
-  const PAIX = ['Bon... d\'accord, chef. Pardon.', 'C\'est vrai que j\'ai exagéré.', 'Hmpf. Je lui pardonne. Pour cette fois.', 'On fait la paix. Mais c\'est quand même mon panier.', 'Désolé{e}, chef. On retourne travailler.'];
+  const PAIX = ['Bon... d\'accord, chef. Pardon.', 'C\'est vrai que j\'ai exagéré.', 'Hmpf. Je lui pardonne. Pour cette fois.', 'On fait la paix. Mais c\'est quand même mon panier.', 'Désolé{e}, chef. On retourne travailler.',
+    'C\'est lui qui a commencé ! ... Bon, d\'accord.', 'Aïe, mon oreille. Ça va, ça va, j\'arrête.', 'Oui, chef. On se serre la main. Voilà.', 'Je ne lui parle plus. Mais je ne le tape plus non plus.', 'D\'accord. Mais je garde un œil sur lui.',
+    'Pardon, chef. J\'ai vu rouge.', 'Bon. Trêve. Jusqu\'à demain, au moins.', 'On rigolait, chef ! ... Non ? Bon.', 'J\'ai eu tort. Un tout petit peu.', 'Ça va, on arrête. De toute façon, j\'étais en train de gagner.', 'Paix, paix ! J\'ai perdu une dent, ça suffit.'];
+  // la paix est faite... mais ça grogne encore un peu en s'éloignant
+  const GROGNE = ['... Face de crapaud.', 'Nez de navet !', '(tout bas) Pied plat.', 'Tu sens le vieux champignon.', 'Oreilles de chou !', 'La prochaine fois, le chef ne sera pas là...', 'Gros bêta.', '... Tête de caillou.', 'J\'ai entendu, hein !', 'Même pas mal, d\'abord.', 'Ta hutte pue.', 'Espèce de limace à pattes.', 'Pfff. Mauviette.', 'Toi-même !', 'C\'est celui qui dit qui l\'est.', '... Grande perche.'];
   const libre = g => g.met && !g.child && !g.bebe && !g.hidden && !g.exile && !g.nap && !g.cine && !g.repli && !g.perch && !g.ask && !Ch.PAS.includes(g.job) && g.hp > G.gobMaxHp(g) * 0.6;
   Ch.paires = function () { const S = CG.S, par = {}, out = []; S.goblins.filter(libre).forEach(g => { (par[g.job] = par[g.job] || []).push(g); }); for (const j in par) if (par[j].length >= 2) out.push(par[j]); return out; };
   Ch.lancer = function (a, b) {
@@ -105,7 +109,8 @@
       { label: '👀 Continuez.' }] });
     { // un seul E : le chef les sépare, sans fenêtre
         fin(c); S.morale = Math.min(100, S.morale + 2); G.addXp(5); [g, o].forEach(x => { x.ami = clamp((x.ami || 0) + 1, -6, 6); x.pep = Math.max(x.pep || 0, 20); G.text(x.x, x.y - 50, '🤝', '#fff', true); });
-        G.say(g, e(pick(PAIX)), 4); G.say(o, pick(PAIX).replace(/\{e\}/g, fem(o) ? 'e' : ''), 4, 0.9); Soc.bystanders(g, 'good'); CG.sfx('ok'); UI.toast('🕊️ ' + g.name + ' et ' + o.name + ' font la paix. (moral +2)'); return; }
+        G.say(g, e(pick(PAIX)), 4); G.say(o, pick(PAIX).replace(/\{e\}/g, fem(o) ? 'e' : ''), 4, 0.9); Soc.bystanders(g, 'good'); CG.sfx('ok'); UI.toast('🕊️ ' + g.name + ' et ' + o.name + ' font la paix. (moral +2)');
+        if (Math.random() < 0.75) { const n = CG.irand(1, 3), duo = Math.random() < 0.5 ? [g, o] : [o, g]; for (let k = 0; k < n; k++) G.say(duo[k % 2], pick(GROGNE), 2.8, 5 + k * 2.6 + Math.random()); } /* quelques insultes qui traînent, chacun son tour */ return; }
     UI.dialog({ goblin: g, who: g.name + ' et ' + o.name, tag: '💢 en pleine chicane', text: '', options: [
       { label: '⚔️ D\'accord. Réglez ça pour de bon : combat à mort.', sub: 'Ils se battront pour vrai, jusqu\'à ce qu\'un des deux tombe', fn: () => {
         c.mort = true; c.cd = 0.5; S.morale = Math.max(0, S.morale - 3); G.say(g, e(pick(MORT)), 3); G.say(o, pick(MORT).replace(/\{e\}/g, fem(o) ? 'e' : ''), 3, 0.8); Soc.bystanders(g, 'choc'); CG.sfx('horn'); UI.toast('⚔️ Combat à mort entre ' + g.name + ' et ' + o.name + '. Le clan retient son souffle. (moral -3)'); } },

@@ -84,7 +84,11 @@
   function monster(g, o, t) {
     const k = o.kind, evo = o.evo ? 1.22 : 1, portrait = o.x === 0 && o.y === 0, z = portrait ? (K[k].pz || 1) : 1;
     g.save(); g.translate(o.x, o.y); g.scale((o.face < 0 ? -1 : 1) * evo * z, evo * z);
-    if (!portrait) el(g, 0, 1, 16 * (LOOKS[k] ? LOOKS[k].w / 15 : 1), 5, 'rgba(90,220,110,0.28)');   // le halo vert des alliés
+    if (o.ko && k === 'gelee') { // morte : il ne reste qu'une flaque, les yeux en croix
+      g.globalAlpha = 0.6; el(g, 0, 1, 21, 6.5, o.evo ? '#58c8a8' : '#7ad86a'); el(g, -5, -0.5, 8, 2.2, 'rgba(255,255,255,0.3)'); el(g, 12, 3.5, 4, 1.6, o.evo ? '#58c8a8' : '#7ad86a'); el(g, -15, 4, 3, 1.3, o.evo ? '#58c8a8' : '#7ad86a');
+      [-1, 1].forEach(s => { const x = 2 + s * 5; ln(g, [x - 1.6, -0.6, x + 1.6, 1.8], '#1c3a1c', 1.3); ln(g, [x - 1.6, 1.8, x + 1.6, -0.6], '#1c3a1c', 1.3); }); g.restore(); return; }
+    if (o.ko) { g.globalAlpha = 0.55; g.rotate(1.4); } // mort : couché par terre, pâle, comme les autres animaux
+    if (!portrait && !o.ko) el(g, 0, 1, 16 * (LOOKS[k] ? LOOKS[k].w / 15 : 1), 5, 'rgba(90,220,110,0.28)');   // le halo vert des alliés
     if (k === 'gelee') {
       const ph = t * 4 + (o.seed || 0), sq = o.moving ? Math.sin(ph * 1.6) * 0.16 : Math.sin(ph * 0.6) * 0.06, hop = o.moving ? Math.max(0, Math.sin(ph * 1.6)) * 8 : 0, at = o.atkAnim || 0;
       el(g, 0, 1, 15, 4.5, 'rgba(0,0,0,0.22)'); g.translate(0, -hop); g.scale(1 + sq + at * 0.2, 1 - sq - at * 0.15);

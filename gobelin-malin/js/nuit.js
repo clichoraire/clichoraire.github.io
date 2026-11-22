@@ -10,7 +10,7 @@
 
   D.startNight = function (resume) {
     const S = CG.S, R = CG.R; if (R.night) return;
-    const raid = !resume && !R.cine && S.day >= 3 && !R.noNightRaid && Math.random() < 0.3;
+    const raid = !resume && !R.cine && S.day >= 3 && !R.noNightRaid && (CG.Diff && CG.Diff.ATTAQUES ? S.raidNuit === S.day : Math.random() < 0.3); /* tiré le matin, selon la difficulté (difficulte.js) */
     R.night = { t: resume ? DUR * 0.5 : 0, raid, raidAt: 3.2 + Math.random() * 1.6, babies: !!R.cine, bebes: R.cine ? (R.cine.shown || 0) : 0, vus: 0, resume: !!resume, horn: false };
     if (!resume) CG.sfx('nuitAnim');
     R.fireLit = false; R.backToBed = 0; document.body.classList.add('nuit'); if (CG.UI.modal && !CG.UI.modal.pauses) CG.UI.close();

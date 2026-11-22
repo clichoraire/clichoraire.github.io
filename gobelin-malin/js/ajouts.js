@@ -176,8 +176,9 @@
         if (d.land > 0) d.land -= dt;
         if (R.ko > 0) continue;
         const dx = p.x - d.x, dy = p.y - 6 - d.y, dd = Math.hypot(dx, dy) || 1;
-        if (dd < 24) { G.pickUp(d); d.gone = true; }
-        else if (dd < 62) { const st = Math.min(dd, 190 * dt); d.x += dx / dd * st; d.y += dy / dd * st; } // aspiré quand on passe tout près
+        const loin = G.ramasseK ? G.ramasseK() : 1; // « Bras longs » (objets.js) : on ramasse de plus loin
+        if (dd < 24 * loin) { G.pickUp(d); d.gone = true; }
+        else if (dd < 62 * loin) { const st = Math.min(dd, 190 * dt); d.x += dx / dd * st; d.y += dy / dd * st; } // aspiré quand on passe tout près
       }
       R.drops = R.drops.filter(d => !d.gone);
     }
@@ -222,9 +223,9 @@
       if (d.d > 0 || !CG.onScreen(d.x, d.y)) continue;
       const fly = d.f < 1, bob = fly ? 0 : Math.sin(t * 3 + d.seed) * 2, sq = d.land > 0 ? 1 - d.land * 1.2 : 1, y = d.y - d.h - 6 - bob;
       ell(g, d.x, d.y + 2, 9 * (fly ? 0.6 : 1), 3.5, 'rgba(0,0,0,0.28)');
-      if (!fly && (d.kind === 'scroll' || d.kind === 'recette' || d.kind === 'potion' || d.kind === 'xp' || d.kind === 'mystere')) circ(g, d.x, y - 4, (d.kind === 'potion' ? 18 : 13) + Math.sin(t * 4 + d.seed) * 2, d.kind === 'xp' ? 'rgba(150,210,255,0.3)' : d.kind === 'mystere' ? 'rgba(190,150,255,0.35)' : d.kind === 'scroll' ? 'rgba(255,227,107,0.3)' : 'rgba(255,90,100,0.3)');
+      if (!fly && (d.kind === 'scroll' || d.kind === 'recette' || d.kind === 'potion' || d.kind === 'xp' || d.kind === 'mystere')) circ(g, d.x, y - 4, 13 + Math.sin(t * 4 + d.seed) * 2, d.kind === 'xp' ? 'rgba(150,210,255,0.3)' : d.kind === 'mystere' ? 'rgba(190,150,255,0.35)' : d.kind === 'scroll' ? 'rgba(255,227,107,0.3)' : 'rgba(255,90,100,0.3)');
       g.save(); g.translate(d.x, y); g.scale(1, sq); if (fly) g.rotate(d.f * 9 + d.seed);
-      g.fillStyle = '#fff'; g.font = (d.kind === 'res' ? 19 : 21) + 'px sans-serif'; if (d.kind === 'potion' && Art.fiole) Art.fiole(g, 0, 2, 1.55); else if (d.kind === 'mystere' && Art.bouleMystere) { if (fly) g.rotate(-(d.f * 9 + d.seed)); Art.bouleMystere(g, t + d.seed); } else g.fillText(d.kind === 'res' ? CG.RES[d.res].icon : d.kind === 'scroll' ? '📜' : d.kind === 'recette' ? '📄' : '✨', 0, 4);
+      g.fillStyle = '#fff'; g.font = (d.kind === 'res' ? 19 : 21) + 'px sans-serif'; if (d.kind === 'potion' && Art.fiole) Art.fiole(g, 0, 2, 1); else if (d.kind === 'mystere' && Art.bouleMystere) { if (fly) g.rotate(-(d.f * 9 + d.seed)); Art.bouleMystere(g, t + d.seed); } else g.fillText(d.kind === 'res' ? CG.RES[d.res].icon : d.kind === 'scroll' ? '📜' : d.kind === 'recette' ? '📄' : '✨', 0, 4);
       g.restore();
     }
   };

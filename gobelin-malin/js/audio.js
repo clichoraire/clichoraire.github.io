@@ -15,6 +15,8 @@
   // ambiance/ (scènes et lieux), village/ (ce qui arrive au clan)
   const PISTES = { aide: 'music/goblin-music-monde-allie-aide.mp3', party: 'music/firecamp-song-1.mp3', party2: 'music/firecamp-song-2.mp3', defeat: 'music/gameover.mp3', marais: 'music/marecage-music-1.mp3' };
   // les fonds sonores qui tournent en boucle : fichier, niveau. Le jeu dit à chaque image lesquels il veut entendre, et à quelle force (A.ambiance).
+  // le monde de dehors (la forêt, pas le marais) : trois musiques, l'une après l'autre, puis on recommence
+  const JOUR = ['music-world1-1.mp3', 'music-world1-2.mp3', 'music-world1-3.mp3']; let jourN = 0;
   const FONDS = { lave: ['ambiance/lava-ambiance.mp3', 0.6], feu: ['ambiance/firecamp-crackling-sound.mp3', 0.55], nuit: ['ambiance/night-ambiant-frogs-and-crickets.mp3', 0.4], ronfle: ['ambiance/snoring-animation-sleep.mp3', 0.5] };
   const LIBRES = {
     sortEtincelle: 'sorts/goblin-magic-etincelle.mp3', sortFeu: 'sorts/goblin-magic-fireball.mp3', sortTerre: 'sorts/goblin-magic-elemental-earth.mp3', sortGlace: 'sorts/goblin-magic-ice.mp3',
@@ -76,7 +78,9 @@
     const media = new Audio();
     media.preload = 'auto';
     media.volume = 0;
-    return { media, mode: null, fade: 0, pending: false, blocked: false, activated: false };
+    const deck = { media, mode: null, fade: 0, pending: false, blocked: false, activated: false };
+    media.addEventListener('ended', () => { if (deck.mode !== 'day') return; jourN = (jourN + 1) % JOUR.length; positions.delete('day'); media.src = DIR + JOUR[jourN]; media.currentTime = 0; media.play().catch(() => {}); }); /* la suivante */
+    return deck;
   }
   function getTrack(mode) {
     const current = decks.find(deck => deck.mode === mode);
@@ -90,8 +94,8 @@
     next.fade = 0;
     next.blocked = false;
     media.volume = 0;
-    media.loop = mode !== 'defeat';
-    media.src = DIR + (PISTES[mode] || 'music/' + mode + '.mp3');
+    media.loop = mode !== 'defeat' && mode !== 'day';
+    media.src = DIR + (mode === 'day' ? JOUR[jourN] : PISTES[mode] || 'music/' + mode + '.mp3');
     media.currentTime = positions.get(mode) || 0;
     return next;
   }

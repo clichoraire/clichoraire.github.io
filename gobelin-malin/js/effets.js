@@ -216,7 +216,7 @@
     etincelle: ['⚔️', 9, '{n} dégâts'], feu: ['⚔️', 20, '{n} dégâts, en explosion'], glace: ['⚔️', 7, '{n} dégâts, ralentit 4,5 s'], soin: ['❤️', 35, '{n} points de vie (25 aux gobelins proches)'],
     racines: ['⚔️', 4, '{n} dégâts, cloue au sol 3,8 s'], eclair: ['⚔️', 15, '{n} dégâts, rebondit sur 4 ennemis'], bouclier: ['🛡️', 30, 'absorbe {n} dégâts, 12 s'], meteore: ['⚔️', 48, '{n} dégâts, grande explosion'],
     onde: ['⚔️', 5, '{n} dégâts, repousse tout autour'], poison: ['⚔️', 5.2, '{n} dégâts par seconde, 8 s'],
-    cri: ['📯', null, 'Gardes : +50 % de dégâts, plus rapides, 12 s'], vision: ['⏳', null, 'Dure 30 secondes'], hate: ['👟', null, 'Vitesse ×1,6 pendant 12 s'], golem: ['⏳', null, 'Il reste 2 minutes'],
+    cri: ['📯', null, 'Gardes : +50 % de dégâts, plus rapides, 12 s'], vision: ['⏳', null, 'Dure 30 secondes'], hate: ['👟', null, 'Vitesse ×1,3 pendant 12 s'], golem: ['⏳', null, 'Il reste 2 minutes'],
     faucon: ['⏳', null, 'Dure 5 secondes'], parefeu: ['🛡️', null, '−80 % de dégâts de feu, 20 s'], ombres: ['⏳', null, 'Dure 20 secondes'], retour: ['🌀', null, 'Portail ouvert 1 minute'], cigogne: ['👶', null, '+1 ou +2 bébés cette nuit']
   };
   Ef.fiche = function (id) {

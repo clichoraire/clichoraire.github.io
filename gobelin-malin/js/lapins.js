@@ -6,13 +6,13 @@
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, UI = CG.UI, Art = CG.Art, W = CG.W, T = CG.TILE, TAU = Math.PI * 2, pick = CG.pick, rand = CG.rand;
-  const Lp = CG.Lapins = { CHANCE: 0.3, JOUR: 2, PARIS: 5, MISES: [20, 50, 100], MISE_FOOD: 20, TROC: 20, PRIX: { epee: [0, 0, 90, 220], arc: [0, 0, 80, 200], armure: [0, 0, 110, 260] }, PARCHEMIN: 0.8 };
+  const Lp = CG.Lapins = { CHANCE: 0.3, JOUR: 2, PARIS: 5, MISES: [20, 50, 100], MISE_FOOD: 20, TROC: 20, PRIX: { epee: [0, 40, 90, 220], arc: [0, 35, 80, 200], armure: [0, 50, 110, 260] }, PARCHEMIN: 0.8 };
   Lp.NOMS = ['Maître Trèfle', 'Dame Pissenlit', 'Oncle Luzerne', 'Carotin', 'Mademoiselle Radis', 'Pimprenelle', 'Grand-Oreille', 'Compère Museau'];
   const DES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   // ce qu'un Lapin a dans son sac ; « gros » : le comptoir du marais, mieux garni
   Lp.stock = function (gros) {
     const S = CG.S, p = S.player, Bq = CG.Banque, l = [];
-    if (Bq) ['epee', 'arc', 'armure'].forEach(k => [2, 3].forEach(n => { if (Math.random() > (n === 2 ? 0.8 : gros ? 0.75 : 0.4)) return;
+    if (Bq) ['epee', 'arc', 'armure'].forEach(k => [1, 2, 3].forEach(n => { if (CG.Qualite ? !CG.Qualite.enVente(n, gros) : n === 1 || Math.random() > (n === 2 ? 0.8 : gros ? 0.75 : 0.4)) return; /* les premiers jours : des 1 étoile, parfois une 2 ; les 3 étoiles viennent bien plus tard */
       l.push({ icon: Bq.IC[k], label: Bq.NOMS[k][n], desc: '★'.repeat(n) + ' ' + ((CG.Objets && CG.Objets.PHRASE[k]) || 'Pour un gobelin.'), prix: Lp.PRIX[k][n], stock: n === 2 ? (gros ? 3 : 2) : 1, buy: () => { const z = Bq.deposer(k, n, 1, 'sac'); UI.toast(Bq.IC[k] + ' ' + Bq.NOMS[k][n] + ' : rangé ' + (CG.Inventaire ? CG.Inventaire.ou(z) : 'dans le coffre du camp') + '.'); } }); }));
     const vus = {}; for (let i = 0; i < (gros ? 3 : 2); i++) { const id = G.newScroll && G.newScroll(); if (!id || vus[id] || Math.random() < 0.25) continue; vus[id] = 1; const sp = CG.SPELLS[id]; l.push({ scroll: id, icon: '📜', label: 'Parchemin : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: Math.round(sp.prix * Lp.PARCHEMIN), stock: 1 }); }
     l.push({ icon: '🥕', label: 'Panier de carottes', desc: '+25 nourriture.', prix: 20, stock: gros ? 5 : 3, buy: () => { S.res.food += 25; } });

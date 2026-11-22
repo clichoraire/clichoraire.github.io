@@ -98,7 +98,7 @@
   G.gobMul = () => 1 + (G.tech('b14') ? 0.15 : 0) + (G.tech('b15') ? 0.15 : 0) + (G.tech('b16') ? 0.2 : 0);
   G.heroMul = () => 1 + (G.tech('g3') ? 0.15 : 0) + (G.tech('g11') ? 0.15 : 0) + (G.tech('g12') ? 0.2 : 0);
   const onPath = e => W.tile[W.idx(CG.clamp(Math.floor(e.x / T), 0, CG.MW - 1), CG.clamp(Math.floor(e.y / T), 0, CG.MH - 1))] === W.PATH;
-  function follow(e, spd, dt) { return follow0(e, e.job !== undefined ? spd * GOB * G.gobMul() * G.evoSpd(e) * (onPath(e) ? 1.2 : 1) * (e.boost > 0 ? 1.7 : 1) : spd, dt); }
+  function follow(e, spd, dt) { return follow0(e, e.job !== undefined ? spd * GOB * G.gobMul() * G.evoSpd(e) * (onPath(e) ? 1.2 * (G.cheminK ? G.cheminK(e) : 1) : 1) * (e.boost > 0 ? 1.7 : 1) : spd, dt); }
   function follow0(e, spd, dt) {
     if (!e.path || !e.path.length) { e.moving = false; return true; }
     const p = e.path[0], dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy), st = spd * dt;
@@ -575,7 +575,7 @@
     if (K.has('w') || K.has('ArrowUp')) my -= 1; if (K.has('s') || K.has('ArrowDown')) my += 1;
     if (mx || my) {
       { const v = CG.Tactile && CG.Tactile.vec; if (v) { mx = v.x; my = v.y; } } // manette tactile : la direction exacte du pouce, pas seulement les huit du clavier
-      const l = Math.hypot(mx, my), run = G.tech('g13') && K.has('Shift'), spd = 80 * G.heroMul() * (run ? 1.7 : 1) * (onPath(p) ? 1.2 : 1); R.running = run; R.dir = { x: mx / l, y: my / l };
+      const l = Math.hypot(mx, my), run = G.tech('g13') && K.has('Shift'), spd = 80 * G.heroMul() * (run ? 1.7 : 1) * (onPath(p) ? 1.2 * (G.cheminK ? G.cheminK(p) : 1) : 1); R.running = run; R.dir = { x: mx / l, y: my / l };
       if (R.passe > 0) { p.x += mx / l * spd * dt; p.y += my / l * spd * dt; } /* Passe-muraille : rien ne l'arrête */ else { W.surEau = R.surEau > 0; /* potion de nénuphar : l'eau porte le chef, et lui seul */ slide(p, mx / l * spd * dt, my / l * spd * dt, 9); W.surEau = false; }
       p.x = CG.clamp(p.x, 12, CG.MW * T - 12); p.y = CG.clamp(p.y, 12, CG.MH * T - 12);
       if (Math.abs(mx) > 0.2) p.face = mx > 0 ? 1 : -1; p.step += dt * 2.6 * G.heroMul() * (run ? 1.6 : 1); p.moving = true; if (run && Math.random() < dt * 14) R.parts.push({ x: p.x - R.dir.x * 8, y: p.y - 2, vx: rand(-12, 12), vy: rand(-22, -6), life: 0.4, max: 0.4, col: '#d8c8a0', size: 3, float: true });

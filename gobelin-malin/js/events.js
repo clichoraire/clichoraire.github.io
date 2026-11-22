@@ -59,7 +59,13 @@
   D.soundAlarm = function () {
     const ev = R.event; if (!ev || ev.type !== 'attack' || R.alarm) return;
     ev.quiet = false; ev.heard = true; ev.time = Math.min(ev.time || 0, 60); R.alarm = true;
-    const m = ev.msg || ['Le village est attaqué !', 'Des ennemis sont aux portes. Aux armes !']; G.banner(m[0], m[1], '#ff9a8a'); CG.sfx('attaque');
+    let m = ev.msg || ['Le village est attaqué !', 'Des ennemis sont aux portes. Aux armes !'];
+    { // on annonce ceux qui sont vraiment là : un raid de gnomes arrivé avant les humains attendus ne s'appelle pas « des humains »
+      const n = {}; for (const e of R.enemies) { if (!e.event || e.dead || e.retreat || e.struct || !D.nearVillage(e)) continue; const r = (CG.ENEMIES[e.type] || {}).race; if (r) n[r] = (n[r] || 0) + 1; }
+      const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0], attendu = { humains: 'humain', betes: 'bete', demons: 'demon', lezards: 'lezard' }[ev.kind];
+      const TITRE = { gnome: 'Des gnomes attaquent le village !', humain: 'Des humains attaquent le village !', bete: 'Des bêtes sauvages attaquent !', demon: 'Des démons attaquent le village !', lezard: 'Les hommes-lézards attaquent !', mort: 'Des morts-vivants attaquent le village !' };
+      if (top && TITRE[top] && !ev.demonLord && !ev.nightRaid && (attendu ? top !== attendu : ev.kind === 'camp' && false)) m = [TITRE[top], 'Ils sont tout près. Aux armes !']; }
+    G.banner(m[0], m[1], '#ff9a8a'); CG.sfx('attaque');
   };
   function endAttack() {
     const ev = R.event; R.alarm = false; R.event = null; if (ev.nightRaid) R.backToBed = 4;
@@ -97,7 +103,7 @@
       { icon: '🛡️', label: 'Cotte renforcée', desc: 'Ton armure te protège mieux.', prix: 40 + 35 * p.armor, stock: 1, buy: () => { p.armor++; } },
       { icon: '🪨', label: '10 minerais', desc: 'Pour ton forgeron.', prix: 22, stock: 2, buy: () => { S.res.minerai += 10; } }].concat(sc(['feu', 'bouclier', 'cri', 'retour', 'murfeu', 'golem'], 1, 1, 0.35));
     if (role === 'elfe') return sc(['etincelle', 'soin', 'racines', 'glace', 'bouclier', 'eclair', 'illusion', 'retour', 'hate'], 2, 1, 0.5).concat([potion(10, 3)]);
-    if (role === 'sorciere') return sc(CG.SCROLL_POOL.filter(i => i !== 'meteore'), 2, 0.75, 0.55).concat([potion(9, 3)]).concat(CG.Feu ? CG.Feu.stock() : []); // et ses poudres pour le feu de camp
+    if (role === 'sorciere') return sc(CG.SCROLL_POOL.filter(i => i !== 'meteore'), 2, 0.75, 0.55).concat([potion(9, 3), { icon: '🦴', label: '5 os', desc: 'Pour les potions de tes alchimistes.', prix: 30, stock: 3, buy: () => { S.res.os = (S.res.os || 0) + 5; } }]).concat(CG.Feu ? CG.Feu.stock() : []); // des os pour les potions, et ses poudres pour le feu de camp
     return sc(['feu', 'meteore', 'cri', 'eclair', 'murfeu'], 2, 1, 0.45).concat([{ icon: '❤️', label: 'Pacte de vigueur', desc: 'Plus de vie, pour toujours.', prix: 80, stock: 1, buy: () => { p.maxhp += 10; p.hp += 10; } }]);
   }
   // ce que disent les gobelins errants en arrivant : une histoire différente à chaque groupe
@@ -152,7 +158,7 @@
     const group = [lord], ne = Math.min(5, 2 + Math.floor(day / 4));
     for (let i = 0; i < ne; i++) { const v = mkVisitor('escorte', 'demon', ex.x + rand(-30, 30), ex.y + rand(-30, 30), { x: f.x + 6 + (i - (ne - 1) / 2) * 44, y: f.y - 150 - (i % 2) * 16 }, ex); v.leaveAt = 99; group.push(v); }
     R.event = { type: 'demande', demand: { kind, n }, timer: 80, lord, group };
-    lord.annonce = ['Un seigneur démon est là', 'Il est descendu du portail du nord avec son escorte, et il t\'attend. Va lui parler (E).', '#e0a8ff', 'horn'];
+    lord.annonce = ['Un seigneur démon veut te parler', 'Il est descendu du portail du nord avec son escorte. Ne le fais pas attendre : il perd vite patience.', '#e0a8ff', 'horn'];
   };
   function leave(v) { v.state = 'leave'; G.goTo(v, v.exit.x, v.exit.y); }
   D.demandHostile = function (why) {
@@ -189,9 +195,10 @@
     if (v.role === 'nomade') {
       const n = v.group.filter(o => R.visitors.includes(o)).length, room = G.capacity() - S.goblins.length, wt = v.group.wait;
       const J = v.group.jumeaux, seuls = J && (n < 2 || room < 2);
+      v.group.forEach(o => { if (o.gros === undefined) o.gros = Math.random() < 0.18; }); const gros = v.group.filter(o => R.visitors.includes(o) && o.gros).length; /* certains sont bien ronds : on le dit avant de les accueillir */
       const hello = !wt ? (v.group.hello || VIS.nomade.hello) : wt.t > wt.max * 0.45 ? 'On attend sagement, chef. Tu nous as trouvé une place ?' : wt.t > wt.max * 0.2 ? 'Ça commence à être long, chef... On a faim et on a mal aux pieds. Alors ?' : 'Grrr ! On poireaute depuis des heures ! C\'est oui ou c\'est non ?!';
-      return UI.dialog({ visitor: v, who: J ? 'Les jumeaux errants' : VIS.nomade.nom, tag: wt ? (wt.t > wt.max * 0.45 ? '⏳ ils attendent' : wt.t > wt.max * 0.2 ? '😒 ils s\'impatientent' : '😡 ils sont en colère') : J ? '👯 jumeaux' : '', text: hello + ' (Ils sont ' + n + '. Places libres dans tes huttes : ' + Math.max(0, room) + '.)',
-        options: [{ label: '🛖 Bienvenue au clan !', sub: seuls ? 'Les jumeaux ne se séparent pas : il leur faut 2 places' : room > 0 ? Math.min(n, room) + ' gobelin(s) rejoignent le village' : 'Aucune place : bâtis d\'abord une hutte', disabled: room <= 0 || !!seuls, fn: () => { const neufs = []; v.group.filter(o => R.visitors.includes(o)).forEach((o, i) => { if (i < room) { const g = G.addGoblin(o.sex, 'aucun'); g.x = o.x; g.y = o.y; g.hue = o.hue; neufs.push(g); R.visitors.splice(R.visitors.indexOf(o), 1); } else leave(o); }); if (J && neufs.length === 2) jumeler(neufs[0], neufs[1], J); S.morale = Math.min(100, S.morale + 4); UI.toast('De nouveaux gobelins rejoignent le clan. Donne-leur un métier !'); } },
+      return UI.dialog({ visitor: v, who: J ? 'Les jumeaux errants' : VIS.nomade.nom, tag: wt ? (wt.t > wt.max * 0.45 ? '⏳ ils attendent' : wt.t > wt.max * 0.2 ? '😒 ils s\'impatientent' : '😡 ils sont en colère') : J ? '👯 jumeaux' : '', text: hello + (gros ? (gros > 1 ? ' ' + gros + ' d\'entre eux ont un gros appétit : ils mangeront pour deux.' : n > 1 ? ' L\'un d\'eux a un gros appétit : il mangera pour deux.' : ' Il a un gros appétit : il mangera pour deux.') : ''),
+        options: [{ label: '🛖 Bienvenue au clan !', sub: seuls ? 'Les jumeaux ne se séparent pas : il leur faut 2 places' : room > 0 ? Math.min(n, room) + ' gobelin(s) rejoignent le village' : 'Aucune place : bâtis d\'abord une hutte', disabled: room <= 0 || !!seuls, fn: () => { const neufs = []; v.group.filter(o => R.visitors.includes(o)).forEach((o, i) => { if (i < room) { const g = G.addGoblin(o.sex, 'aucun'); g.x = o.x; g.y = o.y; g.hue = o.hue; if (CG.Art8 && CG.Art8.randomLook) { g.look = g.look || CG.Art8.randomLook(g); g.look.belly = o.gros ? rand(1.3, 1.5) : Math.min(g.look.belly || 1, 1.15); } neufs.push(g); R.visitors.splice(R.visitors.indexOf(o), 1); } else leave(o); }); if (J && neufs.length === 2) jumeler(neufs[0], neufs[1], J); S.morale = Math.min(100, S.morale + 4); UI.toast('De nouveaux gobelins rejoignent le clan. Donne-leur un métier !'); } },
           { label: '⏳ Attendez un peu, je vous prépare une place.', sub: wt ? 'Ils attendent déjà... mais pas pour toujours' : 'Ils patientent près du feu, le temps de bâtir une hutte. Ne les fais pas trop attendre !', disabled: !!wt, fn: () => { v.group.wait = { t: 150, max: 150, stage: 0 }; v.group.forEach(o => { o.leaveAt = 99; }); G.say(v, pick(['D\'accord, chef. On attend ici.', 'Merci, chef ! On ne bouge pas.', 'On va se réchauffer près du feu en attendant.']), 4); CG.UI.toast('⏳ Les gobelins errants attendent ta réponse. Bâtis-leur une hutte avant qu\'ils perdent patience.'); } },
           { label: '👋 Désolé, passez votre chemin', fn: () => v.group.forEach(o => { if (R.visitors.includes(o)) leave(o); }) }] });
     }
@@ -224,7 +231,7 @@
 
   // ---------- la journée ----------
   D.feast = function () {
-    const pop = S.goblins.length, need = Math.ceil(pop * 3 * (G.count('marmite') ? 0.75 : 1)) + CG.P.food();
+    const pop = S.goblins.length + S.goblins.filter(g => G.gourmand && G.gourmand(g)).length /* les gros mangeurs comptent pour deux */, need = Math.ceil(pop * 3 * (G.count('marmite') ? 0.75 : 1)) + CG.P.food();
     R.feast = true; R.fireLit = true; S.feastDay = S.day; R.dayStats.eaten = Math.min(need, Math.floor(S.res.food));
     if (S.res.food >= need) { S.res.food -= need; S.morale = Math.min(100, S.morale + 8 + (G.count('taverne') ? 4 : 0)); R.feastOk = true; G.addXp((8 + 2 * S.day) * (G.count('taverne') ? 2 : 1)); G.banner('La fête commence !', 'Le feu est allumé. On boit, on danse, on chante.', '#ffcf7a'); }
     else { // pas assez à manger : pas de feu, pas de fête. Tout le monde va se coucher, mécontent (la nourriture qui reste n'est pas touchée)
@@ -307,7 +314,7 @@
       for (let dy = -s.r; dy <= s.r; dy++) for (let dx = -s.r - 1; dx <= s.r + 1; dx++) { const x = s.x + dx, y = s.y + dy; if (W.inMap(x, y) && f[W.idx(x, y)] >= 0 && W.walkTile(x, y) && !taken.has(W.idx(x, y))) free.push({ x, y }); }
       if (!free.length) return;
       CG.shuffle(free);
-      const av = s.mobs.filter(m => day >= m[1]).map(m => m[0]), n = Math.min(s.base + 6, s.base + Math.floor((day - 1) * 0.7)), k = Math.min(1.5, 1 + (day - 1) * 0.04);
+      const av = s.mobs.filter(m => day >= m[1]).map(m => m[0]), n = s.k === 'nid' && CG.Nid && CG.Nid.age ? Math.min(s.base + 7, s.base - 1 + Math.round(CG.Nid.age() * 1.2)) : Math.min(s.base + 6, s.base + Math.floor((day - 1) * 0.7)), /* le nid : peu d'araignées quand on le nettoie souvent, de plus en plus si on le laisse */ k = Math.min(1.5, 1 + (day - 1) * 0.04);
       let gros = 0;
       for (let i = 0; i < n; i++) {
         let type = av[Math.floor(Math.pow(Math.random(), 0.7) * av.length)]; // les plus récents (les plus forts) un peu plus rarement

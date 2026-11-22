@@ -7,7 +7,7 @@
 (function (CG) {
   const G = CG.G, D = CG.D, W = CG.W, UI = CG.UI, T = CG.TILE, TAU = Math.PI * 2, rand = CG.rand, pick = CG.pick; if (!G || !D) return;
   // CHANCE : par jour ; VOIT : distance où le drame commence ; PEUR : ce que chaque monstre encore sur elle lui coûte par seconde (sur 100) ; RENOM : chance d'un groupe d'errants de plus, par sauvetage
-  const Sv = CG.Sauvetage = { CHANCE: 0.3, JOUR: 2, VOIT: 420, PEUR: 1.2, RENOM: 0.18, MAX: 4, LOIN: [16, 40] };
+  const Sv = CG.Sauvetage = { CHANCE: 0.3, JOUR: 2, VOIT: 420, PEUR: 1.2, RENOM: 0.18, MAX: 4, LOIN: [16, 40], CADEAU: { or: [15, 4], parchemin: 0.25 } };
   const BETES = [['loup', 1], ['gelee', 1], ['araignee', 2], ['champi', 2], ['brigand', 3], ['squelette', 4], ['diablotin', 6]];
   const monde = () => (CG.Mondes ? CG.Mondes.ici() : 0), cas = () => { const S = CG.S, q = S && S.sauv; return q && q.day === S.day && q.m === monde() ? q : null; };
   const CRIS = ['À l\'aide ! Au secours !', 'Quelqu\'un ! S\'il vous plaît !', 'Allez-vous-en ! Laissez-moi !', 'Maman ! J\'ai peur !'];
@@ -46,10 +46,14 @@
   };
   // ---------- lui parler, une fois sauvée ----------
   const fi0 = D.findInteract; D.findInteract = function () { const it = fi0.apply(this, arguments), R = CG.R, o = R && R.petite; if (!o || o.etat !== 'sauvee' || R.ko > 0 || R.build) return it; const p = CG.S.player; if (Math.hypot(p.x - o.x, p.y - o.y) < 56 && (!it || it.type !== 'visitor')) return { type: 'petite', obj: { x: o.x, y: o.y - 26 }, label: o.qui === 'elfe' ? 'Parler à la petite elfe' : 'Parler à la petite humaine' }; return it; };
+  // son cadeau tombe par terre, devant elle : on voit bien ce qu'elle donne, et on le ramasse en marchant dessus
+  function cadeau(o) { const S = CG.S, d = S.day; G.dropRes(o.x, o.y, 'or', Sv.CADEAU.or[0] + d * Sv.CADEAU.or[1]); G.drop(o.x, o.y, { kind: 'potion', n: 1 });
+    if (Math.random() < Sv.CADEAU.parchemin && G.newScroll) { const id = G.newScroll(); if (id) G.drop(o.x, o.y, { kind: 'scroll', id }); }
+    G.puff(o.x, o.y - 20, '#ffe36b', 18, 130, 4); CG.R.rings.push({ x: o.x, y: o.y - 6, r: 54, life: 0.45, col: '#ffe36b' }); }
   const in0 = D.interact; D.interact = function () {
     const it = D.findInteract(); if (!it || it.type !== 'petite') return in0.apply(this, arguments); const S = CG.S, R = CG.R, o = R.petite, elfe = o.qui === 'elfe';
     const fin = () => { if (R.petite !== o || o.etat !== 'sauvee') return; const q = cas(); if (q) q.fini = true; S.renom = Math.min(Sv.MAX, (S.renom || 0) + 1); S.morale = Math.min(100, S.morale + 3); G.addXp(10 + S.day);
-      G.text(o.x, o.y - 44, '💛', '#fff', true); G.say(o, elfe ? 'Je le dirai à toute la forêt : les gobelins sont gentils, finalement !' : 'Je vais le dire à tout le village : les gobelins sont gentils, finalement !', 4.5); CG.sfx('heal'); setTimeout(() => { if (CG.R && CG.R.petite === o) partir(o, false); }, 2600); };
+      cadeau(o); G.text(o.x, o.y - 44, '💛', '#fff', true); G.say(o, elfe ? 'Tiens, c\'est pour toi ! Je le dirai à toute la forêt : les gobelins sont gentils !' : 'Tiens, c\'est pour toi ! Je vais le dire à tout le village : les gobelins sont gentils !', 4.5); CG.sfx('heal'); setTimeout(() => { if (CG.R && CG.R.petite === o) partir(o, false); }, 2600); };
     UI.dialog({ who: elfe ? 'La petite elfe' : 'La petite humaine', tag: '💛 sauvée', text: pick(MERCI[o.qui]) + ' Je vais parler de toi à tout le monde. Ils sauront que les gobelins sont gentils, finalement !',
       options: [{ label: '🙂 Rentre vite chez toi, et fais attention.', sub: 'Elle racontera ce que tu as fait : des gobelins errants viendront plus souvent se présenter', fn: fin }, { label: '😈 Bouh !', sub: 'Elle rit... puis file quand même raconter son histoire', fn: () => { G.say(o, 'Hi hi ! Même pas peur, maintenant !', 2.4); fin(); } }] });
   };

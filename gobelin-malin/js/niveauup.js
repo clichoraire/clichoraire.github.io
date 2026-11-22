@@ -7,6 +7,7 @@
   const clamp01 = v => Math.max(0, Math.min(1, v)), doux = k => k * k * (3 - 2 * k);
   Nu.lancer = function (g) { const R = CG.R; if (!R) return; const l = R.ups || (R.ups = []); if (l.some(u => u.g === g)) return; l.push({ g, t: 0, eclat: false, seed: Math.random() * 10, niv: g.lvl }); if (CG.onScreen(g.x, g.y)) CG.sfx('gobNiveau'); };
   const gx0 = G.gobXp; G.gobXp = function (g) { const n = g && g.lvl, r = gx0.apply(this, arguments); if (g && g.lvl > n) Nu.lancer(g); return r; };
+  if (CG.P && CG.P.xp) { const px0 = CG.P.xp; CG.P.xp = function (p) { const n = p && p.lvl, r = px0.apply(this, arguments); if (p && p.lvl > n && !p.ko) Nu.lancer(p); return r; }; } /* les animaux et compagnons : la même fête quand ils gagnent un niveau */
   const vu = u => !u.g.hidden && !u.g.dead && CG.onScreen(u.g.x, u.g.y);
   const up0 = G.update; G.update = function (dt) {
     up0.apply(this, arguments); const R = CG.R, l = R && R.ups; if (!l || !l.length) return;

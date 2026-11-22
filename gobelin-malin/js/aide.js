@@ -59,7 +59,7 @@
     const S = CG.S, l = vivants(a), quoi = nomDe(l); a.ph = 'parle';
     UI.dialog({ goblin: g, who: g.name, tag: '🆘 a besoin de toi', text: pick(['Chef ! Chef ! Il y a ' + quoi + ' là où je travaille ! J\'ai eu la peur de ma vie. Tu viens m\'aider ?', 'Chef, au secours ! Je suis tombé' + (fem(g) ? 'e' : '') + ' sur ' + quoi + ' en allant travailler. Tu peux t\'en occuper ?', 'Chef ! ' + quoi.charAt(0).toUpperCase() + quoi.slice(1) + ' ! Juste à côté de mon coin ! Je n\'y retourne pas tout' + (fem(g) ? 'e' : '') + ' seul' + (fem(g) ? 'e' : '') + ' !']), options: [
       { label: '⚔️ Oui, je viens t\'aider. Montre-moi où c\'est.', sub: g.name + ' te montre le chemin : suis le gobelin entouré d\'or (repère doré sur la mini-carte)', fn: () => { a.ph = 'mene'; a.t = Ai.ATTENTE; a.ping = 0; a.cri = 3; a.rep = 0; a.pause = false; G.text(g.x, g.y - 50, '❤️', '#fff', true); G.say(g, pick(['Merci, chef ! Suis-moi, c\'est par là !', 'Oh, merci ! Viens, je te montre !']), 3.5); CG.sfx('ok'); } },
-      { label: '⏳ Je n\'ai pas le temps. Prends un autre chemin.', sub: 'Le moral baisse un peu, et ' + (fem(g) ? 'elle' : 'il') + ' change de coin', fn: () => { refuse(g, a); } }] });
+      { label: '⏳ Je n\'ai pas le temps. Prends un autre chemin.', echap: true, sub: 'Le moral baisse un peu, et ' + (fem(g) ? 'elle' : 'il') + ' change de coin', fn: () => { refuse(g, a); } }] });
   }
   function reussi(g, a) {
     const S = CG.S; finir(g); Ai.pause = 40; S.morale = Math.min(100, S.morale + 4); G.addXp(6); g.ami = clamp((g.ami || 0) + 2, -6, 6); g.pep = Math.max(g.pep || 0, 40); g.emoteT = 2;

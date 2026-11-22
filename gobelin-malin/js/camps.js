@@ -37,7 +37,7 @@
     if (R.event && R.event.type !== 'attack') return; // on attend que le visiteur soit reparti
     e.raided = true;
     all.slice(0, e.partN || all.length).forEach(o => { o.wild = null; o.event = true; o.target = null; o.exit = { x: e.x, y: e.y + 40 }; });
-    if (!R.event) R.event = { type: 'attack', kind: 'camp', quiet: true, msg: ['Un raid attaque le village !', c.titre + ' a envoyé ses troupes. Aux armes ! Ensuite, va détruire leur repaire.'] };
+    if (!R.event) R.event = { type: 'attack', kind: 'camp', quiet: true, msg: ['Un raid attaque le village !', c.titre + ' a envoyé ses troupes. Aux armes ! ' + ((e.age || 0) >= 2 ? 'Ce repaire grossit chaque jour : détruis-le, sinon il attaquera de plus en plus fort.' : 'Ensuite, va détruire leur repaire.')] };
   };
   Camps.destroyed = function (e) {
     const S = CG.S, R = CG.R; G.puff(e.x, e.y - 20, '#c9a56b', 30, 200, 6); G.puff(e.x, e.y - 20, '#ff8a1e', 16, 150, 5); CG.sfx('fire');
@@ -62,7 +62,7 @@
       if (!n) { if (R.siteN && R.siteN[s.k]) n = R.siteN[s.k]; else continue; }
       (R.siteN || (R.siteN = {}))[s.k] = Math.max(n, (R.siteN[s.k] || 0));
       if (vivants) continue;
-      done[s.k] = true; const prime = 12 + 4 * R.siteN[s.k] + 3 * S.day; G.addXp(prime);
+      done[s.k] = true; (S.propre || (S.propre = {}))[(CG.Mondes && CG.Mondes.ici ? CG.Mondes.ici() : 0) + ':' + s.k] = S.day; /* retenu : le nid d'araignées grossit tant qu'on ne le nettoie pas, et la carte coche les lieux faits */ const prime = 12 + 4 * R.siteN[s.k] + 3 * S.day; G.addXp(prime);
       let plus = '';
       if (s.k === 'cimetiere' || s.k === 'nid') { // la récompense : le coffre apparaît
         const c0 = R.siteCoffre && R.siteCoffre[s.k], ctr = CG.W.center(s.x, s.y), c = c0 || { x: ctr.x, y: ctr.y, kind: 'precieux', open: false }; if (R.siteCoffre) delete R.siteCoffre[s.k];

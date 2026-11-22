@@ -126,3 +126,15 @@
 /* la fenêtre de discussion qui va se refermer toute seule */
 #dlg-muet { position: absolute; left: 14px; right: 14px; bottom: 5px; height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.35); overflow: hidden; pointer-events: none; }
 #dlg-muet i { display: block; height: 100%; background: #ffd84a; transition: width 0.25s linear; }
+
+/* ---------- les bonus permanents : des médaillons bleutés, arrondis, pour ne pas les confondre avec une technologie ---------- */
+#panel.arbre .tree button.tn.passif { border-radius: 27px; border-style: double; border-width: 4px; border-color: #3a3d44; padding-left: 46px; background: radial-gradient(ellipse at 22% 0, rgba(235, 238, 245, 0.3), transparent 60%), linear-gradient(#8b8f98, #6a6e78 55%, #54585f); box-shadow: 0 4px 0 #2a2c32, inset 0 2px 0 rgba(240, 242, 248, 0.3); }
+#panel.arbre .tree button.tn.passif .ti { left: 6px; top: 7px; width: 34px; height: 34px; line-height: 34px; font-size: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f2f3f6, #b9bcc4); box-shadow: 0 0 0 2px #3a3d44, inset 0 -2px 0 rgba(40, 44, 52, 0.25); }
+#panel.arbre .tree button.tn.passif.own .ti { background: radial-gradient(circle at 35% 30%, #eaf4ff, #a9c8ee); box-shadow: 0 0 0 2px #1f3a5c, inset 0 -2px 0 rgba(30, 60, 100, 0.25); }
+#panel.arbre .tree button.tn.passif u.cb { display: none; }
+#panel.arbre .tree button.tn.passif.can { border-color: #ffd84a; box-shadow: 0 0 0 2px #b8860e, 0 0 16px 3px rgba(255, 216, 80, 0.85), 0 4px 0 #2a2c32, inset 0 2px 0 rgba(240, 242, 248, 0.4); background: radial-gradient(ellipse at 22% 0, rgba(240, 242, 248, 0.45), transparent 60%), linear-gradient(#9a9ea8, #787c86 55%, #5e626a); }
+/* appris : vert = une construction débloquée, bleu = un pouvoir ou un bonus débloqué */
+#panel.arbre .tree button.tn.passif.own, #panel.arbre .tree button.tn.pouvoir.own { border-color: #1f3a5c; background: radial-gradient(ellipse at 22% 0, rgba(190, 225, 255, 0.35), transparent 60%), linear-gradient(#5a8fd0, #3d6fb0 55%, #2c5490); box-shadow: 0 0 0 2px #3d6fb0, 0 0 0 3.5px #1c3a66, 0 4px 6px rgba(10, 24, 50, 0.45), inset 0 2px 0 rgba(220, 240, 255, 0.4); }
+.tn.pouvoir.own::before { background: #6aa6e8; box-shadow: inset -2px -1px 0 #2c5490; }
+.tn.v2t.pouvoir.own em, .tn.v2t.passif.own em { background: #24508c; border-color: #183a66; color: #e4f1ff; }
+#panel.arbre .tree button.tn.passif.own::before, #panel.arbre .tree button.tn.passif.own::after { display: none; }

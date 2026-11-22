@@ -7,7 +7,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, P = CG.P, UI = CG.UI, T = CG.TILE, TAU = Math.PI * 2, Si = CG.Sifflet = { TECH: 'b40', TOUCHE: 'y', DOUBLE: 0.7, RENTRE: 9, COURSE: 1.5, BLESSE: 0.7, GUERI: 0.97 };
-  const t = { id: Si.TECH, br: 'clan', t: 6, r: 5, cout: 2, icon: '🎵', nom: 'Sifflet', desc: 'Nouveau pouvoir permanent (touche Y) : un coup de sifflet, et tous tes animaux accourent, te suivent et se battent avec toi. Deux coups rapides : ils rentrent au village.', req: ['b24'] };
+  const t = { id: Si.TECH, br: 'clan', t: 6, r: 5, cout: 2, icon: '🎵', nom: 'Sifflet', desc: 'Nouveau pouvoir permanent (touche Y) : un coup de sifflet, et tes animaux dressés accourent et te suivent. Deux coups rapides : ils rentrent au village.', req: ['b24'] };
   CG.TECH.push(t); if (CG.TECH_BY_ID) CG.TECH_BY_ID[t.id] = t; if (CG.TECH_PARENT) CG.TECH_PARENT[t.id] = 'b24';
   if (CG.Vues && CG.Vues.NIVEAU) CG.Vues.NIVEAU[t.id] = 'b24'; // dans l'arbre : pas de sifflet sans « Compagnons fidèles », même si la case est voisine d'une autre
   const debout = () => CG.S.pets.filter(p => !p.ko && !p.ridden && P.KINDS[p.kind]);
@@ -24,7 +24,7 @@
   Si.peut = () => !!CG.S && !!CG.R && CG.running && G.tech(Si.TECH) && !UI.modal && !(CG.R.ko > 0) && !CG.R.cine && !CG.R.night && !CG.R.death;
   Si.siffler = function () {
     if (!Si.peut()) return; const S = CG.S, R = CG.R, p = S.player, deux = R.t - dernier < Si.DOUBLE; dernier = deux ? -9 : R.t;
-    const l = debout(); son(deux); R.rings.push({ x: p.x, y: p.y - 30, r: deux ? 150 : 110, life: 0.45, col: deux ? '#ffd28a' : '#bfe8ff' }); G.text(p.x + 14, p.y - 72, deux ? '♪♪' : '♪', deux ? '#ffd28a' : '#bfe8ff', true);
+    const l = debout().filter(a => a.dresse); son(deux); R.rings.push({ x: p.x, y: p.y - 30, r: deux ? 150 : 110, life: 0.45, col: deux ? '#ffd28a' : '#bfe8ff' }); G.text(p.x + 14, p.y - 72, deux ? '♪♪' : '♪', deux ? '#ffd28a' : '#bfe8ff', true);
     if (!l.length) return;
     l.forEach(a => { a.follow = !deux; a.soin = null; a.eat = null; a.path = null; a.sleep = false; a.rentre = deux ? Si.RENTRE : 0; if (deux) { a.timer = 0; a.wx = undefined; } G.text(a.x, a.y - 46, deux ? '🏕️' : '❗', '#fff', true); });
   };

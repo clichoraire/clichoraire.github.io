@@ -18,12 +18,12 @@
     N('b17', 'clan', 2, 1, 1, '🎠', 'Aire de jeux', 'Révèle les Balançoires.', { req: ['b1'], unlock: ['balancoire'] }),
     N('b19', 'clan', 4, 1, 2, '🌿', 'Herboristerie', 'Tes guérisseurs soignent deux fois plus vite, et de plus loin autour de leur hutte.', { req: ['b9'] }),
     N('b20', 'clan', 5, 4, 2, '📦', 'Entrepôts', 'Révèle le Dépôt : un second endroit où tes gobelins déposent bois, nourriture et minerai, pour raccourcir leurs trajets.', { req: ['b13'], unlock: ['depot'] }),
-    N('b24', 'clan', 5, 5, 2, '🐕', 'Compagnons fidèles', 'Nouveau pouvoir permanent : en parlant à un de tes animaux, tu peux lui demander de te suivre partout, ou de rester au village.', { req: ['b18'] }),
+    N('b24', 'clan', 5, 5, 2, '🎓', 'École des animaux', 'Révèle l\'École des animaux : un animal y passe une journée, puis il sait t\'obéir.', { req: ['b18'], unlock: ['ecoleAnimaux'] }),
     N('b18', 'clan', 2, 4, 1, '🥣', 'Dressage', 'Révèle la Mangeoire pour tes animaux.', { req: ['b1'], unlock: ['mangeoire'] }),
     N('d8', 'def', 4, 5, 2, '🚧', 'Clôtures de métal', 'Troisième palier : un muret de pierre peut devenir une clôture en métal, et un portail de pierre un portail en métal. Va à côté (E).', { req: ['d11'] }),
     N('d10', 'def', 2, 1, 2, '☠️', 'Pointes empoisonnées', 'Les pièges font double dégâts et ralentissent.', { req: ['d1'] }),
     N('d25', 'def', 2, 5, 1, '🪵', 'Palissades', 'Révèle la Palissade : un mur de rondins, bien plus solide qu\'une clôture.', { unlock: ['palissade'] }),
-    N('d23', 'def', 2, 4, 1, '🔔', 'Appel aux armes', 'Révèle la Cloche d\'alarme : pendant une attaque, sonne-la et tout le clan sort se battre jusqu\'à ce que le village soit sauf.', { req: ['d1'], unlock: ['cloche'] }),
+    N('d23', 'def', 2, 4, 1, '🔔', 'Appel aux armes', 'Révèle la Cloche d\'alarme : pendant une attaque, sonne-la : tes gardes et tes gobelins armés sortent se battre jusqu\'à ce que le village soit sauf.', { req: ['d1'], unlock: ['cloche'] }),
     N('d20', 'def', 5, 2, 2, '⚙️', 'Mécanismes', 'Révèle le Lance-pieux : un mécanisme qui se fixe sur une clôture et tire d\'un côté.', { req: ['d6'], unlock: ['mecaPieux'] }),
     N('d21', 'def', 5, 3, 2, '🔥', 'Lance-flammes', 'Révèle le Lance-flammes, à fixer sur une clôture.', { req: ['d20'], unlock: ['mecaFlamme'] }),
     N('d22', 'def', 5, 5, 2, '🧪', 'Rune gluante', 'Révèle la Rune gluante, à fixer sur une clôture : sa magie rend le sol collant.', { req: ['d8'], unlock: ['mecaGlu'] }),
@@ -59,11 +59,10 @@
     N('b15', 'clan', 3, 5, 2, '🛤️', 'Sentiers battus', 'Tes gobelins marchent encore 15 % plus vite.', { req: ['b14'] }),
     N('b16', 'clan', 4, 5, 3, '🐇', 'Jarrets de lièvre', 'Tes gobelins marchent encore 20 % plus vite.', { req: ['b15'] }),
     // ---- guerrier
-    N('g1', 'guer', 1, 1, 1, '❤️', 'Peau dure', '+20 vie maximum.', { onBuy: () => { const p = CG.S.player; p.maxhp += 20; p.hp += 20; } }),
     N('g2', 'guer', 1, 2, 1, '💪', 'Bras puissant', '+3 dégâts à chaque coup.'),
     N('g13', 'guer', 4, 1, 2, '🏃', 'Courir', 'Nouveau pouvoir permanent : maintiens Maj (Shift) pour courir 70 % plus vite.', { req: ['g5'], power: 'run' }),
-    N('g6', 'guer', 2, 0, 2, '💗', 'Régénération', 'Ta vie remonte toute seule, tout doucement : +0,3 par seconde.', { req: ['g1'] }),
-    N('g3', 'guer', 2, 1, 1, '🥾', 'Pieds agiles', 'Tu cours 15 % plus vite, pour toujours.', { req: ['g1'] }),
+    N('g6', 'guer', 2, 0, 2, '💗', 'Régénération', 'Ta vie remonte toute seule, tout doucement : +0,3 par seconde.'),
+    N('g3', 'guer', 2, 1, 1, '🥾', 'Pieds agiles', 'Tu cours 15 % plus vite, pour toujours.'),
     N('g4', 'guer', 2, 2, 2, '🌀', 'Coup tournoyant', 'Tes coups frappent tout autour de toi, et plus loin.', { req: ['g2'] }),
     N('g14', 'guer', 4, 0, 3, '🧌', 'Sang de troll', 'Ta vie remonte encore un peu plus : +0,4 par seconde de plus.', { req: ['g10'] }),
     N('g10', 'guer', 3, 0, 3, '🕊️', 'Seconde chance', 'Une fois par jour, au lieu de tomber pour de bon, tu te relèves à mi-vie.', { req: ['g6'] }),
@@ -75,11 +74,10 @@
     N('g11', 'guer', 3, 4, 2, '🐺', 'Jambes de loup', 'Tu cours encore 15 % plus vite, pour toujours.', { req: ['g3'] }),
     N('g12', 'guer', 4, 4, 3, '🌬️', 'Vent dans les oreilles', 'Tu cours encore 20 % plus vite.', { req: ['g11'] }),
     // ---- sorcier
-    N('s1', 'sorc', 1, 1, 1, '🧠', 'Esprit vif', '+15 mana maximum.', { onBuy: () => { const p = CG.S.player; p.maxmp += 15; p.mp += 15; } }),
-    N('s6', 'sorc', 2, 0, 1, '💎', 'Cristaux', 'Révèle le Cristal de mana.', { req: ['s1'], unlock: ['cristal'] }),
-    N('s12', 'sorc', 2, 3, 2, '👁️', 'Regard perçant', 'Tu vois en permanence les forces et les faiblesses de chaque gobelin, sans lancer le sort.', { req: ['s1'] }),
-    N('s2', 'sorc', 2, 1, 1, '🌊', 'Source de mana', 'Ton mana remonte de 0,5 par seconde au départ. Avec ce pouvoir : +0,5 par seconde de plus.', { req: ['s1'] }),
-    N('s3', 'sorc', 2, 2, 2, '✨', 'Étincelles jumelles', 'Étincelle lance trois traits en éventail.', { req: ['s1'] }),
+    N('s6', 'sorc', 2, 0, 1, '💎', 'Cristaux', 'Révèle le Cristal de mana.', { unlock: ['cristal'] }),
+    N('s12', 'sorc', 2, 3, 2, '👁️', 'Regard perçant', 'Tu vois en permanence les forces et les faiblesses de chaque gobelin, sans lancer le sort.'),
+    N('s2', 'sorc', 2, 1, 1, '🌊', 'Source de mana', 'Ton mana remonte de 0,5 par seconde au départ. Avec ce pouvoir : +0,5 par seconde de plus.'),
+    N('s3', 'sorc', 2, 2, 2, '✨', 'Étincelles jumelles', 'Étincelle lance trois traits en éventail.'),
     N('s10', 'sorc', 3, 0, 2, '🔮', 'Aura protectrice', 'Tu reçois 15 % de dégâts en moins.', { req: ['s6'] }),
     N('s5', 'sorc', 3, 1, 2, '🗼', 'Tour de magie', 'Révèle la Tour de magie.', { req: ['s2'], unlock: ['tourMagie'] }),
     N('s4', 'sorc', 3, 2, 2, '🔥', 'Sorts puissants', 'Tous tes sorts : +25 % de puissance.', { req: ['s2'] }),
@@ -155,6 +153,12 @@
     g.bio = [CG.pick(ORIG), CG.pick(LIKE), CG.pick(DREAM)];
     g.talent = null; G.makeApt(g);
   };
+  // la première rencontre, en petits morceaux : c'est le chef qui pose les questions (ui.js)
+  G.introParts = function (g) {
+    const f = t => g.sex === 'f' ? t.replace('suis né ', 'suis née ').replace('m\'a trouvé ', 'm\'a trouvée ').replace('suis sauvé ', 'suis sauvée ').replace('marmiton ', 'marmitonne ').replace('le gobelin le plus fort', 'la gobeline la plus forte') : t;
+    return { salut: (g.child ? 'Bonjour papa ! Moi, c\'est ' : 'Bonjour chef ! Moi, c\'est ') + g.name + '.', origine: f(g.child ? 'Je suis né cette nuit dans ta hutte, et j\'ai déjà grandi !' : g.bio[0]), aime: f(g.bio[1]), talent: f(TALENT[g.talent] + ' ' + DISLIKE[g.weak]), reve: f(g.bio[2]) };
+  };
+  G.GOURMAND = 1.2; G.gourmand = g => !!(g && g.look && g.look.belly >= G.GOURMAND); /* un gobelin bien rond mange pour deux à la fête du soir */
   G.introText = function (g) {
     let t = (g.child ? 'Bonjour papa ! Moi, c\'est ' : 'Bonjour chef ! Moi, c\'est ') + g.name + '. ' + (g.child ? 'Je suis né cette nuit dans ta hutte, et j\'ai déjà grandi !' : g.bio[0]) + ' ' + g.bio[1] + ' ' + TALENT[g.talent] + ' ' + DISLIKE[g.weak] + ' ' + g.bio[2];
     if (g.sex === 'f') t = t.replace('suis né ', 'suis née ').replace('m\'a trouvé ', 'm\'a trouvée ').replace('suis sauvé ', 'suis sauvée ').replace('marmiton ', 'marmitonne ').replace('le gobelin le plus fort', 'la gobeline la plus forte');

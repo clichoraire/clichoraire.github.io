@@ -9,20 +9,27 @@
   const MIENS = { coeur: 1, mana: 1, coeurOr: 1, manaOr: 1, objet: 1 };
   // les objets trouvés (arme, armure, outil) : ils tombent par terre comme le reste, et c'est en les ramassant qu'on apprend ce que c'est.
   // Une phrase toute courte, sans chiffres ; la qualité se lit en étoiles à côté du nom.
-  Ob.PHRASE = { epee: 'Donne-la à un gobelin : il frappera plus fort.', arc: 'Donne-le à un gobelin : il tirera de loin.', armure: 'Donne-la à un gobelin : il sera plus solide.', pioche: 'Pour ramasser plus de minerai.', hache: 'Pour ramasser plus de bois.', gant: 'Pour cueillir plus de baies.' };
+  Ob.PHRASE = { baton: 'Un bâton de magie. Pour toi, ou pour un gobelin qui lance des sorts.', chapeau: 'La coiffe des vrais chefs : avec elle sur la tête, tu frappes plus fort.', epee: 'Une bonne lame : celui qui la porte frappe plus fort.', arc: 'Un arc pour toucher les ennemis de loin. Il te faut des flèches.', armure: 'Elle protège celui qui la porte. Toi ou un gobelin.', pioche: 'Avec elle, les rochers donnent plus de minerai.', hache: 'Avec elle, les arbres donnent plus de bois.', gant: 'Des gants pour cueillir plus de baies sans se piquer.' }; /* tout le monde peut les porter : le chef comme les gobelins */
   Ob.lacher = function (x, y, k, n) { G.drop(x, y, { kind: 'objet', k, n }); G.puff(x, y - 20, '#bfe8ff', 24, 150, 4); CG.sfx('discovery'); };
   // ---------- ramasser ----------
   // ---------- deux technologies : les cœurs et les gouttes ramassés rendent deux fois plus, puis encore deux fois plus ----------
   Ob.TECHS = ['g20', 'g21'];
   Ob.fois = () => Ob.TECHS.reduce((k, id) => k * (G.tech(id) ? 2 : 1), 1);
-  [{ id: 'g20', br: 'guer', t: 6, r: 2, cout: 1, icon: '💗', nom: 'Cœurs généreux I', desc: 'Les cœurs et les gouttes de mana que tu ramasses par terre te rendent 2 fois plus.', req: ['g1'] },
+  [{ id: 'g20', br: 'guer', t: 6, r: 2, cout: 1, icon: '💗', nom: 'Cœurs généreux I', desc: 'Les cœurs et les gouttes de mana que tu ramasses par terre te rendent 2 fois plus.', req: ['g2'] },
     { id: 'g21', br: 'guer', t: 6, r: 3, cout: 2, icon: '💖', nom: 'Cœurs généreux II', desc: 'Les cœurs et les gouttes de mana que tu ramasses par terre te rendent encore 2 fois plus (4 fois en tout).', req: ['g20'] }
   ].forEach(n => { CG.TECH.push(n); if (CG.TECH_BY_ID) CG.TECH_BY_ID[n.id] = n; if (CG.TECH_PARENT) CG.TECH_PARENT[n.id] = n.req[0]; });
   if (CG.Vues && CG.Vues.NIVEAU) CG.Vues.NIVEAU.g21 = 'g20'; // le niveau II attend le niveau I
+  // ---------- deux autres : on ramasse ce qui traîne par terre de 25 % plus loin, puis encore 25 % ----------
+  Ob.LOIN = ['b41', 'b42']; Ob.LOIN_K = 0.25;
+  G.ramasseK = () => 1 + Ob.LOIN_K * Ob.LOIN.filter(id => G.tech(id)).length;
+  [{ id: 'b41', br: 'clan', t: 6, r: 3, cout: 1, icon: '🧲', nom: 'Bras longs I', desc: 'Tu ramasses ce qui traîne par terre de 25 % plus loin.', req: ['b1'] },
+    { id: 'b42', br: 'clan', t: 6, r: 4, cout: 2, icon: '🧲', nom: 'Bras longs II', desc: 'Tu ramasses ce qui traîne par terre d\'encore 25 % plus loin.', req: ['b41'] }
+  ].forEach(n => { CG.TECH.push(n); if (CG.TECH_BY_ID) CG.TECH_BY_ID[n.id] = n; if (CG.TECH_PARENT) CG.TECH_PARENT[n.id] = n.req[0]; });
+  if (CG.Vues && CG.Vues.NIVEAU) CG.Vues.NIVEAU.b42 = 'b41';
   const pk0 = G.pickUp; G.pickUp = function (d) {
     if (!d || !MIENS[d.kind]) return pk0.apply(this, arguments); const p = CG.S.player, n = d.n || 1;
     if (d.kind === 'objet') { const Bq = CG.Banque, z = Bq.deposer(d.k, n, 1, 'sac'), nom = Bq.IC[d.k] + ' ' + Bq.NOMS[d.k][n];
-      G.text(p.x, p.y - 84, nom, '#d0ecff', true); G.puff(p.x, p.y - 24, '#bfe8ff', 18, 140, 4); CG.R.rings.push({ x: p.x, y: p.y - 10, r: 50, life: 0.5, col: '#bfe8ff' }); CG.sfx('heal');
+      G.text(p.x, p.y - 84, nom + ' ' + '★'.repeat(n), '#d0ecff', true); G.puff(p.x, p.y - 24, '#bfe8ff', 18, 140, 4); CG.R.rings.push({ x: p.x, y: p.y - 10, r: 50, life: 0.5, col: '#bfe8ff' }); CG.sfx('heal');
       G.banner(nom + ' ' + '★'.repeat(n), Ob.PHRASE[d.k] || (z === 'sac' ? 'C\'est dans ton sac.' : 'C\'est au coffre du camp.'), '#d0ecff'); if (z !== 'sac') CG.UI.toast('🎒 Ton sac est plein : ' + nom + ' est au coffre du camp.'); return; }
     if (d.kind === 'coeur') { const v = Ob.SOIN * n * Ob.fois(); p.hp = Math.min(p.maxhp, p.hp + v); G.text(d.x, d.y - 30, '+' + v + ' ❤', '#ff9ac0'); CG.sfx('ok'); }
     else if (d.kind === 'mana') { const v = Ob.MANA * n * Ob.fois(); p.mp = Math.min(p.maxmp, p.mp + v); G.text(d.x, d.y - 30, '+' + v + ' 💧', '#9ad0ff'); CG.sfx('ok'); }
@@ -36,7 +43,7 @@
     return r; };
   const oc0 = D.openChest; D.openChest = function (c) { const r = oc0.apply(this, arguments); if (c && c.kind !== 'piege' && Math.random() < Ob.COFFRE) { const n = CG.irand(1, 3); for (let i = 0; i < n; i++) G.drop(c.x, c.y, { kind: Math.random() < 0.55 ? 'coeur' : 'mana', n: 1 }); }
     const Bq = CG.Banque; if (c && c.kind !== 'piege' && Bq && Math.random() < Ob.ARME) { // très rarement : une arme ou une armure pour un gobelin
-      const k = ['epee', 'arc', 'armure'][CG.irand(0, 2)], q = Math.random(), n = q < 0.5 ? 1 : q < 0.85 ? 2 : 3; Ob.lacher(c.x, c.y, k, n); } // elle tombe par terre avec le reste : on la ramasse en marchant dessus
+      const k = ['epee', 'arc', 'armure'][CG.irand(0, 2)], q = Math.random(), n = CG.Qualite ? CG.Qualite.tirer() : q < 0.5 ? 1 : q < 0.85 ? 2 : 3; Ob.lacher(c.x, c.y, k, n); } // elle tombe par terre avec le reste : on la ramasse en marchant dessus
     return r; };
   // ---------- leurs dessins ----------
   const ell = (g, x, y, rx, ry, f, rot) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); g.fill(); };

@@ -14,6 +14,7 @@
     [31.4, 4.4, 'Alors le clan fit de lui son chef...'],
     [36.2, 3.6, '... parce que vous êtes...']
   ], TITRE = 40, FIN = 43.5;
+  const OIS = [6.6, 3, 0.7, 1.3]; // le gobelin-oiseau, au loin : quand il apparaît, combien de temps il parle, son saut, sa chute (secondes)
   // les bruits de l'histoire : chaque son part une seule fois, au moment où l'image le montre
   let sons = {};
   const son = (cle, nom) => { if (sons[cle]) return; sons[cle] = 1; if (CG.sfx) CG.sfx(nom); }, rythme = (cle, t, per, dec, nom) => { const n = Math.floor((t + dec) / per); if (t + dec >= 0) son(cle + n, nom); };
@@ -33,20 +34,38 @@
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); if (CG.sfx) CG.sfx('page');
   };
   In.seek = sec => { t0 = performance.now() - sec * 1000; sons = {}; }; // pour les essais
+  In.actif = () => !!root && root.style.display !== 'none' && !root.hidden;
   In.stop = function () { cancelAnimationFrame(raf); if (root) root.style.display = 'none'; if (done) done(); };
   window.addEventListener('keydown', e => { if (root && root.style.display !== 'none' && e.key === 'Escape') { e.stopPropagation(); In.stop(); } }, true);
 
   function loop() {
     raf = requestAnimationFrame(loop);
-    const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.round(r.width * dpr), h = Math.round(r.height * dpr); if (!w || !h) return; if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const lw = window.innerWidth, lh = window.innerHeight, dpr = window.GMPerf ? window.GMPerf.dpr(lw, lh) : Math.min(2, window.devicePixelRatio || 1), w = Math.round(lw * dpr), h = Math.round(lh * dpr); if (!w || !h) return; if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
     const g = cv.getContext('2d'), t = now(), u = Math.min(w / 1300, h / 800), gy = h * 0.74, cx = w / 2;
     // ---- le décor : ciel du soir, collines, sapins, sol
     const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#16224a'); sky.addColorStop(0.5, '#3a3a6a'); sky.addColorStop(0.74, '#c8785a'); sky.addColorStop(0.75, '#3f6a2c'); sky.addColorStop(1, '#2a4a1e'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.fillStyle = '#ffe9b0'; g.beginPath(); g.arc(w * 0.82, h * 0.2, 44 * u, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,233,176,0.12)'; g.beginPath(); g.arc(w * 0.82, h * 0.2, 90 * u, 0, TAU); g.fill();
     for (let i = 0; i < 40; i++) { const sx = (i * 397 % 1000) / 1000 * w, sy = (i * 211 % 500) / 1000 * h; g.fillStyle = 'rgba(255,255,255,' + (0.35 + 0.3 * Math.sin(t * 2 + i)) + ')'; g.fillRect(sx, sy, 2 * u, 2 * u); }
     g.fillStyle = '#243a4a'; g.beginPath(); g.moveTo(0, gy); for (let x = 0; x <= w; x += 40) g.lineTo(x, gy - (70 + Math.sin(x / (170 * u)) * 36 + Math.sin(x / (61 * u)) * 12) * u); g.lineTo(w, gy); g.fill();
+    // une montagne au loin : c'est de là-haut qu'un gobelin va se prendre pour un oiseau
+    const OX = w * 0.17, OY = gy - 345 * u, OL = 230 * u, OB = gy - 60 * u; g.fillStyle = '#2c4258'; g.beginPath(); g.moveTo(OX - OL, OB); g.lineTo(OX - OL * 0.4, OY + (OB - OY) * 0.44); g.lineTo(OX - OL * 0.3, OY + (OB - OY) * 0.47); g.lineTo(OX - 10 * u, OY); g.lineTo(OX + 10 * u, OY); g.lineTo(OX + OL * 0.36, OY + (OB - OY) * 0.5); g.lineTo(OX + OL * 0.5, OY + (OB - OY) * 0.48); g.lineTo(OX + OL, OB); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.16)'; g.beginPath(); g.moveTo(OX - 10 * u, OY); g.lineTo(OX + 10 * u, OY); g.lineTo(OX + OL * 0.2, OY + (OB - OY) * 0.28); g.lineTo(OX + 20 * u, OY + (OB - OY) * 0.2); g.lineTo(OX - 10 * u, OY + (OB - OY) * 0.3); g.lineTo(OX - OL * 0.16, OY + (OB - OY) * 0.22); g.closePath(); g.fill();
     const sapin = (x, s, col) => { g.fillStyle = col; for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(x, gy - (210 - k * 46) * s * u); g.lineTo(x - (38 + k * 20) * s * u, gy - (86 - k * 40) * s * u); g.lineTo(x + (38 + k * 20) * s * u, gy - (86 - k * 40) * s * u); g.fill(); } g.fillStyle = '#3a2412'; g.fillRect(x - 7 * s * u, gy - 12 * s * u, 14 * s * u, 14 * s * u); };
     for (let i = 0; i < 14; i++) sapin((i * 0.083 - 0.03) * w + Math.sin(i * 7) * 30 * u, 0.9 + (i % 3) * 0.22, i % 2 ? '#1c3a2a' : '#17301f');
+    { // le gobelin-oiseau : tout petit, là-haut. Il parle, il saute... et finit planté dans la terre, la tête la première
+      const T1 = OIS[0], T2 = T1 + OIS[1], T3 = T2 + OIS[2], T4 = T3 + OIS[3], sc = 0.46 * u, c = cast[3], LX = OX + 205 * u, LY = gy + 6 * u;
+      const pg = (x, y, rot, pose, tt) => { g.save(); g.translate(x, y); g.rotate(rot); A8.goblin(g, { x: 0, y: 0, scale: sc, dir: 'SE', t: tt, pose, walk: 0, job: 'aucun', sex: c.sex, look: c.look, noHat: true }); g.restore(); };
+      if (t >= T1 && t < T2) { pg(OX, OY + 2 * u, 0, 'cheer', t * 2.2); const k = t - T1;
+        if (k > 0.5) { const txt = 'Je suis un oiseau !', fs = Math.max(13, Math.round(24 * u)); g.font = '700 ' + fs + 'px "Trebuchet MS", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const tw = g.measureText(txt).width + fs * 1.1, bh = fs * 1.7, bx = Math.max(8 * u, OX - tw * 0.4), by = OY - 50 * u - bh, pop = Math.min(1, (k - 0.5) * 5);
+          g.save(); g.translate(bx + tw / 2, by + bh); g.scale(pop, pop); g.translate(-(bx + tw / 2), -(by + bh)); g.fillStyle = '#fffbe8'; g.beginPath(); g.roundRect(bx, by, tw, bh, bh * 0.4); g.fill(); g.beginPath(); g.moveTo(OX - 8 * u, by + bh - 1); g.lineTo(OX + 2 * u, by + bh + fs * 0.6); g.lineTo(OX + 12 * u, by + bh - 1); g.closePath(); g.fill(); g.fillStyle = '#2a1a0c'; g.fillText(txt, bx + tw / 2, by + bh / 2 + 1); g.restore(); g.textBaseline = 'alphabetic'; son('oisDit', 'ok'); } }
+      else if (t >= T2 && t < T4) { const a = (t - T2) / (T4 - T2), saut = Math.sin(Math.min(1, (t - T2) / OIS[2]) * Math.PI) * 70 * u; son('oisSaut', 'swing'); /* un petit bond plein d'espoir, puis la chute */
+        pg(OX + (LX - OX) * a, OY + (LY - 30 * sc - OY) * a * a - saut * (1 - a), Math.PI * Math.min(1, Math.max(0, (t - T2 - OIS[2] * 0.6) / (OIS[3] * 0.8))), 'cheer', t * 4); }
+      else if (t >= T4) { const d = t - T4, tr = Math.sin(d * 11) * 0.17 * Math.max(0.3, 1 - d / 6); son('oisPlouf', 'tombe');
+        g.save(); g.beginPath(); g.rect(LX - 90 * u, LY - 140 * u, 180 * u, 140 * u); g.clip(); g.translate(LX, LY); g.rotate(tr); pg(0, -58 * sc, Math.PI, 'dance', t * 3); g.restore(); /* on ne voit plus que ses jambes qui gigotent */
+        g.fillStyle = '#2f5a22'; g.beginPath(); g.ellipse(LX, LY + 1 * u, 19 * u, 5.5 * u, 0, 0, TAU); g.fill(); g.fillStyle = '#4a3420'; [[-13, 0, 5.5], [11, 1, 4.5], [-3, 2, 5], [16, -1, 3.4]].forEach(q => { g.beginPath(); g.ellipse(LX + q[0] * u, LY + q[1] * u, q[2] * u, q[2] * 0.6 * u, 0, 0, TAU); g.fill(); });
+        if (d < 0.6) { g.globalAlpha = 1 - d / 0.6; g.fillStyle = '#d8c8a0'; for (let i = 0; i < 7; i++) { const an = Math.PI + i / 6 * Math.PI, r = (10 + d * 80) * u; g.beginPath(); g.arc(LX + Math.cos(an) * r, LY + Math.sin(an) * r * 0.6, (6 - d * 6) * u, 0, TAU); g.fill(); } g.globalAlpha = 1; }
+        if (d > 0.4 && d < 5) for (let i = 0; i < 3; i++) { const an = t * 3 + i * 2.1, sx = LX + Math.cos(an) * 22 * u, sy = LY - 52 * u + Math.sin(an) * 6 * u; g.fillStyle = '#ffe36b'; g.beginPath(); for (let j = 0; j < 10; j++) { const rr = (j % 2 ? 2.2 : 5) * u, aa = j / 10 * TAU - Math.PI / 2; g.lineTo(sx + Math.cos(aa) * rr, sy + Math.sin(aa) * rr); } g.closePath(); g.fill(); } }
+    }
     g.fillStyle = 'rgba(0,0,0,0.12)'; for (let i = 0; i < 26; i++) g.fillRect(((i * 613) % 1000) / 1000 * w, gy + ((i * 271) % 200) / 200 * (h - gy), 22 * u, 3 * u);
     // ---- les accessoires
     const om = (x, y, rx) => { g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.ellipse(x, y, rx, rx * 0.26, 0, 0, TAU); g.fill(); };

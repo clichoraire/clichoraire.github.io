@@ -9,7 +9,7 @@
     { k: 'hatetemps', ic: '⌛', nom: () => sp('hatetemps').nom, txt: 'Les heures passent une fois et demie plus vite. Tout le reste bouge normalement.', t: () => { const a = CG.Temps && CG.Temps.actif(); return a && a.id === 'hatetemps' ? a.t : 0; } },
     { k: 'bouclier', ic: '🛡️', nom: () => sp('bouclier').nom || 'Bouclier', txt: () => 'Absorbe encore ' + Math.ceil(CG.R.shield) + ' points de dégâts à ta place.', t: () => CG.R.shield > 0 ? Math.max(0.1, CG.R.shieldT || 0) : 0 },
     { k: 'cri', ic: '📣', nom: () => sp('cri').nom || 'Cri de guerre', txt: 'Tes gardes courent, frappent plus vite et font 50 % de dégâts en plus.', t: () => CG.R.cri },
-    { k: 'hate', ic: '💨', nom: () => sp('hate').nom || 'Hâte', txt: 'Tu cours beaucoup plus vite.', t: () => CG.R.haste },
+    { k: 'hate', ic: '💨', nom: () => sp('hate').nom || 'Hâte', txt: 'Tu cours un peu plus vite.', t: () => CG.R.haste },
     { k: 'pareFeu', ic: '🦎', nom: () => sp('parefeu').nom, txt: 'Le feu ne te fait presque plus rien : 80 % de dégâts de feu en moins.', t: () => CG.R.pareFeu },
     { k: 'electro', ic: '🌩️', nom: () => sp('electro').nom, txt: 'Tout ennemi qui s\'approche est foudroyé, et celui qui te frappe prend une décharge.', t: () => CG.R.electro },
     { k: 'ombres', ic: '👁️', nom: () => sp('ombres').nom, txt: 'Tu vois ceux qui se cachent dans l\'ombre autour de toi.', t: () => CG.R.oeilOmbre },
@@ -40,7 +40,7 @@
   }
   const duree = (b, t) => t === true ? (b.fin ? b.fin() : '') : t >= 60 ? 'encore ' + Math.floor(t / 60) + ' min ' + String(Math.ceil(t % 60)).padStart(2, '0') : 'encore ' + Math.ceil(t) + ' s';
   function montrer(b, el) {
-    const t = b.t(); if (!t) return cacher(); survol = b;
+    let t = 0; try { t = b.t() || 0; } catch (e) { t = 0; } if (t !== true && !(t > 0.05)) return cacher(); survol = b;
     tip.className = b.mal ? 'mal' : ''; tip.innerHTML = '<h4><span></span><i style="font-style:normal"></i></h4><p></p><em></em>';
     tip.querySelector('span').textContent = val(b.ic); tip.querySelector('i').textContent = val(b.nom); tip.querySelector('p').textContent = val(b.txt); tip.querySelector('em').textContent = duree(b, t);
     tip.hidden = false; const r = el.getBoundingClientRect(); tip.style.left = Math.max(8, Math.min(window.innerWidth - tip.offsetWidth - 8, r.left)) + 'px'; tip.style.top = (r.bottom + 10) + 'px';
@@ -49,7 +49,7 @@
   const rf0 = UI.refresh; UI.refresh = function () {
     rf0.apply(this, arguments); const S = CG.S, R = CG.R; if (!S || !R || (!box && !init())) return;
     for (const b of Bf.LISTE) {
-      let t = 0; try { t = b.t() || 0; } catch (e) { t = 0; }
+      let t = 0; try { t = b.t() || 0; } catch (e) { t = 0; } if (t !== true && !(t > 0.05)) t = 0; /* un compteur fini descend souvent un peu sous zéro : sans ça, l'icône restait affichée à 0 et clignotait pour toujours */
       let el = vus[b.k];
       if (!t) { if (el) { el.remove(); delete vus[b.k]; if (survol === b) cacher(); } continue; }
       if (!el) { el = vus[b.k] = document.createElement('div'); el.className = 'bf' + (b.mal ? ' mal' : ''); el.innerHTML = '<span></span><b></b>'; el.onmouseenter = () => montrer(b, el); el.onmouseleave = cacher; box.appendChild(el); el._ic = null; el._s = null; }

@@ -16,7 +16,7 @@
     murfeu: 'Un mur de flammes se dresse devant toi. Les ennemis qui veulent passer se brûlent les fesses.',
     retour: 'Un portail bleu s\'ouvre à côté de toi. Saute dedans : hop, te voilà au village, près du feu ! Reprends-le vite si tu veux retourner d\'où tu viens, car il finit par se refermer.',
     meteore: 'Une énorme pierre en feu tombe du ciel. Mieux vaut ne pas être dessous !',
-    hate: 'Le vent te pousse dans le dos : tu cours comme une fusée pendant un petit moment.',
+    hate: 'Le vent te pousse dans le dos : tu cours un peu plus vite pendant un petit moment.',
     golem: 'Un gros bonhomme de roche sort de la terre pour se battre à tes côtés. Il reste un bon moment, sauf si les ennemis le cassent avant.',
     charme: 'L\'ennemi le plus proche tombe sous ton charme et devient ton ami : il se bat pour toi ! Tu ne peux pas le frapper pendant ce temps-là. Ensuite, il redevient méchant. Les chefs ne se laissent pas charmer.',
     onde: 'Un grand coup de vent part de toi. Tous les ennemis autour s\'envolent, retombent sur les fesses et voient des étoiles.',
@@ -68,7 +68,7 @@
     passe: ['Tu restes fantôme plus longtemps.', 'Tu restes fantôme encore bien plus longtemps.'],
     meteore: ['Une pierre plus grosse, qui fait un plus grand trou.', 'Une pierre géante, un trou immense… et deux éclats retombent juste après.']
   };
-  // la phrase courte (10 mots au plus) : celle qu'on lit quand on gagne le parchemin. La longue reste dans le grimoire.
+  // la phrase courte (10 mots au plus) : celle qu'on lit quand on gagne le parchemin. Le grimoire la montre aussi.
   const C = {
     etincelle: 'Une petite étincelle qui pique le premier ennemi touché.',
     vision: 'Tu vois ce que chaque gobelin fait bien ou mal.',
@@ -83,7 +83,7 @@
     murfeu: 'Un mur de flammes qui brûle ceux qui passent.',
     retour: 'Un portail bleu qui te ramène au village.',
     meteore: 'Une énorme pierre en feu tombe du ciel.',
-    hate: 'Tu cours comme une fusée pendant un moment.',
+    hate: 'Tu cours un peu plus vite pendant un moment.',
     golem: 'Un bonhomme de roche se bat à tes côtés.',
     charme: 'L\'ennemi le plus proche devient ton ami.',
     onde: 'Un coup de vent qui fait voler les ennemis.',
@@ -127,5 +127,7 @@
     [2, 3].forEach(n => { const s = SP[b + '_' + n]; if (s) s.desc = 'Ton sort ' + nom + ' devient plus fort ! ' + N[b][n - 2] + ' Il remplace l\'ancien dans ton grimoire.'; }); });
   if (Nv && Nv.rafraichir) Nv.rafraichir();
   Object.keys(SP).forEach(id => { const m = /^(.*)_(\d)$/.exec(id); if (C[id]) SP[id].court = C[id]; else if (m && SP[m[1]]) SP[id].court = 'Ton sort devient plus fort !'; });
-  CG.SortsDesc = { D, N, C };
+  // dans le grimoire : la phrase courte, et ce que le niveau ajoute s'il y en a un
+  const livre = id => { const sp = SP[id]; if (!sp) return ''; const m = String(sp.desc || '').split(' — Niveau '); return (sp.court || m[0]) + (m[1] ? '<br><b>Niveau ' + m[1].replace(' : ', '</b> : ') : ''); };
+  CG.SortsDesc = { D, N, C, livre };
 })(window.CG);

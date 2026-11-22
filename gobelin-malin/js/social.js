@@ -4,6 +4,7 @@
   const G = CG.G, W = CG.W, T = CG.TILE, Soc = CG.Soc = { timer: 120 };
   const pick = CG.pick, rand = CG.rand;
 
+  Soc.PRESSE = 'Je n\'ai pas le temps.'; Soc.PRESSE_MORAL = -1; /* la réponse rapide (Échap) offerte à chaque question ou demande d'un gobelin */
   // ---------- questions des villageois : [réponse, effet sur le moral] ----------
   const Q = [
     ['Chef, qu\'est-ce que tu vas faire aujourd\'hui ?', ['Veiller sur le village et sur chacun de vous.', 3], ['Ça ne te regarde pas. Retourne travailler !', -4], ['Moi, je surveille. Toi, montre-moi ce que tu vaux : au boulot, et que ça saute !', -2, 'boost'], ['Et toi, qu\'est-ce que TU as fait pour le village, hein ?', -3]],
@@ -19,6 +20,7 @@
     ['Je trouve que tu te bats bien, chef. Tu m\'apprendrais ?', ['Avec plaisir. Règle numéro un : ne jamais tourner le dos.', 3], ['Toi ? Tu te blesserais avec une cuillère.', -3], ['Je n\'ai pas de temps à perdre avec toi.', -3], ['Plus tard. D\'abord prouve-moi que tu sais travailler dur !', -1, 'boost']],
     ['On mange quoi ce soir, chef ?', ['Ce que le clan aura rapporté, et on partagera tout.', 2], ['Toi, rien. Tu manges déjà trop.', -4], ['Ceux qui travaillent fort mangeront les premiers. Dépêche-toi !', -2, 'boost'], ['Va demander à quelqu\'un que ça intéresse.', -2]],
     ['Chef, tu te souviens de mon nom ?', ['Bien sûr, {n}. Je n\'oublie aucun des miens.', 3], ['Euh... Machin ? Truc ?', -3], ['Pourquoi je retiendrais le nom d\'un simple gobelin ?', -5]],
+    ['Chef, je... j\'ai mal aux mains...', ['Va te reposer, mon brave gobelin.', 3, null, 'Merci, chef... Juste un petit moment, promis.'], ['... Et alors ?!', -3]],
     ['J\'ai une idée pour le village ! Tu veux l\'entendre ?', ['Raconte, je t\'écoute. Les bonnes idées viennent de partout.', 3], ['Non. Les idées, c\'est moi qui les ai.', -3], ['Mon idée à moi : moins de paroles, plus de travail. Exécution !', -2, 'boost'], ['Toi, une idée ? Ça doit faire mal à la tête.', -4]]
   ];
   const GOOD = ['Merci, chef ! Tu es le meilleur.', 'Ça fait chaud au cœur, chef.', 'Je vais le dire à tout le monde : on a un bon chef !', 'Hi hi ! Je retourne travailler, tout content.'];
@@ -78,7 +80,7 @@
     const def = pick(ERR), mates = others.filter(o => o.home === g.home), to = def.same && mates.length ? pick(mates) : pick(others);
     CG.UI.dialog({ goblin: g, who: g.name, tag: 'a besoin de toi', text: fill(def.ask, g, to), options: [
       { label: '🤝 Oui, je m\'en occupe.', sub: 'Promesse : ' + fill(def.but, g, to) + ' avant la nuit', fn: () => { Soc.tasks().push({ from: g, to, def, quiz: Math.random() < 0.7 }); S.morale = Math.min(100, S.morale + 1); G.text(g.x, g.y - 50, '❤️', '#fff', true); CG.UI.toast('📌 Promesse faite à ' + g.name + ' : ' + fill(def.but, g, to) + ' avant la nuit.'); CG.sfx('ok'); } },
-      { label: 'Je n\'ai pas le temps, arrangez-vous entre vous.', fn: () => react(g, -1) },
+      { label: 'Je n\'ai pas le temps, arrangez-vous entre vous.', echap: true, fn: () => react(g, -1) },
       { label: 'Tu me déranges pour ÇA ? Disparais !', fn: () => react(g, -4) }] });
     return true;
   }
@@ -118,6 +120,7 @@
   function askDialog(g) {
     if (Soc.tasks().length < 2 && Math.random() < 0.4 && errandDialog(g)) return;
     const q = pick(Q), opts = CG.shuffle(q.slice(1)).map(a => ({ label: a[0].replace('{n}', g.name).replace(/\{e\}/g, g.sex === 'f' ? 'e' : ''), fn: () => react(g, a[1], a[2] === 'boost', a[3]) }));
+    opts.push({ label: Soc.PRESSE, echap: true, fn: () => react(g, Soc.PRESSE_MORAL) }); /* pour passer vite : ça coûte un peu de moral */
     CG.UI.dialog({ goblin: g, who: g.name, tag: 'vient te poser une question', text: q[0].replace(/\{e\}/g, g.sex === 'f' ? 'e' : ''), options: opts });
   }
   // appelé par la routine du gobelin tant qu'il cherche le chef
@@ -144,7 +147,6 @@
     if (!(R.fireLit && g.state === 'party' && Soc.courtable(g) && g.met && !R.alarm && !R.cine)) return UI.talkGoblin(g);
     if (g.courtDay === S.day) return UI.dialog({ goblin: g, who: g.name, text: 'On a assez parlé pour ce soir, chef. Laisse-moi danser !', options: [{ label: 'Bonne soirée, ' + g.name + '.' }] });
     UI.dialog({ goblin: g, who: g.name, tag: 'danse autour du feu', text: pick(CG.LINES.soir), options: Soc.taskOpt(g).concat([
-      { label: '💕 Lui faire la cour', sub: 'Tenter de fonder une famille avec ' + (g.sex === 'f' ? 'elle' : 'lui'), fn: () => court(g) },
       { label: '💬 Discuter', sub: 'Jaser un peu avec ' + (g.sex === 'f' ? 'elle' : 'lui'), fn: () => Soc.chat(g) },
       { label: '🛠 Modifier le travail', sub: 'Lui donner un autre métier', fn: () => UI.jobDialog(g) }, { label: g.sex === 'f' ? '👋 La laisser danser' : '👋 Le laisser danser' }]) });
   };
@@ -156,6 +158,15 @@
     const o = pick(OPEN);
     UI.dialog({ goblin: g, who: g.name, tag: '💕', text: o[0], options: CG.shuffle(o.slice(1)).map(a => ({ label: a[0], fn: () => a[1] > 0 ? round2(g) : refuse(g, -3) })) });
   }
+  // fonder une famille : ça se dit maintenant dans « Discuter », le soir près du feu, une fois qu'on s'aime assez (discuter.js)
+  Soc.famillePrete = g => { const R = CG.R, S = CG.S; return !!(CG.Amour && CG.Amour.cible(g) && (g.amour || 0) >= Soc.FAMILLE_AMOUR && R.fireLit && !g.hidden && g.ko !== true && !R.alarm && !R.cine && g.courtDay !== S.day); }; /* le soir, une fois le feu allumé (plus besoin qu'il soit en train de danser), et dès 40 d'affection au lieu de 60 */
+  Soc.FAMILLE_AMOUR = 40;
+  Soc.famille = function (g) {
+    const S = CG.S, UI = CG.UI; if (!Soc.famillePrete(g)) return; g.courtDay = S.day;
+    if (S.goblins.length >= G.capacity()) return UI.dialog({ goblin: g, who: g.name, text: 'Hi hi, chef... Mais regarde : les huttes sont pleines à craquer. Où dormiraient les petits ? Bâtis d\'abord une hutte, et on en reparle.', options: [{ label: 'Tu as raison. Je m\'en occupe.' }] });
+    if ((g.ami || 0) <= -2) return UI.dialog({ goblin: g, who: g.name, text: 'Après ce que tu m\'as dit l\'autre jour ? Non merci, chef. Sois d\'abord gentil avec moi.', options: [{ label: 'Je ferai mieux, promis.' }] });
+    G.text(g.x, g.y - 50, '💕', '#fff', true); accept(g);
+  };
   function refuse(g, delta) { react(g, delta); }
   function round2(g) {
     G.text(g.x, g.y - 50, '💕', '#fff', true);

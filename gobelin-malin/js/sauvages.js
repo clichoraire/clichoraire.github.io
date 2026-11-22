@@ -55,7 +55,7 @@
     const S = CG.S, R = CG.R, am = S.pets.filter(a => a.amene); if (!am.length) return pu0.apply(this, arguments);
     const t0 = G.tech; G.tech = id => id === 'b24' ? true : t0(id); let r; try { r = pu0.apply(this, arguments); } finally { G.tech = t0; }
     const f = G.firePos(), feu = !CG.Mondes || CG.Mondes.feuIci();
-    for (const a of am) if (a.ko || (feu && Math.hypot(a.x - f.x, a.y - f.y) < 260)) { a.amene = false; if (!t0('b24')) a.follow = false; if (!a.ko) { G.text(a.x, a.y - 44, '🏕️', '#fff', true); UI.toast('🏕️ ' + a.name + ' est arrivé au village. Il garde maintenant le clan.'); } }
+    for (const a of am) if (a.ko || (feu && Math.hypot(a.x - f.x, a.y - f.y) < 260)) { a.amene = false; if (!a.dresse) a.follow = false; if (!a.ko) { G.text(a.x, a.y - 44, '🏕️', '#fff', true); UI.toast('🏕️ ' + a.name + ' est arrivé au village. Il garde maintenant le clan.'); } }
     return r;
   };
 })(window.CG);

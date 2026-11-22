@@ -29,20 +29,17 @@
   const sn = G.siteNeed; G.siteNeed = type => sn(type) * Df.cur().build;
   // les niveaux du chef
   const xn = G.xpNeed; G.xpNeed = l => Math.floor(xn(l) * Df.cur().xp);
-  // les invasions : plus rares en Normal, à répétition en Élite
+  // les invasions. repos : chance que l'attaque du jour soit annulée ; pas2 / max2 : chance d'une 2e attaque le même jour (pas2 de plus par jour, jusqu'à max2) ; nuit : chance d'une attaque de nuit
+  Df.ATTAQUES = { normal: { repos: 0.5, pas2: 0, max2: 0, nuit: 0.05 }, difficile: { repos: 0.2, pas2: 0.05, max2: 0.7, nuit: 0.15 }, elite: { repos: 0, pas2: 0.1, max2: 0.8, nuit: 0.3 }, cauchemar: { repos: 0, pas2: 1, max2: 1, nuit: 0.6 } };
   const plan = D.plan;
   D.plan = function () {
-    plan.apply(this, arguments); const S = CG.S, R = CG.R, id = Df.id(), day = S.day; Df.noter(); if (!R.schedule || id === 'difficile') return;
-    const att = R.schedule.filter(e => e.type === 'attack');
-    if (id === 'normal') {
-      const keep = att.find(e => e.boss) || att[0]; R.schedule = R.schedule.filter(e => e.type !== 'attack' || e === keep); // jamais deux attaques le même jour, jamais la nuit
-      if (keep && !keep.boss && day > 1 && Math.random() < 0.3) R.schedule = R.schedule.filter(e => e !== keep); // et certains jours, personne ne vient
-    } else {
-      if (day >= 2 && att.filter(e => !e.night).length < 2) { const h1 = att[0] ? att[0].h : 11; R.schedule.push({ h: h1 > 13 ? h1 - CG.rand(3.5, 5) : h1 + CG.rand(3.5, 5), type: 'attack', kind: Math.random() < 0.5 ? 'humains' : 'betes' }); }
-      if (day >= 3 && !att.some(e => e.night) && Math.random() < (id === 'cauchemar' ? 0.85 : 0.55)) R.schedule.push({ h: 20.7, type: 'attack', kind: 'humains', night: true });
-      if (id === 'cauchemar' && day >= 4) R.schedule.push({ h: CG.rand(7, 8.5), type: 'attack', kind: Math.random() < 0.5 ? 'betes' : 'demons' }); // en Cauchemar, on est réveillé par une attaque
-      R.schedule.sort((a, b) => a.h - b.h);
-    }
+    plan.apply(this, arguments); const S = CG.S, R = CG.R, id = Df.id(), day = S.day; Df.noter(); if (!R.schedule) return;
+    const att = R.schedule.filter(e => e.type === 'attack'), keep = att.find(e => e.boss) || att[0], C = Df.ATTAQUES[id] || Df.ATTAQUES.normal;
+    R.schedule = R.schedule.filter(e => e.type !== 'attack' || e === keep); /* on repart de la seule attaque principale, puis chaque difficulté ajoute ou enlève */
+    if (keep && !keep.boss && day > 1 && Math.random() < C.repos) R.schedule = R.schedule.filter(e => e !== keep); /* certains jours, personne ne vient (jamais un jour de boss) */
+    if (day >= 2 && Math.random() < Math.min(C.max2, day * C.pas2)) { const h1 = keep ? keep.h : 11; R.schedule.push({ h: h1 > 13 ? h1 - CG.rand(3.5, 5) : h1 + CG.rand(3.5, 5), type: 'attack', kind: Math.random() < 0.5 ? 'humains' : 'betes' }); } /* une deuxième attaque le même jour : la chance monte un peu chaque jour */
+    S.raidNuit = 0; if (day >= 3 && Math.random() < C.nuit) { if (Math.random() < 0.5) R.schedule.push({ h: 20.7, type: 'attack', kind: 'humains', night: true }); else S.raidNuit = day; } /* la nuit : une seule chance par jour, soit au coucher du soleil, soit en plein sommeil (nuit.js) */
+    R.schedule.sort((a, b) => a.h - b.h);
   };
   // les prix : en Cauchemar, tout ce qu'on bâtit et tout ce qu'on achète coûte plus cher
   Df.prix = function () { const k = Df.cur().prix || 1; Object.keys(CG.BUILDS).forEach(t => { const b = CG.BUILDS[t]; if (!b.cout) return; if (!b.cout0) b.cout0 = Object.assign({}, b.cout); const c = {}; Object.keys(b.cout0).forEach(r => { c[r] = Math.ceil(b.cout0[r] * k); }); b.cout = c; }); };
