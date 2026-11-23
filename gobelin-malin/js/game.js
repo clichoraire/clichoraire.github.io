@@ -20,7 +20,7 @@
     [[42, 31], [53, 38]].forEach(([x, y], i) => B('hut', x, y, 2, 2, i % 3));
     const jobs = ['cueilleur', 'chasseur', 'bucheron', 'garde', 'aucun']; // l'essentiel dès le départ : manger, du bois, un garde, un bricoleur pour bâtir
     const sexes = CG.shuffle(['f', 'm', 'f', 'm', Math.random() < 0.5 ? 'f' : 'm']);
-    jobs.forEach((j, i) => { const g = G.addGoblin(sexes[i], j); g.talent = j; G.makeApt(g); g.hp = G.gobMaxHp(g); g.met = true; }); // tes compagnons de toujours : pas besoin de présentations // chacun fait déjà ce qu'il fait le mieux
+    jobs.forEach((j, i) => { const g = G.addGoblin(sexes[i], j); g.talent = j; G.makeApt(g); if (j === 'garde') g.equip.epee = 1; /* le garde part avec une épée de base */ g.hp = G.gobMaxHp(g); g.met = true; }); // tes compagnons de toujours : pas besoin de présentations // chacun fait déjà ce qu'il fait le mieux
     return S;
   };
   G.huts = () => S.buildings.filter(b => b.type === 'hut' && !b.site);
@@ -181,9 +181,9 @@
       if (follow(g, 130, dt)) { if (g.dehors) { g.moving = false; g.bubble = '😱'; if (Math.random() < dt * 0.4) g.state = 'idle'; /* plus de place nulle part : il attend devant la porte et retente sa chance */ } else { g.hidden = true; g.bubble = null; } }
       return;
     }
-    if (G.sansFete && G.sansFete() && G.partyTime()) { // rien à manger ce soir : chacun rentre se coucher, la mine basse
+    if (G.partyTime() && ((G.sansFete && G.sansFete()) || S.hour >= 24)) { // rien à manger ce soir, ou minuit passé : tout le monde au lit // rien à manger ce soir : chacun rentre se coucher, la mine basse
       if (g.hidden) return;
-      if (g.state !== 'dodo') { G.resetGoblin(g); g.state = 'dodo'; const d = G.door(home); goTo(g, d.x, d.y); g.bubble = '😞'; }
+      if (g.state !== 'dodo') { G.resetGoblin(g); g.state = 'dodo'; const d = G.door(home); goTo(g, d.x, d.y); g.bubble = S.hour >= 24 ? '💤' : '😞'; }
       if (follow(g, 80, dt)) { g.hidden = true; g.bubble = null; g.moving = false; }
       return;
     }
@@ -193,7 +193,8 @@
     if (g.job === 'garde' && G.towerStep(g, dt)) return; // sa priorité : monter dans une tour de guet libre
     if (g.job === 'garde' || G.militia(g)) {
       let tgt = null, bd = 1e9;
-      for (const e of R.enemies) { if (e.dead || e.calm) continue; const d = dist(g, e), dv = dist(e, fire); if ((dv < 720 || d < 300) && d < bd) { bd = d; tgt = e; } }
+      const ray = R.alarm ? G.GARDE.ALERTE : G.GARDE.RAYON; /* un garde garde le village : il ne sort pas chercher les monstres dans la forêt */
+      for (const e of R.enemies) { if (e.dead || e.calm) continue; const d = dist(g, e), dv = dist(e, fire); if (dv < ray && d < bd) { bd = d; tgt = e; } }
       if (tgt) { guardFight(g, tgt, bd, dt); return; }
       if (g.state === 'fight') { g.state = 'idle'; g.path = null; g.melee = false; }
     }
@@ -335,6 +336,8 @@
     }
     G.gain('or', Math.round(c.prix * (G.count('marche') ? 1.5 : 1) * (G.tech('b12') ? 1.25 : 1)), g.x, g.y - 34); S.stats.sold++; if (CG.onScreen(g.x, g.y)) CG.sfx('coin');
   };
+  G.GARDE = { RAYON: 440, ALERTE: 600 }; /* jusqu'où (du feu, en pixels : 40 = une case) un garde va cogner un monstre ; un peu plus loin pendant une attaque */
+  G.ETINCELLE = 5; /* les dégâts de l'Étincelle : le tout premier sort d'attaque, une petite étincelle sur un seul monstre (c'était 9) */
   G.POINGS = 0.6; /* sans arme (ni épée, ni arc, ni bâton), un gobelin cogne avec ses poings : cette part des dégâts seulement */
   G.guardDmg = g => (4 + g.lvl * 1.5 + (g.equip.epee ? 4 : 0)) * (g.equip.epee || g.equip.arc || g.equip.baton ? 1 : G.POINGS) * (G.tech('d13') ? 1.25 : 1) * G.apt(g, 'garde') * (CG.totemPres ? (CG.totemPres(g) ? 1.2 : 1) : 1 + 0.2 * Math.min(1, G.count('totem'))) /* un seul totem compte, et seulement près de lui */ * (R.cri > 0 ? 1.5 : 1);
   G.guardFight = (g, e, d, dt) => guardFight(g, e, d, dt);
@@ -546,7 +549,7 @@
     if (tg && Math.abs(tg.x - p.x) > 4) p.face = tg.x > p.x ? 1 : -1;
     CG.sfx(id === 'eclair' ? 'zap' : id === 'soin' ? 'heal' : id === 'cri' ? 'horn' : 'spell');
     if (id === 'vision') { R.vision = 30; R.rings.push({ x: p.x, y: p.y - 10, r: 260, life: 0.5, col: '#7dffea' }); }
-    else if (id === 'etincelle') { G.shoot(p, aim, 'bolt', 9 * m, 'p'); if (G.tech('s3')) { const dx = aim.x - p.x, dy = aim.y - p.y; [-0.3, 0.3].forEach(a => G.shoot(p, { x: p.x + dx * Math.cos(a) - dy * Math.sin(a), y: p.y + dx * Math.sin(a) + dy * Math.cos(a) }, 'bolt', 9 * m, 'p')); } }
+    else if (id === 'etincelle') { G.shoot(p, aim, 'bolt', G.ETINCELLE * m, 'p'); if (G.tech('s3')) { const dx = aim.x - p.x, dy = aim.y - p.y; [-0.3, 0.3].forEach(a => G.shoot(p, { x: p.x + dx * Math.cos(a) - dy * Math.sin(a), y: p.y + dx * Math.sin(a) + dy * Math.cos(a) }, 'bolt', G.ETINCELLE * m, 'p')); } }
     else if (id === 'feu') G.shoot(p, aim, 'feu', 20 * m, 'p', null, el ? 102 : 72);
     else if (id === 'glace') { R.rings.push({ x: p.x, y: p.y - 10, r: 135, life: 0.5, col: '#8fe1ff' }); G.puff(p.x, p.y - 14, '#c8f4ff', 26, 220, 4); for (const e of R.enemies) if (!e.dead && dist(e, p) < 135 + e.r) { e.slow = el ? 7.5 : 4.5; G.hurtEnemy(e, 7 * m, p); } }
     else if (id === 'soin') { const h = Math.round(35 * m); p.hp = Math.min(p.maxhp, p.hp + h); G.text(p.x, p.y - 56, '+' + h, '#7dff8a'); G.puff(p.x, p.y - 20, '#7dff8a', 18, 90, 4); R.rings.push({ x: p.x, y: p.y - 10, r: 170, life: 0.5, col: '#7dff8a' }); for (const g of S.goblins) if (!g.hidden && dist(g, p) < 170) { g.hp = Math.min(G.gobMaxHp(g), g.hp + 25 * m); G.puff(g.x, g.y - 20, '#7dff8a', 6, 60, 3); } }
@@ -610,7 +613,7 @@
         if (s.life > 0) for (const a of S.pets) if (!a.ko && !a.ridden && Math.hypot(a.x - s.x, a.y - 16 - s.y) < 14) { CG.P.hurt(a, s.dmg); s.life = 0; break; }
       } else {
         for (const e of R.enemies) if (!e.dead && Math.hypot(e.x - s.x, e.y - 16 - s.y) < e.r + 8) {
-          R.tirK = s.kind; /* chevalieros.js : une flèche entame un bouclier, pas un sort */ try { if (s.aoe) G.blast(s.x, s.y, s.aoe, s.dmg, '#ff8a1e', s.team === 'p'); else G.hurtEnemy(e, s.dmg, s.owner || p, s.team === 'p'); } finally { R.tirK = null; }
+          R.tirK = s.kind; R.tirEl = s.team === 'p' && s.elem ? s.elem : null; /* chevalieros.js : une flèche entame un bouclier, pas un sort */ try { if (s.aoe) G.blast(s.x, s.y, s.aoe, s.dmg, '#ff8a1e', s.team === 'p'); else G.hurtEnemy(e, s.dmg, s.owner || p, s.team === 'p'); } finally { R.tirK = null; R.tirEl = null; }
           s.life = 0; break;
         }
       }

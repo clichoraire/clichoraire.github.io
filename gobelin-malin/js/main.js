@@ -57,6 +57,7 @@
   }
   CG.viewScale = () => scale;
   CG.toScreen = (x, y) => ({ x: (x - R.cam.x) * scale, y: (y - R.cam.y) * scale });
+  CG.versMonde = (cx, cy) => ({ x: cx / scale + R.cam.x, y: cy / scale + R.cam.y }); /* un point de l'écran -> le même point dans le monde (batmenu.js) */
   CG.onScreen = (x, y) => R && x > R.cam.x - 40 && x < R.cam.x + vw + 40 && y > R.cam.y - 40 && y < R.cam.y + vh + 60;
 
   // ---------- un pas de jeu ----------

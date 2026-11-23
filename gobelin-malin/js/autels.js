@@ -71,7 +71,7 @@
   }
   Au.take = function (a) {
     const S = CG.S, c = pos(a); if (a.st !== 'ouvert') return;
-    const id = G.newScroll(); a.st = 'vide'; a.day = S.day; G.puff(c.x, c.y - 40, '#ffe36b', 18, 110, 4);
+    const id = G.newScroll(true); a.st = 'vide'; a.day = S.day; G.puff(c.x, c.y - 40, '#ffe36b', 18, 110, 4);
     if (id) G.giveScroll(id, c.x, c.y - 20); else { G.dropRes(c.x, c.y, 'or', 80); G.drop(c.x, c.y, { kind: 'potion', n: 1 }); CG.UI.toast('Tu connais déjà tous les sorts : le piédestal te laisse de l\'or.'); }
     G.addXp(20 + S.day * 3);
   };

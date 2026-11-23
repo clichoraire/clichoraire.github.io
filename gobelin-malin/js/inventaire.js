@@ -62,7 +62,7 @@
   // la sauvegarde ne gardait du chef qu'une liste fixe de champs : on y ajoute son sac, ce qu'il porte, ses recettes et son sort prêté
   { const pk = CG.pack; CG.pack = function () { const d = pk.apply(this, arguments), p = CG.S.player; if (d && d.player) ['sac', 'porte', 'recettes', 'papiers', 'pret', 'os', 'cases'].forEach(k => { if (p[k] !== undefined && p[k] !== null) d.player[k] = p[k]; }); return d; }; }
   // ---------- ce que le chef porte ----------
-  { const pd = G.playerDmg; G.playerDmg = function () { const a = CG.S.player.porte && CG.S.player.porte.arme; return pd.apply(this, arguments) + (a && a.k === 'epee' ? Iv.CHEF_EPEE[a.n] || 0 : 0); }; } /* seule une épée ajoute des dégâts : le bâton et l'arc ont leur propre effet (armes.js) */
+  { const pd = G.playerDmg; G.playerDmg = function () { const a = CG.S.player.porte && CG.S.player.porte.arme; return pd.apply(this, arguments) + (a && /^epee/.test(a.k) ? Iv.CHEF_EPEE[a.n] || 0 : 0); }; } /* seule une épée ajoute des dégâts : le bâton et l'arc ont leur propre effet (armes.js) */
   function chefArmure(avant, apres) { const p = CG.S.player, d = (apres ? Iv.CHEF_ARMURE[apres.n] : 0) - (avant ? Iv.CHEF_ARMURE[avant.n] : 0); if (!d) return; p.maxhp += d; p.hp = Math.max(1, Math.min(p.maxhp, p.hp + Math.max(0, d))); }
   Iv.effet = (it, chef) => chef ? (OUT()[it.k] ? 'C\'est un outil de travail : confie-le à un gobelin' : it.k === 'epee' ? '+' + Iv.CHEF_EPEE[it.n] + ' dégâts' : it.k === 'armure' ? '+' + Iv.CHEF_ARMURE[it.n] + ' vie maximum' : 'Tu ne sais pas tirer à l\'arc') : Bq.effet(it.k, it.n);
   // ---------- lire, écrire, déplacer ----------
@@ -71,7 +71,7 @@
   let vue = null; // { cible: 'chef' | gobelin, coffre, choix }
   const cibleDe = s => s.z === 'gob' ? CG.S.goblins.find(g => g.id === s.g) : null;
   function lire(s) { if (s.z === 'sac') { const it = sac()[s.i] || null; return pile(it) ? { k: it.k, id: it.id, q: compte(it) } : it; } if (s.z === 'cof') return cof()[s.i] || null; if (s.z === 'chef') return porte()[s.i] || null; const g = cibleDe(s); if (s.i === 'outil') return g && g.outil && OUT()[g.outil] ? { k: g.outil, n: 1 } : null; if (s.i === 'travail') return g && g.travail ? { k: g.travail.k, n: g.travail.n } : null; const n = g ? nivG(g, s.i) : 0; return n ? { k: s.i, n: Math.min(Bq.MAX, n) } : null; }
-  function accepte(s, it) { if (s.z === 'sac' || s.z === 'cof') return true; if (s.z === 'chef') return s.i === 'arme' ? (it.k === 'epee' || it.k === 'baton' || it.k === 'arc') : it.k === s.i; return !!cibleDe(s) && (s.i === 'outil' ? !!OUT()[it.k] : s.i === 'travail' ? TRAV.includes(it.k) : s.i === it.k); }
+  function accepte(s, it) { if (s.z === 'sac' || s.z === 'cof') return true; if (s.z === 'chef') return s.i === 'arme' ? /^(epee|baton|arc)/.test(it.k) : it.k === s.i; return !!cibleDe(s) && (s.i === 'outil' ? !!OUT()[it.k] : s.i === 'travail' ? TRAV.includes(it.k) : s.i === it.k); }
   function ecrire(s, it) {
     if (s.z === 'sac') { const l = sac(), vieux = l[s.i]; l[s.i] = null; if (pile(vieux)) fixer(vieux, 0); /* la pile quitte le chef */
       if (pile(it)) { const deja = l.some(o => memeP(o, it)); fixer(it, compte(it) + (it.q || 1)); if (!deja) l[s.i] = { k: it.k, id: it.id }; } else l[s.i] = it || null; }

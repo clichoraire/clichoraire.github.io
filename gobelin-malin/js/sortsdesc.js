@@ -128,6 +128,6 @@
   if (Nv && Nv.rafraichir) Nv.rafraichir();
   Object.keys(SP).forEach(id => { const m = /^(.*)_(\d)$/.exec(id); if (C[id]) SP[id].court = C[id]; else if (m && SP[m[1]]) SP[id].court = 'Ton sort devient plus fort !'; });
   // dans le grimoire : la phrase courte, et ce que le niveau ajoute s'il y en a un
-  const livre = id => { const sp = SP[id]; if (!sp) return ''; const m = String(sp.desc || '').split(' — Niveau '); return (sp.court || m[0]) + (m[1] ? '<br><b>Niveau ' + m[1].replace(' : ', '</b> : ') : ''); };
+  const livre = id => { const sp = SP[id]; if (!sp) return ''; const m = String(sp.desc || '').split(' — Niveau '); return (sp.court || m[0]) + (m[1] && !/^III\b/.test(m[1]) /* le grimoire ne dit jamais rien du niveau III */ ? '<br><b>Niveau ' + m[1].replace(' : ', '</b> : ') : ''); };
   CG.SortsDesc = { D, N, C, livre };
 })(window.CG);

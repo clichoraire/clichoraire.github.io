@@ -9,8 +9,10 @@
   V.vue = () => 2; // un seul visuel : les anneaux
   const enPlan = id => false; // une case débloquée par un plan acheté (plans.js) compte maintenant comme une case apprise : elle ouvre ses voisines
   const vraie = id => G.tech(id) && !enPlan(id);
-  // un coin n'est plus une case à apprendre : c'est une simple jointure, qu'on franchit dès qu'on tient une de ses deux voisines
-  const tenu = id => id === 'centre' || (BY()[id] && BY()[id].vide ? (plan(2).acces[id] || []).some(a => a !== 'centre' && !(BY()[a] && BY()[a].vide) && vraie(a)) : vraie(id));
+  // un coin n'est pas une case à apprendre : c'est une jointure, qu'on ne franchit qu'une fois son bonus gagné
+  const coinGagne = id => !!(CG.S && CG.S.tech && CG.S.tech.coins && CG.S.tech.coins[id]);
+  // un coin à bonus barre le passage tant qu'il n'est pas gagné : on ne passe à travers qu'une fois ses deux voisines apprises
+  const tenu = id => id === 'centre' || (BY()[id] && BY()[id].vide && BY()[id].don ? coinGagne(id) : BY()[id] && BY()[id].vide ? (plan(2).acces[id] || []).some(a => a !== 'centre' && !(BY()[a] && BY()[a].vide) && vraie(a)) : vraie(id));
 
   // ---------- les petits bonus permanents ----------
   const TYPES = [
@@ -76,7 +78,7 @@
       tour.forEach(c => { const coin = Math.abs(c[0]) === k && Math.abs(c[1]) === k; grille[cle(c[0], c[1])] = !coin && s < suite.length ? suite[s++].id : bonus(++nb).id; });
     }
     // on passe partout : chaque case touche ses voisines d'à côté, du dessus et du dessous. Plus de passages obligés d'un carré au suivant.
-    Object.keys(grille).forEach(c => { const xy = c.split(',').map(Number); [[1, 0], [0, 1]].forEach(d => { const v = grille[cle(xy[0] + d[0], xy[1] + d[1])]; if (v) liens.push([grille[c], v]); }); });
+    Object.keys(grille).forEach(c => { const xy = c.split(',').map(Number); [[1, 0], [0, 1]].forEach(d => { const x2 = xy[0] + d[0], y2 = xy[1] + d[1], v = grille[cle(x2, y2)]; if (!v) return; const coin = q => q !== 'centre' && BY()[q] && BY()[q].vide, r1 = Math.max(Math.abs(xy[0]), Math.abs(xy[1])), r2 = Math.max(Math.abs(x2), Math.abs(y2)); if (r1 !== r2 && (coin(grille[c]) || coin(v))) return; /* un coin ne touche que ses deux voisines du même carré : aucun chemin ne part de lui vers un autre carré */ liens.push([grille[c], v]); }); });
     liens.forEach(l => { (acces[l[0]] = acces[l[0]] || []).push(l[1]); (acces[l[1]] = acces[l[1]] || []).push(l[0]); }); delete acces.centre;
     const pos = {}; Object.keys(grille).forEach(c => { const xy = c.split(',').map(Number), id = grille[c]; pos[id] = { x: BORD + (xy[0] + K) * SX, y: BORD + (xy[1] + K) * SY, bn: id !== 'centre' && !!BY()[id].bonus }; });
     return { pos, acces, liens, K, partiel, W: BORD * 2 + 2 * K * SX + TW, H: BORD * 2 + 2 * K * SY + TH };
@@ -85,12 +87,12 @@
   // plus une case est loin du feu, plus elle coûte d'étoiles : le prix minimum de chaque carré (1 = autour du feu)
   V.PRIX = [0, 1, 1, 2, 2, 3, 4, 4];
   function prix(P) { Object.keys(P.pos).forEach(id => { const n = BY()[id]; if (!n || n.vide || id === 'centre') return; const p = P.pos[id], r = Math.max(Math.abs(Math.round((p.x - BORD) / SX) - P.K), Math.abs(Math.round((p.y - BORD) / SY) - P.K)); if (n.cout0 === undefined) n.cout0 = n.cout; n.cout = Math.max(n.cout0, V.PRIX[Math.min(r, V.PRIX.length - 1)]); }); }
-  function plan(v) { const k = v + ':' + CG.TECH.length + ':' + CG.TECH.map(n => (n.req || [''])[0]).join(); if (!cache[v] || cache[v].k !== k) { cache[v] = plan2(); cache[v].k = k; prix(cache[v]); } return cache[v]; }
+  function plan(v) { const k = 'c2:' + v + ':' + CG.TECH.length + ':' + CG.TECH.map(n => (n.req || [''])[0]).join(); if (!cache[v] || cache[v].k !== k) { cache[v] = plan2(); cache[v].k = k; prix(cache[v]); } return cache[v]; }
   { const ir0 = G.initRuntime; if (ir0) G.initRuntime = function () { const r = ir0.apply(this, arguments); try { plan(2); } catch (e) { /* rien */ } return r; }; } /* les prix sont prêts dès le début de la partie */
   V.plan = plan;
 
-  // ---------- les coins : un bonus pour toujours, gagné quand toutes les cases qui touchent le coin sont apprises ----------
-  V.coin = function (id) { const n = BY()[id], l = (plan(2).acces[id] || []).filter(a => a !== 'centre' && BY()[a] && !BY()[a].vide), t = CG.S && CG.S.tech; return { n, sur: l.length, fait: l.filter(a => G.tech(a)).length, gagne: !!(t && t.coins && t.coins[id]) }; };
+  // ---------- les coins : un bonus pour toujours, gagné quand les deux cases voisines du coin, dans le même carré, sont apprises ----------
+  V.coin = function (id) { const n = BY()[id], r = V.anneau(id), l = (plan(2).acces[id] || []).filter(a => a !== 'centre' && BY()[a] && !BY()[a].vide && V.anneau(a) === r) /* seulement les deux cases voisines du même carré */, t = CG.S && CG.S.tech; return { n, sur: l.length, fait: l.filter(a => G.tech(a)).length, gagne: !!(t && t.coins && t.coins[id]) }; };
   { let tic = 0; const up0 = G.update; G.update = function (dt) { up0.apply(this, arguments); tic -= dt; if (tic > 0) return; tic = 1; const S = CG.S; if (!S || !S.tech || !CG.R) return; const t = S.tech, P = plan(2);
     Object.keys(P.pos).forEach(id => { const n = BY()[id]; if (id === 'centre' || !n || !n.vide || !n.don || (t.coins && t.coins[id])) return; const c = V.coin(id); if (c.sur < 2 || c.fait < c.sur) return;
       (t.coins = t.coins || {})[id] = 1; n.don.fn(); CG.sfx('level'); UI.toast('🔶 Coin de l\'arbre complété : ' + n.don.icon + ' ' + n.don.nom + ', pour toujours !'); const p = S.player; G.text(p.x, p.y - 80, n.don.icon + ' ' + n.don.nom, '#ffe36b', true); }); }; }
@@ -133,7 +135,7 @@
         if (deux) vignes += '<path class="vine" d="' + d + '"/>';
       });
       avant = ''; // plus de légende des couleurs au-dessus de l'arbre
-      Object.keys(P.pos).forEach(id => { const p = P.pos[id]; if (id === 'centre') { cases += '<button class="tn own v2t centre' + (CG.Feu2 && CG.Feu2.brille() ? ' dore' : '') + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + TW + 'px;height:' + TH + 'px"><span class="ti">🔥</span><b>Feu du clan</b></button>'; return; } const n = BY()[id]; if (n.vide) { const c = V.coin(id), d = n.don; if (!d || c.sur < 2) { cases += '<i class="tn-coin' + (tenu(id) ? ' on' : '') + '" style="left:' + (p.x + TW / 2 - 9) + 'px;top:' + (p.y + TH / 2 - 9) + 'px"></i>'; return; } cases += '<span class="tn-coin2' + (c.gagne ? ' on' : '') + '" title="Bonus du coin : ' + d.desc + ' ' + (c.gagne ? 'Tu l\'as gagné !' : 'Apprends les ' + c.sur + ' cases qui le touchent (' + c.fait + ' sur ' + c.sur + ').') + '" style="left:' + (p.x + TW / 2) + 'px;top:' + (p.y + TH / 2) + 'px"><b>' + d.icon + ' ' + d.nom.replace(/ (vie|mana|force)$/, '') + '</b><small>' + (c.gagne ? '✔ gagné' : c.fait + ' / ' + c.sur) + '</small></span>'; return; } cases += tuile(n, p.x, p.y, TW, TH, state(n), 'v2t' + (p.bn ? ' bn2' : '')); });
+      Object.keys(P.pos).forEach(id => { const p = P.pos[id]; if (id === 'centre') { cases += '<button class="tn own v2t centre' + (CG.Feu2 && CG.Feu2.brille() ? ' dore' : '') + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + TW + 'px;height:' + TH + 'px"><span class="ti">🔥</span><b>Feu du clan</b></button>'; return; } const n = BY()[id]; if (n.vide) { const c = V.coin(id), d = n.don; if (!d || c.sur < 2) { cases += '<i class="tn-coin' + (tenu(id) ? ' on' : '') + '" style="left:' + (p.x + TW / 2 - 9) + 'px;top:' + (p.y + TH / 2 - 9) + 'px"></i>'; return; } cases += '<span class="tn-coin2' + (c.gagne ? ' on' : '') + '" title="Bonus du coin : ' + d.desc + ' ' + (c.gagne ? 'Tu l\'as gagné !' : 'Apprends les ' + c.sur + ' cases à côté de lui, dans le même carré (' + c.fait + ' sur ' + c.sur + ').') + '" style="left:' + (p.x + TW / 2) + 'px;top:' + (p.y + TH / 2) + 'px"><b>' + d.icon + ' ' + d.nom.replace(/ (vie|mana|force)$/, '') + '</b><small>' + (c.gagne ? '✔ gagné' : c.fait + ' / ' + c.sur) + '</small></span>'; return; } cases += tuile(n, p.x, p.y, TW, TH, state(n), 'v2t' + (p.bn ? ' bn2' : '')); });
       if (!document.getElementById('tn-coin-css')) { const st = document.createElement('style'); st.id = 'tn-coin-css'; st.textContent = '.tn-coin{position:absolute;width:18px;height:18px;border-radius:4px;transform:rotate(45deg);background:#6a5a3a;border:2px solid #3a2a14;box-shadow:inset 0 1px 0 rgba(255,255,255,.25);pointer-events:none}.tn-coin.on{background:#ffd84a;border-color:#8a6a1a;box-shadow:0 0 10px rgba(255,216,74,.8)}.tn-coin2{position:absolute;width:58px;height:46px;margin:-23px 0 0 -29px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#4a3e28;border:2px dashed #b89a5a;color:#f0dcae;z-index:1;cursor:help}.tn-coin2 b{font-size:13px;line-height:1;white-space:nowrap}.tn-coin2 small{font-size:10px;line-height:1;opacity:.85}.tn-coin2.on{background:radial-gradient(#fff3b0,#ffd84a);border:2px solid #8a6a1a;color:#4a3200;box-shadow:0 0 12px rgba(255,216,74,.9)}'; document.head.appendChild(st); }
     }
     return avant + '<div class="tree v2" style="width:' + P.W + 'px;height:' + P.H + 'px"><svg class="lk" width="' + P.W + '" height="' + P.H + '">' + svg + vignes + '</svg>' + cases + '</div>';

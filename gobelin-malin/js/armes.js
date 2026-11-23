@@ -12,10 +12,10 @@
   const Ar = CG.Armes = { BATON_MANA: 0.3, BATON_GOB: 2, FLECHES_MAX: 60, FLECHES_LOT: 5, FLECHES_BOIS: 1, FLECHES_TEMPS: 12, FLECHES_DEPART: 15, PORTEE: 430, CADENCE: 0.5, ARC_DMG: [0, 0.9, 1.1, 1.35], CARQUOIS: [20, 14] }; /* FLECHES_LOT flèches pour FLECHES_BOIS bois toutes les FLECHES_TEMPS secondes, par facteur d'arcs ; CARQUOIS : [flèches, prix] chez un marchand */
   const porte = () => { const p = CG.S.player; return p.porte || (p.porte = { arme: null, armure: null }); };
   const arme = () => (CG.S && CG.S.player ? porte().arme : null);
-  Ar.arc = () => { const a = arme(); return a && a.k === 'arc' ? a : null; };
+  Ar.arc = () => { const a = arme(); return a && /^arc/.test(a.k) ? a : null; };
   Ar.fleches = () => porte().fleches || 0;
   Ar.ajouter = n => { const P = porte(); P.fleches = Math.max(0, Math.min(Ar.FLECHES_MAX, (P.fleches || 0) + n)); return P.fleches; };
-  const aUnArc = () => { const p = CG.S.player, est = o => !!o && o.k === 'arc'; return !!Ar.arc() || (p.sac || []).some(est); };
+  const aUnArc = () => { const p = CG.S.player, est = o => !!o && /^arc/.test(o.k); return !!Ar.arc() || (p.sac || []).some(est); };
   // ---------- le bâton de départ ----------
   function depart() { const S = CG.S; if (!S || !S.player) return; const P = porte(); if (P.batonDonne) return; P.batonDonne = true; if (!P.arme) P.arme = { k: 'baton', n: 1 }; else if (Iv && Iv.ajouter) Iv.ajouter('baton', 1, 'sac'); }
   { const mr0 = G.manaRegen; G.manaRegen = function () { const a = arme(); return mr0.apply(this, arguments) + (a && a.k === 'baton' ? Ar.BATON_MANA : 0); }; }

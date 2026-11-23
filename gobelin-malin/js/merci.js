@@ -8,7 +8,7 @@
   // ---------- le parchemin dans la salle ----------
   const ga0 = Ar.gagner; Ar.gagner = function () {
     const S = CG.S, R = CG.R, A = S.arene;
-    if (A && !A.gagne && !A.donne && A.id !== 'crypte' && Math.random() < Mc.PARCHEMIN && G.newScroll && G.newScroll()) {
+    if (A && !A.gagne && !A.donne && A.id !== 'crypte' && Math.random() < Mc.PARCHEMIN && G.newScroll && G.newScroll(true)) {
       A.donne = true; A.piedestal = true; const p = S.player, c = { x: (Ar.CX + 0.5) * T, y: (Ar.CY + 0.5) * T };
       S.autels = (S.autels || []).filter(o => !o.crypte); S.autels.push({ tx: Ar.CX, ty: Ar.CY, st: 'ouvert', id: null, day: S.day, crypte: true });
       if (Math.hypot(p.x - c.x, p.y - c.y) < 34) { p.y = c.y + 40; G.unstick(p, 9); }

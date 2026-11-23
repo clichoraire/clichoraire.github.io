@@ -35,7 +35,7 @@
     const S = CG.S, p = S.player, ids = Object.keys(p.scrolls || {}).filter(id => CG.SPELLS[id]);
     UI.dialog({ visitor: v, who: qui(v), tag: '🔁 troc de parchemins', text: 'Un parchemin contre un autre, et ' + Lp.TROC + ' 🍖 pour ma peine. Tu ne choisis pas ce que tu reçois : c\'est ça qui est drôle ! Lequel me donnes-tu ?', grid: true,
       options: ids.map(id => ({ label: '📜 ' + CG.SPELLS[id].nom, sub: 'Tu le donnes, avec ' + Lp.TROC + ' 🍖', disabled: S.res.food < Lp.TROC, fn: () => {
-        if (!p.scrolls[id] || S.res.food < Lp.TROC) return; const neuf = G.newScroll && G.newScroll(); if (!neuf) return UI.dialog({ visitor: v, who: qui(v), text: 'Ah, zut : tu connais déjà tout ce que j\'ai dans mon sac. Garde ton parchemin.', options: [{ label: '↩ Retour', fn: () => Lp.parler(v) }] });
+        if (!p.scrolls[id] || S.res.food < Lp.TROC) return; const neuf = G.newScroll && G.newScroll(true); if (!neuf) return UI.dialog({ visitor: v, who: qui(v), text: 'Ah, zut : tu connais déjà tout ce que j\'ai dans mon sac. Garde ton parchemin.', options: [{ label: '↩ Retour', fn: () => Lp.parler(v) }] });
         S.res.food -= Lp.TROC; delete p.scrolls[id]; G.giveScroll(neuf, p.x, p.y); G.say(v, pick(['Marché conclu ! Tiens, celui-là sent encore l\'encre.', 'Topons là ! Tu ne le regretteras pas. Enfin, j\'espère.']), 3.5); } })).concat([{ label: '↩ Retour', fn: () => Lp.parler(v) }]) });
   };
   Lp.pari = function (v) {

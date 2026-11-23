@@ -177,8 +177,9 @@
     { const e = M.stabTarget(); if (e) { const y = e.y - 70 * (e.r > 14 ? 1.2 : 1) + Math.sin(t * 7) * 4; g.fillStyle = 'rgba(255,60,60,' + (0.3 + Math.sin(t * 7) * 0.15) + ')'; g.beginPath(); g.arc(e.x, y - 6, 17, 0, 6.3); g.fill(); g.fillStyle = '#fff'; g.font = '22px sans-serif'; g.textAlign = 'center'; g.fillText('🗡️', e.x, y); g.strokeStyle = 'rgba(255,90,90,0.9)'; g.lineWidth = 2.5; g.beginPath(); g.ellipse(e.x, e.y, e.r + 8, (e.r + 8) * 0.5, 0, 0, 6.3); g.stroke(); } }
     for (const e of CG.R.enemies) { if (!(e.charm > 0) || e.dead || !CG.onScreen(e.x, e.y)) continue; const h = 50 * (e.r > 14 ? 1.25 : 1);
       g.strokeStyle = 'rgba(120,255,160,' + (0.6 + Math.sin(t * 6) * 0.25) + ')'; g.lineWidth = 3; g.beginPath(); g.ellipse(e.x, e.y, e.r + 9, (e.r + 9) * 0.5, 0, 0, 6.3); g.stroke();
+      if (e.charm > 1e5) continue; /* un allié pour de bon (squelette relevé) : l'anneau vert suffit, pas de cœur ni de jauge */
       g.fillStyle = '#fff'; g.font = '15px sans-serif'; g.textAlign = 'center'; g.fillText('💞', e.x, e.y - h - 12 + Math.sin(t * 4) * 2);
-      g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(e.x - 15, e.y - h - 6, 30, 3); g.fillStyle = e.charm < 4 ? '#ff8a5a' : '#8dffb0'; g.fillRect(e.x - 15, e.y - h - 6, 30 * e.charm / M.CHARM, 3); }
+      g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(e.x - 15, e.y - h - 6, 30, 3); g.fillStyle = e.charm < 4 ? '#ff8a5a' : '#8dffb0'; g.fillRect(e.x - 15, e.y - h - 6, 30 * Math.min(1, e.charm / M.CHARM), 3); }
   };
   function golemStep(s, dt) {
     const S = CG.S, R = CG.R, p = S.player;

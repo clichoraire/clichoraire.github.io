@@ -30,10 +30,10 @@
     e.spawnT -= dt; if (e.spawnT > 0) return;
     const raid = e.raidN || c.raid;
     e.spawnT = c.every * (e.rate || 1) * rand(0.8, 1.2);
-    if (e.raided && members(e).length >= raid) return; // un seul raid par jour : ensuite il se contente de se regarnir
+    if ((e.raided || S.day < 2) && members(e).length >= raid) return; // un seul raid par jour (et aucun le jour 1 : la tente se garnit, sans plus) : ensuite il se contente de se regarnir
     const m = G.spawnEnemy(pick(c.units(S.day + (e.age || 0))), e.x + rand(-44, 44), e.y + 40 + rand(0, 16), { wild: true }); m.campId = e.id; m.wild = { x: e.x, y: e.y + 50 };
     G.puff(m.x, m.y - 14, '#ddd', 8, 70, 3);
-    const all = members(e); if (all.length < raid || e.raided) return;
+    const all = members(e); if (all.length < raid || e.raided || S.day < 2) return; /* jamais de raid le premier jour */
     if (R.event && R.event.type !== 'attack') return; // on attend que le visiteur soit reparti
     e.raided = true;
     all.slice(0, e.partN || all.length).forEach(o => { o.wild = null; o.event = true; o.target = null; o.exit = { x: e.x, y: e.y + 40 }; });

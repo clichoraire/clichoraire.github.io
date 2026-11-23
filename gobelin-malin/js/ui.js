@@ -89,6 +89,7 @@
     msg = String(msg); const m = msg.match(/^((?:\p{Extended_Pictographic}|\p{Regional_Indicator})\uFE0F?(?:\u200D\p{Extended_Pictographic}\uFE0F?)*)\s*/u), ic = m ? m[1] : '📣', txt = m ? msg.slice(m[0].length) : msg;
     const ton = '🔥😡😢😒🚪💀⚠️'.includes(ic) || (!m && /(^Pas question|manque|Impossible|Rien à|plus de quoi|Aucun)/.test(txt)) ? 'bad' : '🌳📜🤩😄🐺🧭🎁💰✨'.includes(ic) ? 'good' : '';
     const d = document.createElement('div'); d.className = 'toast ' + ton; const i = document.createElement('i'); i.textContent = !m && ton === 'bad' ? '✋' : ic; const sp = document.createElement('span'); sp.textContent = txt; d.appendChild(i); d.appendChild(sp); $('toasts').appendChild(d);
+    { /* juste sous le cadre de vie du chef, quelle que soit sa hauteur */ const pl = $('player'), bo = $('toasts'); if (pl && bo && bo.offsetParent) { const r = pl.getBoundingClientRect(), o = bo.offsetParent.getBoundingClientRect(), k = pl.offsetHeight ? r.height / pl.offsetHeight : 1; if (r.height) bo.style.top = Math.round((r.bottom - o.top) / (k || 1) + 8) + 'px'; } }
     while ($('toasts').children.length > 3) $('toasts').firstChild.remove();
     setTimeout(() => d.classList.add('out'), 5200); setTimeout(() => d.remove(), 6000);
   };
@@ -103,7 +104,7 @@
     if (key !== lastHud) {
       lastHud = key;
       $('clock').innerHTML = '<i>' + (night ? '🌙' : S.hour >= 18 ? '🌇' : '☀️') + '</i><b>Jour ' + S.day + '</b><u>' + (fige ? '--:--' : pad(h) + ':' + pad(m)) + '</u>' + (R.alarm ? '<span class="alarm">⚔ ATTAQUE</span>' : '');
-      const mor = S.morale >= 70 ? '😄' : S.morale >= 40 ? '🙂' : '😟';
+      const mor = CG.Humeur ? CG.Humeur.tete() : S.morale >= 70 ? '😄' : S.morale >= 40 ? '🙂' : '😟';
       const TIP = { food: 'Pour nourrir le clan et faire la fête le soir', bois: 'Pour bâtir', minerai: 'Pour bâtir et forger', cuir: 'Pour les armures', or: 'Pour acheter et améliorer', os: 'Pour les potions du chaudron', slime: 'Une boule par flaque de glu' };
       /* les ressources défilent : six à la fois, les autres en glissant (flèches, molette, ou en tirant la barre) */ const LR = UI.RES_LISTE.filter(k => CG.RES[k]), VU = UI.RES_VU, n0 = UI.resPos = Math.max(0, Math.min(LR.length - VU, UI.resPos || 0)), nav = (d, ok) => LR.length > VU ? '<span class="r-nav' + (ok ? '' : ' off') + '" data-nav="' + d + '" data-tip="' + (d < 0 ? 'Ressources précédentes' : 'Autres ressources') + '" data-sub="Ou la molette, ou tire la barre">' + (d < 0 ? '‹' : '›') + '</span>' : '';
       $('res').innerHTML = nav(-1, n0 > 0) + LR.slice(n0, n0 + VU).map(k => '<span class="r-' + k + '" data-tip="' + CG.RES[k].icon + ' ' + CG.RES[k].nom + '" data-sub="' + TIP[k] + '"><i>' + CG.RES[k].icon + '</i><b>' + Math.floor(r[k] || 0) + '</b></span>').join('') + nav(1, n0 + VU < LR.length) + '<span class="r-clan" data-tip="👥 Gobelins" data-sub="Ceux du clan / les places dans les huttes"><i>👥</i><b>' + S.goblins.length + '<small>/' + G.capacity() + '</small></b></span><span class="r-moral" data-tip="Moral" data-sub="Sous 50 %, plus personne ne vient s’installer"><i>' + mor + '</i><b>' + Math.round(S.morale) + '<small>%</small></b></span>';
@@ -200,7 +201,7 @@
     sync(); const job = CG.JOBS[g.job];
     UI.dialog({
       goblin: g, who: g.name, tag: (g.sex === 'f' ? '♀ ' + job.nomF : '♂ ' + job.nom) + ' · niv. ' + g.lvl + ' · ' + G.persoNom(g),
-      text: 'Tu veux me confier un autre travail, chef ?', extra: '<p class="ask">Quel métier veux-tu lui donner ?' + (G.seeApt() ? '' : ' (Ses forces et faiblesses sont cachées : souviens-toi de ce qu\'il t\'a dit, ou lance l\'Œil de vérité.)') + '</p>', grid: true,
+      text: 'Tu veux me confier un autre travail, chef ?', extra: '<p class="ask">Quel métier veux-tu lui donner ?</p>', grid: true,
       options: CG.jobsAvail().map(id => ({ label: CG.JOBS[id].icon + ' ' + (g.sex === 'f' ? CG.JOBS[id].nomF : CG.JOBS[id].nom) + aptMark(g, id), sub: (CG.jobManque && id !== g.job && CG.jobManque(id, g)) || aptNote(g, id).trim(), disabled: !!(CG.jobOk && id !== g.job && !CG.jobOk(id, g)), active: id === g.job, fn: () => UI.setJob(g, id) }))
     });
   };
@@ -263,7 +264,7 @@
   // le cercle d'un sort (1, le plus faible, à 9, le plus fort) : sa puissance, d'après la valeur de son parchemin
   const GR_SEUILS = [420, 500, 600, 750, 900, 1100, 1400, 1800], GR_FIXE = { mondes: 6, hate: 5, teleport: 4 }; /* Pieds de vent : bien trop utile pour un petit cercle */
   const GR_NOMS = ['', 'Les premiers mots', 'Les tours d\'apprenti', 'Les sorts de bataille', 'La magie du mage', 'Les secrets du sorcier', 'Les arts interdits', 'La haute magie', 'Les sorts de légende', 'La magie des dieux'];
-  const grCercle = id => { if (GR_FIXE[id]) return GR_FIXE[id]; const v = (CG.SPELLS[id] || {}).prix || 0; let c = 1; while (c < 9 && v > GR_SEUILS[c - 1]) c++; return c; };
+  const grCercle = id => { const fixe = CG.CerclesPrix && CG.CerclesPrix.cercle(id); if (fixe) return fixe; /* le cercle écrit dans cerclesprix.js passe avant tout */ if (GR_FIXE[id]) return GR_FIXE[id]; const v = (CG.SPELLS[id] || {}).prix || 0; let c = 1; while (c < 9 && v > GR_SEUILS[c - 1]) c++; return c; };
   CG.cercle = grCercle;
   let grPage = 0;
   UI.grimoire = function (page) {
@@ -292,11 +293,13 @@
     } else if (grPage === 1) {
       // --- la table des matières : tous les cercles et tous les sorts sur une seule double page (chaque liste défile dans sa page : le livre garde sa hauteur)
       const numDe = x => pageSort(x) * 2 + (feuilles.findIndex(q => q.id === x) % 2) + 1, cercles = feuilles.filter(f => f.c).map(f => f.c);
-      const bloc = c => '<button class="gr-t-cercle" data-go="' + pageCercle(c) + '"><span>' + c + '</span><b>' + GR_NOMS[c] + '</b></button><div class="gr-t-liste">' + livre.filter(x => grCercle(x) === c).map(x => '<button class="gr-t-sort" data-go="' + pageSort(x) + '" title="' + esc(CG.SPELLS[x].nom) + '"><span>' + CG.SPELLS[x].icon + '</span><b>' + CG.SPELLS[x].nom + '</b><i>' + numDe(x) + '</i></button>').join('') + '</div>';
-      const poids = c => 1.6 + Math.ceil(livre.filter(x => grCercle(x) === c).length / 2), total = cercles.reduce((a, c) => a + poids(c), 0); let acc = 0; const gauche = [], droite = [];
-      cercles.forEach(c => { if (acc < total / 2) gauche.push(c); else droite.push(c); acc += poids(c); });
-      h += '<div class="gr-page l tdm"><h2 class="gr-h">Table des matières</h2><div class="gr-orn">✦</div><div class="gr-t-corps">' + (cercles.length ? gauche.map(bloc).join('') : '<p class="gr-note">Aucun sort pour l\'instant. Trouve un parchemin et copie-le : il apparaîtra ici.</p>') + '</div>' + foot(3, 'l') + '</div>';
-      h += '<div class="gr-page r tdm"><h2 class="gr-h">' + (n ? n + ' sort' + (n > 1 ? 's' : '') : 'Pages blanches') + '</h2><div class="gr-orn">✦</div><div class="gr-t-corps">' + droite.map(bloc).join('') + '</div>' + foot(4, 'r') + '</div>';
+      /* jamais d'ascenseur : le numéro du cercle se met à gauche de ses sorts (aucune ligne perdue), trois colonnes dès qu'il y a beaucoup de sorts, et tout rétrécit s'il le faut (voir plus bas) */
+      const cols = livre.length > 24 ? 3 : 2;
+      const bloc = c => '<div class="gr-t-rang"><button class="gr-t-cercle" data-go="' + pageCercle(c) + '" title="Cercle ' + c + ' : ' + GR_NOMS[c] + '"><span>' + c + '</span></button><div class="gr-t-liste c' + cols + '">' + livre.filter(x => grCercle(x) === c).map(x => '<button class="gr-t-sort" data-go="' + pageSort(x) + '" title="' + esc(CG.SPELLS[x].nom) + ' (page ' + numDe(x) + ')"><span>' + CG.SPELLS[x].icon + '</span><b>' + CG.SPELLS[x].nom + '</b>' + (cols < 3 ? '<i>' + numDe(x) + '</i>' : '') + '</button>').join('') + '</div></div>';
+      const poids = c => 0.35 + Math.ceil(livre.filter(x => grCercle(x) === c).length / cols), P = cercles.map(poids), total = P.reduce((a, b) => a + b, 0); let coupe = 0, mieux = Infinity, acc = 0;
+      P.forEach((v, i) => { acc += v; const d = Math.abs(total - 2 * acc); if (d < mieux) { mieux = d; coupe = i + 1; } }); /* la coupure qui équilibre le mieux les deux pages */ const gauche = cercles.slice(0, coupe), droite = cercles.slice(coupe);
+      h += '<div class="gr-page l tdm"><h2 class="gr-h">Table des matières</h2><div class="gr-orn">✦</div><div class="gr-t-corps"><div class="gr-t-in">' + (cercles.length ? gauche.map(bloc).join('') : '<p class="gr-note">Aucun sort pour l\'instant. Trouve un parchemin et copie-le : il apparaîtra ici.</p>') + '</div></div>' + foot(3, 'l') + '</div>';
+      h += '<div class="gr-page r tdm"><h2 class="gr-h">' + (n ? n + ' sort' + (n > 1 ? 's' : '') : 'Pages blanches') + '</h2><div class="gr-orn">✦</div><div class="gr-t-corps"><div class="gr-t-in">' + droite.map(bloc).join('') + '</div></div>' + foot(4, 'r') + '</div>';
     } else {
       // --- une page par sort
       [0, 1].forEach(k => {
@@ -315,6 +318,7 @@
     }
     h += '<span class="gr-ribbon"></span>' + (grPage ? '<button class="gr-home' + (grPage > 1 ? ' deux' : '') + '" data-go="0" title="Retour à ma sélection">⌂ Sélection</button>' : '') + (grPage > 1 ? '<button class="gr-home deux tdm" data-go="1" title="Tous les sorts sur une double page">📑 Table</button>' : '') + '<button class="gr-close" id="x-close" title="Fermer (G)">✕</button></div>';
     open('grimoire', h, true, true); $('panel').className = 'grim'; $('modal').classList.add('flou'); $('x-close').onclick = UI.dismiss;
+    $('panel').querySelectorAll('.gr-t-corps').forEach(c => { const d = c.firstElementChild; if (!d || !c.clientHeight || d.offsetHeight <= c.clientHeight) return; const k = Math.max(0.5, c.clientHeight / d.offsetHeight); d.style.width = (100 / k) + '%'; d.style.transform = 'scale(' + k + ')'; }); /* la table des matières ne défile jamais : si elle dépasse, elle rétrécit */
     const P = $('panel'), go = pg => { if (pg < 0 || pg >= spreads || pg === grPage) return; CG.sfx('page'); UI.grimoire(pg); };
     P.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(+b.dataset.go));
     keyHandlers.ArrowRight = () => go(grPage + 1); keyHandlers.ArrowLeft = () => go(grPage - 1);

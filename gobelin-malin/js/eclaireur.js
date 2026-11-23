@@ -147,7 +147,7 @@
     const S = CG.S, R = CG.R, p = S.player, F = found(), k = 2 / T, now = performance.now();
     // les ennemis ne se voient que de près, ou une fois l'alerte donnée
     for (const e of R.enemies) { if (e.struct || e.dead) continue; if (e.seen) dot(e.x, e.y, e.wild ? '#ffb0a0' : '#ff3020', e.wild ? 2 : 4); }
-    for (const c of R.chests) if (!c.open && (c.vu || d2(c, p) < 420)) dot(c.x, c.y, '#ffe36b', 3); // vus par le chef, ou signalés par un villageois
+    for (const c of R.chests) if (!c.open && (c.vu || c.flairFaux || d2(c, p) < 420)) dot(c.x, c.y, c.flairFaux ? '#ff4a3a' : '#ffe36b', c.flairFaux ? 4 : 3); /* en rouge : un coffre vorace flairé par le sort (sortsneufs.js) */ // vus par le chef, ou signalés par un villageois
     const fresh = {}; R.pings = R.pings.filter(q => now - q.t0 < (q.dur || 3400)); R.pings.forEach(q => { fresh[Math.round(q.x) + ':' + Math.round(q.y)] = q; });
     for (const t of Sc.targets()) { if (!F[t.key] || fresh[Math.round(t.x) + ':' + Math.round(t.y)]) continue; if (t.small) { const x = Math.round(t.x * k), y = Math.round(t.y * k); g.fillStyle = '#3a2408'; g.fillRect(x - 3, y - 2, 6, 5); g.fillStyle = '#ffd84a'; g.fillRect(x - 2, y - 1, 4, 3); g.fillStyle = '#8a5a14'; g.fillRect(x - 2, y, 4, 1); } else if (t.beast) dot(t.x, t.y, '#ffb0a0', 3); else { badge(g, t.x * k, t.y * k, t.icon, 0.85, t.foe); if (Sc.fait(t)) Sc.coche(g, t.x * k + 7, t.y * k + 6, 1); } }
     // l'animation d'une découverte : le trait part du village, les anneaux s'ouvrent, l'icône rebondit

@@ -8,7 +8,7 @@
   const vivants = a => a.es.filter(e => !e.dead && CG.R.enemies.includes(e));
   const centre = l => { let x = 0, y = 0; l.forEach(e => { x += e.x; y += e.y; }); return { x: x / l.length, y: y / l.length }; };
   const nomDe = l => { const n = {}; l.forEach(e => { const k = (CG.ENEMIES[e.type] || {}).nom || 'monstre'; n[k] = (n[k] || 0) + 1; }); const ks = Object.keys(n); return ks.length === 1 ? (n[ks[0]] > 1 ? n[ks[0]] + ' ' + ks[0].toLowerCase() + 's' : 'un ' + ks[0].toLowerCase()) : l.length + ' monstres'; };
-  function finir(g) { const R = CG.R; if (R.aide === g.aide) R.aide = null; g.aide = null; g.bubble = null; }
+  function finir(g) { const R = CG.R; if (R.aide === g.aide) R.aide = null; g.aide = null; g.bubble = null; if (g.state === 'aide') G.resetGoblin(g); /* sinon il restait figé sur place, dans un état que personne d'autre ne connaît */ }
   // ---------- qui demande de l'aide ----------
   const up0 = G.update; G.update = function (dt) {
     up0.apply(this, arguments); const S = CG.S, R = CG.R; if (!S || !R) return; if (Ai.pause > 0) Ai.pause -= dt;
@@ -29,11 +29,11 @@
   // quand la peur retombe, la prochaine frayeur pourra de nouveau déclencher une demande
   // ---------- la routine du gobelin qui cherche de l'aide, puis qui suit le chef ----------
   Ai.step = function (g, dt) {
-    const R = CG.R, S = CG.S, a = g.aide, p = S.player; if (!a) return false;
+    const R = CG.R, S = CG.S, a = g.aide, p = S.player; if (!a) { if (g.state === 'aide') G.resetGoblin(g); return false; }
     if (R.aide !== a || R.alarm || R.night) { finir(g); return false; }
     g.alerte = 0; g.pose = null; g.state = 'aide'; const d = CG.dist(g, p);
     if (a.ph === 'va') {
-      a.t -= dt; if (a.t <= 0 || !Soc.inVillage() || !vivants(a).length) { finir(g); return false; } g.bubble = '🆘';
+      a.t -= dt; if (a.t <= 0 || !vivants(a).length) { finir(g); return false; } g.bubble = '🆘'; /* le chef peut sortir du village à sa rencontre : il continue de courir vers lui */
       if (d > 56) { g.repath -= dt; if (!g.path || !g.path.length || g.repath <= 0) { G.goTo(g, p.x, p.y + 8); g.repath = 0.8; } G.follow(g, 190, dt); return true; }
       g.moving = false; g.face = p.x > g.x ? 1 : -1; if (!UI.modal && !R.cine) demander(g, a); return true;
     }

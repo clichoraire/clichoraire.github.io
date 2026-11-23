@@ -1,4 +1,4 @@
-// Goblin Malin — le village des elfes, tout au fond de la forêt de l'ouest.
+// Goblin Malin — le village des elfes, tout au fond de la forêt de l'ouest (la carte voisine, pas la forêt du départ).
 //   Une grande clairière, six demeures de pierre claire et de bois d'argent (la grande salle, deux maisons dans les arbres géants,
 //   deux pavillons, la tour du mage), une fontaine au milieu. Les elfes sont des amis : ils vendent des armes, des armures et des
 //   outils elfiques (qualité 4, au-dessus des « de maître »), très chers et très forts, pour le chef comme pour les gobelins.
@@ -8,17 +8,19 @@
 (function (CG) {
   const G = CG.G, D = CG.D, UI = CG.UI, W = CG.W, Art = CG.Art, T = CG.TILE, TAU = Math.PI * 2, Bq = CG.Banque, Iv = CG.Inventaire, Eq = CG.Equipement;
   const El = CG.Elfes = {
+    MONDE: 3, /* la forêt de l'ouest : la carte où l'on arrive en sortant de chez nous par la gauche (terres.js) */
     LIEU: { x: 11, y: 25, rx: 9, ry: 7 }, /* le centre de la clairière (en cases) et sa taille */
     MAISONS: [{ k: 'salle', tx: 9, ty: 20, w: 5 }, { k: 'arbre', tx: 4, ty: 22, w: 2 }, { k: 'arbre2', tx: 17, ty: 22, w: 2 }, { k: 'pavillon', tx: 3, ty: 27, w: 2 }, { k: 'pavillon2', tx: 18, ty: 27, w: 2 }, { k: 'tour', tx: 14, ty: 30, w: 2 }, { k: 'fontaine', tx: 11, ty: 25, w: 1 }],
     ECHELLE: 1.45, /* la taille des demeures : elles dominent les arbres */
     PNJ: [[11.5, 21.9], [5.5, 28.7], [17.5, 28.7], [13.6, 31.7]], /* où se tiennent la dame, l'archer, la tisseuse et le mage (en cases) */
     GARDE: 0.34, /* un monstre qui entre dans le village est frappé par la lumière des elfes : cette part de sa vie à chaque éclair */
     PRIX: { arc: 2500, epee: 2400, armure: 3000, pioche: 1800, hache: 1800, gant: 1800 }, STOCK: 2,
+    MANA: 120, /* il faut au moins ce mana maximum pour être accueilli : sinon les gardes barrent l'entrée */
     MAGE: 1000, /* pièces d'or pour +1 de vie ou de mana, pour toujours */
     FEU: 0.25, /* la part des dégâts de feu qui passe à travers l'armure elfique */
     GOB: { arme: 8, vie: 30 } /* en plus, sur un gobelin : dégâts d'une arme elfique, vie d'une armure elfique */
   };
-  const chezNous = () => !CG.Mondes || CG.Mondes.ici() === 0;
+  const chezNous = () => !!CG.Mondes && CG.Mondes.ici() === El.MONDE; /* seulement dans la forêt de l'ouest (la carte voisine, par la sortie ouest) */
   // ---------- l'équipement elfique : la qualité 4 ----------
   if (Bq) { Bq.NOMS.epee[4] = 'Lame elfique'; Bq.NOMS.arc[4] = 'Arc elfique'; Bq.NOMS.armure[4] = 'Armure elfique'; }
   if (Eq) { Eq.L.pioche.noms[4] = 'Pioche elfique'; Eq.L.hache.noms[4] = 'Hache elfique'; Eq.L.gant.noms[4] = 'Gants elfiques'; Eq.CHEF[4] = 4; Eq.GOB[4] = 6; }
@@ -40,17 +42,23 @@
   // ---------- la clairière ----------
   const gen0 = W.generate; W.generate = function (seed) {
     const r = gen0.apply(this, arguments); W.elfes = null; if (!chezNous() || !W.tile) return r;
-    const L = El.LIEU, rng = CG.makeRng((W.seed || seed || 1) + 9091), ok = (x, y) => x >= 2 && y >= 2 && x < CG.MW - 2 && y < CG.MH - 2;
+    let porte = null; const L = El.LIEU, rng = CG.makeRng((W.seed || seed || 1) + 9091), ok = (x, y) => x >= 2 && y >= 2 && x < CG.MW - 2 && y < CG.MH - 2;
     for (let y = L.y - L.ry - 1; y <= L.y + L.ry + 1; y++) for (let x = L.x - L.rx - 1; x <= L.x + L.rx + 1; x++) {
       if (!ok(x, y)) continue; const d = Math.pow((x - L.x) / L.rx, 2) + Math.pow((y - L.y) / L.ry, 2); if (d > 1 - rng() * 0.14) continue;
       W.tile[W.idx(x, y)] = d < 0.13 || (Math.abs(x - L.x) <= 1 && y < L.y && y > L.y - L.ry + 1) ? W.PATH : W.GRASS; // la place ronde, et l'allée qui monte à la grande salle
     }
-    let x = L.x - 2; for (let y = L.y + 1; y <= 37; y++) { if (ok(x, y)) { W.tile[W.idx(x, y)] = W.PATH; W.tile[W.idx(x + 1, y)] = W.PATH; } if (y > L.y + L.ry - 2 && y % 2 === 0 && x > 4) x--; } // le sentier qui rejoint la route de l'ouest
+    { // un sentier relie le village à la clairière la plus proche (là-bas, tous les sentiers partent du carrefour)
+      const P = CG.Terres && CG.Terres.plan && CG.Terres.plan(), l = P ? [P.hub].concat(P.clairieres || []) : [{ x: CG.MW - 3, y: 35 }], a = { x: L.x + 2, y: L.y + 1 }; let b = l[0], bd = 1e9;
+      l.forEach(o => { const d = Math.hypot(o.x - a.x, o.y - a.y); if (d > L.rx + 4 && d < bd) { bd = d; b = o; } });
+      { const ux = b.x - L.x, uy = b.y - L.y, q = 1 / Math.sqrt(Math.pow(ux / (L.rx + 3), 2) + Math.pow(uy / (L.ry + 3), 2)); porte = { x: (L.x + ux * q + 0.5) * T, y: (L.y + uy * q + 1) * T }; }
+      const n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) * 2); for (let k = 0; k <= n; k++) { const q = k / n, x = Math.round(a.x + (b.x - a.x) * q), y = Math.round(a.y + (b.y - a.y) * q + Math.sin(q * Math.PI) * Math.sin(q * 6) * 1.6); for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) if (ok(x + dx, y + dy)) W.tile[W.idx(x + dx, y + dy)] = W.PATH; }
+    }
     if (W.nodes) W.nodes = W.nodes.filter(n => Math.pow((n.x - L.x) / (L.rx + 1), 2) + Math.pow((n.y - L.y) / (L.ry + 1), 2) > 1);
     El.MAISONS.forEach(m => { for (let dy = 1; dy <= 2; dy++) for (let i = -1; i <= m.w; i++) { const j = W.idx(m.tx + i, m.ty + dy); if (ok(m.tx + i, m.ty + dy) && (W.tile[j] === W.TREE || W.tile[j] === W.ROCK)) W.tile[j] = W.GRASS; } }); // rien ne pousse devant une porte
     El.PNJ.forEach(q => { for (let dy = -1; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = Math.floor(q[0]) + dx, y = Math.floor(q[1]) + dy, j = W.idx(x, y); if (ok(x, y) && (W.tile[j] === W.TREE || W.tile[j] === W.ROCK)) W.tile[j] = W.GRASS; } }); // ni devant un habitant
     El.MAISONS.forEach(m => { for (let i = 0; i < m.w; i++) W.tile[W.idx(m.tx + i, m.ty)] = W.BUILD; });
-    W.elfes = { x: (L.x + 0.5) * T, y: (L.y + 0.5) * T, r: (L.rx + 2) * T };
+    W.elfes = { x: (L.x + 0.5) * T, y: (L.y + 0.5) * T, r: (L.rx + 2) * T, porte };
+    if (porte) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = Math.floor(porte.x / T) + dx, y = Math.floor(porte.y / T) + dy, j = W.idx(x, y); if (ok(x, y) && (W.tile[j] === W.TREE || W.tile[j] === W.ROCK || W.tile[j] === W.WATER)) W.tile[j] = W.GRASS; } // de la place pour les deux gardes
     return r;
   };
   // pas de monstres installés chez les elfes
@@ -66,11 +74,15 @@
       mk('tisseuse', 'Ilwen', 'tisseuse d\'armures', El.PNJ[2][0], El.PNJ[2][1], { tunic: '#4a6fa8', hair: '#c8b0e0', glow: '#9ad0ff', shop: ['armure', 'pioche', 'hache', 'gant'].map(article) }),
       mk('mage', 'Maître Orvald', 'vieux mage', El.PNJ[3][0], El.PNJ[3][1], { look: 'mageV' })
     ];
+    const P = W.elfes && W.elfes.porte; if (P) { const dx = P.x - W.elfes.x, dy = P.y - W.elfes.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d; // deux gardes, de chaque côté du sentier
+      [[-1, 'Thalan'], [1, 'Erevan']].forEach(q => { let x = P.x + nx * 46 * q[0], y = P.y + ny * 46 * q[0]; if (!W.walkPx(x, y)) { x = P.x + q[0] * 30; y = P.y; } R.elfesV.push(mk('garde', q[1], 'garde de la cité', x / T, y / T, { tunic: '#c8ccd8', hair: '#e8e0b0', glow: '#bfe8ff', armure: true })); }); }
   }
+  El.accueilli = () => { const p = CG.S && CG.S.player; return !!p && p.maxmp >= El.MANA; };
   const dire = (v, text, options) => UI.dialog({ visitor: v, who: v.nom + ', ' + v.titre, tag: v.quoi === 'mage' ? '🧙 Mage · ami' : '🌿 Elfe · ami', text, options });
   const AUREVOIR = { label: '👋 Au revoir', sub: 'Tu reprends ta route', fn: () => { } };
   El.parler = function (v) {
     const S = CG.S, p = S.player;
+    if (v.quoi === 'garde') return dire(v, El.accueilli() ? 'Passe, ami des elfes. La cité t\'est ouverte.' : 'Halte. Seuls ceux qui portent assez de magie entrent dans la cité. Tu as ' + Math.floor(p.maxmp) + ' de mana : il en faut ' + El.MANA + '. Reviens plus tard, petit chef.', [AUREVOIR]);
     if (v.quoi === 'dame') return dire(v, v.vu ? 'Que les étoiles veillent sur ton clan, petit chef.' : 'Un gobelin, ici ? La forêt t\'a laissé passer : sois le bienvenu. Nos artisans font les plus beaux arcs du monde. Va les voir.', [AUREVOIR]), void (v.vu = true);
     if (v.quoi === 'mage') {
       const or = Math.floor(S.res.or), peut = or >= El.MAGE, acheter = quoi => () => {
@@ -79,7 +91,7 @@
         setTimeout(() => El.parler(v), 0);
       };
       return dire(v, v.vu ? 'Encore toi ? Bien. La magie se paie, petit chef, mais elle ne s\'en va jamais.' : 'Hmm. Un chef gobelin qui vient voir un vieux mage... Je peux te rendre plus fort pour toujours. Mais ce n\'est pas donné.',
-        [{ label: '❤️ +1 vie pour toujours · ' + El.MAGE + ' 🪙', sub: 'Tu as ' + or + ' 🪙', disabled: !peut, fn: acheter('vie') }, { label: '💧 +1 mana pour toujours · ' + El.MAGE + ' 🪙', sub: 'Tu as ' + or + ' 🪙', disabled: !peut, fn: acheter('mana') }, AUREVOIR]), void (v.vu = true);
+        [{ label: '❤️ +1 vie pour toujours · ' + El.MAGE + ' 🪙', sub: 'Tu as ' + or + ' 🪙', disabled: !peut, fn: acheter('vie') }, { label: '💧 +1 mana pour toujours · ' + El.MAGE + ' 🪙', sub: 'Tu as ' + or + ' 🪙', disabled: !peut, fn: acheter('mana') }].concat(CG.CerclesPrix ? [{ label: '📜 Voir ses parchemins de niveau II', sub: 'Pour rendre plus forts les sorts que tu connais déjà', fn: () => { v.shop = CG.CerclesPrix.elfes(); if (!v.shop.length) return dire(v, 'Je n\'ai rien pour toi aujourd\'hui : apprends d\'abord un sort, ou finis ceux que tu as.', [AUREVOIR]); UI.shop(v, { nom: v.nom + ', ' + v.titre, hello: 'Un sort qu\'on connaît peut toujours grandir. Mais ce savoir-là se paie cher.' }); } }] : []).concat([AUREVOIR])), void (v.vu = true);
     }
     const archer = v.quoi === 'archer';
     dire(v, archer ? 'Regarde cet arc. Du bois d\'argent, une corde de lune. Il coûte cher, oui. Mais tu n\'en verras jamais de meilleur.' : 'Mes armures sont légères comme une feuille et dures comme la pierre. Même le feu les laisse tranquilles.',
@@ -92,6 +104,10 @@
   };
     const in0 = D.interact; D.interact = function () { const it = D.findInteract(); if (it && it.type === 'elfeV') return El.parler(it.obj); return in0.apply(this, arguments); }; }
   { const up0 = G.update; G.update = function (dt) { up0.apply(this, arguments); const R = CG.R; if (!R || !CG.S) return; if (!W.elfes) { if (R.elfesV) R.elfesV = null; return; } if (!R.elfesV) peuple(); const p = CG.S.player; for (const v of R.elfesV) if (Math.abs(p.x - v.x) > 6) v.face = p.x > v.x ? 1 : -1;
+    // pas assez de mana : les gardes repoussent le chef hors de la cité
+    if (!El.accueilli() && !(R.ko > 0)) { const V0 = W.elfes, L0 = El.LIEU, ux = (p.x - V0.x) / ((L0.rx + 0.6) * T), uy = (p.y - V0.y) / ((L0.ry + 0.6) * T), q = Math.hypot(ux, uy);
+      if (q < 1) { const P = V0.porte; let x = V0.x + (p.x - V0.x) / (q || 1) * 1.1, y = V0.y + (p.y - V0.y) / (q || 1) * 1.1; if (!W.walkPx(x, y) && P) { x = P.x + (P.x - V0.x) * 0.12; y = P.y + (P.y - V0.y) * 0.12; } p.x = x; p.y = y; p.path = null; G.unstick(p, 9);
+        if (!(R.elfesHalte > R.t)) { R.elfesHalte = R.t + 2.5; CG.sfx('no'); const gd = R.elfesV.filter(v => v.quoi === 'garde').sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0]; G.text(gd ? gd.x : p.x, (gd ? gd.y : p.y) - 70, 'Halte ! Pas assez de magie.', '#bfe8ff', true); } } }
     // la lumière des elfes garde le village : un monstre qui y entre est frappé, encore et encore
     R.elfesT = (R.elfesT || 0) - dt; if (R.elfesT > 0) return; R.elfesT = 0.5; const V = W.elfes, L = El.LIEU;
     for (const e of R.enemies.slice()) { if (e.dead || e.struct || e.charm > 0 || Math.pow((e.x - V.x) / ((L.rx + 1) * T), 2) + Math.pow((e.y - V.y) / ((L.ry + 1) * T), 2) > 1) continue;
@@ -185,7 +201,7 @@
   }; }
   // les elfes du village et le vieux mage
   { const vis0 = Art.visitor; Art.visitor = function (g, v, t) {
-    if (v.look === 'elfeV') return Art.humanoid(g, { x: v.x, y: v.y, face: v.face, t: t + (v.seed || 0), moving: false, step: 0, skin: '#f4dcc0', tunic: v.tunic || '#3f8a5a', legs: '#2a4a3a', s: 1.14, hair: v.hair || '#f0e090', longHair: true, ears: true, robe: true, glow: v.glow || '#7dff8a' });
+    if (v.look === 'elfeV') return Art.humanoid(g, { x: v.x, y: v.y, face: v.face, t: t + (v.seed || 0), moving: false, step: 0, skin: '#f4dcc0', tunic: v.tunic || '#3f8a5a', legs: '#2a4a3a', s: 1.14, hair: v.hair || '#f0e090', longHair: true, ears: true, robe: !v.armure, armor: !!v.armure, cape: v.armure ? '#2f6670' : undefined, glow: v.glow || '#7dff8a' });
     if (v.look !== 'mageV') return vis0.apply(this, arguments);
     const s = 1.16, f = v.face < 0 ? -1 : 1, bob = Math.sin((t + (v.seed || 0)) * 2.4) * 0.6;
     Art.humanoid(g, { x: v.x, y: v.y, face: v.face, t: t + (v.seed || 0), moving: false, step: 0, skin: '#f0d2b4', tunic: '#8e97ac', sleeve: '#7c8598', legs: '#565c6c', s, robe: true });

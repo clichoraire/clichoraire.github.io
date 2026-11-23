@@ -6,7 +6,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, W = CG.W, T = CG.TILE, rand = CG.rand;
-  const Pi = CG.RocheMine = { COUPS: 14, GAIN: 3, PRES: 50, REPOS: 0.4, TOUCHE: 0.17, SORTS: 2 };
+  const Pi = CG.RocheMine = { COUPS: 14, GAIN: 3, PRES: 50, REPOS: 0.4, TOUCHE: 0.17, SORTS: 1 } /* SORTS : les prix des sorts sont maintenant fixés par cercle (cerclesprix.js) */;
   const dehors = () => !CG.Mondes || CG.Mondes.ici() !== 2;
   const faits = () => { const R = CG.R; return R.rocFaits || (R.rocFaits = {}); };
   Pi.nb = function () { const q = CG.S.player.porte, o = q && q.pioche, n = o && o.n > 0 ? Math.min(3, o.n) : 1, K = CG.Coups ? CG.Coups.OUTIL[n] : 1; return Math.max(3, Math.round(Pi.COUPS * K)); };

@@ -97,7 +97,7 @@
   function stockFor0(role) {
     const p = S.player, potion = (prix, n) => ({ icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('vie') : '🧪', label: 'Fiole de vie', desc: 'Te redonne de la vie.', prix, stock: n, buy: () => { p.potions++; } });
     // un marchand n'a des parchemins que parfois (ch = chance par parchemin), et de préférence des sorts que tu n'as pas
-    const sc = (ids, n, mul, ch) => CG.shuffle(ids.slice()).sort((a, b) => (!!(p.spells.includes(a) || p.scrolls[a])) - (!!(p.spells.includes(b) || p.scrolls[b]))).slice(0, n).filter(() => Math.random() < ch).map(id => scrollItem(id, mul));
+    const sc = (ids, n, mul, ch) => CG.shuffle(ids.slice()).sort((a, b) => (!!(p.spells.includes(a) || p.scrolls[a])) - (!!(p.spells.includes(b) || p.scrolls[b]))).slice(0, n).filter(() => Math.random() < ch / (CG.SortsRares ? CG.SortsRares.RARE : 1)).map(id => scrollItem(id, mul)); /* deux fois plus rares sur les étals (sortsrares.js) */
     if (role === 'nain') return [potion(12, 3),
       { icon: '🗡️', label: 'Lame naine', desc: 'Ton arme frappe plus fort.', prix: 40 + 35 * p.weapon, stock: 1, buy: () => { p.weapon++; } },
       { icon: '🛡️', label: 'Cotte renforcée', desc: 'Ton armure te protège mieux.', prix: 40 + 35 * p.armor, stock: 1, buy: () => { p.armor++; } },
@@ -150,10 +150,12 @@
       group[0].annonce = J ? ['Des jumeaux errants', 'Deux gobelins qui se ressemblent comme deux gouttes d\'eau attendent près de ton feu. Va leur parler (E).', '#bfe8ff'] : [def.nom, 'Des visiteurs attendent près de ton feu. Va leur parler (E).', '#bfe8ff']; return; /* l'annonce se fait quand ils sont rendus au village (updateVisitors) */
     } else { const v = mkVisitor(ev.role, def.look, ex.x, ex.y, { x: f.x - 96, y: f.y + 74 }, ex); v.shop = stockFor(ev.role); v.sells = ev.role === 'nain' || ev.role === 'demonMarchand'; v.annonce = [def.nom, 'Un visiteur attend près de ton feu. Va lui parler (E).', '#bfe8ff']; }
   };
+  D.TRIBUT = { or: [12, 5, 0.7], food: [10, 4, 0.6], bois: [14, 4, 0.6] }; /* [base, par jour, par jour au carré] */
   D.startDemand = function () {
     const e = W.EXITS.nord, f = G.firePos(), ex = { x: e.x * T + T / 2, y: e.y * T + T / 2 }, day = S.day;
     const kinds = ['or', 'food', 'bois', 'duel'], kind = day === 3 ? 'food' : pick(kinds);
-    const n = kind === 'or' ? 12 + day * 5 : kind === 'food' ? 10 + day * 4 : 14 + day * 4;
+    /* le tribut grossit de plus en plus vite avec les jours : base + par jour + un supplément qui monte au carré (D.TRIBUT) */
+    const TR = D.TRIBUT[kind] || D.TRIBUT.bois, n = Math.max(5, Math.round((TR[0] + day * TR[1] + day * day * TR[2]) / 5) * 5);
     const lord = mkVisitor('seigneur', 'seigneur', ex.x, ex.y, { x: f.x + 6, y: f.y - 104 }, ex); lord.leaveAt = 99;
     const group = [lord], ne = Math.min(5, 2 + Math.floor(day / 4));
     for (let i = 0; i < ne; i++) { const v = mkVisitor('escorte', 'demon', ex.x + rand(-30, 30), ex.y + rand(-30, 30), { x: f.x + 6 + (i - (ne - 1) / 2) * 44, y: f.y - 150 - (i % 2) * 16 }, ex); v.leaveAt = 99; group.push(v); }
@@ -365,7 +367,7 @@
   D.update = function (dt) {
     S = CG.S; R = CG.R;
     const attack = R.event && R.event.type === 'attack';
-    S.hour = Math.min(attack ? 23.98 : 24, S.hour + dt / D.HOUR);
+    S.hour = Math.min(attack ? (S.hour > 24 ? 29.98 : 23.98) : 30, S.hour + dt / D.HOUR); /* après minuit, le chef peut rester debout jusqu'à 6 h (30 au compteur) : fatigue.js */
     for (const q of R.spawnQ) { q.t -= dt; if (q.t <= 0) { G.spawnEnemy(q.type, q.x, q.y, { exit: { x: q.x, y: q.y } }); } }
     R.spawnQ = R.spawnQ.filter(q => q.t > 0);
     if (!R.event) { const ev = R.schedule.find(e => !e.done && S.hour >= e.h); if (ev) { ev.done = true; if (ev.type === 'attack') D.startAttack(ev); else if (ev.type === 'visit') D.startVisit(ev); else D.startDemand(); } }
@@ -382,7 +384,7 @@
     updateVisitors(dt); CG.Soc.update(dt);
     if (S.hour >= 19 && !R.eveningSaid && !R.alarm) { R.eveningSaid = true; G.banner('Le soir tombe', 'Les gobelins rentrent pour la fête. Va à ta hutte (E) quand tu veux dormir.', '#ffcf7a'); }
     if (S.hour >= 20 && !R.feast && !R.alarm) D.feast();
-    if (S.hour >= 24 && !R.fadeDir) D.startNight();
+    if (S.hour >= 30 && !R.fadeDir) { if (CG.Fatigue) CG.Fatigue.matin(); else D.startNight(); }
     if (R.fadeDir) { R.fade = CG.clamp(R.fade + R.fadeDir * dt * 1.4, 0, 1); if (R.fade >= 1 && R.fadeDir > 0) { R.fadeDir = -1; D.nextDay(); } else if (R.fade <= 0) R.fadeDir = 0; }
   };
 

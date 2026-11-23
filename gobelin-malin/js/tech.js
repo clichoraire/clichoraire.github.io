@@ -37,7 +37,7 @@
     N('d12', 'def', 4, 4, 2, '⚔️', 'Caserne', 'Révèle la Caserne.', { req: ['d11'], unlock: ['caserne'] }),
     N('d13', 'def', 5, 4, 3, '🥇', 'Gardes d\'élite', 'Gardes : +25 % de vie et de dégâts, casques dorés.', { req: ['d12'] }),
     // ---- clan
-    N('b25', 'clan', 1, 4, 1, '🌿', 'Hutte du guérisseur', 'Débloque la Hutte du guérisseur (menu Construire) et le métier de Guérisseur qui va avec : il soigne gobelins, animaux et chef près de sa hutte.', { unlock: ['guerisseur'] }),
+    N('b25', 'clan', 1, 4, 2, '🌿', 'Hutte du guérisseur', 'Débloque la Hutte du guérisseur (menu Construire) et le métier de Guérisseur qui va avec : il soigne gobelins, animaux et chef près de sa hutte.', { unlock: ['guerisseur'] }),
     N('b1', 'clan', 1, 2, 1, '🍄', 'Agriculture', 'Révèle le Potager à champignons.', { unlock: ['potager'] }),
     N('b21', 'clan', 2, 6, 1, '🪣', 'Puisatier', 'Révèle le Puits.', { req: ['b1'], unlock: ['puits'] }),
     N('b22', 'clan', 3, 6, 1, '🐟', 'Pisciculture', 'Révèle l\'Étang à poissons.', { req: ['b21'], unlock: ['etang'] }),
