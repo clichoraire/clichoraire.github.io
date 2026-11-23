@@ -3,6 +3,7 @@
 (function (CG) {
   const G = CG.G, B = CG.Boss = {}, TAU = Math.PI * 2, SQ = 0.75; // SQ : les zones sont des ovales aplatis, comme le sol vu de haut
   const rand = CG.rand, pick = CG.pick;
+  B.ROCHER = [90, 230]; // le lancer de rocher : seulement quand le chef est assez près (de 2 à 6 cases environ)
   B.KIT = { capitaine: ['charge', 'tourbillon'], troll: ['ecrase', 'rocher'], seigneur: ['pluie', 'nova', 'souffle', 'deluge', 'croix'] };
   const NOM = { charge: 'Charge !', tourbillon: 'Tourbillon d\'acier !', ecrase: 'Écrase-tout !', rocher: 'Lancer de rocher !', pluie: 'Pluie de feu !', nova: 'Anneau infernal !', souffle: 'Souffle de feu !', deluge: 'Déluge infernal !', croix: 'Croix de flammes !' };
   const zones = () => CG.R.zones || (CG.R.zones = []);
@@ -35,7 +36,7 @@
     if (name === 'tourbillon') { if (d > 150) return false; z({ x: e.x, y: e.y, r: 100, t: 1.0, dmg: e.dmg * 1.8, self: true }); hold = 1.1; }
     else if (name === 'charge') { if (d < 90 || d > 360) return false; const L = Math.min(330, d + 110); z({ k: 'ligne', x: e.x, y: e.y, x2: e.x + dx / d * L, y2: e.y + dy / d * L, w: 50, t: 0.95, dmg: e.dmg * 2 }); hold = 1.2; e.face = dx > 0 ? 1 : -1; }
     else if (name === 'ecrase') { if (d > 170) return false; z({ x: e.x, y: e.y, r: 125, t: 1.25, dmg: e.dmg * 2, self: true }); hold = 1.4; }
-    else if (name === 'rocher') { if (d < 100 || d > 440) return false; z({ x: p.x, y: p.y, r: 72, t: 1.35, dmg: e.dmg * 1.7, roc: true }); hold = 0.9; }
+    else if (name === 'rocher') { if (d < B.ROCHER[0] || d > B.ROCHER[1]) return false; z({ x: p.x, y: p.y, r: 72, t: 1.35, dmg: e.dmg * 1.7, roc: true }); hold = 0.9; }
     else if (name === 'pluie') { if (d > 460) return false; for (let i = 0; i < 6; i++) { const a = Math.random() * TAU, r = i ? rand(60, 150) : 0; z({ x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r * SQ, r: 56, t: 1.0 + i * 0.28, dmg: e.dmg * 1.3, roc: 'feu' }); } hold = 1.2; }
     else if (name === 'souffle') { // un éventail de trois langues de feu vers toi
       if (d > 330) return false; const a0 = Math.atan2(dy, dx), L = 310; [-0.42, 0, 0.42].forEach((da, i) => z({ k: 'ligne', feu: true, mute: i > 0, x: e.x, y: e.y, x2: e.x + Math.cos(a0 + da) * L, y2: e.y + Math.sin(a0 + da) * L, w: 78, t: 1.05, dmg: e.dmg * 1.6 })); hold = 1.3; e.face = dx > 0 ? 1 : -1; }

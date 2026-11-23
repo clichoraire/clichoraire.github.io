@@ -99,13 +99,13 @@
   let enCours = null;
   const tg0 = UI.talkGoblin; UI.talkGoblin = function (g) { enCours = g; try { return tg0.apply(this, arguments); } finally { enCours = null; } };
   const dl0 = UI.dialog; UI.dialog = function (o) {
-    const g = enCours; enCours = null;
-    if (g && o && o.goblin === g && Am.cible(g) && o.options && o.options.length > 1) {
+    const menu = enCours; enCours = null; const g = (o && o.goblin) || null; /* la jauge se montre dans toutes les discussions avec lui, aussi autour du feu */
+    if (g && Am.cible(g) && o.options && o.options.length > 1 && !/am-bar/.test(o.extra || '')) {
       const st = Am.stage(g), a = Math.round(g.amour || 0), R = CG.R, fait = g.flirtDay === CG.S.day;
       /* les mots doux se disent maintenant dans « Discuter », sans rien annoncer (discuter.js) */
       if (a > 0) {
         o.extra = (o.extra || '') + '<div class="am-bar"><span>' + (st ? '💗 ' + g.name.replace(/[<&>]/g, '') + ' ' + (st === 1 ? 'a le béguin pour toi' : st === 2 ? 'est en amour avec toi' : (fem(g) ? 'est folle d\'amour pour toi' : 'est fou d\'amour pour toi')) : '💗 Affection') + '</span><b><i style="width:' + a + '%"></i>' + Am.SEUILS.slice(0, 2).map(s => '<u style="left:' + s + '%"></u>').join('') + '</b><em>' + a + ' / 100</em></div>';
-        if (st && !R.alarm && !G.partyTime() && Math.random() < 0.6) o.text = fillA(pick(SALUT[st]), g);
+        if (menu === g && st && !R.alarm && !G.partyTime() && Math.random() < 0.6) o.text = fillA(pick(SALUT[st]), g);
       }
     }
     return dl0.call(this, o);

@@ -80,10 +80,16 @@
     }
     return q.x >= 0 ? q : null;
   };
+  // le puits devient gourmand : chaque pièce jetée fait monter le prix de la suivante, pour toujours (HAUSSE). Une vieille partie démarre déjà haut (DEPART par jour passé).
+  Pu.HAUSSE = 1.15; Pu.DEPART = 2; Pu.DEPART_MAX = 30;
+  Pu.fois = () => { const S = CG.S; if (S.puitsN === undefined) S.puitsN = Math.min(Pu.DEPART_MAX, Math.max(0, (S.day - 1) * Pu.DEPART)); return Math.pow(Pu.HAUSSE, S.puitsN); };
+  Pu.prix = n => Math.max(n, Math.round(n * Pu.fois()));
+  Pu.payer = n => { const S = CG.S, c = Pu.prix(n); S.res.or -= c; S.puitsN++; return c; };
+  if (CG.Mondes && CG.Mondes.GLOBAL && !CG.Mondes.GLOBAL.includes('puitsN')) CG.Mondes.GLOBAL.push('puitsN');
   const pos = q => ({ x: q.x * T + T / 2, y: q.y * T + T / 2 });
   Pu.pos = () => { const q = Pu.ici(); return q ? pos(q) : null; };
   Pu.jeter = function (n) {
-    const S = CG.S, R = CG.R, q = Pu.ici(), p = S.player; if (!q || S.res.or < n || q.parle || q.lancers >= Pu.LANCERS || R.puitsT) return; S.res.or -= n; q.lancers++; const c = pos(q);
+    const S = CG.S, R = CG.R, q = Pu.ici(), p = S.player; if (!q || S.res.or < Pu.prix(n) || q.parle || q.lancers >= Pu.LANCERS || R.puitsT) return; Pu.payer(n); q.lancers++; const c = pos(q);
     CG.sfx('coin'); R.puitsPiece = { t: 0, x0: p.x, y0: p.y - 30, x1: c.x, y1: c.y - 9 }; // la pièce part de la main du chef et tombe dans le puits (voir le dessin plus bas)
     R.puitsT = { t: 1.5, n, repond: Math.random() < Pu.REPOND[n] };
   };
@@ -110,16 +116,16 @@
   };
   Pu.parler = function () {
     const S = CG.S, q = Pu.ici(); if (!q) return; const or = Math.floor(S.res.or), fini = q.parle || q.lancers >= Pu.LANCERS;
-    const opt = n => ({ label: '🪙 Jeter ' + n + ' pièce' + (n > 1 ? 's' : '') + ' d\'or', sub: or < n ? 'Tu n\'as que ' + or + ' 🪙' : n === 1 ? 'On ne sait jamais...' : n === 2 ? 'Un peu plus de chances qu\'on te réponde' : 'Le puits aime ce qui brille : plus de chances, et de plus gros pouvoirs', disabled: or < n, fn: () => Pu.jeter(n) });
+    const opt = k => ({ k, n: Pu.prix(k) }), opt2 = ({ k, n }) => ({ label: '🪙 Jeter ' + n + ' pièce' + (n > 1 ? 's' : '') + ' d\'or', sub: or < n ? 'Tu n\'as que ' + or + ' 🪙' : k === 1 ? 'On ne sait jamais...' : k === 2 ? 'Un peu plus de chances qu\'on te réponde' : 'Le puits aime ce qui brille : plus de chances, et de plus gros pouvoirs', disabled: or < n, fn: () => Pu.jeter(k) });
     UI.dialog({ who: 'Le puits magique', tag: fini ? '🕳️ muet pour aujourd\'hui' : '🕳️ ' + (Pu.LANCERS - q.lancers) + ' essai' + (Pu.LANCERS - q.lancers > 1 ? 's' : '') + ' aujourd\'hui',
       text: q.parle ? 'Tu te penches. L\'eau noire ne bouge plus. Ce qui vit là-dessous a déjà parlé aujourd\'hui : il ne dira plus rien avant demain... et demain, le puits sera ailleurs.' : q.lancers >= Pu.LANCERS ? 'Le puits est plein d\'échos. Il ne répondra plus aujourd\'hui.' : 'Un vieux puits couvert de mousse, que personne n\'a creusé. Il n\'était pas là hier. On n\'en voit pas le fond... mais on dirait que quelque chose écoute. Tu jettes une pièce ?',
-      options: (fini ? [] : [opt(1), opt(2), opt(5)]).concat([{ label: '👋 S\'éloigner' }]) });
+      options: (fini ? [] : [opt2(opt(1)), opt2(opt(2)), opt2(opt(5))]).concat([{ label: '👋 S\'éloigner' }]) });
   };
   const fi0 = D.findInteract; D.findInteract = function () {
     const it = fi0.apply(this, arguments), R = CG.R; if (R.ko > 0 || R.cine || R.build) return it; const c = Pu.pos(); if (!c) return it; const p = CG.S.player;
-    if (Math.hypot(p.x - c.x, p.y - (c.y + 10)) < 50 && (!it || (it.type !== 'visitor' && it.type !== 'goblin'))) { const q = Pu.ici(); if (!q || q.parle || q.lancers >= Pu.LANCERS) return it; return { type: 'puitsMagique', obj: { x: c.x, y: c.y - 44 }, label: 'Jeter ' + Pu.MISE + ' 🪙 dans le puits' }; } return it;
+    if (Math.hypot(p.x - c.x, p.y - (c.y + 10)) < 50 && (!it || (it.type !== 'visitor' && it.type !== 'goblin'))) { const q = Pu.ici(); if (!q || q.parle || q.lancers >= Pu.LANCERS) return it; return { type: 'puitsMagique', obj: { x: c.x, y: c.y - 44 }, label: 'Jeter ' + Pu.prix(Pu.MISE) + ' 🪙 dans le puits' }; } return it;
   };
-  const in0 = D.interact; D.interact = function () { const it = D.findInteract(); if (!it || it.type !== 'puitsMagique') return in0.apply(this, arguments); if (CG.R.puitsT) return; if (CG.S.res.or < Pu.MISE) { CG.sfx('no'); return; } Pu.jeter(Pu.MISE); };
+  const in0 = D.interact; D.interact = function () { const it = D.findInteract(); if (!it || it.type !== 'puitsMagique') return in0.apply(this, arguments); if (CG.R.puitsT) return; if (CG.S.res.or < Pu.prix(Pu.MISE)) { CG.sfx('no'); CG.UI.toast('Le puits veut ' + Pu.prix(Pu.MISE) + ' 🪙 maintenant. Il devient gourmand.'); return; } Pu.jeter(Pu.MISE); };
   // la pièce : elle tourne en l'air, plonge dans le trou, et l'eau noire fait un rond
   Pu.MISE = 5; Pu.VOL = 0.6;
   if (CG.Magie && CG.Magie.marks) { const mk0 = CG.Magie.marks; CG.Magie.marks = function (g, t) { mk0.apply(this, arguments); const a = CG.R && CG.R.puitsPiece; if (!a) return; const k = a.t / Pu.VOL;

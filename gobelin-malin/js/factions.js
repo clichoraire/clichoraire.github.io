@@ -10,12 +10,12 @@
 'use strict';
 (function (CG) {
   const G = CG.G, W = CG.W, dist = CG.dist;
-  const Fa = CG.Factions = { PEUPLES: { humain: 1, elfeNoir: 1, lezard: 1, demon: 1 }, VOIT: 230, LACHE: 400, TIC: 0.4 }; /* VOIT : distance à laquelle deux camps se sautent dessus ; LACHE : distance où ils abandonnent */
+  const Fa = CG.Factions = { PEUPLES: { humain: 1, elfeNoir: 1, lezard: 1, demon: 1 }, VOIT: 230, LACHE: 400, TIC: 0.4, ACTIF: false }; /* ACTIF : faux = les ennemis ne se battent plus entre eux (une attaque arrivait décimée par les bêtes du chemin) */ /* VOIT : distance à laquelle deux camps se sautent dessus ; LACHE : distance où ils abandonnent */
   // le camp d'un ennemi : son peuple, ou « monstre » (les gnomes aussi). null : il ne prend pas part à ces bagarres
   Fa.camp = function (e) { const d = e && CG.ENEMIES[e.type]; if (!d || d.struct || e.struct || d.boss || e.grosArene || d.race === 'repaire') return null; return Fa.PEUPLES[d.race] ? d.race : 'monstre'; };
   const pret = e => !e.dead && !e.struct && !e.retreat && !e.voleur && !e.calm && !(e.charm > 0) && !(e.sleepT > 0) && !e.arene && !e.grotte && !e.hidden;
   const memeBande = (a, b) => (!a.wild && !b.wild) || (a.site && a.site === b.site) || (a.campRef && a.campRef === b.campRef);
-  Fa.ennemis = function (a, b) { if (a === b || !pret(a) || !pret(b)) return false; const ca = Fa.camp(a), cb = Fa.camp(b); if (!ca || !cb || ca === cb || (ca !== 'monstre' && cb !== 'monstre')) return false; return !memeBande(a, b); };
+  Fa.ennemis = function (a, b) { if (!Fa.ACTIF || a === b || !pret(a) || !pret(b)) return false; const ca = Fa.camp(a), cb = Fa.camp(b); if (!ca || !cb || ca === cb || (ca !== 'monstre' && cb !== 'monstre')) return false; return !memeBande(a, b); };
   const ici = () => !CG.Mondes || CG.Mondes.ici() < 2;
   const notre = o => !!o && !(o.type && CG.ENEMIES[o.type]); // le chef, un gobelin, un animal : quelqu'un du clan
   function lacher(e) { const b = e.fac; e.fac = null; if (e.event && !e.hunt) { if (e.aggro === b) { e.aggro = null; e.path = null; e.provoked = false; e.blase = !!e._facBl; } } else if (e.target === b) { e.target = null; e.seek = 0; } }

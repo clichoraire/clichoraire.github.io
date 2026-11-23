@@ -27,8 +27,8 @@
     if (attente) txt = 'La pièce tourne, brille une dernière fois, et disparaît dans le noir...';
     else if (res && res.voix) txt = '<span class="pz-voix" style="--c:' + res.col + '">' + res.voix + '</span><br><span class="pz-don" style="--c:' + res.col + '">' + res.quoi + '<span class="pz-det">' + res.detail + '</span></span>';
     else if (res && res.silence) txt = res.silence + (reste <= 0 ? '<br>Le puits est plein d\'échos : il ne répondra plus aujourd\'hui.' : '<br>Tu peux retenter ta chance.');
-    else txt = q.parle ? 'L\'eau noire ne bouge plus. Ce qui vit là-dessous a déjà parlé aujourd\'hui : il ne dira plus rien avant demain... et demain, le puits sera ailleurs.' : reste <= 0 ? 'Le puits est plein d\'échos. Il ne répondra plus aujourd\'hui.' : 'Un vieux puits couvert de mousse, que personne n\'a creusé. Il n\'était pas là hier. On n\'en voit pas le fond... mais on dirait que quelque chose écoute.';
-    const mise = n => '<button class="pz-m" data-n="' + n + '"' + (or < n || attente ? ' disabled' : '') + '><b>🪙 ' + n + ' pièce' + (n > 1 ? 's' : '') + '</b><small>' + (or < n ? 'Tu n\'as que ' + or + ' 🪙' : n === 1 ? 'On ne sait jamais...' : n === 2 ? 'Un peu plus de chances' : 'Plus de chances, plus gros pouvoirs') + '</small></button>';
+    else txt = q.parle ? 'L\'eau noire ne bouge plus. Ce qui vit là-dessous a déjà parlé aujourd\'hui : il ne dira plus rien avant demain... et demain, le puits sera ailleurs.' : reste <= 0 ? 'Le puits est plein d\'échos. Il ne répondra plus aujourd\'hui.' : 'Un vieux puits couvert de mousse, que personne n\'a creusé. Il n\'était pas là hier. On n\'en voit pas le fond... mais on dirait que quelque chose écoute. Plus on le nourrit, plus il en veut.';
+    const mise = k => { const n = Pu.prix(k); return '<button class="pz-m" data-n="' + k + '"' + (or < n || attente ? ' disabled' : '') + '><b>🪙 ' + n + ' pièce' + (n > 1 ? 's' : '') + '</b><small>' + (or < n ? 'Tu n\'as que ' + or + ' 🪙' : k === 1 ? 'On ne sait jamais...' : k === 2 ? 'Un peu plus de chances' : 'Plus de chances, plus gros pouvoirs') + '</small></button>'; };
     UI.open('puits', '<div class="pz-titre"><span>✦</span> Le puits magique <span>✦</span></div>' + SCENE + '<p class="pz-txt">' + txt + '</p>'
       + '<div class="pz-infos"><span>🪙 Ta bourse : <b>' + or + '</b></span><span>🕳️ ' + (q.parle ? 'Il a parlé aujourd\'hui' : reste + ' essai' + (reste > 1 ? 's' : '') + ' aujourd\'hui') + '</span></div>'
       + (fini && !attente ? '' : '<div class="pz-mises">' + mise(1) + mise(2) + mise(5) + '</div>')
@@ -40,7 +40,7 @@
     pan.querySelectorAll('.pz-m').forEach(b => b.onclick = () => jeter(+b.dataset.n));
   }
   function jeter(n) {
-    const S = CG.S, q = Pu.ici(); if (!q || S.res.or < n || q.parle || q.lancers >= Pu.LANCERS) return; S.res.or -= n; q.lancers++; const repond = Math.random() < Pu.REPOND[n]; CG.sfx('coin'); panneau({ attente: true });
+    const S = CG.S, q = Pu.ici(); if (!q || S.res.or < Pu.prix(n) || q.parle || q.lancers >= Pu.LANCERS) return; Pu.payer(n); q.lancers++; const repond = Math.random() < Pu.REPOND[n]; CG.sfx('coin'); panneau({ attente: true });
     setTimeout(() => { if (CG.S !== S) return; const ouvert = UI.modal && UI.modal.name === 'puits', r = Pu.reponse(n, repond, ouvert); if (ouvert && r) panneau(r); }, 1500); // fenêtre refermée entre-temps : le puits répond quand même, par un bandeau
   }
   Pu.parler = function () { panneau(null); };

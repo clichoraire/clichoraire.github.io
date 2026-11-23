@@ -69,7 +69,7 @@
   function peur() {
     const S = CG.S, R = CG.R;
     for (const g of S.goblins) {
-      if (g.hidden || g.perch || g.job === 'garde' || g.ko === true || G.militia(g)) continue;
+      if (g.hidden || g.perch || g.job === 'garde' || g.ko === true || G.militia(g) || (CG.Gibier && CG.Gibier.brave(g))) continue;
       if (g.job === 'guerisseur' && (g.state === 'heal' || g.state === 'toHeal')) { g.panic = 0; g.alerte = 0; continue; } /* à son poste, il soigne même pendant une attaque : pas de panique affichée pour rien */
       let pres = false; for (const e of R.enemies) if (!e.dead && !e.struct && !(e.charm > 0) && !(e.sleepT > 0) && !e.calm && dist(e, g) < Es.PEUR) { pres = true; break; }
       if (!pres) continue;

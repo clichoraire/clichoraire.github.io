@@ -23,7 +23,7 @@
   };
   // au-dessus du chef : la même barre, en petit
   const mk0 = CG.Magie.marks; CG.Magie.marks = function (g, t) {
-    mk0.apply(this, arguments); const S = CG.S, R = CG.R; if (!S || !R || !(R.shield > 0) || R.ko > 0) return; const p = S.player, k = Math.min(1, R.shield / (max || R.shield)), L = 40, x = p.x - L / 2, y = p.y - (p.hp < p.maxhp - 0.5 ? 84 : 66); /* quand la barre de vie est affichée, le bouclier se pose au-dessus de ses chiffres, sans les toucher */
+    mk0.apply(this, arguments); const S = CG.S, R = CG.R; if (CG.BarresChef || !S || !R || !(R.shield > 0) || R.ko > 0) return; /* barreschef.js dessine maintenant le bouclier dans la barre de vie elle-même */ const p = S.player, k = Math.min(1, R.shield / (max || R.shield)), L = 40, x = p.x - L / 2, y = p.y - (p.hp < p.maxhp - 0.5 ? 84 : 66); /* quand la barre de vie est affichée, le bouclier se pose au-dessus de ses chiffres, sans les toucher */
     g.save(); if (R.shieldT < 2.5) g.globalAlpha = 0.55 + 0.45 * Math.sin(t * 16);
     g.fillStyle = 'rgba(10,20,40,0.7)'; g.beginPath(); if (g.roundRect) g.roundRect(x - 1.5, y - 1.5, L + 3, 8, 4); else g.rect(x - 1.5, y - 1.5, L + 3, 8); g.fill();
     const gr = g.createLinearGradient(x, 0, x + L, 0), d = (t * 0.6) % 1; gr.addColorStop(0, Bb.COULEURS[0]); gr.addColorStop(Math.min(0.99, 0.2 + d * 0.7), '#f2fbff'); gr.addColorStop(1, Bb.COULEURS[1]);

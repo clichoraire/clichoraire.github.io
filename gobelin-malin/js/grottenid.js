@@ -171,7 +171,7 @@
     const gc = W.ground = document.createElement('canvas'); gc.width = c.width; gc.height = c.height; gc.getContext('2d').drawImage(c, 0, 0);
   };
   // ---------- les araignées, la reine, la fin ----------
-  const SORTES = () => bois() ? ['loup'] : ['araignee', 'araignee', 'araignee'].concat(CG.ENEMIES.cracheuse ? ['cracheuse'] : []);
+  const SORTES = () => bois() ? (CG.Loups ? CG.Loups.meute() : ['loup']) : ['araignee', 'araignee', 'araignee'].concat(CG.ENEMIES.cracheuse ? ['cracheuse'] : []);
   const dansLave = (x, y) => cols.get(Math.floor(x / T) + Math.floor(y / T) * 1000) === 'l';
   function poser(type, x, y) { for (let k = 0; k < 40 && (!W.walkPx(x, y) || dansLave(x, y)); k++) { x += rand(-20, 20); y += rand(-20, 20); } if (!W.walkPx(x, y)) return null; const e = G.spawnEnemy(type, x, y, { wild: true, exact: true }); if (!e) return null; e.arene = true; e.etage = 99; e.leash = 1400; e.aggroR = Gn.VOIT; e.calm = false; e.grotte = true; return e; }
   // certains monstres reviennent : tué, il reparaît à sa place quand le chef s'est éloigné un moment (toujours au moins un, dans la première salle)
@@ -183,7 +183,7 @@
     const S = CG.S, R = CG.R, A = S.arene, P = plan(), pal = A.palier || 0, d = S.day; R.grotte = { reine: null };
     P.salles.forEach((s, i) => { if (!i) return; const cx = (s.x0 + s.w / 2) * T, cy = (s.y0 + s.h / 2) * T, fin = i === P.salles.length - 1;
       const bete = bois() ? 'loup' : 'araignee';
-      if (fin) { const e = poser(bete, cx + T * 2, cy); if (e) { e.hp = e.maxhp = Math.round(e.hp * Gn.REINE_VIE * (1 + pal * 0.6)); e.dmg *= Gn.REINE_DMG; e.r = Math.round(e.r * 1.35); e.grosArene = true; e.nomArene = bois() ? 'Le chef de meute' : 'La reine des araignées'; e.aggroR = 330; R.grotte.reine = e; } for (let k = 0; k < 2 + pal; k++) poser(pick(SORTES()), cx + rand(-70, 30), cy + rand(-90, 90)); return; }
+      if (fin) { const e = poser(bois() && CG.Loups ? CG.Loups.chef() : bete, cx + T * 2, cy); if (e) { e.hp = e.maxhp = Math.round(e.hp * Gn.REINE_VIE * (1 + pal * 0.6)); e.dmg *= Gn.REINE_DMG; e.r = Math.round(e.r * 1.35); e.grosArene = true; e.nomArene = bois() ? 'Le chef de meute' : 'La reine des araignées'; e.aggroR = 330; R.grotte.reine = e; } for (let k = 0; k < 2 + pal; k++) poser(pick(SORTES()), cx + rand(-70, 30), cy + rand(-90, 90)); return; }
       for (let k = 0; k < 3 + pal + Math.floor(i / 2) + (bois() ? 2 : 0); k++) revient(poser(pick(SORTES()), cx + rand(-s.w * T * 0.36, s.w * T * 0.36), cy + rand(-s.h * T * 0.34, s.h * T * 0.34)), i === 1 && !k); });
     P.couloirs.forEach((c, i) => { if (i) poser(bois() ? 'loup' : 'araignee', (c.mx + 1) * T, ((c.y1 + c.y2) / 2 + 1) * T); });
     P.recoins.forEach(r => { const cx = (r.x0 + 2) * T, cy = (r.y0 + 2) * T; poser(pick(SORTES()), cx - 20, cy); poser(bois() ? 'loup' : 'araignee', cx + 24, cy + 14); G.dropRes(cx, cy - 10, 'or', 25 + d * 4 + pal * 15); if (Math.random() < 0.5) G.drop(cx, cy - 10, { kind: 'potion', n: 1 }); }); /* un recoin : deux gardiennes et un petit trésor */
@@ -361,7 +361,7 @@
   const rw0 = D.rollWild; D.rollWild = function () { const r = rw0.apply(this, arguments), m = mode(); if (!m || CG.S.arene.gagne) return r; if (m === 'nid') peupler(); else peuplerChateau(); coffres(m); barils(bois() ? 'bois' : m); return r; };
   Gn.plan = () => plan();
   // ---------- des barils (ou des jarres, selon l'endroit) : un coup de bâton les casse, et il en tombe parfois quelque chose ----------
-  Gn.BARIL = { PAR_SALLE: [0, 2], RIEN: 0.4, PRES: 52, CORPS: 15 };
+  Gn.BARIL = { PAR_SALLE: [0, 2], RIEN: 0.4, PRES: 52, CORPS: 15, LARGE: 14 }; /* LARGE : le baril est gros, le coup le touche avant d'arriver à son milieu */
   function barils(m) {
     const R = CG.R, P = plan(), p = CG.S.player, B = R.barils = [], pris = (x, y) => B.some(b => Math.hypot(b.x - x, b.y - y) < 30) || R.chests.some(c => Math.hypot(c.x - x, c.y - y) < 44) || Math.hypot(p.x - x, p.y - y) < 90 || (P.cage && Math.hypot(P.cage.x - x, P.cage.y - y) < 90);
     const libre = (x, y) => W.walkPx(x, y) && W.walkPx(x - 12, y) && W.walkPx(x + 12, y) && W.walkPx(x, y - 10) && ![[0, 0], [-12, 0], [12, 0], [0, 10]].some(q => cols.has(Math.floor((x + q[0]) / T) + Math.floor((y + q[1]) / T) * 1000));
@@ -376,6 +376,10 @@
     if (q < 0.76) G.dropRes(b.x, b.y, 'or', CG.irand(4, 9) + S.day); else if (q < 0.88) for (let k = 0; k < 2; k++) G.drop(b.x, b.y, { kind: 'xp', n: 3 + S.day }); else if (q < 0.96) G.drop(b.x, b.y, { kind: 'potion', n: 1 }); else { G.dropRes(b.x, b.y, 'or', 30 + S.day * 4); G.text(b.x, b.y - 40, 'Un magot !', '#ffe36b', true); }
   }
   { const sb1 = G.strikeBuilding; G.strikeBuilding = function () { const R = CG.R, B = mode() && R.barils, p = CG.S.player; if (B && B.length) { let best = null, bd = Gn.BARIL.PRES; for (const b of B) { const dx = b.x - p.x, dy = b.y - 10 - p.y, d = Math.hypot(dx, dy) || 1; if (d < bd && (d < 22 || (dx * R.dir.x + dy * R.dir.y) / d > 0.1)) { bd = d; best = b; } } if (best) return casser(best); } return sb1.apply(this, arguments); };
+    // un coup d'arme casse les barils qu'il atteint, même si un ennemi est touché en même temps ; le coup tournoyant casse tout autour
+    const at1 = G.attack; G.attack = function () { const R = CG.R, cd = R ? R.atkCd : 0, r = at1.apply(this, arguments), B = CG.R && mode() && CG.R.barils; if (!B || !B.length || !(CG.R.atkCd > cd) || !(CG.R.swing >= 0.9)) return r;
+      const p = CG.S.player, d0 = CG.R.dir || { x: 1, y: 0 }, tour = G.tech('g4'), portee = (tour ? 60 : 44) + Gn.BARIL.LARGE;
+      B.filter(b => { const dx = b.x - p.x, dy = b.y - 10 - p.y, d = Math.hypot(dx, dy) || 1; return d < portee && (tour || d < 28 || (dx * d0.x + dy * d0.y) / d > 0); }).forEach(casser); return r; };
     const bl1 = G.blast; G.blast = function (x, y, r) { const res = bl1.apply(this, arguments), B = mode() && CG.R.barils; if (B) B.filter(b => Math.hypot(b.x - x, b.y - 12 - y) < r).forEach(casser); return res; };
     const ub = G.update; G.update = function (dt) { ub.apply(this, arguments); const R = CG.R, B = R && mode() && R.barils; if (!B || !B.length || R.passe > 0 || R.ko > 0) return; const p = CG.S.player; for (const b of B) { const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy); if (d < Gn.BARIL.CORPS) { const m = Gn.BARIL.CORPS - d; G.slide(p, (d ? dx / d : 1) * m, (d ? dy / d : 0) * m, 8); } } };
     const PB = { bois: ['#8e6638', '#6a4722', '#4a4a50'], nid: ['#8e6638', '#6a4722', '#4a4a50'], chateau: ['#6a4a3a', '#4a3226', '#3a3a42'], glace: ['#9cc8e8', '#6ea4d0', '#e8f4ff'], lave: ['#4a3a38', '#2e2224', '#ff8a1e'], eau: ['#b8704a', '#8a4e32', '#58b05a'] };

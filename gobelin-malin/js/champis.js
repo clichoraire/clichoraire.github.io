@@ -8,6 +8,7 @@
 (function (CG) {
   const G = CG.G, W = CG.W, Art = CG.Art, Ma = CG.Marais, TAU = Math.PI * 2, rand = CG.rand, dist = CG.dist;
   const Ch = CG.Champis = { SPORES: 78, GONFLE: 0.85, SPORES_CD: [5, 7], DARD_CD: [2.8, 3.8], DARD_V: 200 };
+  Ch.COGNE = { CD: [7, 10], PRES: 110, PREP: 0.7, RAYON: 125, LENT: 3.5, K: 0.5, DMG: 0.5 }; /* le gros champi lève les poings (PREP s), cogne le sol, et tout le monde à RAYON pixels marche à moitié vitesse pendant LENT s */
   Ch.TOUPIE = { VOIT: 250, CD: [6, 9], SAUT: 0.7, DUREE: 4.5, SONNE: 1.8, ACC: 520, FROT: 1.6, VMAX: 230, ZIG: 290, ZIG_V: 2.7, TOUCHE: 27, DMG: 0.3, RECHARGE: 0.8, POUSSE: 95, POUSSE_T: 0.22 };
   // tous les autres champignons secouent la tête de temps en temps : un petit nuage de spores, plus rare et bien moins fort
   Ch.FORT = { r: Ch.SPORES, cd: Ch.SPORES_CD, dmg: 0.6, venin: [5, 2], n: 34 }; Ch.PETIT = { r: 54, cd: [13, 17], dmg: 0.25, venin: [3, 1], n: 16, petit: true };
@@ -80,8 +81,23 @@
   function pousseChef(dt) { const R = CG.R, k = R.toupiePousse; if (!k) return; if (R.ko > 0) { R.toupiePousse = null; return; } const d = Math.min(dt, k.t); G.slide(CG.S.player, k.x * d, 0, 9); G.slide(CG.S.player, 0, k.y * d, 9); k.t -= dt; if (k.t <= 0) R.toupiePousse = null; }
   const up0 = G.update; G.update = function (dt) {
     up0.apply(this, arguments); const R = CG.R; if (!R || !CG.S || !R.enemies || R.night || R.cine) return; pousseChef(dt);
-    for (const e of R.enemies) { if (e.dead) continue; if (e.type === 'champiToupie') { toupie(e, dt); if (e.toupie) continue; } if (e.type === 'champiSpore') spores(e, dt, Ch.FORT); else if (e.type === 'champi' || LOOK[e.type]) { spores(e, dt, Ch.PETIT); if (e.type === 'champiMage') sorcier(e, dt); } }
+    for (const e of R.enemies) { if (e.dead) continue; if (e.type === 'champiToupie') { toupie(e, dt); if (e.toupie) continue; } if (e.type === 'champiSpore') spores(e, dt, Ch.FORT); else if (e.type === 'champi' || LOOK[e.type]) { spores(e, dt, Ch.PETIT); if (e.type === 'champiMage') sorcier(e, dt); else if (e.type === 'champiCostaud') cogne(e, dt); } }
+    if (R.lentChampi > 0) R.lentChampi -= dt;
   };
+  function cogne(e, dt) {
+    const S = CG.S, R = CG.R, p = S.player, C = Ch.COGNE; if (e.para > 0 || e.sleepT > 0 || e.poly || e.charm > 0 || e.fear > 0 || e.rooted > 0) { e.cogne = null; return; }
+    const c = e.cogne;
+    if (!c) { e.cogneCd = (e.cogneCd === undefined ? rand(2, 5) : e.cogneCd) - dt; const tg = e.target; if (e.cogneCd > 0 || !tg || dist(e, tg) > C.PRES) return; e.cogne = { t: C.PREP, x: e.x, y: e.y }; e.path = null; G.text(e.x, e.y - 76, '❗', '#ff6a4a', true); return; }
+    e.x = c.x; e.y = c.y; e.moving = false; e.atkCd = Math.max(e.atkCd || 0, 0.5); c.t -= dt; if (c.t > 0) return;
+    e.cogne = null; e.cogneCd = rand(C.CD[0], C.CD[1]); e.atkAnim = 1; G.text(e.x, e.y - 76, 'BOUM !', '#ffe9a8', true); R.shake = Math.max(R.shake || 0, 0.28); if (CG.onScreen(e.x, e.y)) CG.sfx('tombe');
+    for (let i = 0; i < 3; i++) R.rings.push({ x: e.x, y: e.y, r: C.RAYON * (0.5 + i * 0.3), life: 0.35 + i * 0.12, col: '#c9a56b' }); G.puff(e.x, e.y - 4, '#a58a5c', 26, 200, 5);
+    if (!(R.ko > 0) && dist(e, p) < C.RAYON) { G.hurtPlayer(e.dmg * C.DMG); R.lentChampi = C.LENT; G.text(p.x, p.y - 74, '🐌 Tout tremble !', '#e8d8b8', true); }
+    for (const o of S.goblins.concat(S.pets)) { if (o.hidden || o.ko || o.dead || dist(e, o) > C.RAYON) continue; o.lentT = R.t + C.LENT; if (S.pets.includes(o)) CG.P.hurt(o, e.dmg * C.DMG * 0.6); else G.hurtGoblin(o, e.dmg * C.DMG * 0.6); }
+  }
+  { const hm0 = G.heroMul; G.heroMul = function () { return hm0.apply(this, arguments) * (CG.R && CG.R.lentChampi > 0 ? Ch.COGNE.K : 1); };
+    const ev0 = G.evoSpd; if (ev0) G.evoSpd = function (g) { return ev0.apply(this, arguments) * (g && g.lentT > CG.R.t ? Ch.COGNE.K : 1); };
+    if (CG.Buffs) CG.Buffs.LISTE.push({ k: 'lentChampi', ic: '🐌', mal: true, nom: () => 'Sol qui tremble', txt: 'Le gros champi a cogné le sol : tu marches bien moins vite.', t: () => CG.R.lentChampi > 0 ? CG.R.lentChampi : 0 });
+    const gr0 = CG.Magie.ground; CG.Magie.ground = function (g, t) { gr0.apply(this, arguments); const R = CG.R; if (!R || !R.enemies) return; for (const e of R.enemies) { const c = e.cogne; if (!c || e.dead || !CG.onScreen(e.x, e.y)) continue; const k = 1 - c.t / Ch.COGNE.PREP; g.fillStyle = 'rgba(200,150,80,' + (0.1 + k * 0.2).toFixed(2) + ')'; g.beginPath(); g.ellipse(e.x, e.y, Ch.COGNE.RAYON, Ch.COGNE.RAYON * 0.72, 0, 0, TAU); g.fill(); g.fillStyle = 'rgba(230,180,90,0.28)'; g.beginPath(); g.ellipse(e.x, e.y, Ch.COGNE.RAYON * k, Ch.COGNE.RAYON * 0.72 * k, 0, 0, TAU); g.fill(); } }; }
   // ---------- dessins ----------
   const ell = (g, x, y, rx, ry, f, r) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, rx, ry, r || 0, 0, TAU); g.fill(); };
   const circ = (g, x, y, r, f) => ell(g, x, y, r, r, f);

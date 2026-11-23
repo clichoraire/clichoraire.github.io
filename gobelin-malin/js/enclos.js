@@ -21,6 +21,20 @@
     const dx = q.bx - q.x, dy = q.by - q.y, d = Math.hypot(dx, dy), v = Ec.PAS * dt; if (d <= v) { q.x = q.bx; q.y = q.by; q.va = false; q.chez = q.vers || q.chez; q.pause = 1.5 + Math.random() * 4; return; }
     q.x += dx / d * v; q.y += dy / d * v; q.step += dt * 1.6; if (Math.abs(dx) > 1) q.face = dx > 0 ? 1 : -1; { const ici = G.buildingAt(Math.floor(q.x / T), Math.floor(q.y / T)); if (ici && ici.type === 'enclos' && !ici.site) q.chez = ici; } }
   Ec.PAS = 15; /* la vitesse de sa promenade */
+  // ---------- seule la clôture arrête le chef : dedans, il marche librement, et il entre par la porte (une seule par enclos) ----------
+  const W = CG.W, wt0 = W.walkTile; W.walkTile = function (x, y) { return wt0.apply(this, arguments) || (!!W.chef && est(x, y)); };
+  let portes = { cle: '', m: new Map() };
+  Ec.porte = function (b) { // la case de l'enclos dont le bord du bas est la porte : la plus en bas, puis la plus à gauche, devant un endroit où l'on peut marcher
+    const S = CG.S; if (!S || !b || b.site) return null; const cle = S.buildings.length + ':' + S.buildings.reduce((n, o) => n + (o.type === 'enclos' && !o.site ? 1 : 0), 0) + ':' + (S.day || 0); if (portes.cle !== cle) portes = { cle, m: new Map() };
+    if (portes.m.has(b)) return portes.m.get(b); const gr = Ec.groupe(b); let best = null, bs = -1e9;
+    for (const o of gr) for (let i = 0; i < o.w; i++) { const tx = o.tx + i, ty = o.ty + o.h - 1; if (est(tx, ty + 1)) continue; const s = (wt0.call(W, tx, ty + 1) ? 10000 : 0) + ty * 100 - tx; if (s > bs) { bs = s; best = { tx, ty }; } }
+    gr.forEach(o => portes.m.set(o, best)); return best;
+  };
+  Ec.cloture = function (p, x0, y0) {
+    const c = (x, y) => ({ tx: Math.floor(x / T), ty: Math.floor(y / T) }), dans = (x, y) => { const q = c(x, y); return est(q.tx, q.ty); }, a = dans(x0, y0); if (dans(p.x, p.y) === a) return;
+    const i = a ? c(x0, y0) : c(p.x, p.y), o = a ? c(p.x, p.y) : c(x0, y0), pt = Ec.porte(G.buildingAt(i.tx, i.ty)); if (pt && i.tx === pt.tx && i.ty === pt.ty && o.tx === pt.tx && o.ty === pt.ty + 1) return; /* par la porte */
+    if (dans(p.x, y0) === a) p.y = y0; else if (dans(x0, p.y) === a) p.x = x0; else { p.x = x0; p.y = y0; }
+  };
   const X = Art.extra; if (X && X.enclos) {
     const de0 = Art.drawExtra; Art.drawExtra = function (g, b, t) {
       if (!b || b.type !== 'enclos') return de0.apply(this, arguments); const S = CG.S, x0 = b.tx * T, y0 = b.ty * T, x1 = x0 + b.w * T, y1 = y0 + b.h * T;
@@ -28,7 +42,11 @@
       for (let j = 0; j < b.h; j++) { const y = y0 + j * T; if (!est(b.tx - 1, b.ty + j)) { box(g, x0 - 1.5, y - 9, 3, T, '#6a4826'); box(g, x0 - 2.5, y + 4, 5, 18, '#96703e'); } if (!est(b.tx + b.w, b.ty + j)) { box(g, x1 - 1.5, y - 9, 3, T, '#6a4826'); box(g, x1 - 2.5, y + 4, 5, 18, '#96703e'); } } /* les côtés */
       if (S && CG.R) for (const o of S.buildings) { if (o.type !== 'enclos' || !o.bete || o.site) continue; const q = bete(o); if (q.x < x0 || q.x >= x1 || q.y < y0 - 2 || q.y >= y1) continue; /* le sanglier qui se trouve dans ce morceau-ci, derrière la barrière du devant */
         g.save(); g.translate(q.x, q.y); g.scale(0.92, 0.92); try { Art.enemy(g, { type: 'sanglier', x: 0, y: 0, face: q.face, seed: q.seed, moving: q.va, step: q.step, atkAnim: 0, hp: 1, maxhp: 1, calm: true, enclos: true }, t || 0); } catch (e) { /* rien */ } g.restore(); }
-      for (let i = 0; i < b.w; i++) if (!est(b.tx + i, b.ty + b.h)) { const x = x0 + i * T; box(g, x, y1 - 18, T, 4, '#8a6234'); box(g, x, y1 - 8, T, 4, '#7a5630'); [x - 2, x + T - 3].forEach(px => { box(g, px, y1 - 27, 5, 28, '#a47a46'); box(g, px + 3, y1 - 27, 2, 28, 'rgba(0,0,0,0.2)'); }); } /* le devant */
+      const pt = Ec.porte(b);
+      for (let i = 0; i < b.w; i++) if (!est(b.tx + i, b.ty + b.h)) { const x = x0 + i * T;
+        if (pt && pt.tx === b.tx + i && pt.ty === b.ty + b.h - 1) { [x - 2, x + T - 3].forEach(px => { box(g, px, y1 - 31, 5, 32, '#a47a46'); box(g, px + 3, y1 - 31, 2, 32, 'rgba(0,0,0,0.2)'); box(g, px - 1, y1 - 33, 7, 3, '#c49a5c'); }); /* la porte : deux poteaux plus hauts, le battant ouvert vers l'intérieur */
+          g.fillStyle = '#8a6234'; g.beginPath(); g.moveTo(x + 2, y1 - 20); g.lineTo(x + 12, y1 - 34); g.lineTo(x + 12, y1 - 30); g.lineTo(x + 2, y1 - 16); g.closePath(); g.fill(); g.beginPath(); g.moveTo(x + 2, y1 - 9); g.lineTo(x + 12, y1 - 23); g.lineTo(x + 12, y1 - 19); g.lineTo(x + 2, y1 - 5); g.closePath(); g.fill(); box(g, x + 10, y1 - 35, 3, 17, '#7a5630'); continue; }
+        box(g, x, y1 - 18, T, 4, '#8a6234'); box(g, x, y1 - 8, T, 4, '#7a5630'); [x - 2, x + T - 3].forEach(px => { box(g, px, y1 - 27, 5, 28, '#a47a46'); box(g, px + 3, y1 - 27, 2, 28, 'rgba(0,0,0,0.2)'); }); } /* le devant */
     };
     // le sol de terre battue, sous tout le monde
     const gr0 = CG.Magie.ground; CG.Magie.ground = function (g) { const S = CG.S; if (S) for (const b of S.buildings) { if (b.type !== 'enclos' || b.site) continue; const x0 = b.tx * T, y0 = b.ty * T; if (!CG.onScreen(x0 + T, y0 + T)) continue;
@@ -38,7 +56,7 @@
   // un enclos ne s'améliore plus en pierre ou en métal : il s'agrandit en en collant d'autres
   if (CG.Ameliorer && CG.Ameliorer.UP) delete CG.Ameliorer.UP.enclos; if (CG.Ameliorer2 && CG.Ameliorer2.TYPES) { const i = CG.Ameliorer2.TYPES.indexOf('enclos'); if (i >= 0) CG.Ameliorer2.TYPES.splice(i, 1); }
   if (CG.FicheBati && CG.FicheBati.TEXTE) { const ph0 = CG.FicheBati.phrase; CG.FicheBati.phrase = function (b) { if (!b || b.type !== 'enclos') return ph0.apply(this, arguments); const gr = Ec.groupe(b), n = gr.filter(o => o.bete).length; return !n ? 'Un enclos vide. Il attend un sanglier : va en chercher un dans la forêt.' : gr.some(o => !o.bete) ? 'Un grand enclos. Il reste de la place pour un autre sanglier.' : gr.length > 1 ? 'Un grand enclos, où les sangliers se promènent.' : 'Un enclos et son sanglier. Colle-lui un autre enclos pour l\'agrandir.'; }; }
-  CG.BUILDS.enclos.desc = 'Un enclos, vide au départ. Collés l\'un à l\'autre, les enclos se rejoignent en un seul grand enclos. Amènes-y un sanglier de la forêt : il donnera de la viande et du cuir.';
+  CG.BUILDS.enclos.desc = 'Un enclos, vide au départ. Tu peux y entrer par sa porte. Collés l\'un à l\'autre, les enclos se rejoignent en un seul grand enclos. Amènes-y un sanglier de la forêt : il donnera de la viande et du cuir.';
   // ---------- pas de bête, pas de viande ----------
   const up0 = G.update; G.update = function (dt) {
     const S = CG.S, R = CG.R; if (S) for (const b of S.buildings) if (b.type === 'enclos' && !b.bete) b.pt = 0; /* le compteur de production reste à zéro tant qu'il est vide */

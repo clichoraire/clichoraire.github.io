@@ -58,6 +58,21 @@
     return it;
   };
   const in0 = D.interact; D.interact = function () { const it = D.findInteract(); if (it && it.type === 'tableau') return Tb.ouvrir(); return in0.apply(this, arguments); };
+  // un clic sur le panneau l'ouvre aussi, d'où qu'on soit
+  document.addEventListener('mousedown', e => {
+    if (e.button !== 0 || !e.target || e.target.id !== 'game' || !CG.running || CG.UI.modal || !CG.S || !CG.R) return; const R = CG.R; if (R.build || R.ko > 0 || R.cine || R.night) return;
+    const o = Tb.pos(); if (!o) return; const k = CG.viewScale ? CG.viewScale() : 1, x = e.clientX / k + R.cam.x, y = e.clientY / k + R.cam.y; if (Math.abs(x - o.x) > 36 || y < o.y - 72 || y > o.y + 8) return;
+    e.stopImmediatePropagation(); e.preventDefault(); Tb.ouvrir();
+  }, true);
+  // le même anneau au sol que pour les autres choses qu'on peut cliquer : au survol de la souris, ou quand E va l'ouvrir
+  { let souris = null; document.addEventListener('mousemove', e => { souris = e.target && e.target.id === 'game' ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; }, true);
+    window.addEventListener('load', () => { const M = CG.Magie; if (!M || !M.marks) return; const mk0 = M.marks; M.marks = function (g, t) {
+      mk0.apply(this, arguments); const R = CG.R; if (!CG.running || !CG.S || !R || CG.UI.modal || R.build || R.ko > 0 || R.cine || R.night) return; const o = Tb.pos(); if (!o || !CG.onScreen(o.x, o.y)) return;
+      let vu = false; if (souris && performance.now() - souris.t < 4000) { const k = CG.viewScale ? CG.viewScale() : 1, x = souris.x / k + R.cam.x, y = souris.y / k + R.cam.y; vu = Math.abs(x - o.x) <= 36 && y >= o.y - 72 && y <= o.y + 8; }
+      const cv = document.getElementById('game'); if (vu && cv && cv.style.cursor !== 'pointer') cv.style.cursor = 'pointer';
+      if (!vu) { const it = D.findInteract(); vu = !!it && it.type === 'tableau'; } if (!vu) return;
+      const a = 0.6 + Math.sin(t * 5) * 0.15; g.strokeStyle = 'rgba(255,255,255,' + a + ')'; g.lineWidth = 2.2; g.beginPath(); g.ellipse(o.x, o.y + 1, 30, 10, 0, 0, Math.PI * 2); g.stroke();
+    }; }); }
   Tb.ouvrir = function () {
     const S = CG.S, n = S.nouvelles, $ = id => document.getElementById(id); CG.sfx('page'); if (n) n.lu = true;
     const notes = n && n.lines.length ? n.lines.map((l, i) => { const m = l.match(EMO), ic = m ? m[1] : '📌', txt = m ? l.slice(m[0].length) : l; return '<div class="tb-note" style="--r:' + (((i * 37) % 7) - 3) * 0.35 + 'deg"><i></i><span class="ic">' + ic + '</span><p>' + esc(txt) + '</p></div>'; }).join('')

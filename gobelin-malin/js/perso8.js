@@ -123,7 +123,7 @@
     let K = { swing: 0, lunge: 0, twist: 0, slash: 0 }, striking = false, dip = 0, hop = 0, lean = 0, armW = null, armF = null, sym = true, log = null, tool = o.tool === undefined ? (P.tool || look.tool) : o.tool, mouth = 'smile', eyes = 'open';
     if (pose === 'attack') { K = strike(prog); striking = true; mouth = 'shout'; }
     else if (pose === 'chop' || pose === 'mine' || pose === 'build') { K = strike(prog); K.lunge *= 0.25; K.slash = 0; K.dessus = prog < 0.30 ? 1 : prog < 0.55 ? 2 : 3; /* outil : il passe par-dessus l'épaule, pas par en dessous */ striking = true; mouth = prog > 0.3 && prog < 0.6 ? 'shout' : 'smile'; }
-    else if (pose === 'gather') { const s = Math.sin(t * 5); dip = 13 + s * 2; sym = false; if (Math.abs(vx) < 0.1) { armW = 0.15 + s * 0.3; armF = -0.15 + s * 0.3; } else { armW = side * (-0.75 + s * 0.45); armF = side * (-0.75 - s * 0.45); } tool = null; }
+    else if (pose === 'gather') { const s = o.p === undefined ? Math.sin(t * 5) : Math.sin(Math.min(1, prog * 1.5) * Math.PI) * 2 - 1; /* un coup : il plonge les mains dans le buisson, puis les ramène */ dip = o.p === undefined ? 13 + s * 2 : 9 + (s + 1) * 4.5; sym = false; if (Math.abs(vx) < 0.1) { armW = 0.15 + s * 0.3; armF = -0.15 + s * 0.3; } else { armW = side * (-0.75 + s * 0.45); armF = side * (-0.75 - s * 0.45); } tool = null; }
     else if (pose === 'pickup') {
       const down = prog < 0.3 ? ease2(prog / 0.3) : prog < 0.5 ? 1 : prog < 0.75 ? 1 - ease2((prog - 0.5) / 0.25) : 0; dip = down * 20; tool = null;
       const hold = prog >= 0.42; armW = hold ? -0.55 : side * -0.5 * down + 0.28; armF = hold ? 0.55 : side * -0.5 * down - 0.28; if (hold) log = 'front';
@@ -542,7 +542,7 @@
     if (!dir) dir = o.moving ? (face < 0 ? 'W' : 'E') : 'S';
     let pose = 'idle', p, tool = o.tool && KNOWN[o.tool] ? o.tool : (o.tool === null || o.tool === undefined || !KNOWN[o.tool] ? null : o.tool);
     if (o.atk > 0.02) { pose = 'attack'; p = Math.max(0.3, Math.min(0.99, 0.3 + (1 - o.atk) * 0.7)); }
-    else if (o.pose === 'work') pose = tool === 'hache' ? 'chop' : tool === 'pioche' ? 'mine' : tool === 'marteau' ? 'build' : 'gather';
+    else if (o.pose === 'work') { pose = tool === 'hache' ? 'chop' : tool === 'pioche' ? 'mine' : tool === 'marteau' ? 'build' : 'gather'; if (o.workP !== undefined) p = o.workP; /* un coup à la fois : le geste part quand on appuie (coups.js) */ }
     else if (o.pose) pose = A8.POSES[o.pose] || o.pose === 'drink' || o.pose === 'drum' ? o.pose : 'idle';
     else if (o.moving) pose = 'walk';
     if (e && e.cls === 'loup') tool = 'lance';

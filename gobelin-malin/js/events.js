@@ -451,7 +451,7 @@
     const b = CG.BUILDS[type];
     if (b.terrain) {
       if (!sp.ok) { CG.sfx('no'); CG.UI.toast(!G.canPay(b.cout) ? 'Il te manque des ressources.' : b.terrain === 'path' ? 'Un chemin se trace sur de l\'herbe libre.' : 'Le gazon se sème sur un sentier ou une clairière.'); return; }
-      G.pay(b.cout); W.setTerrain(sp.tx, sp.ty, b.terrain); S.terra[W.idx(sp.tx, sp.ty)] = W.tile[W.idx(sp.tx, sp.ty)]; CG.sfx('ok'); G.puff((sp.tx + 0.5) * T, (sp.ty + 0.5) * T, b.terrain === 'path' ? '#a58a5c' : '#6ab04a', 8, 70, 3);
+      G.pay(b.cout); W.setTerrain(sp.tx, sp.ty, b.terrain); S.terra[W.idx(sp.tx, sp.ty)] = W.sous && W.sous.i === W.idx(sp.tx, sp.ty) ? W.sous.v : W.tile[W.idx(sp.tx, sp.ty)]; /* sous un bâtiment : soussol.js */ CG.sfx('ok'); G.puff((sp.tx + 0.5) * T, (sp.ty + 0.5) * T, b.terrain === 'path' ? '#a58a5c' : '#6ab04a', 8, 70, 3);
       if (!G.canPay(b.cout)) R.build = null; return;
     }
     if (!sp.ok) { CG.sfx('no'); CG.UI.toast(!G.canPay(b.cout) ? 'Il te manque des ressources.' : b.on === 'water' ? 'Un pont se pose sur l\'eau : une douve ou un étang.' : (b.on === 'road' ? 'Impossible ici : la case doit être libre (herbe ou sentier).' : 'Impossible ici : il faut de l\'herbe dégagée (ni arbre, ni sentier).')); return; }

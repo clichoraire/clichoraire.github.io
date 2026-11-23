@@ -142,7 +142,7 @@
     if (g.pose === 'drink') return 'chope';
     if (g.pose === 'dance' || g.pose === 'drum') return null;
     if (g.state === 'fight' && g.job !== 'garde') return TOOLS[g.job] || null;
-    if (g.job === 'garde') return g.equip.arc && !g.melee ? 'arc' : g.equip.epee ? 'epee' : 'lance';
+    if (g.job === 'garde') return g.equip.arc && !g.melee ? 'arc' : g.equip.epee ? 'epee' : g.equip.baton ? 'lance' : null; /* sans arme : ses poings */
     if (g.state === 'build') return 'marteau';
     return g.state === 'work' || g.state === 'logWork' || g.job === 'chasseur' ? TOOLS[g.job] : null;
   };
@@ -170,6 +170,7 @@
     if (g.migre && CG.Mondes && CG.Mondes.step(g, dt)) return; // invité dans l'autre monde : il marche vers le portail
     if (g.demenage && CG.Demenager && CG.Demenager.step(g, dt)) return; // il suit le chef pour déménager dans l'autre monde (demenager.js)
     if (g.aide && CG.Aide && CG.Aide.step(g, dt)) return; // il est venu chercher le chef pour chasser un monstre (aide.js)
+    if (g.job === 'chasseur' && CG.Gibier && CG.Gibier.defend(g, dt)) return; // un monstre approche : le chasseur lui tire dessus au lieu de se cacher (gibier.js)
     if (g.alerte > 0 && CG.Espion && CG.Espion.alerteStep(g, dt)) return; // il a vu un monstre de près : il lâche tout et rentre se cacher (espion.js)
     if ((g.chicane || g.crieur) && CG.Chicane && CG.Chicane.step(g, dt)) return; // il se bat avec un collègue, ou il court prévenir le chef (chicane.js)
     if (CG.Repli && CG.Repli.step(g, dt)) return; // presque mort : il quitte le combat, vers le guérisseur ou vers un abri (repli.js)
@@ -215,11 +216,13 @@
     if (g.state === 'party' || g.state === 'toParty') G.resetGoblin(g);
     // 3. le travail
     if (CG.Paresse && CG.Paresse.step(g, dt)) return;
+    if (CG.OutilsBase && CG.OutilsBase.step(g, dt)) return; // il va chercher (ou rendre) son outil à la réserve (outilsbase.js)
     g.pose = null;
     if (g.cls === 'loup' && CG.Evo.rider(g, dt)) return;
     if (g.job === 'eclaireur' && CG.Scout.step(g, dt)) return;
     if (g.job === 'alchimiste' && CG.Alchimie && CG.Alchimie.step(g, dt)) return; // au chaudron (alchimie.js)
     if (g.job === 'cueilleur' && CG.Potager && CG.Potager.step(g, dt)) return; // un potager plein passe avant les buissons (potager.js)
+    if (g.job === 'chasseur' && CG.Gibier && CG.Gibier.step(g, dt)) return; // il traque le gibier à l'arc (gibier.js) ; sans gibier, le vieux terrain de chasse
     if (g.job === 'bucheron') { lumber(g, dt, job); return; }
     if (job.node || g.job === 'bucheron') {
       if (g.state === 'idle') {
@@ -332,7 +335,8 @@
     }
     G.gain('or', Math.round(c.prix * (G.count('marche') ? 1.5 : 1) * (G.tech('b12') ? 1.25 : 1)), g.x, g.y - 34); S.stats.sold++; if (CG.onScreen(g.x, g.y)) CG.sfx('coin');
   };
-  G.guardDmg = g => (4 + g.lvl * 1.5 + (g.equip.epee ? 4 : 0)) * (G.tech('d13') ? 1.25 : 1) * G.apt(g, 'garde') * (CG.totemPres ? (CG.totemPres(g) ? 1.2 : 1) : 1 + 0.2 * Math.min(1, G.count('totem'))) /* un seul totem compte, et seulement près de lui */ * (R.cri > 0 ? 1.5 : 1);
+  G.POINGS = 0.6; /* sans arme (ni épée, ni arc, ni bâton), un gobelin cogne avec ses poings : cette part des dégâts seulement */
+  G.guardDmg = g => (4 + g.lvl * 1.5 + (g.equip.epee ? 4 : 0)) * (g.equip.epee || g.equip.arc || g.equip.baton ? 1 : G.POINGS) * (G.tech('d13') ? 1.25 : 1) * G.apt(g, 'garde') * (CG.totemPres ? (CG.totemPres(g) ? 1.2 : 1) : 1 + 0.2 * Math.min(1, G.count('totem'))) /* un seul totem compte, et seulement près de lui */ * (R.cri > 0 ? 1.5 : 1);
   G.guardFight = (g, e, d, dt) => guardFight(g, e, d, dt);
   function guardFight(g, e, d, dt) {
     g.state = 'fight'; g.pose = null;
@@ -561,7 +565,7 @@
   function updatePlayer(dt) {
     const p = S.player, K = CG.keys;
     if (R.cine) { R.atkCd -= dt; if (R.swing > 0) R.swing -= dt * 5; return; }
-    if (R.ko <= 0 && !(R.passe > 0)) { W.surEau = R.surEau > 0; G.unstick(p, 9); W.surEau = false; } // jamais coincé dans un mur (chantier terminé, arbre repoussé...)
+    if (R.ko <= 0 && !(R.passe > 0)) { W.surEau = R.surEau > 0; W.chef = true; G.unstick(p, 9); W.surEau = false; W.chef = false; } // jamais coincé dans un mur (chantier terminé, arbre repoussé...)
     R.atkCd -= dt; R.castCd -= dt; if (R.swing > 0) R.swing -= dt * 5; if (R.castAnim > 0) R.castAnim -= dt * 3; if (R.hurtFlash > 0) R.hurtFlash -= dt;
     if (R.shieldT > 0) { R.shieldT -= dt; if (R.shieldT <= 0) R.shield = 0; }
     if (R.cri > 0) R.cri -= dt; if (R.invuln > 0) R.invuln -= dt;
@@ -576,7 +580,7 @@
     if (mx || my) {
       { const v = CG.Tactile && CG.Tactile.vec; if (v) { mx = v.x; my = v.y; } } // manette tactile : la direction exacte du pouce, pas seulement les huit du clavier
       const l = Math.hypot(mx, my), run = G.tech('g13') && K.has('Shift'), spd = 80 * G.heroMul() * (run ? 1.7 : 1) * (onPath(p) ? 1.2 * (G.cheminK ? G.cheminK(p) : 1) : 1); R.running = run; R.dir = { x: mx / l, y: my / l };
-      if (R.passe > 0) { p.x += mx / l * spd * dt; p.y += my / l * spd * dt; } /* Passe-muraille : rien ne l'arrête */ else { W.surEau = R.surEau > 0; /* potion de nénuphar : l'eau porte le chef, et lui seul */ slide(p, mx / l * spd * dt, my / l * spd * dt, 9); W.surEau = false; }
+      if (R.passe > 0) { p.x += mx / l * spd * dt; p.y += my / l * spd * dt; } /* Passe-muraille : rien ne l'arrête */ else { W.surEau = R.surEau > 0; /* potion de nénuphar : l'eau porte le chef, et lui seul */ W.chef = true; const ex = p.x, ey = p.y; slide(p, mx / l * spd * dt, my / l * spd * dt, 9); W.surEau = false; W.chef = false; if (CG.Enclos && CG.Enclos.cloture) CG.Enclos.cloture(p, ex, ey); /* enclos.js : la clôture l'arrête, sauf à la porte */ }
       p.x = CG.clamp(p.x, 12, CG.MW * T - 12); p.y = CG.clamp(p.y, 12, CG.MH * T - 12);
       if (Math.abs(mx) > 0.2) p.face = mx > 0 ? 1 : -1; p.step += dt * 2.6 * G.heroMul() * (run ? 1.6 : 1); p.moving = true; if (run && Math.random() < dt * 14) R.parts.push({ x: p.x - R.dir.x * 8, y: p.y - 2, vx: rand(-12, 12), vy: rand(-22, -6), life: 0.4, max: 0.4, col: '#d8c8a0', size: 3, float: true });
     } else p.moving = false;
@@ -606,7 +610,7 @@
         if (s.life > 0) for (const a of S.pets) if (!a.ko && !a.ridden && Math.hypot(a.x - s.x, a.y - 16 - s.y) < 14) { CG.P.hurt(a, s.dmg); s.life = 0; break; }
       } else {
         for (const e of R.enemies) if (!e.dead && Math.hypot(e.x - s.x, e.y - 16 - s.y) < e.r + 8) {
-          if (s.aoe) G.blast(s.x, s.y, s.aoe, s.dmg, '#ff8a1e', s.team === 'p'); else G.hurtEnemy(e, s.dmg, s.owner || p, s.team === 'p');
+          R.tirK = s.kind; /* chevalieros.js : une flèche entame un bouclier, pas un sort */ try { if (s.aoe) G.blast(s.x, s.y, s.aoe, s.dmg, '#ff8a1e', s.team === 'p'); else G.hurtEnemy(e, s.dmg, s.owner || p, s.team === 'p'); } finally { R.tirK = null; }
           s.life = 0; break;
         }
       }

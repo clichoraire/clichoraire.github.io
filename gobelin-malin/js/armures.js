@@ -3,7 +3,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, Ar = CG.Armures = { MOINS: [0, 0.08, 0.15, 0.22] }; /* la part des dégâts qu'elle arrête, selon ses étoiles */
-  const niv = v => { const n = v && typeof v === 'object' ? v.n : v === true ? 1 : +v || 0; return Math.max(0, Math.min(3, n || (v ? 1 : 0))); };
+  const niv = v => { const n = v && typeof v === 'object' ? v.n : v === true ? 1 : +v || 0; return Math.max(0, Math.min(4, n || (v ? 1 : 0))); };
   Ar.chef = () => { const p = CG.S && CG.S.player, q = p && p.porte; return Ar.MOINS[niv(q && q.armure)]; };
   Ar.gobelin = g => Ar.MOINS[niv(g && g.equip && g.equip.armure)];
   const hp0 = G.hurtPlayer; G.hurtPlayer = function (dmg) { const k = Ar.chef(); return hp0.call(this, k ? dmg * (1 - k) : dmg); };

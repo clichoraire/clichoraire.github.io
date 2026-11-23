@@ -17,13 +17,15 @@
   document.head.appendChild(st);
   const lot = (ic, txt) => '<div class="lot"><i>' + ic + '</i><b>' + txt + '</b></div>';
   let ouvert = null; // { v, prendre } : la fenêtre des cadeaux est à l'écran
+  // les gros boutons dorés ne servent qu'à cette fenêtre-là : toute autre discussion retrouve ses boutons ordinaires
+  { const dg0 = UI.dialog; UI.dialog = function () { const el = document.getElementById('dialog'); if (el) el.classList.remove('cadeau'); return dg0.apply(this, arguments); }; }
   const tk0 = D.talk; D.talk = function (v) {
     if (!(v && v.quete && v.merci)) return tk0.apply(this, arguments);
     const d0 = UI.dialog; let o = null; UI.dialog = x => { o = x; }; try { tk0.apply(this, arguments); } finally { UI.dialog = d0; }
     if (!o || !o.options || !o.options[0] || !o.options[0].fn) return o ? UI.dialog(o) : undefined;
     const m = v.merci, q = Ar.Q[v.quete], prendre = o.options[0].fn, xp = 30 + 6 * CG.S.day;
     const html = '<div class="cadeaux">' + m.lot.map(x => lot(CG.RES[x[0]].icon, '+' + x[1])).join('') + lot('⭐', '+' + xp + ' XP') + (m.fiole ? lot('🧪', '+1') : '') + '</div>';
-    v.cadeauVu = true; UI.dialog({ visitor: v, who: q.qui, tag: '🎁 ta récompense', text: q.merci, extra: html, options: [{ label: '🎁 Prendre la récompense', fn: () => { ouvert = null; prendre(); } }] });
+    v.cadeauVu = true; UI.dialog({ visitor: v, who: q.qui, tag: '🎁 ta récompense', text: q.merci, extra: html, options: [{ label: '🎁 Prendre la récompense', fn: () => { ouvert = null; const el = document.getElementById('dialog'); if (el) el.classList.remove('cadeau'); prendre(); } }] });
     const el = document.getElementById('dialog'); if (el) el.classList.add('cadeau'); ouvert = { v, prendre }; CG.sfx('discovery');
   };
   const up0 = G.update; G.update = function (dt) {

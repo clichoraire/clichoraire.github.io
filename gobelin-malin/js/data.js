@@ -92,7 +92,7 @@
   CG.LINES = {
     aucun: ['Pose un plan, chef, et je sors mon marteau.', 'Entre deux chantiers, je compte les nuages. Il y en a... beaucoup.', 'Une bonne hutte, c\'est quatre murs et pas de courant d\'air.', 'Plus on est de bricoleurs, plus ça monte vite.'],
     cueilleur: ['Les baies du nord-est sont bien mûres.', 'J\'en mange une sur trois. Ne le dis à personne.', 'Mon panier est presque plein, chef !'],
-    chasseur: ['Les sangliers courent vite, mais ma flèche court plus vite.', 'Le terrain de chasse est au sud-ouest. Attention aux loups.', 'Ce soir, on mange de la viande !'],
+    chasseur: ['Les sangliers courent vite, mais ma flèche court plus vite.', 'Chut... il y a un cerf, juste là.', 'Ce soir, on mange de la viande !'],
     bucheron: ['Chaque arbre tombé, c\'est de la place pour une hutte.', 'TIMBEEER ! ... J\'adore crier ça.', 'La forêt recule, le village avance.'],
     mineur: ['Les collines du nord-ouest sont pleines de minerai.', 'Je creuse, je creuse... un jour je trouverai un diamant.', 'Le forgeron a toujours faim de minerai.'],
     forgeron: ['Sans minerai, pas d\'épée. Envoie des mineurs !', 'Une bonne lame, ça se vend bien aux marchands.', 'Cling ! Clang ! La plus belle musique du monde.'],

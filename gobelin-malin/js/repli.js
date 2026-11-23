@@ -25,6 +25,7 @@
     const R = CG.R, S = CG.S, mh = G.gobMaxHp(g);
     if (!g.repli) {
       if (g.job === 'guerisseur' || g.perch || g.hidden || g.hp <= 0 || g.hp > mh * Re.SEUIL || !(g.job === 'garde' || G.militia(g)) || !danger(g, 260)) return false;
+      if ((g.job === 'garde' || g.job === 'chasseur') && !Re.hutte(g)) return false; /* un garde ou un chasseur ne rentre pas se cacher chez lui : sans guérisseur, il tient son poste */
       g.repli = { h: Re.hutte(g) }; G.resetGoblin(g); g.repli = g.repli || { h: Re.hutte(g) }; g.state = 'repli'; g.melee = false;
       const but = g.repli.h ? place(g, g.repli.h) : G.door(G.shelter(g)); g.repli.but = but; if (!G.goTo(g, but.x, but.y)) { g.repli = null; return false; }
       G.say(g, CG.pick(CRI), 2.6); return true;

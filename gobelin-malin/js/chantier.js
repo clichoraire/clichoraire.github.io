@@ -39,7 +39,7 @@
     const S = CG.S, R = CG.R, b = g.repB;
     if (!b || !abime(b) || S.buildings.indexOf(b) < 0 || S.buildings.some(s => s.site)) { stop(g); return false; } // un chantier passe avant
     if (g.state === 'toRep') { if (G.follow(g, 96, dt)) { g.state = 'repair'; g.face = (b.tx + b.w / 2) * T > g.x ? 1 : -1; } return true; }
-    if (b.upg) { b.upg.prog += dt * G.workSpeed(g); g.moving = false; g.pose = 'work'; if (Math.random() < dt * 2.5) { G.puff((b.tx + Math.random() * b.w) * T, (b.ty + b.h) * T - 8 - Math.random() * 26, '#c9c2b0', 2, 50, 2.5); if (CG.onScreen(g.x, g.y)) CG.sfx('chop'); } return true; } // déjà payée : il n'y a qu'à travailler
+    if (b.upg) { b.upg.prog += dt * G.workSpeed(g); if (CG.Arrivee) CG.Arrivee.bricole(g, dt * G.workSpeed(g)); g.moving = false; g.pose = 'work'; if (Math.random() < dt * 2.5) { G.puff((b.tx + Math.random() * b.w) * T, (b.ty + b.h) * T - 8 - Math.random() * 26, '#c9c2b0', 2, 50, 2.5); if (CG.onScreen(g.x, g.y)) CG.sfx('chop'); } return true; } // déjà payée : il n'y a qu'à travailler
     if (S.res.bois < 1) { G.text(g.x, g.y - 46, 'Plus de bois pour réparer !', '#ffb0a0'); g.repCd = 20; stop(g); return false; }
     const mh = G.buildMaxHp(b), add = mh / Ch.SEC * dt * G.workSpeed(g), real = Math.min(add, mh - b.hp);
     b.hp += real; g.moving = false; g.pose = 'work'; b.repW = (b.repW || 0) + real / mh * boisPour(b); // compté sur la construction : à plusieurs, le bois part quand même

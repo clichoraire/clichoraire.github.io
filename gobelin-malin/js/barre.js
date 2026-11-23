@@ -1,20 +1,28 @@
 // Goblin Malin — la barre des sorts, en grand cadre. La rangée du bas porte les touches 1 à 0 ; le bouton ＋ ajoute une rangée
 // au-dessus (sans touches : on clique ou on touche le sort pour le lancer). On glisse un sort sur un autre pour les échanger.
-// Les sorts restent rangés à la suite, sans trou : la barre montre p.spells dans l'ordre, dix par rangée.
+// Chaque sort va dans la case qu'on veut, même une case vide d'une rangée du haut (p.cases).
 'use strict';
 (function (CG) {
   const G = CG.G, UI = CG.UI, Ba = CG.Barre = { PAR: 10, MAX: 4, SEUIL: 9 };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let prise = null; /* { i, x, y, bouge, fant } : le sort qu'on tient */
   Ba.rangs = () => CG.clamp(Math.floor((CG.S && CG.S.barre) || 1), 1, Ba.MAX);
-  Ba.cle = () => Ba.rangs() + (prise && prise.bouge ? 'p' + prise.i : '');
+  // chaque sort a sa case, où l'on veut : p.cases[i] = le sort de la case i (ou rien). Les touches 1 à 0 sont les dix premières cases.
+  Ba.cases = function () {
+    const p = CG.S.player; let c = p.cases; if (!Array.isArray(c)) c = p.cases = p.spells.slice();
+    for (let i = 0; i < c.length; i++) if (!c[i] || !p.spells.includes(c[i]) || c.indexOf(c[i]) !== i) c[i] = null;
+    for (const id of p.spells) if (!c.includes(id)) { let i = 0; while (i < c.length && c[i]) i++; c[i] = id; }
+    while (c.length && !c[c.length - 1]) c.pop(); return c;
+  };
+  Ba.a = i => Ba.cases()[i] || null;
+  Ba.cle = () => Ba.rangs() + (prise && prise.bouge ? 'p' + prise.i : '') + 'c' + Ba.cases().join(',');
   Ba.html = function (reste) {
-    const p = CG.S.player, n = Ba.rangs(); let h = '<div class="br-cadre"><div class="br-rangs">';
+    const p = CG.S.player, n = Ba.rangs(), C = Ba.cases(); let h = '<div class="br-cadre"><div class="br-rangs">';
     for (let r = 0; r < n; r++) { h += '<div class="br-rang">';
-      for (let c = 0; c < Ba.PAR; c++) { const i = r * Ba.PAR + c, id = p.spells[i], sp = id && CG.SPELLS[id], k = r ? '' : '<i>' + (c + 1) % 10 + '</i>';
+      for (let c = 0; c < Ba.PAR; c++) { const i = r * Ba.PAR + c, id = C[i], sp = id && CG.SPELLS[id], k = r ? '' : '<i>' + (c + 1) % 10 + '</i>';
         h += sp ? '<div class="spell' + (p.mp < G.spellCost(id) ? ' low' : '') + (prise && prise.bouge && prise.i === i ? ' prise' : '') + '" data-i="' + i + '" title="' + esc(sp.nom + ' — ' + (sp.court || sp.desc)) + '">' + k + sp.icon + '<u>' + G.spellCost(id) + '</u></div>' : '<div class="spell vide" data-i="' + i + '">' + k + '</div>'; }
       h += '</div>'; }
-    const cache = p.spells.length - n * Ba.PAR;
+    const cache = C.slice(n * Ba.PAR).filter(Boolean).length;
     h += '</div><div class="br-cote">' + (n < Ba.MAX ? '<button class="br-b" data-br="1" title="Ajouter une rangée' + (cache > 0 ? ' (' + cache + ' sort' + (cache > 1 ? 's' : '') + ' de plus à montrer)' : '') + '">＋' + (cache > 0 ? '<em>' + cache + '</em>' : '') + '</button>' : '') + (n > 1 ? '<button class="br-b" data-br="-1" title="Enlever la rangée du haut">－</button>' : '') + '</div></div>';
     return h + (reste ? '<div class="br-reste">' + reste + '</div>' : '');
   };
@@ -25,7 +33,7 @@
     const t = ev.target && ev.target.closest ? ev.target : null; if (!t) return; const b = t.closest('#spells [data-br]');
     if (b) { ev.preventDefault(); if (!CG.S) return; CG.S.barre = CG.clamp(Ba.rangs() + (+b.dataset.br), 1, Ba.MAX); CG.sfx('click'); return; }
     const s = t.closest('#spells .spell[data-i]'); if (!s) return; ev.preventDefault(); if (s.classList.contains('vide') || !libre()) return;
-    prise = { i: +s.dataset.i, x: ev.clientX, y: ev.clientY, bouge: false, fant: null, ic: CG.SPELLS[CG.S.player.spells[+s.dataset.i]].icon };
+    prise = { i: +s.dataset.i, x: ev.clientX, y: ev.clientY, bouge: false, fant: null, ic: CG.SPELLS[Ba.a(+s.dataset.i)].icon };
   });
   document.addEventListener('pointermove', ev => {
     if (!prise) return; if (!prise.bouge) { if (Math.hypot(ev.clientX - prise.x, ev.clientY - prise.y) < Ba.SEUIL) return; prise.bouge = true; const f = prise.fant = document.createElement('div'); f.className = 'spell br-fant'; f.textContent = prise.ic; document.body.appendChild(f); document.body.classList.add('br-glisse'); }
@@ -33,10 +41,10 @@
     const c = sous(ev.clientX, ev.clientY); document.querySelectorAll('#spells .vise').forEach(e => { if (e !== c) e.classList.remove('vise'); }); if (c && +c.dataset.i !== prise.i) c.classList.add('vise');
   });
   document.addEventListener('pointerup', ev => {
-    if (!prise) return; const q = prise, p = CG.S && CG.S.player; fini(); if (!p || !p.spells[q.i]) return;
-    if (!q.bouge) { if (libre()) G.cast(p.spells[q.i]); return; } /* un simple clic : on lance le sort */
-    const c = sous(ev.clientX, ev.clientY); if (!c) return; const j = Math.min(+c.dataset.i, p.spells.length - 1); if (j === q.i) return; /* sur une case vide : il prend la dernière place */
-    const t = p.spells[q.i]; p.spells[q.i] = p.spells[j]; p.spells[j] = t; CG.sfx('page');
+    if (!prise) return; const q = prise, p = CG.S && CG.S.player; fini(); if (!p) return; const C = Ba.cases(); if (!C[q.i]) return;
+    if (!q.bouge) { if (libre()) G.cast(C[q.i]); return; } /* un simple clic : on lance le sort */
+    const c = sous(ev.clientX, ev.clientY); if (!c) return; const j = +c.dataset.i; if (j === q.i) return; /* sur un autre sort : ils échangent leurs places ; sur une case vide : il s'y pose */
+    while (C.length <= Math.max(j, q.i)) C.push(null); const t = C[q.i]; C[q.i] = C[j] || null; C[j] = t; CG.sfx('page');
   });
   document.addEventListener('pointercancel', fini); window.addEventListener('blur', fini);
   const css = document.createElement('style');

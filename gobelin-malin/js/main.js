@@ -75,7 +75,7 @@
       else if (k === 'e' || k === 'Enter') D.interact();
       else if (k === 'Space' || k === 'j') G.attack();
       else if (k >= '0' && k <= '9' && k.length === 1 && CG.Meta && CG.Meta.forme()) CG.Meta.touche(k); /* transformé : les touches sont celles de la créature */
-      else if (k >= '0' && k <= '9' && k.length === 1) { const id = S.player.spells[k === '0' ? 9 : +k - 1]; if (id) G.cast(id); } // 1 à 9, puis 0 pour le dixième
+      else if (k >= '0' && k <= '9' && k.length === 1) { const n = k === '0' ? 9 : +k - 1, id = CG.Barre && CG.Barre.a ? CG.Barre.a(n) : S.player.spells[n]; if (id) G.cast(id); } // 1 à 9, puis 0 pour le dixième
       else if (k === 'q') G.drinkPotion(); else if (k === 'z' && G.drinkMana) G.drinkMana(); else if (k === 'v' && CG.Potions) CG.Potions.besace(); else if (k === 'i' && CG.Inventaire) CG.Inventaire.ouvrir();
       else if (k === 'c') UI.carte(); else if (k === 'g') UI.grimoire(); else if (k === 'h') UI.help();
       else if (k === 'm') document.getElementById('btn-sound').click();
@@ -143,7 +143,7 @@
     Art.bar(ctx, x + w / 2, y - 8, Math.max(30, w - 16), pr, '#ffe36b'); CG.Chantier.draw(ctx, b, t);
   }
   let shA = null, shB = null, ringCv = null;
-  function drawChief(c, p, t, alpha) { const cp = p === S.player && R.chefPose && R.chefPose.fin > R.t && !(R.swing > 0.02) && !(R.castAnim > 0) ? R.chefPose : null; /* au travail : cueillir, piocher, bâtir (pas de coup d'arme) */ const up = R.mount && p === S.player ? CG.Monture.pre(c, p, t) : 0; Art.goblin(c, { dir: CG.Art8.dirFrom(R.dir.x, R.dir.y), x: p.x, y: p.y - up, face: p.face, t: t, moving: up ? false : p.moving, noLegs: !!up, step: p.step, sex: 'm', hue: 112, lum: 46, chief: true, pierre: p === S.player && CG.peauDePierre(), tool: cp ? (cp.k === 'mine' ? 'pioche' : cp.k === 'chop' ? 'hache' : cp.k === 'build' ? 'marteau' : 'baton') : 'baton', glow: R.castAnim > 0 ? '#fff' : '#b070ff', atk: cp ? 0 : R.ruee && R.ruee.ph === 'course' && p === S.player ? 0.42 : Math.max(R.swing, R.castAnim || 0), equip: { armure: p.armor > 0 }, s: 1.12 * (CG.Evo ? CG.Evo.chefScale() : 1), alpha: alpha, pose: cp ? 'work' : (R.trouve || R.criShout > 0) && p === S.player ? 'cheer' : undefined }); }
+  function drawChief(c, p, t, alpha) { const cp = p === S.player && R.chefPose && R.chefPose.fin > R.t && !(R.swing > 0.02) && !(R.castAnim > 0) ? R.chefPose : null; /* au travail : cueillir, piocher, bâtir (pas de coup d'arme) */ const up = R.mount && p === S.player ? CG.Monture.pre(c, p, t) : 0; Art.goblin(c, { dir: CG.Art8.dirFrom(R.dir.x, R.dir.y), x: p.x, y: p.y - up, face: p.face, t: t, moving: up ? false : p.moving, noLegs: !!up, step: p.step, sex: 'm', hue: 112, lum: 46, chief: true, pierre: p === S.player && CG.peauDePierre(), tool: cp ? (cp.k === 'mine' ? 'pioche' : cp.k === 'chop' ? 'hache' : cp.k === 'build' ? 'marteau' : 'baton') : 'baton', glow: R.castAnim > 0 ? '#fff' : '#b070ff', atk: cp ? 0 : R.ruee && R.ruee.ph === 'course' && p === S.player ? 0.42 : Math.max(R.swing, R.castAnim || 0), equip: { armure: p.armor > 0 }, s: 1.12 * (CG.Evo ? CG.Evo.chefScale() : 1), alpha: alpha, workP: cp && cp.dur ? Math.max(0, Math.min(0.99, (R.t - cp.d) / cp.dur)) : undefined, pose: cp ? 'work' : (R.trouve || R.criShout > 0) && p === S.player ? 'cheer' : undefined }); }
   // rond de terre autour du feu, de la taille exacte de la zone où l'on ne peut pas bâtir (dessiné une fois, en double résolution)
   function fireRing() {
     if (ringCv) return ringCv;
@@ -270,7 +270,7 @@
       if (g.pep > 0 && !(g.boost > 0) && !g.bubble) { ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🎵', g.x + 12, g.y - 44 + Math.sin(t * 6 + g.id) * 2); }
       if (g.boost > 0 && !g.bubble) { ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('💢', g.x + 12, g.y - 44 + Math.sin(t * 10) * 2); }
       if (!g.met && !g.bubble) Art.bubble(ctx, g.x, g.y - 60 + Math.sin(t * 3 + g.id) * 2, '👋'); const mh = G.gobMaxHp(g); if (g.hp < mh - 0.5) hpBar(g.x, g.y - 46, 30, g.hp, mh, '#6ad84a'); if (g.bubble) Art.bubble(ctx, g.x, g.y - 60, g.bubble); }
-    { const p = S.player; if (p.hp < p.maxhp - 0.5 && R.ko <= 0) hpBar(p.x, p.y - 56, 36, p.hp, p.maxhp, '#ff5a4a'); }
+    { const p = S.player; if (!CG.BarresChef && p.hp < p.maxhp - 0.5 && R.ko <= 0) hpBar(p.x, p.y - 56, 36, p.hp, p.maxhp, '#ff5a4a'); }
     for (const b of S.buildings) { const mh = G.buildMaxHp(b); if (mh && b.hp < mh) Art.bar(ctx, (b.tx + b.w / 2) * T, b.ty * T - (b.h > 1 ? 34 : 14), b.w > 1 ? 46 : 30, b.hp / mh, '#e8c84a'); }
     for (const e of R.enemies) { if (!(e.fear > 0 || e.daze > 0 || e.etourdi > R.t) || e.dead || !CG.onScreen(e.x, e.y)) continue; ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; if (e.fear > 0) { ctx.fillText('😱', e.x, e.y - 54); continue; }
       /* assommé : de petites étoiles tournent autour de sa tête, comme dans les dessins animés (celles de derrière sont plus petites et plus pâles) */

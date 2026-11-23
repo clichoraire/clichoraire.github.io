@@ -200,9 +200,10 @@
   }
   Soc.chat = function (g, topic) {
     const S = CG.S, ps = G.perso(g), first = !topic; topic = topic || topicFor(g);
-    const opts = CG.shuffle(topic.o.slice()).map(o => ({ label: fillT(o[0], g), fn: () => o[4] ? Soc.chat(g, o[4]) : outcome(g, o) }));
+    const auFeu = !!(CG.R && CG.R.fireLit) || G.partyTime(), lesChoix = auFeu && topic.o.filter(o => o[1] !== '!').length >= 2 ? topic.o.filter(o => o[1] !== '!') : topic.o; /* autour du feu, on ne chicane personne pour qu'il travaille */
+    const opts = CG.shuffle(lesChoix.slice()).map(o => ({ label: fillT(o[0], g), fn: () => o[4] ? Soc.chat(g, o[4]) : outcome(g, o) }));
     if (first) { // des choix qui s'ajoutent au hasard : chicaner, ou carrément renvoyer du clan
-      if (!topic.o.some(o => o[1] === '!') && Math.random() < 0.3) opts.push({ label: '😤 ' + pick(SCOLD), fn: () => outcome(g, ['', '!']) });
+      if (!auFeu && !topic.o.some(o => o[1] === '!') && Math.random() < 0.3) opts.push({ label: '😤 ' + pick(SCOLD), fn: () => outcome(g, ['', '!']) });
       if (!topic.o.some(o => o[1] === 'x') && Math.random() < 0.1) opts.push({ label: '🚪 ' + pick(BANISH), fn: () => outcome(g, ['', 'x']) });
     }
     CG.UI.dialog({ goblin: g, who: g.name, tag: G.persoNom(g) + ' · discussion', text: fillT(topic.t, g), options: opts });
@@ -225,11 +226,11 @@
     if (eff === '0') { G.say(g, rep || pick(NEUTRE), 4); if (Math.random() < 0.6) Soc.bystanders(g, 'fun'); return; }
     // content : un peu de moral (une fois par jour et par gobelin) et il travaille plus vite pendant 30 s
     const firstToday = g.chatDay !== S.day, m = firstToday ? (sup ? 3 : 2) : 0, dur = sup ? 45 : 30; g.chatDay = S.day;
-    S.morale = CG.clamp(S.morale + m, 0, 100); g.ami = CG.clamp((g.ami || 0) + (sup ? 2 : 1), -6, 6); g.pep = Math.max(g.pep || 0, dur);
+    S.morale = CG.clamp(S.morale + m, 0, 100); g.ami = CG.clamp((g.ami || 0) + (sup ? 2 : 1), -6, 6); const auFeu = !!(CG.R && CG.R.fireLit); if (!auFeu) g.pep = Math.max(g.pep || 0, dur); /* autour du feu, personne ne travaille : pas de coup de fouet */
     if (firstToday) G.addXp(2);
     G.text(g.x, g.y - 50, sup ? '❤️✨' : '❤️', '#fff', true); CG.sfx('ok');
     G.say(g, rep || (sup || Math.random() < 0.5 ? fillT(pick(ps.oui), g) : pick(P0.GOOD)), 4); Soc.bystanders(g, 'good');
-    CG.UI.toast((sup ? '🤩 Tu as trouvé les mots parfaits pour ' + g.name : '😄 ' + g.name + ' est content' + (g.sex === 'f' ? 'e' : '')) + (m ? ' : moral +' + m : '') + ', et ' + (g.sex === 'f' ? 'elle' : 'il') + ' travaille plus vite pendant ' + dur + ' s.' + (firstToday ? '' : ' (Vous avez déjà jasé aujourd\'hui : pas de moral en plus.)'));
+    CG.UI.toast((sup ? '🤩 Tu as trouvé les mots parfaits pour ' + g.name : '😄 ' + g.name + ' est content' + (g.sex === 'f' ? 'e' : '')) + (m ? ' : moral +' + m : '') + (auFeu ? '.' : ', et ' + (g.sex === 'f' ? 'elle' : 'il') + ' travaille plus vite pendant ' + dur + ' s.') + (firstToday ? '' : ' (Vous avez déjà jasé aujourd\'hui : pas de moral en plus.)'));
   }
 
   // ---------- renvoyer quelqu'un du clan ----------

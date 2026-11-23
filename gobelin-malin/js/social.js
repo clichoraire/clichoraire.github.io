@@ -119,7 +119,7 @@
   };
   function askDialog(g) {
     if (Soc.tasks().length < 2 && Math.random() < 0.4 && errandDialog(g)) return;
-    const q = pick(Q), opts = CG.shuffle(q.slice(1)).map(a => ({ label: a[0].replace('{n}', g.name).replace(/\{e\}/g, g.sex === 'f' ? 'e' : ''), fn: () => react(g, a[1], a[2] === 'boost', a[3]) }));
+    const q = pick(Q), auFeu = !!(CG.R && CG.R.fireLit) || G.partyTime(), opts = CG.shuffle(q.slice(1).filter(a => !(auFeu && a[2] === 'boost'))).map(a => ({ label: a[0].replace('{n}', g.name).replace(/\{e\}/g, g.sex === 'f' ? 'e' : ''), fn: () => react(g, a[1], a[2] === 'boost', a[3]) }));
     opts.push({ label: Soc.PRESSE, echap: true, fn: () => react(g, Soc.PRESSE_MORAL) }); /* pour passer vite : ça coûte un peu de moral */
     CG.UI.dialog({ goblin: g, who: g.name, tag: 'vient te poser une question', text: q[0].replace(/\{e\}/g, g.sex === 'f' ? 'e' : ''), options: opts });
   }

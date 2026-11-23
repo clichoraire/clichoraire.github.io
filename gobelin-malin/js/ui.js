@@ -99,10 +99,10 @@
   UI.refresh = function (hint) {
     sync(); if (!S) return;
     const p = S.player, h = Math.floor(S.hour) % 24, m = Math.floor((S.hour % 1) * 6) * 10, night = S.hour >= 19.5 || S.hour < 6;
-    const r = S.res, key = [S.day, h, m, Math.floor(r.food), Math.floor(r.bois), Math.floor(r.minerai), Math.floor(r.cuir), Math.floor(r.or), Math.floor(r.os || 0), Math.floor(r.slime || 0), UI.resPos || 0, S.goblins.length, G.capacity(), Math.round(S.morale), (p.fioles && p.fioles.mana1) || 0, Math.round(p.hp), p.maxhp, Math.floor(p.mp), p.maxmp, p.xp, p.lvl, p.potions, Math.ceil(R.shield), R.alarm, S.tech.points, (R.tasks || []).map(k => k.to.id).join('.')].join('|');
+    const r = S.res, fige = !!(CG.Mondes && CG.Mondes.ici && CG.Mondes.ici() === 2), /* donjon, arène : dehors, le temps s'est arrêté */ key = [S.day, fige ? -1 : h, m, Math.floor(r.food), Math.floor(r.bois), Math.floor(r.minerai), Math.floor(r.cuir), Math.floor(r.or), Math.floor(r.os || 0), Math.floor(r.slime || 0), UI.resPos || 0, S.goblins.length, G.capacity(), Math.round(S.morale), (p.fioles && p.fioles.mana1) || 0, Math.round(p.hp), p.maxhp, Math.floor(p.mp), p.maxmp, p.xp, p.lvl, p.potions, Math.ceil(R.shield), R.alarm, S.tech.points, (R.tasks || []).map(k => k.to.id).join('.')].join('|');
     if (key !== lastHud) {
       lastHud = key;
-      $('clock').innerHTML = '<i>' + (night ? '🌙' : S.hour >= 18 ? '🌇' : '☀️') + '</i><b>Jour ' + S.day + '</b><u>' + pad(h) + ':' + pad(m) + '</u>' + (R.alarm ? '<span class="alarm">⚔ ATTAQUE</span>' : '');
+      $('clock').innerHTML = '<i>' + (night ? '🌙' : S.hour >= 18 ? '🌇' : '☀️') + '</i><b>Jour ' + S.day + '</b><u>' + (fige ? '--:--' : pad(h) + ':' + pad(m)) + '</u>' + (R.alarm ? '<span class="alarm">⚔ ATTAQUE</span>' : '');
       const mor = S.morale >= 70 ? '😄' : S.morale >= 40 ? '🙂' : '😟';
       const TIP = { food: 'Pour nourrir le clan et faire la fête le soir', bois: 'Pour bâtir', minerai: 'Pour bâtir et forger', cuir: 'Pour les armures', or: 'Pour acheter et améliorer', os: 'Pour les potions du chaudron', slime: 'Une boule par flaque de glu' };
       /* les ressources défilent : six à la fois, les autres en glissant (flèches, molette, ou en tirant la barre) */ const LR = UI.RES_LISTE.filter(k => CG.RES[k]), VU = UI.RES_VU, n0 = UI.resPos = Math.max(0, Math.min(LR.length - VU, UI.resPos || 0)), nav = (d, ok) => LR.length > VU ? '<span class="r-nav' + (ok ? '' : ' off') + '" data-nav="' + d + '" data-tip="' + (d < 0 ? 'Ressources précédentes' : 'Autres ressources') + '" data-sub="Ou la molette, ou tire la barre">' + (d < 0 ? '‹' : '›') + '</span>' : '';
@@ -201,14 +201,14 @@
     UI.dialog({
       goblin: g, who: g.name, tag: (g.sex === 'f' ? '♀ ' + job.nomF : '♂ ' + job.nom) + ' · niv. ' + g.lvl + ' · ' + G.persoNom(g),
       text: 'Tu veux me confier un autre travail, chef ?', extra: '<p class="ask">Quel métier veux-tu lui donner ?' + (G.seeApt() ? '' : ' (Ses forces et faiblesses sont cachées : souviens-toi de ce qu\'il t\'a dit, ou lance l\'Œil de vérité.)') + '</p>', grid: true,
-      options: CG.jobsAvail().map(id => ({ label: CG.JOBS[id].icon + ' ' + (g.sex === 'f' ? CG.JOBS[id].nomF : CG.JOBS[id].nom) + aptMark(g, id), sub: (CG.jobManque && id !== g.job && CG.jobManque(id)) || aptNote(g, id).trim(), disabled: !!(CG.jobOk && id !== g.job && !CG.jobOk(id)), active: id === g.job, fn: () => UI.setJob(g, id) }))
+      options: CG.jobsAvail().map(id => ({ label: CG.JOBS[id].icon + ' ' + (g.sex === 'f' ? CG.JOBS[id].nomF : CG.JOBS[id].nom) + aptMark(g, id), sub: (CG.jobManque && id !== g.job && CG.jobManque(id, g)) || aptNote(g, id).trim(), disabled: !!(CG.jobOk && id !== g.job && !CG.jobOk(id, g)), active: id === g.job, fn: () => UI.setJob(g, id) }))
     });
   };
   const aptMark = (g, j) => { if (!G.seeApt()) return ''; const a = G.apt(g, j); return a >= 1.3 ? ' ⭐⭐' : a > 1 ? ' ⭐' : a <= 0.6 ? ' 👎👎' : a < 1 ? ' 👎' : ''; };
   const aptNote = (g, j) => { if (!G.seeApt()) return ''; const a = G.apt(g, j); return a >= 1.3 ? 'Très doué (+40 %). ' : a > 1 ? 'Doué (+20 %). ' : a <= 0.6 ? 'Vraiment pas fait pour ça (-40 %). ' : a < 1 ? 'Pas très bon (-25 %). ' : ''; };
   UI.setJob = function (g, id) {
     if (g.job === id) return;
-    if (CG.jobOk && !CG.jobOk(id)) { CG.sfx('no'); UI.toast('🔒 ' + CG.jobManque(id) + '.'); return; }
+    if (CG.jobOk && !CG.jobOk(id, g)) { CG.sfx('no'); UI.toast('🔒 ' + CG.jobManque(id, g) + '.'); return; }
     if (g.cls === 'loup') { UI.toast('🐺 ' + g.name + ' ne quittera pas sa meute pour un autre métier.'); return; }
     // l'expérience appartient au métier : on range celle de l'ancien, on reprend celle du nouveau
     g.jobs = g.jobs || {}; g.jobs[g.job] = { lvl: g.lvl, xp: g.xp }; const sv = g.jobs[id] || { lvl: 1, xp: 0 }; g.lvl = sv.lvl; g.xp = sv.xp;
@@ -267,7 +267,7 @@
   CG.cercle = grCercle;
   let grPage = 0;
   UI.grimoire = function (page) {
-    sync(); const p = S.player, sc = Object.keys(p.scrolls), n = p.spells.length;
+    sync(); const p = S.player, sc = Object.keys(p.scrolls), n = p.spells.length, CS = CG.Barre && CG.Barre.cases ? CG.Barre.cases() : p.spells; /* les cases de la barre : c'est elles qui portent les touches */
     // les pages ne bougent jamais : du premier cercle au neuvième, quel que soit l'ordre des touches. Chaque cercle s'ouvre sur sa page de garde.
     const livre = p.spells.slice().sort((a, b) => grCercle(a) - grCercle(b) || CG.SPELLS[a].prix - CG.SPELLS[b].prix || CG.SPELLS[a].nom.localeCompare(CG.SPELLS[b].nom));
     const feuilles = []; { let c0 = 0; livre.forEach(id => { const c = grCercle(id); if (c !== c0) { c0 = c; feuilles.push({ c }); } feuilles.push({ id }); }); }
@@ -279,7 +279,7 @@
     if (grPage === 0) {
       // --- page de gauche : la sélection
       h += '<div class="gr-page l"><h2 class="gr-h">Grimoire de ' + esc(S.name) + '</h2><div class="gr-orn">✦</div><div class="gr-sub">Ma sélection — touches 1 à 9, puis 0</div><div class="gr-slots" id="gr-slots">';
-      for (let i = 0; i < 10; i++) { const id = p.spells[i], sp = id && CG.SPELLS[id]; h += sp ? '<div class="gr-slot" data-i="' + i + '" title="' + esc(sp.nom) + '"><span class="gr-key">' + grKey(i) + '</span><span class="gr-ic">' + sp.icon + '</span><div class="gr-tx"><b>' + sp.nom + '</b><small>' + G.spellCost(id) + ' mana</small></div></div>' : '<div class="gr-slot vide" data-i="' + i + '"><span class="gr-key">' + grKey(i) + '</span><em>page blanche</em></div>'; }
+      for (let i = 0; i < 10; i++) { const id = CS[i], sp = id && CG.SPELLS[id]; h += sp ? '<div class="gr-slot" data-i="' + i + '" title="' + esc(sp.nom) + '"><span class="gr-key">' + grKey(i) + '</span><span class="gr-ic">' + sp.icon + '</span><div class="gr-tx"><b>' + sp.nom + '</b><small>' + G.spellCost(id) + ' mana</small></div></div>' : '<div class="gr-slot vide" data-i="' + i + '"><span class="gr-key">' + grKey(i) + '</span><em>page blanche</em></div>'; }
       h += '</div><p class="gr-note">' + (n ? 'Clique un sort pour ouvrir sa page. Glisse-le sur une autre touche pour les échanger.' + (n > 10 ? ' ' + (n - 10) + ' autre' + (n - 10 > 1 ? 's sorts t\'attendent' : ' sort t\'attend') + ' dans les pages suivantes.' : '') : 'Les pages sont encore blanches. Pour l\'instant, tu n\'as que ton bâton (Espace) : trouve un parchemin pour apprendre ton premier sort.') + '</p>' + foot('I', 'l') + '</div>';
       // --- page de droite : le mage et son sac
       h += '<div class="gr-page r"><h2 class="gr-h">Le mage</h2><div class="gr-orn">✦</div><div class="gr-stats"><span>Niveau <b>' + p.lvl + '</b></span><span>⚔️ Dégâts <b>' + Math.round(G.playerDmg()) + '</b></span><span>🛡️ Armure <b>+' + p.armor + '</b></span><span>✨ Sorts <b>×' + (1 + 0.12 * (p.lvl - 1)).toFixed(2) + '</b></span><span>🧪 Fioles <b>' + p.potions + '</b></span><span>💧 Mana <b>+' + (+G.manaRegen().toFixed(1)) + '/s</b></span><span>📖 Sorts connus <b>' + n + '</b></span><span>📜 Parchemins <b>' + sc.length + '</b></span></div>';
@@ -300,13 +300,13 @@
     } else {
       // --- une page par sort
       [0, 1].forEach(k => {
-        const f = feuilles[(grPage - 2) * 2 + k] || {}, id = f.id, i = id ? p.spells.indexOf(id) : -1, sp = id && CG.SPELLS[id], side = k ? 'r' : 'l', num = grPage * 2 + k + 1;
+        const f = feuilles[(grPage - 2) * 2 + k] || {}, id = f.id, i = id ? CS.indexOf(id) : -1, sp = id && CG.SPELLS[id], side = k ? 'r' : 'l', num = grPage * 2 + k + 1;
         if (f.c) { // la page de garde d'un cercle : son numéro, son nom, et ses sorts (un clic ouvre la page du sort)
           const les = livre.filter(x => grCercle(x) === f.c);
           h += '<div class="gr-page ' + side + ' garde"><div class="gr-g-haut">Cercle de magie</div><div class="gr-g-num"><span>' + f.c + '</span></div><div class="gr-g-nom">' + GR_NOMS[f.c] + '</div><div class="gr-orn">✦</div><div class="gr-g-liste">'
             + les.map(x => '<button class="gr-g-sort" data-go="' + pageSort(x) + '"><span>' + CG.SPELLS[x].icon + '</span><b>' + CG.SPELLS[x].nom + '</b><i>p. ' + (pageSort(x) * 2 + (feuilles.findIndex(q => q.id === x) % 2) + 1) + '</i></button>').join('') + '</div>' + foot(num, side) + '</div>'; return; }
         if (!sp) { h += '<div class="gr-page ' + side + ' blanche"><div class="gr-vide"><span>✒️</span><p>Page blanche.<br>Un sort attend quelque part d\'y être écrit...</p></div>' + foot(num, side) + '</div>'; return; }
-        let keys = ''; for (let j = 0; j < 10; j++) keys += '<button class="gr-kb' + (j === i ? ' on' : '') + '" data-set="' + i + ':' + j + '" title="' + (p.spells[j] && j !== i ? 'Échanger avec ' + esc(CG.SPELLS[p.spells[j]].nom) : 'Touche ' + grKey(j)) + '">' + grKey(j) + '</button>';
+        let keys = ''; for (let j = 0; j < 10; j++) keys += '<button class="gr-kb' + (j === i ? ' on' : '') + '" data-set="' + i + ':' + j + '" title="' + (CS[j] && j !== i ? 'Échanger avec ' + esc(CG.SPELLS[CS[j]].nom) : 'Touche ' + grKey(j)) + '">' + grKey(j) + '</button>';
         h += '<div class="gr-page ' + side + ' sort"><h2 class="gr-h">' + sp.nom + '</h2><div class="gr-orn"><button class="gr-versc" data-go="' + pageCercle(grCercle(id)) + '" title="Voir tout le cercle ' + grCercle(id) + '">Cercle ' + grCercle(id) + '</button></div>' + grArt(id, sp)
           + '<div class="gr-meta"><span>💧 <b>' + G.spellCost(id) + '</b> mana</span><span>📜 vaut <b>' + sp.prix + '</b> 🪙</span></div>' + (CG.Effets ? CG.Effets.fiche(id) : '')
           + '<p class="gr-desc">' + (CG.SortsDesc ? CG.SortsDesc.livre(id) : sp.desc) + '</p>' + (GR_NOTES[id] ? '<p class="gr-marge">« ' + GR_NOTES[id] + ' »</p>' : '')
@@ -320,7 +320,7 @@
     keyHandlers.ArrowRight = () => go(grPage + 1); keyHandlers.ArrowLeft = () => go(grPage - 1);
     P.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { const id = b.dataset.copy, prix = G.copyCost(id); if (S.res.or < prix) { CG.sfx('no'); return UI.toast('Il te faut ' + prix + ' 🪙 d\'encre et de parchemin pour copier ce sort.'); } S.res.or -= prix; delete p.scrolls[id]; p.spells.push(id); CG.sfx('page'); CG.sfx('level'); UI.toast('✨ ' + CG.SPELLS[id].nom + ' est copié dans ton grimoire. ' + (p.spells.length <= 10 ? 'Touche ' + grKey(p.spells.length - 1) + ' pour le lancer.' : 'Ouvre sa page pour le placer sur une touche.')); UI.grimoire(); });
     // changer un sort de touche : il échange sa place avec celui qui s'y trouve (ou va au bout de la sélection si la touche est libre)
-    const echange = (a, b) => { if (a === b || !p.spells[a]) return false; b = Math.min(b, p.spells.length - 1); if (a === b) return false; const t = p.spells[a]; p.spells[a] = p.spells[b]; p.spells[b] = t; CG.sfx('page'); return b; };
+    const echange = (a, b) => { if (a === b || a < 0 || !CS[a]) return false; while (CS.length <= Math.max(a, b)) CS.push(null); const t = CS[a]; CS[a] = CS[b] || null; CS[b] = t; CG.sfx('page'); return b; };
     P.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { const [a, j] = b.dataset.set.split(':').map(Number); if (echange(a, j) !== false) UI.grimoire(grPage); }); // on reste sur la même page
     // la page de sélection : un clic ouvre la page du sort, un glisser l'échange avec une autre touche
     P.querySelectorAll('.gr-slot:not(.vide)').forEach(el => {
@@ -331,7 +331,7 @@
           el.style.pointerEvents = 'none'; const o = document.elementFromPoint(ev.clientX, ev.clientY), t = o && o.closest('.gr-slot'); el.style.pointerEvents = ''; P.querySelectorAll('.gr-slot.vise').forEach(q => q.classList.remove('vise')); if (t && t !== el) t.classList.add('vise'); };
         const up = ev => {
           window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
-          if (!on) return go(pageSort(p.spells[i]));
+          if (!on) return go(pageSort(CS[i]));
           el.style.pointerEvents = 'none'; const o = document.elementFromPoint(ev.clientX, ev.clientY), t = o && o.closest('.gr-slot'); el.style.pointerEvents = '';
           if (t && t !== el) echange(i, +t.dataset.i); UI.grimoire(0);
         };

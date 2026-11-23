@@ -8,7 +8,7 @@
     d25: '', d1: 'd25',
     d3: 'd25', d9: 'd3', d8: 'd9', d4: 'd3', d17: 'd4',
     d5: 'd3', d7: 'd5', d6: 'd5', d20: 'd6', d21: 'd20', d22: 'd21', d26: 'd1', d27: 'd26', d28: 'd27',
-    d16: 'd1', d10: 'd16', d18: 'd10', d19: 'd18', d15: 'd18',
+    d10: 'd1', d18: 'd10', d19: 'd18', d15: 'd18',
     d23: 'd1', d11: 'd23', d12: 'd11', d13: 'd12',
     // ---- vie du clan : nourrir d'un côté, bâtir de l'autre
     b1: '', b2: 'b1', b3: 'b1',
@@ -24,6 +24,6 @@
     s3: 's2', s4: 's3', s8: 's4', s11: 's8', s9: 's4', s6: 's2', s10: 's6', s14: 's10', s5: 's6', s7: 's5'
   };
   /* la tour de guet se bâtit dès le départ : une vieille partie qui avait payé sa case récupère son point */
-  const up0 = CG.G.update; CG.G.update = function () { const t = CG.S && CG.S.tech; if (t) ['g1', 's1'].forEach(k => { if (t.owned[k]) { delete t.owned[k]; t.points += 1; } }); /* Peau dure et Esprit vif n'existent plus : le point revient, la vie et le mana déjà gagnés restent */ if (t) for (const k in t.owned) if (/^bn\d+$/.test(k)) { delete t.owned[k]; t.points += 1; } /* les petites cases bonus des coins (vie, mana, force, sommeil) n'existent plus : le point est rendu, ce qu'elles avaient donné reste */ if (t && t.owned.d2) { delete t.owned.d2; if (!(t.plans && t.plans.d2)) t.points += 1; if (t.plans) delete t.plans.d2; } return up0.apply(this, arguments); };
+  const up0 = CG.G.update; CG.G.update = function () { const t = CG.S && CG.S.tech; if (t) ['g1', 's1'].forEach(k => { if (t.owned[k]) { delete t.owned[k]; t.points += 1; } }); /* Peau dure et Esprit vif n'existent plus : le point revient, la vie et le mana déjà gagnés restent */ if (t) for (const k in t.owned) if (/^bn\d+$/.test(k)) { delete t.owned[k]; t.points += 1; } /* les petites cases bonus des coins (vie, mana, force, sommeil) n'existent plus : le point est rendu, ce qu'elles avaient donné reste */ if (t && t.owned.d16) { delete t.owned.d16; t.points += 1; } /* les Chausse-trapes n'existent plus (trop pareilles au Piège à pointes) : le point est rendu */ if (t && t.owned.d2) { delete t.owned.d2; if (!(t.plans && t.plans.d2)) t.points += 1; if (t.plans) delete t.plans.d2; } return up0.apply(this, arguments); };
   CG.TECH.forEach(n => { if (!(n.id in P)) return; if (P[n.id]) n.req = [P[n.id]]; else delete n.req; });
 })(window.CG);

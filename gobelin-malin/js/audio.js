@@ -17,7 +17,7 @@
   // les fonds sonores qui tournent en boucle : fichier, niveau. Le jeu dit à chaque image lesquels il veut entendre, et à quelle force (A.ambiance).
   // le monde de dehors (la forêt, pas le marais) : trois musiques, l'une après l'autre, puis on recommence
   const JOUR = ['music-world1-1.mp3', 'music-world1-2.mp3', 'music-world1-3.mp3']; let jourN = 0;
-  const FONDS = { lave: ['ambiance/lava-ambiance.mp3', 0.6], feu: ['ambiance/firecamp-crackling-sound.mp3', 0.55], nuit: ['ambiance/night-ambiant-frogs-and-crickets.mp3', 0.4], ronfle: ['ambiance/snoring-animation-sleep.mp3', 0.5] };
+  const FONDS = { lave: ['ambiance/lava-ambiance.mp3', 0.6], feu: ['ambiance/firecamp-crackling-sound.mp3', 0.3], nuit: ['ambiance/night-ambiant-frogs-and-crickets.mp3', 0.4], ronfle: ['ambiance/snoring-animation-sleep.mp3', 0.5] };
   const LIBRES = {
     sortEtincelle: 'sorts/goblin-magic-etincelle.mp3', sortFeu: 'sorts/goblin-magic-fireball.mp3', sortTerre: 'sorts/goblin-magic-elemental-earth.mp3', sortGlace: 'sorts/goblin-magic-ice.mp3',
     sortInvisible: 'sorts/goblin-magic-invisibility.mp3', sortSoin: 'sorts/goblin-magic-heal.mp3', sortOeil: 'sorts/goblin-magic-oeil-faiblesse.mp3',

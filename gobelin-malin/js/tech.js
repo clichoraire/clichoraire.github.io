@@ -11,7 +11,6 @@
   CG.TECH = [
     // ---- défense
     N('d1', 'def', 1, 2, 1, '📌', 'Piège à pointes', 'Révèle le Piège à pointes.', { unlock: ['piege'] }),
-    N('d16', 'def', 2, 0, 1, '🔩', 'Chausse-trapes', 'Révèle les Chausse-trapes, un petit piège pas cher.', { req: ['d1'], unlock: ['chausse'] }),
     N('d18', 'def', 4, 0, 2, '🕸️', 'Filets', 'Révèle le Piège à filet.', { req: ['d10'], unlock: ['filet'] }),
     N('d19', 'def', 5, 0, 2, '🕳️', 'Fosses', 'Révèle la Fosse à pieux.', { req: ['d18'], unlock: ['fosse'] }),
     N('d15', 'def', 5, 1, 2, '💥', 'Poudre noire', 'Révèle le Baril explosif.', { req: ['d18'], unlock: ['baril'] }),

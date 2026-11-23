@@ -13,7 +13,9 @@
     if (e.osNb === 2) { e.hp = e.maxhp = Math.round(e.hp * Od.VIE); e.dmg *= Od.DMG; } return e;
   };
   const pris = e => e.para > 0 || e.poly || e.sleepT > 0 || e.charm > 0 || e.fear > 0 || e.daze > 0 || e.rooted > 0.5 || e.retreat || e.kb;
-  function os(e, ux, uy, dmg) { const R = CG.R; (R.osMorts = R.osMorts || []).push({ x: e.x, y: e.y - 20, ux, uy, t: 0, dmg, vus: new Set() }); }
+  // la couleur de l'os suit celle du squelette : [contour, milieu, bouts]
+  Od.COULEURS = { squelette: ['#5a5244', '#f4eedc', '#fffaf0'], squeletteChevalier: ['#4a4e58', '#e4e6ee', '#f6f8ff'], squeletteRouge: ['#5a1410', '#f08070', '#ffb0a0'], squeletteNoir: ['#3a3440', '#8a8496', '#4a4454'] };
+  function os(e, ux, uy, dmg) { const R = CG.R; (R.osMorts = R.osMorts || []).push({ x: e.x, y: e.y - 20, ux, uy, t: 0, dmg, vus: new Set(), c: Od.COULEURS[e.type] }); }
   function gerbe(e, ux, uy, dmg) { if (e.osNb === 2) { const a = Math.atan2(uy, ux); [-Od.ECART, Od.ECART].forEach(k => os(e, Math.cos(a + k), Math.sin(a + k), dmg)); } else os(e, ux, uy, dmg); if (CG.onScreen(e.x, e.y)) CG.sfx('swing'); }
   function pas(e, dt) {
     const q = e.osL;
@@ -31,12 +33,12 @@
   };
   // celui qui en lance deux : un peu plus grand, deux os croisés dans le dos ; pendant l'élan, un os levé au-dessus de la tête
   const TAU = Math.PI * 2;
-  function unOs(g, x, y, a, l) { g.save(); g.translate(x, y); g.rotate(a); g.strokeStyle = '#4a4454'; g.lineWidth = 4.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(-l, 0); g.lineTo(l, 0); g.stroke(); g.strokeStyle = '#ece6d6'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(-l, 0); g.lineTo(l, 0); g.stroke(); g.fillStyle = '#ece6d6'; [[-l, -1.8], [-l, 1.8], [l, -1.8], [l, 1.8]].forEach(q => { g.beginPath(); g.arc(q[0], q[1], 2, 0, TAU); g.fill(); }); g.restore(); }
+  function unOs(g, x, y, a, l, C) { C = C || Od.COULEURS.squelette; g.save(); g.translate(x, y); g.rotate(a); g.strokeStyle = C[0]; g.lineWidth = 4.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(-l, 0); g.lineTo(l, 0); g.stroke(); g.strokeStyle = C[1]; g.lineWidth = 2.6; g.beginPath(); g.moveTo(-l, 0); g.lineTo(l, 0); g.stroke(); g.fillStyle = C[2]; [[-l, -1.8], [-l, 1.8], [l, -1.8], [l, 1.8]].forEach(q => { g.beginPath(); g.arc(q[0], q[1], 2, 0, TAU); g.fill(); }); g.restore(); }
   const ae = Art.enemy; Art.enemy = function (g, e, t) {
     if (!e.osNb || !Od.TYPES[e.type]) return ae.apply(this, arguments);
     const deux = e.osNb === 2, f = e.face < 0 ? -1 : 1;
-    if (deux) { g.save(); g.translate(e.x, e.y); g.scale(Od.TAILLE, Od.TAILLE); g.translate(-e.x, -e.y); unOs(g, e.x - f * 7, e.y - 31, 0.9, 9); unOs(g, e.x - f * 7, e.y - 31, -0.9, 9); }
+    if (deux) { g.save(); g.translate(e.x, e.y); g.scale(Od.TAILLE, Od.TAILLE); g.translate(-e.x, -e.y); unOs(g, e.x - f * 7, e.y - 31, 0.9, 9, Od.COULEURS[e.type]); unOs(g, e.x - f * 7, e.y - 31, -0.9, 9, Od.COULEURS[e.type]); }
     try { ae.apply(this, arguments); } finally { if (deux) g.restore(); }
-    if (e.osL) { const k = 1 - e.osL.t / Od.ELAN, s = deux ? Od.TAILLE : 1; unOs(g, e.x + f * 9 * s, e.y - (52 + k * 6) * s, -f * (0.5 + k), 7); if (deux) unOs(g, e.x - f * 3 * s, e.y - (55 + k * 6) * s, -f * (0.2 + k), 7); }
+    if (e.osL) { const k = 1 - e.osL.t / Od.ELAN, s = deux ? Od.TAILLE : 1; unOs(g, e.x + f * 9 * s, e.y - (52 + k * 6) * s, -f * (0.5 + k), 7, Od.COULEURS[e.type]); if (deux) unOs(g, e.x - f * 3 * s, e.y - (55 + k * 6) * s, -f * (0.2 + k), 7, Od.COULEURS[e.type]); }
   };
 })(window.CG);

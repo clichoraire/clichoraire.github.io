@@ -99,6 +99,6 @@
   };
   const mk0 = CG.Magie.marks; CG.Magie.marks = function (g, t) {
     mk0.apply(this, arguments); const R = CG.R; if (!R || !R.osMorts) return;
-    for (const o of R.osMorts) { g.save(); g.translate(o.x, o.y); g.rotate(o.t * 16); g.strokeStyle = '#3a3440'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(-9, 0); g.lineTo(9, 0); g.stroke(); g.strokeStyle = '#8a8496'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(-9, 0); g.lineTo(9, 0); g.stroke(); [[-10, -2.4], [-10, 2.4], [10, -2.4], [10, 2.4]].forEach(q => ell(g, q[0], q[1], 2.6, 2.6, '#4a4454')); g.restore(); }
+    for (const o of R.osMorts) { g.save(); g.translate(o.x, o.y); g.rotate(o.t * 16); const C = o.c || ['#3a3440', '#8a8496', '#4a4454']; /* [contour, milieu, bouts] : sans couleur donnée, l'os sombre du squelette noir */ g.strokeStyle = C[0]; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(-9, 0); g.lineTo(9, 0); g.stroke(); g.strokeStyle = C[1]; g.lineWidth = 2.4; g.beginPath(); g.moveTo(-9, 0); g.lineTo(9, 0); g.stroke(); [[-10, -2.4], [-10, 2.4], [10, -2.4], [10, 2.4]].forEach(q => ell(g, q[0], q[1], 2.6, 2.6, C[2])); g.restore(); }
   };
 })(window.CG);

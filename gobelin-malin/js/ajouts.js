@@ -186,7 +186,7 @@
       for (const w of R.walls) {
         w.t -= dt; w.tick -= dt; if (w.tick > 0) continue; w.tick = 0.45;
         const vx = w.x2 - w.x1, vy = w.y2 - w.y1, L2 = vx * vx + vy * vy;
-        for (const e of R.enemies) { if (e.dead || e.struct) continue; const k = CG.clamp(((e.x - w.x1) * vx + (e.y - w.y1) * vy) / L2, 0, 1); if (Math.hypot(e.x - (w.x1 + vx * k), e.y - (w.y1 + vy * k)) < 24 + e.r) { e.slow = Math.max(e.slow, 0.8); G.hurtEnemy(e, w.dmg, S.player); } }
+        for (const e of R.enemies) { if (e.dead || e.struct) continue; const k = CG.clamp(((e.x - w.x1) * vx + (e.y - w.y1) * vy) / L2, 0, 1); if (Math.hypot(e.x - (w.x1 + vx * k), e.y - (w.y1 + vy * k)) < 24 + e.r) { G.hurtEnemy(e, w.dmg, S.player); } /* il brûle, il ne ralentit pas */ }
       }
       R.walls = R.walls.filter(w => w.t > 0);
     }
