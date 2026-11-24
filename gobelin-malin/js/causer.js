@@ -72,7 +72,7 @@
   const it = G.introText; G.introText = g => it(g) + ' ' + fillT(G.perso(g).intro, g);
 
   function fillT(s, g) {
-    if (s.indexOf('{o}') >= 0) { const o = CG.S.goblins.filter(x => x !== g && x.met); s = s.replace(/\{o\}/g, o.length ? pick(o).name : 'le voisin'); }
+    if (s.indexOf('{o}') >= 0) { const R = CG.R, o = CG.S.goblins.filter(x => x !== g && x.met); let q = R && R.chatO && R.chatO.g === g && o.includes(R.chatO.o) ? R.chatO.o : null; if (!q && o.length) { q = pick(o); if (R) R.chatO = { g, o: q }; } /* le même voisin du début à la fin de la discussion : question, réponses et réplique */ s = s.replace(/\{o\}/g, q ? q.name : 'le voisin'); }
     return s.replace(/\{n\}/g, g.name).replace(/\{e\}/g, g.sex === 'f' ? 'e' : '').replace(/\{il\}/g, g.sex === 'f' ? 'elle' : 'il');
   }
 
@@ -171,6 +171,7 @@
     { w: 'soir', t: "J'aime ça, le soir. On oublie les humains, les monstres... on est juste bien.", o: [["C'est pour des soirs comme ça que je me bats.", '+', 's'], ["Profites-en, {n}. Tu as bien travaillé.", '+', 'g'], ["Et le tambour couvre les ronflements de {o}.", '+', 'b'], ["Ne t'habitue pas. Demain, c'est le travail.", '-']] },
     { w: 'soir', t: "Chef, viens voir ! J'ai fait griller une guimauve de champignon. Elle a pris en feu.", o: [["C'est comme ça qu'elles sont les meilleures !", '+', 'b'], ["Fais attention à tes doigts.", '+', 'g'], ["Bien grillée, bien dorée. Tu as le tour.", '+', 'f'], ["Tu gaspilles la nourriture.", '-']] }
   ];
+  Soc.SUJETS = C; /* repliques.js y ajoute les répliques qui manquaient */
   const SCOLD = ["Bon, assez jasé. Au travail, et plus vite que ça !", "C'est bien beau tout ça, mais je te paie pas à rien faire. Grouille !", "Moins de paroles, plus de sueur. File !", "Tu parles, tu parles... Montre-moi plutôt comment tu cours !"];
   const BANISH = ["Tu sais quoi ? Fais ton baluchon. Tu quittes le clan.", "J'en ai assez de toi. Tu n'as plus ta place ici.", "Le clan n'a pas besoin de toi. Va-t'en."];
   const PLEAD = ["Quoi ?! Chef... tu es sérieux ? Où est-ce que j'irais ? Je n'ai que ce clan...", "Me... me renvoyer ? Mais j'ai rien fait de mal ! S'il te plaît, chef...", "Tu veux que je parte ? Pour vrai ? ... Dis-moi que c'est une blague."];
@@ -199,7 +200,7 @@
     const i = pick(fresh); R.chatSeen.push(i); if (R.chatSeen.length > 45) R.chatSeen.shift(); return C[i];
   }
   Soc.chat = function (g, topic) {
-    const S = CG.S, ps = G.perso(g), first = !topic; topic = topic || topicFor(g);
+    const S = CG.S, ps = G.perso(g), first = !topic; if (first && CG.R) CG.R.chatO = null; topic = topic || topicFor(g);
     const auFeu = !!(CG.R && CG.R.fireLit) || G.partyTime(), lesChoix = auFeu && topic.o.filter(o => o[1] !== '!').length >= 2 ? topic.o.filter(o => o[1] !== '!') : topic.o; /* autour du feu, on ne chicane personne pour qu'il travaille */
     const opts = CG.shuffle(lesChoix.slice()).map(o => ({ label: fillT(o[0], g), fn: () => o[4] ? Soc.chat(g, o[4]) : outcome(g, o) }));
     if (first) { // des choix qui s'ajoutent au hasard : chicaner, ou carrément renvoyer du clan
@@ -212,7 +213,7 @@
     const S = CG.S, ps = G.perso(g); let eff = o[1], tone = o[2], rep = o[3] ? fillT(o[3], g) : null, sup = false;
     if (eff === '+' && tone && tone === ps.hait) { eff = '0'; rep = fillT(pick(ps.bof), g); }
     else if (eff === '+' && tone === ps.aime) sup = true;
-    else if (eff === '0' && tone && tone === ps.aime) { eff = '+'; rep = null; }
+    else if (eff === '0' && tone && tone === ps.aime) { eff = '+'; } /* il aime ce ton : la réponse tiède devient bonne, et il garde sa réplique à lui */
     else if (eff === '0' && tone && tone === ps.hait && !rep) rep = fillT(pick(ps.bof), g);
     if (eff === 'x') return banish(g);
     if (eff === '-') return Soc.react(g, -3, false, rep);
@@ -229,7 +230,7 @@
     S.morale = CG.clamp(S.morale + m, 0, 100); g.ami = CG.clamp((g.ami || 0) + (sup ? 2 : 1), -6, 6); const auFeu = !!(CG.R && CG.R.fireLit); if (!auFeu) g.pep = Math.max(g.pep || 0, dur); /* autour du feu, personne ne travaille : pas de coup de fouet */
     if (firstToday) G.addXp(2);
     G.text(g.x, g.y - 50, sup ? '❤️✨' : '❤️', '#fff', true); CG.sfx('ok');
-    G.say(g, rep || (sup || Math.random() < 0.5 ? fillT(pick(ps.oui), g) : pick(P0.GOOD)), 4); Soc.bystanders(g, 'good');
+    G.say(g, rep || (sup ? fillT(pick(ps.oui), g) : pick(P0.GOOD)), 4); /* la phrase de sa personnalité parle du ton qu'il aime : seulement si c'est ce ton-là */ Soc.bystanders(g, 'good');
     CG.UI.toast((sup ? '🤩 Tu as trouvé les mots parfaits pour ' + g.name : '😄 ' + g.name + ' est content' + (g.sex === 'f' ? 'e' : '')) + (m ? ' : moral +' + m : '') + (auFeu ? '.' : ', et ' + (g.sex === 'f' ? 'elle' : 'il') + ' travaille plus vite pendant ' + dur + ' s.') + (firstToday ? '' : ' (Vous avez déjà jasé aujourd\'hui : pas de moral en plus.)'));
   }
 

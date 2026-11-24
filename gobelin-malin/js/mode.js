@@ -26,7 +26,7 @@
   const wear = g => g ? (g.fun || (g.fun = {})) : (CG.S.chefFun || (CG.S.chefFun = {}));
 
   // ---------- les chapeaux : cousus à l'atelier, un par métier ; portés par quelqu'un qui fait ce métier, ils rendent plus efficace ----------
-  Mode.HAT = { cout: { cuir: 2, or: 8 }, bonus: 0.2 }; Mode.CHEF = { cout: { cuir: 4, or: 25 }, dmg: 0.15, mana: 0.2 };
+  Mode.HAT = { cout: { cuir: 2, or: 8 }, bonus: 0.2 }; Mode.CHEF = { cout: { cuir: 4, or: 25 }, dmg: 0.15, mana: 0.2, marchand: 450 }; /* marchand : son prix chez un marchand de passage */
   const prix = c => Object.keys(c).map(r => c[r] + ' ' + CG.RES[r].icon).join(' '), nomJ = (g, j) => (g.sex === 'f' ? CG.JOBS[j].nomF : CG.JOBS[j].nom).toLowerCase();
   Mode.hatOn = g => !!g && !!g.hat && g.hat === g.job;
   function chapeaux(g) {
@@ -43,8 +43,9 @@
   }
   const ws0 = G.workSpeed; G.workSpeed = g => ws0(g) * (Mode.hatOn(g) ? 1 + Mode.HAT.bonus : 1);
   const gd0 = G.guardDmg; G.guardDmg = g => gd0(g) * (Mode.hatOn(g) ? 1 + Mode.HAT.bonus : 1);
-  const pd0 = G.playerDmg; G.playerDmg = () => pd0() * (CG.S.chefHat ? 1 + Mode.CHEF.dmg : 1);
-  const mr0 = G.manaRegen; G.manaRegen = () => mr0() + (CG.S.chefHat ? Mode.CHEF.mana : 0);
+  const coiffe = () => !!CG.S.chefHat && !(CG.Chapeaux && CG.Chapeaux.porte()); /* la coiffe à plumes ne compte que si c'est bien elle qu'on porte, pas un autre chapeau (chapeaux.js) */
+  const pd0 = G.playerDmg; G.playerDmg = () => pd0() * (coiffe() ? 1 + Mode.CHEF.dmg : 1);
+  const mr0 = G.manaRegen; G.manaRegen = () => mr0() + (coiffe() ? Mode.CHEF.mana : 0);
 
   // ---------- la fenêtre : on coche ce qu'on porte ----------
   UI.tenue = function (g) {

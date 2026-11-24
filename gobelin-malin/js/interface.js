@@ -71,7 +71,7 @@
   const oter = l => l.forEach(k => { try { localStorage.removeItem(k); } catch (e) { /* rien */ } });
   const PARAMS = [KEY, 'clan-gobelin-son'], RESTE = ['gobelinmalin.records', 'goblin-malin-tombes', 'goblin-malin-config', 'goblin-malin-chef-look'];
   If.effacer = function (quoi) {
-    if (quoi === 'partie' || quoi === 'tout') { CG.dead = true; CG.wipe(); } else CG.save(); // la partie en cours est gardée quand on ne touche qu'aux paramètres
+    if (quoi === 'partie' || quoi === 'tout') { CG.dead = true; CG.wipe(); if (quoi === 'tout') for (let n = 1; n <= CG.NB_PARTIES; n++) { CG.wipe(n); if (n > 1) oter(['goblin-malin-chef-look-' + n]); } } else CG.save(); // la partie en cours est gardée quand on ne touche qu'aux paramètres
     if (quoi === 'params' || quoi === 'tout') oter(PARAMS); if (quoi === 'tout') oter(RESTE);
     If.recharger();
   };

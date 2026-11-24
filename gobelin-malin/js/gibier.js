@@ -10,7 +10,7 @@
   const Gi = CG.Gibier = {
     MAX: 7, POUSSE: 16, LOIN: [7, 18], /* combien de bêtes à la fois, secondes entre deux arrivées, distance du feu (en cases) */
     SORTES: { faisan: { hp: 1, food: 2, cuir: 0, v: 150, part: 0.3 }, biche: { hp: 2, food: 3, cuir: 1, v: 165, part: 0.45 }, cerf: { hp: 3.2, food: 4, cuir: 2, v: 155, part: 0.25 } },
-    PEUR: 85, TIR: 165, VISE: 0.6, RECHARGE: 1.4, PREND: 1.1, XP_MAX: 8,
+    PEUR: 85, TIR: 165, COLLE: 44, /* COLLE : à cette distance, plus besoin de ligne de tir dégagée */ VISE: 0.6, RECHARGE: 1.4, PREND: 1.1, XP_MAX: 8,
     JUSTE: [0.62, 0.07, 0.96], /* chance de toucher : au niveau 1, par niveau de plus, au maximum */
     FORCE: [1, 0.35, 1], /* dégâts d'une flèche sur le gibier : de base, par niveau de plus, en plus avec un arc équipé */
     DEF: { VUE: 250, RECUL: 95, CD: 1.6, DMG: [3, 1.2, 3], PV: 0.35 } /* contre les monstres : il tire jusqu'à VUE, recule sous RECUL, et se replie sous 35 % de vie */
@@ -94,7 +94,7 @@
     const d = dist(a, g);
     if (q.ph === 'traque') {
       g.pose = null; if (a.mort) { if (a.par === g) q.ph = 'va'; else fini(g, 0.4); return true; }
-      if (d < Gi.TIR && W.lineClear(g.x, g.y, a.x, a.y)) { q.ph = 'vise'; q.t = Gi.VISE; g.path = null; g.moving = false; return true; }
+      if (d < Gi.TIR && (d < Gi.COLLE || W.lineClear(g.x, g.y, a.x, a.y))) { q.ph = 'vise'; /* collé à la bête, il tire même si elle est blottie contre un mur ou une hutte : sinon il piétinait sur place sans fin */ q.t = Gi.VISE; g.path = null; g.moving = false; return true; }
       q.dur += dt; if (q.dur > 30) { a.sauf = R.t + 25; fini(g, 0.5); return true; } // elle court trop : il en cherche une autre
       q.r -= dt; if (q.r <= 0 || !g.path || !g.path.length) { q.r = 1; if (!G.goTo(g, a.x, a.y)) { a.sauf = R.t + 30; fini(g, 0.5); return true; } }
       G.follow(g, 104, dt); return true;
@@ -102,7 +102,7 @@
     if (q.ph === 'vise') {
       g.moving = false; g.face = a.x > g.x ? 1 : -1;
       if (a.mort) { q.ph = 'traque'; return true; }
-      if (d > Gi.TIR * 1.3 || !W.lineClear(g.x, g.y, a.x, a.y)) { q.ph = 'traque'; q.r = 0; return true; }
+      if (d > Gi.TIR * 1.3 || (d >= Gi.COLLE && !W.lineClear(g.x, g.y, a.x, a.y))) { q.ph = 'traque'; q.r = 0; return true; }
       q.t -= dt; if (q.t > 0) return true;
       g.atkAnim = 1; G.shoot(g, a, 'arrow', Gi.degats(g), 'g', g); const s = R.shots[R.shots.length - 1]; s.gib = a; s.rate = Math.random() > juste(g); s.life = Math.min(s.life, d / 380 + 0.25);
       q.ph = 'attend'; q.t = Gi.RECHARGE; return true;
@@ -110,7 +110,7 @@
     if (q.ph === 'attend') {
       g.moving = false; q.t -= dt;
       if (a.mort && a.par === g) { q.ph = 'va'; if (!G.goTo(g, a.x, a.y)) { g.x = a.x; g.y = a.y; } return true; }
-      if (q.t <= 0) { q.ph = a.mort ? 'traque' : (d < Gi.TIR && W.lineClear(g.x, g.y, a.x, a.y) ? 'vise' : 'traque'); q.t = Gi.VISE * 0.7; q.r = 0; }
+      if (q.t <= 0) { q.ph = a.mort ? 'traque' : (d < Gi.TIR && (d < Gi.COLLE || W.lineClear(g.x, g.y, a.x, a.y)) ? 'vise' : 'traque'); q.t = Gi.VISE * 0.7; q.r = 0; }
       return true;
     }
     if (q.ph === 'va') { if (d < 16 || G.follow(g, 100, dt)) { if (dist(a, g) > 40 && G.goTo(g, a.x, a.y)) return true; q.ph = 'prend'; q.t = Gi.PREND; g.moving = false; g.face = a.x > g.x ? 1 : -1; } return true; }

@@ -370,3 +370,10 @@ body.menu-icones #buttons #btn-triche { width: auto; padding: 0 9px; font-size: 
 
 #panel .quote:empty { display: none; }
 .opts button i.ech { background: #8a3a2a; letter-spacing: 0.3px; }
+
+/* les parties gardées : une rangée par case, la poubelle à droite */
+.acc-parties { width: min(680px, 100%); } .acc-parties .acc-btns { gap: 1.5vh; }
+.acc-rang { display: flex; gap: 12px; align-items: stretch; }
+.acc-parties .acc-rang .acc-btn { min-height: clamp(50px, 9.5vh, 80px); font-size: clamp(19px, 3.4vh, 29px); padding: 6px 22px; text-transform: none; letter-spacing: 0.5px; }
+.acc-parties .acc-rang .acc-btn.vide { background: linear-gradient(#5a4a38, #3a2e22); border-style: dashed; opacity: 0.92; }
+.acc-parties .acc-rang .acc-suppr { flex: 0 0 auto; width: auto; padding: 6px 16px; justify-content: center; } .acc-suppr .ic { width: auto; }

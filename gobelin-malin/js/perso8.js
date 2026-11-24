@@ -14,7 +14,7 @@
   A8.LOOKS = {
     chef: { tunic: '#6a3fa8', tool: 'baton', cape: '#c23a2a' }, garde: { tunic: '#5a6478', tunicF: '#75588a', tool: 'epee' },
     bucheron: { tunic: '#b8322a', tunicF: '#c8663a', tool: 'hache', plaid: true }, mineur: { tunic: '#6b6258', tunicF: '#8a6450', tool: 'pioche' },
-    chasseur: { tunic: '#8a5a34', tunicF: '#b07a3e', tool: 'lance' }, cueilleur: { tunic: '#b8587a', tunicM: '#c8962e', tool: 'panier' },
+    chasseur: { tunic: '#8a5a34', tunicF: '#b07a3e', tool: 'arc' }, cueilleur: { tunic: '#b8587a', tunicM: '#c8962e', tool: 'panier' },
     forgeron: { tunic: '#4a3a34', tunicF: '#6a3448', tool: 'marteau' }, arcier: { tunic: '#3f5f9a', tunicF: '#5a7ab8', tool: 'arc' }, tanneur: { tunic: '#9a6a3a', tunicF: '#b8804a', tool: 'couteau' },
     guerisseur: { tunic: '#e8e2cc', tunicF: '#e6d6ea', tool: 'herbes' }, aucun: { tunic: '#7d5236', tunicF: '#9a5a6e', tool: null }
   };
@@ -53,9 +53,11 @@
       hair: e && e.sex === 'f' ? pk(['couettes', 'couettes', 'couettes', 'long', 'long', 'queue', 'chignon', 'court', 'tresses', 'tresses', 'natte', 'carre', 'carre', 'macarons', 'palmier', 'afro', 'raie', 'boucle', 'emo', 'dreads']) : e && e.sex === 'm' ? pk(['chauve', 'chauve', 'chauve', 'chauve', 'brins', 'brins', 'brins', 'brins', 'crete', 'court', 'pics', 'bol', 'afro', 'brosse', 'raie', 'meche', 'ebouriffe', 'boucle', 'banane', 'houppette', 'topknot', 'couronne', 'mulet', 'dreads', 'emo']) : undefined,
       ear: pk(['pointu', 'pointu', 'long', 'court', 'feuille', 'tombant', 'dresse', 'dechire']), earSize: r(0.82, 1.2), iris: pk([38, 38, 38, 30, 48, 22, 58, 95, 190]), eyeSize: r(0.82, 1.2), eyes: pk(['rond', 'rond', 'rond', 'ovale', 'amande', 'petit', 'endormi', 'billes', 'grand', 'chat', 'tombant', 'cils', 'mefiant', 'brillant']), jaw: pk(['rond', 'rond', 'rond', 'ovale', 'ovale', 'fin', 'pointu', 'carre', 'bajoues']), marks: Math.random() < 0.3 ? { [pk(Object.keys(A8.MARKS).filter(k => k !== 'levres' || (e && e.sex === 'f')))]: 1 } : null, size: r(0.88, 1.15), head: r(0.9, 1.12), belly: r(0.85, 1.25) };
   };
-  const CHEF_KEY = 'goblin-malin-chef-look'; let chefLook = null;
-  A8.chiefLook = function () { if (!chefLook) { try { chefLook = JSON.parse(localStorage.getItem(CHEF_KEY)); } catch (e) { chefLook = null; } if (chefLook && (chefLook.skull === 0.65 || chefLook.skull === 0.72)) delete chefLook.skull; /* ancienne valeur par défaut */ chefLook = Object.assign({}, A8.DEF, { hue: 112 }, chefLook || {}); } return chefLook; };
-  A8.setChiefLook = function (l) { chefLook = l ? Object.assign({}, A8.DEF, l) : null; try { if (l) localStorage.setItem(CHEF_KEY, JSON.stringify(l)); else localStorage.removeItem(CHEF_KEY); } catch (e) { /* rien */ } };
+  // l'apparence du chef est gardée par partie (la partie n° 1 garde l'ancienne clé) ; une case neuve repart de la dernière apparence connue
+  const CHEF_KEY = 'goblin-malin-chef-look'; let chefLook = null, chefCase = 0;
+  const caseIci = () => (CG.partie ? CG.partie() : 1), chefCle = n => CHEF_KEY + (n > 1 ? '-' + n : '');
+  A8.chiefLook = function () { const n = caseIci(); if (!chefLook || chefCase !== n) { chefCase = n; try { chefLook = JSON.parse(localStorage.getItem(chefCle(n))) || (n > 1 ? JSON.parse(localStorage.getItem(CHEF_KEY)) : null); } catch (e) { chefLook = null; } if (chefLook && (chefLook.skull === 0.65 || chefLook.skull === 0.72)) delete chefLook.skull; /* ancienne valeur par défaut */ chefLook = Object.assign({}, A8.DEF, { hue: 112 }, chefLook || {}); } return chefLook; };
+  A8.setChiefLook = function (l) { const n = caseIci(); chefCase = n; chefLook = l ? Object.assign({}, A8.DEF, l) : null; try { if (l) localStorage.setItem(chefCle(n), JSON.stringify(l)); else localStorage.removeItem(chefCle(n)); } catch (e) { /* rien */ } };
   const ease2 = k => 1 - Math.pow(1 - k, 2), ease3 = k => 1 - Math.pow(1 - k, 3);
   // frappe en 3 temps : armement, coup, retour (p de 0 à 1)
   function strike(p) {

@@ -5,6 +5,15 @@
 (function (CG) {
   const G = CG.G, D = CG.D, UI = CG.UI, W = CG.W, Ar = CG.Arene, T = CG.TILE, pick = CG.pick; if (!Ar || !Ar.Q) return;
   const Mc = CG.Merci = { PARCHEMIN: 0.35, ATTEND: 3, FIOLE: 0.5 };
+  // ce qu'il dit en partant, selon ce qu'il est : un troll ne parle pas comme un elfe
+  Mc.ADIEU = {
+    troll: ['Groumf. Troll pas oublier petit vert.', 'Toi petit. Toi fort. Troll content.', 'Si petit vert en danger, troll cogner pour lui.'],
+    elfe: ['Que les feuilles guident tes pas, chef gobelin.', 'La forêt se souviendra de ton nom.', 'Si le vent t\'apporte des ennuis, les miens l\'entendront.'],
+    nain: ['Par ma barbe, tu as ma parole et ma pioche !', 'Chez les nains, une dette ne s\'oublie jamais.', 'Ce soir, je lève ma chope à ton nom, chef.'],
+    crapaud: ['Croâ ! La mare se souviendra de toi.', 'Que tes pieds restent toujours au frais, chef.', 'Croâ, croâ. Ami des crapauds, pour toujours.'],
+    autre: ['Si un jour tu as besoin de moi, tu sais où chercher.', 'Que tes pas soient légers, chef gobelin.', 'Je parlerai de toi autour de moi.']
+  };
+  Mc.adieu = q => { const k = ((q && (q.kind || '')) + ' ' + (q && (q.look || '')) + ' ' + (q && (q.qui || ''))).toLowerCase(); return Mc.ADIEU[/troll|ogre/.test(k) ? 'troll' : /elfe/.test(k) ? 'elfe' : /nain/.test(k) ? 'nain' : /crapaud/.test(k) ? 'crapaud' : 'autre']; };
   // ---------- le parchemin dans la salle ----------
   const ga0 = Ar.gagner; Ar.gagner = function () {
     const S = CG.S, R = CG.R, A = S.arene;
@@ -38,7 +47,7 @@
     if (v && v.sauve) return UI.dialog({ visitor: v, who: Ar.Q[v.sauve].sauve.qui, text: pick(['« Sans toi, j\'y serais encore, dans cette cage. Merci, chef ! »', '« Je n\'oublierai jamais ça. Va voir mon maître, il a quelque chose pour toi. »']), options: [{ label: '👋 De rien' }] });
     if (v && v.quete && v.merci) { const q = Ar.Q[v.quete], m = v.merci;
       return UI.dialog({ visitor: v, who: q.qui, tag: '🙏 te remercie', text: q.merci + ' Tiens, prends ceci : c\'est peu, mais c\'est de bon cœur.', extra: '<p class="ask">' + m.lot.map(x => '+' + x[1] + ' ' + CG.RES[x[0]].icon).join(' · ') + (m.fiole ? ' · 🧪 une fiole de vie' : '') + '</p>',
-        options: [{ label: '🎁 Merci, c\'est gentil', fn: () => { donner(v); G.say(v, pick(['Si un jour tu as besoin de moi, tu sais où chercher.', 'Que tes pas soient légers, chef gobelin.', 'Je parlerai de toi autour de moi.']), 4); } }, { label: '🤝 Garde tout, tu en as plus besoin que moi', sub: 'Tu ne prends rien · moral +6', fn: () => { v.merci = null; v.remercie = true; CG.S.morale = Math.min(100, CG.S.morale + 6); G.addXp(30 + 6 * CG.S.day); G.say(v, 'Un chef au grand cœur... On s\'en souviendra.', 4); v.leaveAt = Math.min(v.leaveAt, CG.S.hour + 0.3); CG.sfx('ok'); } }] }); }
+        options: [{ label: '🎁 Merci, c\'est gentil', fn: () => { donner(v); G.say(v, pick(Mc.adieu(q)), 4); } }, { label: '🤝 Garde tout, tu en as plus besoin que moi', sub: 'Tu ne prends rien · moral +6', fn: () => { v.merci = null; v.remercie = true; CG.S.morale = Math.min(100, CG.S.morale + 6); G.addXp(30 + 6 * CG.S.day); G.say(v, 'Un chef au grand cœur... On s\'en souviendra.', 4); v.leaveAt = Math.min(v.leaveAt, CG.S.hour + 0.3); CG.sfx('ok'); } }] }); }
     if (v && v.remercie) return UI.dialog({ visitor: v, who: Ar.Q[v.quete].qui, text: pick(['Encore merci. Je reprends la route, le cœur plus léger.', 'Je n\'oublierai pas ce que tu as fait.']), options: [{ label: '👋 Bonne route' }] });
     return tk0.apply(this, arguments);
   };

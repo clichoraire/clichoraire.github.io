@@ -97,7 +97,7 @@
     return r;
   };
   // ---------- la sauvegarde : ce que l'animal a appris, et l'ordre qu'il suit ----------
-  { const pk = CG.pack; CG.pack = function () { const d = pk.apply(this, arguments), S = CG.S; if (d && d.pets && S) d.pets.forEach((o, i) => { const a = S.pets[i]; if (!a) return; if (a.dresse) o.dresse = true; if (a.calme) o.calme = true; }); return d; }; }
+  { const pk = CG.pack; CG.pack = function () { const d = pk.apply(this, arguments), S = CG.S; if (d && d.pets && S) d.pets.forEach((o, i) => { const a = S.pets[i]; if (!a) return; if (a.dresse) o.dresse = true; if (a.calme) o.calme = true; if (a.caresse) o.caresse = a.caresse; /* le jour de sa dernière caresse (pets.js) */ }); return d; }; }
   // ---------- l'onglet Animaux et la fiche de l'école : on dit qui est en classe ----------
   const noms = L => L.map(o => o.pet.name).join(' et ');
   { const pp = P.panel; P.panel = function () { const h = pp.apply(this, arguments), L = CG.S.ecole || []; return L.length && typeof h === 'string' ? h + '<p class="note">🎓 ' + noms(L) + (L.length > 1 ? ' sont' : ' est') + ' à l\'école des animaux.</p>' : h; }; }

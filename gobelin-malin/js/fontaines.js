@@ -50,7 +50,7 @@
     if (vie ? p.hp >= p.maxhp : p.mp >= p.maxmp) { CG.sfx('no'); G.text(p.x, p.y - 60, vie ? 'Ta vie est déjà pleine' : 'Ton mana est déjà plein', '#e8e0d0'); return; }
     const n = Math.ceil(vie ? p.maxhp - p.hp : p.maxmp - p.mp); if (vie) p.hp = p.maxhp; else p.mp = p.maxmp; d.vide = true; d.videT = R.t; const c = De.pos(d);
     G.text(p.x, p.y - 74, '+' + n + ' ' + f.ic, f.eau[1], true); G.puff(c.x, c.y - 14, f.eau[1], 26, 170, 4); G.puff(p.x, p.y - 22, f.eau[2], 16, 120, 3); for (let i = 0; i < 3; i++) R.rings.push({ x: p.x, y: p.y - 10, r: 40 + i * 30, life: 0.45 + i * 0.15, col: f.eau[1] });
-    G.banner(vie ? '❤ Fontaine de vie' : '💧 Fontaine de mana', vie ? 'Toute ta vie est revenue. La fontaine est vide, maintenant.' : 'Tout ton mana est revenu. La fontaine est vide, maintenant.', f.eau[2]); CG.sfx('heal');
+    G.banner(vie ? '❤ Fontaine de vie' : '💧 Fontaine de mana', vie ? 'Toute ta vie est revenue.' : 'Tout ton mana est revenu.', f.eau[2]); CG.sfx('heal');
   }
   ['fMana', 'fVie'].forEach(k => { De.SORTES[k] = { chance: 0.3, marge: 1, solide: 25, draw: (g, d, t) => { const c = De.pos(d); g.save(); g.translate(c.x, c.y + 14); g.scale(De.TAILLE, De.TAILLE); g.translate(-c.x, -c.y - 14); try { fontaine(g, d, t); } finally { g.restore(); } }, label: d => (d.vide ? null : 'Boire à la ' + F[k].nom + ' ' + F[k].ic), agir: boire }; });
   // ---------- l'oasis ----------

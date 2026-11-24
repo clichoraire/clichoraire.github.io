@@ -23,7 +23,7 @@
     repousse: 'La souche la plus proche redevient un grand arbre en un clin d\'œil. Pratique quand tes bûcherons ont tout coupé !',
     sommeil: 'Tu chantes une berceuse et le monstre le plus proche s\'endort en ronflant. Un coup le réveille… mais ce premier coup fait très, très mal. Les chefs ne font qu\'une petite sieste.',
     invisible: 'Pouf ! Tu deviens invisible et les ennemis te cherchent partout. Attention : si tu frappes ou si tu lances un autre sort, on te revoit.',
-    caboche: 'Juste pour rire : la tête du gobelin le plus proche devient grosse comme un ballon ! Si d\'autres gobelins le voient, ils rigolent et tout le clan est de meilleure humeur. Mais à force, la blague fait moins rire.',
+    caboche: 'Juste pour rire : la tête du gobelin le plus proche devient grosse comme un ballon ! Si d\'autres gobelins le voient, ils rigolent et tout le clan est de meilleure humeur. Mais à force, la blague fait moins rire. Et si tout le clan a eu sa grosse tête dans la même journée, c\'est le fou rire général : le moral peut même dépasser 100 % !',
     poison: 'Un nuage vert qui pue se pose sur l\'ennemi le plus proche. Tous ceux qui restent dedans tombent malades.',
     faucon: 'Tu vois comme un faucon, de tout là-haut : pendant un court instant, tous les ennemis apparaissent sur la carte, même ceux qui sont très loin.',
     parefeu: 'Ta peau devient comme celle d\'une salamandre : le feu ne te fait presque plus rien. Les gobelins collés à toi sont un peu protégés, eux aussi.',
@@ -64,7 +64,7 @@
     eclair: ['Un éclair plus fort.', 'Un éclair encore plus fort, qui laisse chaque ennemi tout étourdi.'],
     bouclier: ['Une bulle plus solide, qui dure plus longtemps.', 'Une bulle super solide, qui dure encore plus longtemps.'],
     murfeu: ['Des flammes bleues, plus chaudes, qui brûlent plus longtemps.', 'Des flammes mauves, les plus chaudes de toutes : un mur plus long, qui brûle encore plus longtemps.'],
-    poison: ['Un venin plus fort.', 'Un venin terrible, et le nuage colle aux pattes des ennemis.'],
+    poison: ['Un poison plus fort.', 'Un poison terrible, et le nuage colle aux pattes des ennemis.'],
     passe: ['Tu restes fantôme plus longtemps.', 'Tu restes fantôme encore bien plus longtemps.'],
     meteore: ['Une pierre plus grosse, qui fait un plus grand trou.', 'Une pierre géante, un trou immense… et deux éclats retombent juste après.']
   };

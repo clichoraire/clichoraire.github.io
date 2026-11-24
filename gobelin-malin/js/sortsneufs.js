@@ -21,7 +21,7 @@
   const def = (id, nom, icon, color, desc) => { SP[id] = { nom, icon, mp: 6, prix: 500, color, desc }; if (!CG.SCROLL_POOL.includes(id)) CG.SCROLL_POOL.push(id); };
   def('frenesie', 'Frénésie', '💢', '#ff9a5a', 'Pendant 20 secondes, tu frappes bien plus vite.');
   def('ruse', 'Rusé', '🦊', '#ffc070', 'Pendant une minute et demie, tu as plus de vie et plus de mana au maximum.');
-  def('venin', 'Venin', '🐍', '#7dff6a', 'Le monstre le plus proche est empoisonné : le venin le ronge pendant plusieurs secondes.');
+  def('venin', 'Poison', '🧪', '#7dff6a', 'Le monstre le plus proche est empoisonné sur-le-champ : le poison le ronge pendant plusieurs secondes.');
   def('murpierre', 'Mur de pierre', '🧱', '#b8b8c4', 'Un mur de pierre sort du sol devant toi : personne ne passe au travers tant qu\'il tient.');
   def('coffrepiege', 'Coffre-piège', '🥊', '#ff5a4a', 'Tu poses un faux coffre. L\'humain, le démon, le gnome ou l\'elfe qui vient l\'ouvrir reçoit un gant de boxe en pleine figure et vole dix cases plus loin. S\'il heurte quelque chose, il reste sonné.');
   def('flair', 'Flair du trésor', '🔎', '#ffe36b', 'Tu sens les coffres autour de toi : un vrai trésor, ou un coffre vorace qui attend de te mordre ?');
@@ -29,7 +29,7 @@
   def('force', 'Force', '💪', '#ff7a5a', 'Pendant 30 secondes, tu frappes plus fort.');
   Sn.T = {
     frenesie: ['Tu frappes encore plus vite.', 'Tu frappes plus de deux fois plus vite.'], ruse: ['Encore plus de vie et de mana.', 'Bien plus de vie et de mana.'],
-    venin: ['Venin plus fort, plus longtemps.', 'Venin terrible : quand le monstre tombe, le venin saute sur son voisin.'],
+    venin: ['Poison plus fort, plus longtemps.', 'Poison terrible : quand le monstre tombe, le poison saute sur son voisin.'],
     murpierre: ['Six cases de large, en métal : il tient plus longtemps.', 'Huit cases de large, gravé de runes : il tient très longtemps.'],
     coffrepiege: ['Le gant frappe deux fois avant que le coffre s\'en aille, et plus fort.', 'Trois coups de gant, encore plus forts.'],
     flair: ['Tu sens les coffres de plus loin, et les faux se marquent en rouge sur la mini-carte.', 'Tu sens les coffres de très loin.'],
@@ -57,13 +57,13 @@
     const S = CG.S, R = CG.R, p = S.player; if (R.castCd > 0 || R.ko > 0 || R.cine) return; const cost = G.spellCost(id), n = niv(id), col = SP[id].color;
     const rate = msg => { CG.sfx('no'); G.text(p.x, p.y - 56, msg, col); };
     if (p.mp < cost) return rate('Pas assez de mana');
-    const payer = () => { p.mp -= cost; R.castCd = 0.45; R.castAnim = 1; CG.sfx('spell'); R.rings.push({ x: p.x, y: p.y - 8, r: 54, life: 0.4, col }); };
+    const payer = () => { p.mp -= cost; R.castCd = 0.45; R.castAnim = 1; if (CG.audio && CG.audio.SORTS && CG.audio.SORTS[id]) CG.audio.swap = CG.audio.SORTS[id]; /* ce fichier lance ses sorts lui-même : il choisit donc aussi leur son */ CG.sfx('spell'); if (CG.audio) CG.audio.swap = null; R.rings.push({ x: p.x, y: p.y - 8, r: 54, life: 0.4, col }); };
     if (id === 'frenesie') { payer(); R.frenesie = { t: Sn.FRENESIE.dur, k: Sn.FRENESIE.k[n - 1] }; G.text(p.x, p.y - 62, '💢 Frénésie !', col, true); return; }
     if (id === 'protec') { payer(); R.protec = { t: Sn.PROTEC.dur, k: Sn.PROTEC.k[n - 1] }; G.text(p.x, p.y - 62, '🛡️ Protection !', col, true); return; }
     if (id === 'force') { payer(); R.forceS = { t: Sn.FORCE.dur, k: Sn.FORCE.k[n - 1] }; G.text(p.x, p.y - 62, '💪 Force !', col, true); return; }
     if (id === 'ruse') { payer(); finRuse(); const hp = Math.round(p.maxhp * Sn.RUSE.k[n - 1]), mp = Math.round(p.maxmp * Sn.RUSE.k[n - 1]); p.maxhp += hp; p.maxmp += mp; p.hp += hp; p.mp = Math.min(p.maxmp, p.mp + mp); S.ruse = { hp, mp, t: Sn.RUSE.dur }; G.text(p.x, p.y - 62, '🦊 Rusé !', col, true); return; }
     if (id === 'venin') { const Q = Sn.VENIN; let tg = null, bd = Q.portee; for (const e of R.enemies) { if (e.dead || e.struct || e.charm > 0) continue; const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; tg = e; } } if (!tg) return rate('Aucun monstre ici');
-      payer(); p.face = tg.x > p.x ? 1 : -1; R.bolts.push({ x1: p.x, y1: p.y - 26, x2: tg.x, y2: tg.y - 18, life: 0.25 }); mordre(tg, n); return; }
+      payer(); p.face = tg.x > p.x ? 1 : -1; mordre(tg, n); return; } // rien ne vole : le poison apparaît d'un coup sur le monstre
     if (id === 'murpierre') { if (!mur(n)) return rate('Pas de place pour un mur ici'); payer(); return; }
     if (id === 'coffrepiege') { const d = R.dir || { x: p.face || 1, y: 0 }, L = Math.hypot(d.x, d.y) || 1; let x = p.x + d.x / L * 46, y = p.y + d.y / L * 46; if (!W.walkPx(x, y)) { x = p.x; y = p.y + 6; }
       payer(); const Q = Sn.COFFRE; (R.coffresPieges = R.coffresPieges || []).push({ x, y, t: Q.dur, coups: Q.coups[n - 1], dmg: (8 + p.lvl * 2) * Q.dmg[n - 1], poing: 0, ux: 1, uy: 0 }); G.puff(x, y - 8, '#c9a56b', 12, 90, 3); return; }
@@ -72,7 +72,7 @@
       let faux = 0; l.forEach(c => { const f = !!(CG.Mimic && CG.Mimic.est && CG.Mimic.est(c)); c.flair = { faux: f, t: R.t + Q.dur }; if (f) { faux++; if (n >= 2) c.flairFaux = true; } });
       G.text(p.x, p.y - 62, faux ? '🔎 ' + faux + (faux > 1 ? ' coffres voraces !' : ' coffre vorace !') : '🔎 Que des vrais trésors', faux ? '#ff8a7a' : '#c8ffb0', true); return; }
   };
-  function mordre(e, n) { const Q = Sn.VENIN, p = CG.S.player; e.veninS = { t: Q.dur[n - 1], dps: (2.5 + p.lvl * 0.6) * Q.dps[n - 1], tic: 0.5, n }; G.text(e.x, e.y - 60, '🐍 Empoisonné !', '#7dff6a', true); G.puff(e.x, e.y - 20, '#7dff6a', 10, 80, 3); }
+  function mordre(e, n) { const Q = Sn.VENIN, p = CG.S.player; e.veninS = { t: Q.dur[n - 1], dps: (2.5 + p.lvl * 0.6) * Q.dps[n - 1], tic: 0.5, n, age: 0, seed: Math.random() * 9 }; G.text(e.x, e.y - 60, '☠ Empoisonné !', '#b8f070', true); G.puff(e.x, e.y - 20, '#7dff6a', 12, 90, 3); G.puff(e.x, e.y - 14, '#a05ad8', 7, 70, 3); CG.R.rings.push({ x: e.x, y: e.y - 6, r: (e.r || 12) + 26, life: 0.35, col: '#9be04a' }); }
   // ---------- ce que font les buffs ----------
   { const at0 = G.attack; G.attack = function () { const R = CG.R, cd = R ? R.atkCd : 0, r = at0.apply(this, arguments); if (R && R.frenesie && R.frenesie.t > 0 && R.atkCd > cd) R.atkCd *= R.frenesie.k; return r; }; }
   { const hp0 = G.hurtPlayer; G.hurtPlayer = function (dmg) { const R = CG.R; if (R && R.protec && R.protec.t > 0) dmg *= R.protec.k; return hp0.call(this, dmg); }; }
@@ -86,7 +86,7 @@
     ['frenesie', 'protec', 'forceS'].forEach(k => { if (R[k] && R[k].t > 0) R[k].t -= dt; });
     if (S.ruse) { S.ruse.t -= dt; if (S.ruse.t <= 0) finRuse(); }
     for (const e of R.enemies) { const v = e.veninS; if (!v) continue; if (e.dead) { e.veninS = null; if (v.n >= 3 && v.t > 1) { let tg = null, bd = Sn.VENIN.saute; for (const o of R.enemies) { if (o === e || o.dead || o.struct || o.charm > 0 || o.veninS) continue; const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; tg = o; } } if (tg) mordre(tg, v.n); } continue; }
-      v.t -= dt; v.tic -= dt; if (v.tic <= 0) { v.tic = 0.5; const c0 = R.dmgCol; R.dmgCol = CG.DMG ? CG.DMG.poison : '#6fe03a'; try { G.hurtEnemy(e, v.dps * 0.5, p); } finally { R.dmgCol = c0; } } if (v.t <= 0) e.veninS = null; }
+      v.t -= dt; v.age = (v.age || 0) + dt; v.tic -= dt; if (v.tic <= 0) { v.tic = 0.5; const c0 = R.dmgCol; R.dmgCol = CG.DMG ? CG.DMG.poison : '#6fe03a'; try { G.hurtEnemy(e, v.dps * 0.5, p); } finally { R.dmgCol = c0; } } if (v.t <= 0) e.veninS = null; }
     const M = R.mursPierre; if (M && M.length) { for (const m of M) { m.t -= dt; if (m.t <= 0) tomber(m); } R.mursPierre = M.filter(m => m.t > 0); }
     const C = R.coffresPieges; if (C && C.length) { const Q = Sn.COFFRE;
       for (const c of C) { c.t -= dt; if (c.poing > 0) c.poing -= dt;
@@ -112,7 +112,29 @@
     g.restore(); } };
   if (CG.Armee && CG.Armee.pousser) { const po0 = CG.Armee.pousser; CG.Armee.pousser = function (push) { po0.apply(this, arguments); const R = CG.R; if (!R) return;
     for (const m of R.mursPierre || []) for (const c of m.cases) { const x = c.tx * T + T / 2, y = c.ty * T + T / 2; if (CG.onScreen(x, y)) push(y + 14, 21, { x, y, m, draw: bloc.draw }, null); }
-    for (const c of R.coffresPieges || []) if (CG.onScreen(c.x, c.y)) push(c.y + 2, 21, { x: c.x, y: c.y, c, draw: coffre.draw }, null); }; }
+    for (const c of R.coffresPieges || []) if (CG.onScreen(c.x, c.y)) push(c.y + 2, 21, { x: c.x, y: c.y, c, draw: coffre.draw }, null);
+    for (const e of R.enemies || []) if (e.veninS && !e.dead && CG.onScreen(e.x, e.y)) { push(e.y - 30, 21, { x: e.x, y: e.y, e, draw: flaqueP }, null); push(e.y + 3, 21, { x: e.x, y: e.y, e, draw: bullesP }, null); } }; }
+  // ---------- le poison sur un monstre : une flaque qui bouillonne à ses pieds, des bulles qui montent autour de lui et qui crèvent ----------
+  // Sn.POISON : nombre de bulles, hauteur de montée (px), durée d'un cycle (s), durée de la grosse bulle du début (s)
+  Sn.POISON = { BULLES: 9, HAUT: 58, CYCLE: 1.5, ECLAT: 0.5 };
+  function bulleP(g, x, y, r, a) {
+    g.globalAlpha = a * 0.5; g.fillStyle = '#58c832'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    g.globalAlpha = a * 0.9; g.strokeStyle = '#2f7a1e'; g.lineWidth = 1.2; g.stroke();
+    g.strokeStyle = '#d8ffb0'; g.lineWidth = Math.max(1, r * 0.22); g.beginPath(); g.arc(x, y, r * 0.62, Math.PI * 1.05, Math.PI * 1.5); g.stroke();
+    g.fillStyle = '#f4ffe0'; g.beginPath(); g.arc(x - r * 0.36, y - r * 0.4, Math.max(0.7, r * 0.17), 0, TAU); g.fill(); }
+  function flaqueP(g, o, t) { const e = o.e, v = e.veninS; if (!v) return; const R = (e.r || 12) + 12, a = Math.min(1, v.age * 4, v.t * 2), s = v.seed || 0;
+    g.save(); g.globalAlpha = a * 0.55; el(g, o.x, o.y + 2, R * (1 + Math.sin(t * 2.2 + s) * 0.05), R * 0.42, '#3f9a26'); g.globalAlpha = a * 0.5; el(g, o.x - 2, o.y + 1, R * 0.66, R * 0.26, '#8fe04a');
+    g.globalAlpha = a * 0.45; el(g, o.x + R * 0.3, o.y + 3, R * 0.2, R * 0.09, '#8a4ac8'); g.restore(); }
+  function bullesP(g, o, t) { const e = o.e, v = e.veninS; if (!v) return; const Q = Sn.POISON, R = (e.r || 12) + 9, fin = Math.min(1, v.t * 2), s = v.seed || 0; g.save();
+    if (v.age < Q.ECLAT) { const k = v.age / Q.ECLAT, r = (R + 16) * (0.35 + 0.65 * (1 - Math.pow(1 - k, 3))), cy = o.y - 20; // d'abord une grosse bulle qui gonfle autour de lui, puis qui crève
+      g.globalAlpha = 0.34 * (1 - k * k); g.fillStyle = '#6ad83a'; g.beginPath(); g.arc(o.x, cy, r, 0, TAU); g.fill(); g.globalAlpha = 0.9 * (1 - k * k); g.strokeStyle = '#c8ff8a'; g.lineWidth = 2.5; g.stroke();
+      g.strokeStyle = '#f4ffe0'; g.lineWidth = 3; g.beginPath(); g.arc(o.x, cy, r * 0.74, Math.PI * 1.08, Math.PI * 1.42); g.stroke(); }
+    else if (v.age < Q.ECLAT + 0.28) { const k = (v.age - Q.ECLAT) / 0.28, r = R + 16 + k * 14; g.globalAlpha = 1 - k; g.fillStyle = '#b8f070'; for (let i = 0; i < 10; i++) { const an = i / 10 * TAU + s; g.beginPath(); g.arc(o.x + Math.cos(an) * r, o.y - 20 + Math.sin(an) * r + k * k * 10, 2.6 * (1 - k * 0.6), 0, TAU); g.fill(); } }
+    for (let i = 0; i < Q.BULLES; i++) { const ph = (t / Q.CYCLE * (0.8 + (i % 3) * 0.17) + i * 0.37 + s) % 1, an = i * 2.4 + s, x = o.x + Math.cos(an) * R * (0.55 + 0.45 * ((i * 7) % 5) / 4) + Math.sin(t * 3 + i * 1.7) * 3.5, y = o.y - 2 - ph * Q.HAUT, r = (3.4 + (i % 4) * 1.9) * (0.55 + ph * 0.6);
+      if (ph < 0.86) bulleP(g, x, y, r, fin * Math.min(1, ph * 7) * Math.min(1, v.age * 3));
+      else { const k = (ph - 0.86) / 0.14; g.globalAlpha = fin * (1 - k); g.strokeStyle = '#d8ffb0'; g.lineWidth = 1.3; for (let j = 0; j < 5; j++) { const b = j / 5 * TAU + i; g.beginPath(); g.moveTo(x + Math.cos(b) * r * (1 + k), y + Math.sin(b) * r * (1 + k)); g.lineTo(x + Math.cos(b) * r * (1.5 + k * 1.6), y + Math.sin(b) * r * (1.5 + k * 1.6)); g.stroke(); } } }
+    const gt = (t * 0.9 + s) % 1; g.globalAlpha = fin * (1 - gt) * 0.9; g.fillStyle = '#9a5ad8'; g.beginPath(); g.ellipse(o.x - R * 0.5, o.y - 30 + gt * 26, 1.8, 2.8 + gt * 2, 0, 0, TAU); g.fill(); // une goutte violette qui coule
+    g.restore(); }
   if (CG.Magie && CG.Magie.marks) { const mk0 = CG.Magie.marks; CG.Magie.marks = function (g, t) { mk0.apply(this, arguments); const R = CG.R; if (!R || !R.chests) return;
     for (const c of R.chests) { const f = c.flair; if (!f || c.open || f.t < R.t || !CG.onScreen(c.x, c.y)) continue; g.font = 'bold 15px sans-serif'; g.textAlign = 'center'; g.fillStyle = f.faux ? '#ff5a4a' : '#8dffb0'; g.fillText(f.faux ? '👹 Faux !' : '✔ Vrai', c.x, c.y - 40 + Math.sin(t * 3) * 2); } }; }
 })(window.CG);

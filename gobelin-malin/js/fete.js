@@ -45,7 +45,7 @@
       return r;
     };
     // l'affichage : le moral du haut de l'écran montre le surplus
-    const rf0 = UI.refresh; UI.refresh = function () { rf0.apply(this, arguments); const e = Fe.euphorie(), el = document.querySelector('#res .r-moral'); if (!el) return; const t = e > 0 ? '🤩 ' + Math.round(100 + e) + '%' : null; if (t) { if (el._euT !== t) { el._euT = t; const q = t.split(' '); el.innerHTML = '<i>' + q[0] + '</i><b>' + q[1].replace('%', '<small>%</small>') + '</b>'; el.style.color = '#ffe36b'; el._eu = true; } } else if (el._eu) { el._eu = false; el._euT = null; el.style.color = ''; el.innerHTML = '<i>' + (CG.Humeur ? CG.Humeur.tete() : CG.S.morale >= 70 ? '😄' : CG.S.morale >= 40 ? '🙂' : '😟') + '</i><b>' + Math.round(CG.S.morale) + '<small>%</small></b>'; } };
+    const rf0 = UI.refresh; UI.refresh = function () { rf0.apply(this, arguments); const e = Fe.euphorie() + (CG.FouRire ? CG.FouRire.plus() : 0), el = document.querySelector('#res .r-moral'); if (!el) return; const t = e > 0 ? '🤩 ' + Math.round(100 + e) + '%' : null; if (t) { if (el._euT !== t) { el._euT = t; const q = t.split(' '); el.innerHTML = '<i>' + q[0] + '</i><b>' + q[1].replace('%', '<small>%</small>') + '</b>'; el.style.color = '#ffe36b'; el._eu = true; } } else if (el._eu) { el._eu = false; el._euT = null; el.style.color = ''; el.innerHTML = '<i>' + (CG.Humeur ? CG.Humeur.tete() : CG.S.morale >= 70 ? '😄' : CG.S.morale >= 40 ? '🙂' : '😟') + '</i><b>' + Math.round(CG.S.morale) + '<small>%</small></b>'; } };
   }
   // ---------- éteindre le feu : tout près du feu, pendant la fête ----------
   const fi0 = D.findInteract; D.findInteract = function () {

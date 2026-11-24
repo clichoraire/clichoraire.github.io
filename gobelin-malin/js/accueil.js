@@ -17,7 +17,7 @@
     const sv = CG.peekSave(), d = document.createElement('div'); d.className = 'acc-ask';
     const nb = sv && sv.goblins ? sv.goblins.length : 0;
     d.innerHTML = '<div class="acc-card"><div class="acc-warn">⚠️</div><h3>' + o.titre + '</h3>' +
-      (sv ? '<div class="acc-save"><div class="acc-slot">Partie<b>n° 1</b></div><div class="acc-info"><b>' + esc(sv.name) + '</b><span>☀️ Jour ' + sv.day + ' &nbsp;·&nbsp; 👥 ' + nb + ' gobelin' + (nb > 1 ? 's' : '') + (sv.player ? ' &nbsp;·&nbsp; ⭐ Chef niv. ' + sv.player.lvl : '') + '</span></div></div>' : '') +
+      (sv ? '<div class="acc-save"><div class="acc-slot">Partie<b>n° ' + CG.partie() + '</b></div><div class="acc-info"><b>' + esc(sv.name) + '</b><span>☀️ Jour ' + sv.day + ' &nbsp;·&nbsp; 👥 ' + nb + ' gobelin' + (nb > 1 ? 's' : '') + (sv.player ? ' &nbsp;·&nbsp; ⭐ Chef niv. ' + sv.player.lvl : '') + '</span></div></div>' : '') +
       (o.texte ? '<p>' + o.texte + '</p>' : '') + '<div class="acc-ask-btns"><button class="acc-btn low" id="q-non"><span class="tx">Annuler</span></button><button class="acc-btn danger" id="q-oui"><span class="ic">🗑️</span><span class="tx">' + o.oui + '</span></button></div></div>';
     root.appendChild(d);
     CG.sfx('uiWarn');
@@ -212,24 +212,30 @@
     view = 'menu'; root.className = '';
     box().innerHTML = '<div class="acc-menu"><div class="acc-logo"><span>Goblin</span><b>Malin</b></div><p class="acc-tag">Tu es le seul gobelin malin du clan.<br>Fais grandir ton village, et protège-le.</p>' +
       '<div class="acc-btns">' + big('a-jouer', '▶', 'Jouer', '', 'go') + big('a-config', '⚙️', 'Configuration') + '' + big('a-debug', '🛠️', 'Debug') + '</div></div><div class="acc-ver">v' + CG.VERSION + '</div>';
-    box().querySelector('#a-jouer').onclick = () => { CG.peekSave() ? parties() : debut(); };
+    box().querySelector('#a-jouer').onclick = () => { if (aucune()) { CG.choisirPartie(1); debut(); } else parties(); };
     box().querySelector('#a-config').onclick = config;
     box().querySelector('#a-debug').onclick = () => CG.Debug.show();
     if (box().querySelector('#a-tombes')) box().querySelector('#a-tombes').onclick = () => CG.Tombes.ouvrir();
     focusFirst();
   }
+  // les parties gardées : CG.NB_PARTIES cases, chacune avec son chef, son village et sa difficulté
+  const cases = () => { const l = []; for (let n = 1; n <= CG.NB_PARTIES; n++) l.push(n); return l; }, aucune = () => !cases().some(n => CG.peekSave(n));
   function parties() {
-    const sv = CG.peekSave(); view = 'parties'; root.className = '';
-    box().innerHTML = '<div class="acc-menu"><div class="acc-logo small"><span>Goblin</span><b>Malin</b></div><div class="acc-btns">' + big('a-cont', '▶', 'Continuer', esc(sv.name) + ' · jour ' + sv.day + ' · ' + (CG.Diff.LIST[sv.diff] || CG.Diff.LIST.difficile).nom, 'go') + big('a-new', '🌱', 'Nouvelle partie') + big('a-back', '←', 'Retour', '', 'low') + '</div></div>';
-    box().querySelector('#a-cont').onclick = () => { UI.close(); CG.start(false); };
-    box().querySelector('#a-new').onclick = () => ask({ titre: 'Écraser la partie n° 1 ?', texte: '', oui: 'Oui, écraser', ok: debut });
-    box().querySelector('#a-back').onclick = menu; focusFirst();
+    view = 'parties'; root.className = '';
+    const rang = n => { const sv = CG.peekSave(n), nb = sv && sv.goblins ? sv.goblins.length : 0;
+      return '<div class="acc-rang">' + (sv ? big('a-p' + n, '▶', esc(sv.name), 'Partie ' + n + ' · jour ' + sv.day + ' · ' + nb + ' gobelin' + (nb > 1 ? 's' : '') + ' · ' + (CG.Diff.LIST[sv.diff] || CG.Diff.LIST.difficile).nom, 'go') + '<button class="acc-btn danger acc-suppr" id="a-x' + n + '" title="Effacer la partie n° ' + n + '"><span class="ic">🗑️</span></button>' : big('a-p' + n, '🌱', 'Nouvelle partie', 'Partie ' + n + ' · libre', 'vide')) + '</div>'; };
+    box().innerHTML = '<div class="acc-menu acc-parties"><h2 class="acc-h">Tes parties</h2><div class="acc-btns">' + cases().map(rang).join('') + big('a-back', '←', 'Retour', '', 'low') + '</div></div>';
+    cases().forEach(n => {
+      box().querySelector('#a-p' + n).onclick = () => { CG.choisirPartie(n); if (CG.peekSave(n)) { UI.close(); CG.start(false); } else debut(); };
+      const x = box().querySelector('#a-x' + n); if (x) x.onclick = () => { CG.choisirPartie(n); ask({ titre: 'Effacer la partie n° ' + n + ' ?', texte: 'Elle sera perdue pour de bon : impossible de revenir en arrière.', oui: 'Oui, effacer', ok: () => { CG.wipe(n); parties(); } }); };
+    });
+    box().querySelector('#a-back').onclick = menu; const b = box().querySelector('#a-p' + CG.partie()); if (b) b.focus(); else focusFirst();
   }
   function config() {
     view = 'config'; root.className = '';
     const audio = [['music', '🎵', 'Musique', 'Activée', 'Coupée'], ['sfx', '🔊', 'Effets sonores', 'Activés', 'Coupés']];
     const sw = ([k, icon, txt, on, off]) => '<div class="acc-audio">' + big('c-' + k, icon, txt, cfg[k] ? on : off, cfg[k] ? 'on' : 'off') + UI.audioVolume(k) + '</div>';
-    box().innerHTML = '<div class="acc-menu acc-config"><h2 class="acc-h">⚙️ Configuration</h2><div class="acc-btns">' + audio.map(sw).join('') + big('c-full', '🖥️', 'Plein écran', document.fullscreenElement ? 'Activé' : 'Coupé', document.fullscreenElement ? 'on' : 'off') + (CG.peekSave() ? big('c-wipe', '🗑️', 'Effacer la partie', '', 'danger') : '') + big('a-back', '←', 'Retour', '', 'low') + '</div></div>';
+    box().innerHTML = '<div class="acc-menu acc-config"><h2 class="acc-h">⚙️ Configuration</h2><div class="acc-btns">' + audio.map(sw).join('') + big('c-full', '🖥️', 'Plein écran', document.fullscreenElement ? 'Activé' : 'Coupé', document.fullscreenElement ? 'on' : 'off') + big('a-back', '←', 'Retour', '', 'low') + '</div></div>';
     for (const [k, , label] of audio) {
       const id = '#c-' + k, button = box().querySelector(id);
       button.setAttribute('aria-label', label);
@@ -281,7 +287,7 @@
     const st = B.querySelector('#acc-prev'); st.onpointerdown = e => { drag = e.clientX; st.setPointerCapture(e.pointerId); }; st.onpointermove = e => { if (drag === null) return; const d = e.clientX - drag; if (Math.abs(d) > 34) { turn(d > 0 ? -1 : 1); drag = e.clientX; } }; st.onpointerup = st.onpointercancel = () => { drag = null; };
     B.querySelector('#a-rnd').onclick = () => { const sk = look.skull, sx = look.sex; Object.assign(look, A8.randomLook()); look.skull = sk; look.sex = sx; fit(); refresh(); };
     B.querySelector('#a-name').oninput = e => { nom = e.target.value; };
-    if (!evo) B.querySelector('#a-back').onclick = () => (CG.peekSave() ? parties() : menu());
+    if (!evo) B.querySelector('#a-back').onclick = () => (aucune() ? menu() : parties());
     B.querySelector('#a-go').onclick = () => { if (evo) { look.hue2 = look.hue; A8.setChiefLook(Object.assign({}, look)); Acc.hide(); UI.close(); CG.save(); return; } const n = (B.querySelector('#a-name').value || '').trim() || 'Grizz'; delete look.skull; A8.setChiefLook(Object.assign({}, look)); nom = n; difficulte(n); };
     refresh(); if (!evo) B.querySelector('#a-name').select();
   }
@@ -291,7 +297,7 @@
     cv = root.querySelector('#acc-bg'); ctx = cv.getContext('2d');
     root.addEventListener('click', e => {
       const b = e.target.closest('#acc-ui button:not(:disabled)');
-      if (!b || b.matches('.ld-btn, #a-new, #c-wipe, #c-music, #c-sfx')) return;
+      if (!b || b.matches('.ld-btn, #a-new, .acc-suppr, #c-wipe, #c-music, #c-sfx')) return;
       CG.sfx(b.matches('#a-back, #d-back') ? 'uiClose' : b.id === 'a-config' ? 'uiOpen' : 'click');
     }, true);
     root.addEventListener('keydown', e => {

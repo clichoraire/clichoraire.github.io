@@ -11,7 +11,7 @@
     const out = [], f = G.firePos(), fx = f.x / T, fy = f.y / T, tile = W.tile, I = W.idx;
     const chemin = (x, y) => { for (let dy = -Cc.PRES_CHEMIN; dy <= Cc.PRES_CHEMIN; dy++) for (let dx = -Cc.PRES_CHEMIN; dx <= Cc.PRES_CHEMIN; dx++) if (W.inMap(x + dx, y + dy) && tile[I(x + dx, y + dy)] === W.PATH) return true; return false; };
     for (let k = 0; k < 900 && out.length < n; k++) { const x = 3 + Math.floor(Math.random() * (CG.MW - 6)), y = 4 + Math.floor(Math.random() * (CG.MH - 7));
-      if (tile[I(x, y)] !== W.TREE || !W.walkTile(x, y - 1) || Math.hypot(x - fx, y - fy) < Cc.LOIN_FEU || !chemin(x, y)) continue;
+      if (tile[I(x, y)] !== W.TREE || !W.walkTile(x, y - 1) || !W.reachable(x, y - 1) || /* jamais dans une poche fermée entre les arbres : il n'en sortirait pas */ Math.hypot(x - fx, y - fy) < Cc.LOIN_FEU || !chemin(x, y)) continue;
       const s = Math.random() < 0.5 ? -1 : 1, px = x * T + T / 2 + s * Cc.DECALE, py = (y - 1) * T + T * 0.72; if (!W.walkPx(px, py) || out.some(o => Math.hypot(o.x - px, o.y - py) < 300)) continue;
       out.push({ x: px, y: py, s }); }
     return out;
@@ -27,7 +27,7 @@
     if (S && R && R.enemies) { const p = S.player, vu = !(R.ko > 0) && !(R.invis > 0);
       for (const e of R.enemies) { if (!e.embusque || e.dead) continue;
         if (!e.calm || e.hp < e.maxhp || (vu && Math.hypot(p.x - e.x, p.y - e.y) < Cc.SAUTE)) { // le chef est tout près (ou quelqu'un l'a frappé) : il sort d'un bond
-          e.embusque = false; e.calm = false; e.aggroR = 340; e.rooted = 0; e.seek = 1.5; e.tpCd = 0; if (vu) e.target = p; e.wild = { x: e.x, y: e.y };
+          e.embusque = false; e.calm = false; e.aggroR = 340; e.rooted = 0; e.x = (Math.floor(e.x / T) + 0.5) * T; e.y = (Math.floor(e.y / T) + 0.5) * T; if (G.unstick) G.unstick(e, e.r || 12); /* il bondit au milieu de sa case : collé contre l'arbre, il restait coincé */ e.seek = 1.5; e.tpCd = 0; if (vu) e.target = p; e.wild = { x: e.x, y: e.y };
           G.text(e.x, e.y - 50, '❗', '#ffe36b', true); G.puff(e.x, e.y - 10, '#9be04a', 12, 100, 3); if (CG.onScreen(e.x, e.y)) CG.sfx('warning'); continue; }
         e.rooted = Math.max(e.rooted || 0, 0.2); e.target = null; e.path = null; e.moving = false; e.tpCd = 1; if (Math.random() < dt * 0.25) e.face = -e.face; } }
     return up0.apply(this, arguments);

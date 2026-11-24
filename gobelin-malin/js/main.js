@@ -19,12 +19,18 @@
   };
   CG.save = function () {
     if (CG.dead) return; // le chef est mort : la partie est finie pour de bon
-    try { localStorage.setItem(SAVE, JSON.stringify(CG.pack())); } catch (e) { /* stockage indisponible */ }
+    try { localStorage.setItem(cle(), JSON.stringify(CG.pack())); } catch (e) { /* stockage indisponible */ }
   };
-  CG.peekSave = function () { try { const d = JSON.parse(localStorage.getItem(SAVE)); return d && d.v === 1 ? d : null; } catch (e) { return null; } };
+  // plusieurs parties gardées en même temps : CG.NB_PARTIES cases. La case n° 1 garde l'ancienne clé (la partie déjà commencée reste là).
+  CG.NB_PARTIES = 5; const CASE = 'goblin-malin-partie'; let caseN = 1;
+  try { const n = +(sessionStorage.getItem(CASE) || localStorage.getItem(CASE)); if (n >= 1 && n <= CG.NB_PARTIES) caseN = Math.floor(n); } catch (e) { /* rien */ }
+  const cle = n => SAVE + ((n || caseN) > 1 ? '-' + (n || caseN) : '');
+  CG.partie = () => caseN;
+  CG.choisirPartie = function (n) { n = Math.max(1, Math.min(CG.NB_PARTIES, Math.floor(+n) || 1)); caseN = n; try { sessionStorage.setItem(CASE, String(n)); localStorage.setItem(CASE, String(n)); } catch (e) { /* rien */ } return n; };
+  CG.peekSave = function (n) { try { const d = JSON.parse(localStorage.getItem(cle(n))); return d && d.v === 1 ? d : null; } catch (e) { return null; } };
   // on ferme l'onglet ou la fenêtre : la partie est sauvegardée telle quelle (heure comprise), sauf pendant la nuit ou une scène
   window.addEventListener('pagehide', () => { if (CG.running && CG.S && CG.R && !CG.R.night && !CG.R.cine && !CG.R.death) CG.save(); });
-  CG.wipe = function () { try { localStorage.removeItem(SAVE); } catch (e) { /* rien */ } };
+  CG.wipe = function (n) { try { localStorage.removeItem(cle(n)); } catch (e) { /* rien */ } };
   CG.start = function (isNew, name) {
     if (isNew) G.newState(name); else CG.S = CG.peekSave();
     const h0 = !isNew && CG.S && CG.S.hour > 6 ? CG.S.hour : 0, ou = !isNew && CG.S && CG.S.player && CG.S.player.x !== undefined ? { x: CG.S.player.x, y: CG.S.player.y } : null, vm = !isNew && CG.S && CG.S.player ? { hp: CG.S.player.hp, mp: CG.S.player.mp } : null;
@@ -166,7 +172,7 @@
     ctx.translate(-cam.x, -cam.y);
     if (!CG.Mondes || CG.Mondes.feuIci()) { const f = G.firePos(), fr = fireRing(); ctx.drawImage(fr, f.x - fr.width / 4, f.y - fr.height / 4, fr.width / 2, fr.height / 2); } // le rond de terre battue : on ne bâtit pas dedans
     // effets au sol
-    for (const q of R.rings) { const a = q.life / 0.5; ctx.strokeStyle = q.col; ctx.globalAlpha = Math.min(1, a * 1.4); ctx.lineWidth = 5; ctx.beginPath(); { const rr = Math.max(0, q.r * (1 - a * 0.5)); ctx.ellipse(q.x, q.y, rr, rr * 0.8, 0, 0, 6.3); } ctx.stroke(); ctx.fillStyle = q.col; ctx.globalAlpha = a * 0.18; ctx.fill(); }
+    for (const q of R.rings) { const a = q.life / 0.5; ctx.strokeStyle = q.col; ctx.globalAlpha = Math.min(1, a * 1.4); ctx.lineWidth = 5; ctx.beginPath(); { const rr = Math.max(0, q.r * (1 - a * 0.5)); ctx.ellipse(q.x, q.y, rr, rr * 0.8, 0, 0, 6.3); } ctx.stroke(); ctx.fillStyle = q.col; ctx.globalAlpha = a * 0.18; ctx.fill(); { const r2 = Math.max(0, q.r * (1 - a * 0.5) - 5); if (r2 > 6) { ctx.globalAlpha = Math.min(1, a * 1.2) * 0.75; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(q.x, q.y, r2, r2 * 0.8, 0, 0, 6.3); ctx.stroke(); } } }
     ctx.globalAlpha = 1;
     for (const d of R.delayed) { const f = 1 - d.t / d.max; ctx.fillStyle = 'rgba(255,60,20,' + (0.15 + f * 0.25) + ')'; ctx.beginPath(); ctx.ellipse(d.x, d.y + 10, d.r * (0.4 + f * 0.6), d.r * (0.4 + f * 0.6) * 0.7, 0, 0, 6.3); ctx.fill(); }
     CG.Boss.ground(ctx, t); CG.Magie.ground(ctx, t);
@@ -295,9 +301,9 @@
     if (R.ghost) Art.ghost(ctx, R.ghost, t);
     if (R.walls && R.walls.length) Art.fireWalls(ctx, R.walls, t);
     for (const d of R.delayed) { const f = 1 - d.t / d.max, mx = d.x + (1 - f) * 220, my = d.y - (1 - f) * 520; ctx.fillStyle = '#ff7a2a'; ctx.beginPath(); ctx.arc(mx, my, 20, 0, 6.3); ctx.fill(); ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(mx - 3, my + 4, 11, 0, 6.3); ctx.fill(); ctx.strokeStyle = 'rgba(255,140,40,0.5)'; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + 40, my - 95); ctx.stroke(); }
-    for (const q of R.parts) { ctx.globalAlpha = Math.min(1, q.life / q.max * 1.6); ctx.fillStyle = q.col; ctx.fillRect(q.x - q.size / 2, q.y - q.size / 2, q.size, q.size); }
+    for (const q of R.parts) { ctx.globalAlpha = Math.min(1, q.life / q.max * 1.6); ctx.fillStyle = q.col; if (q.size < 3) ctx.fillRect(q.x - q.size / 2, q.y - q.size / 2, q.size, q.size); else { ctx.beginPath(); ctx.arc(q.x, q.y, q.size * 0.56, 0, 6.3); ctx.fill(); } } // des étincelles rondes, plus des carrés
     ctx.globalAlpha = 1;
-    for (const b of R.bolts) { ctx.strokeStyle = 'rgba(230,220,255,' + (b.life / 0.25) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(b.x1, b.y1); for (let i = 1; i < 6; i++) ctx.lineTo(CG.lerp(b.x1, b.x2, i / 6) + CG.rand(-9, 9), CG.lerp(b.y1, b.y2, i / 6) + CG.rand(-9, 9)); ctx.lineTo(b.x2, b.y2); ctx.stroke(); }
+    for (const b of R.bolts) { const a = Math.min(1, b.life / 0.25); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(b.x1, b.y1); for (let i = 1; i < 6; i++) ctx.lineTo(CG.lerp(b.x1, b.x2, i / 6) + CG.rand(-9, 9), CG.lerp(b.y1, b.y2, i / 6) + CG.rand(-9, 9)); ctx.lineTo(b.x2, b.y2); ctx.globalAlpha = a * 0.35; ctx.strokeStyle = b.col || '#b8a8ff'; ctx.lineWidth = 9; ctx.stroke(); ctx.globalAlpha = a * 0.7; ctx.lineWidth = 4.5; ctx.stroke(); ctx.globalAlpha = a; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.8; ctx.stroke(); } ctx.globalAlpha = 1; // un halo de la couleur du sort, un cœur blanc
     // nuit : voile sombre troué par les lumières
     const dark = darkness(S.hour);
     if (dark > 0.01) {

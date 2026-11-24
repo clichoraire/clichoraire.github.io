@@ -9,7 +9,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, W = CG.W, Art = CG.Art, En = CG.Enfer, T = CG.TILE, TAU = Math.PI * 2, rand = CG.rand, dist = CG.dist;
-  const Lp = CG.Loups = {
+  const Lp = CG.Loups = { SAUT_DEPART: 0.3, /* chance qu'un loup ouvre le combat par un bond ; sinon il attend quelques secondes avant son premier saut */
     SAUT: 2 * T, VOL: 0.42, HAUT: 7, POSE: 0.35, MIN: 50, MAX: 135, /* le bond : il se ramasse, vise, et hop ! deux cases en VOL secondes, en cloche (HAUT pixels). Il reste POSE secondes à l'arrêt en retombant. Lancé entre MIN et MAX pixels de la proie */
     SORTES: {
       loup: { bond: { prep: 0.7, cd: [10, 14], k: 1.3 } },
@@ -118,7 +118,8 @@
     }
     if (e.pose > 0) { e.pose -= dt; e.moving = false; return; }
     const B = s.bond; if (!B) return; const b = e.bond;
-    if (!b) { e.bondCd -= dt; if (!tg || e.bondCd > 0 || e.retreat || e.siege || tg.struct || d < Lp.MIN || d > Lp.MAX || !W.lineClear(e.x, e.y, tg.x, tg.y)) return;
+    if (!b) { if (!tg) e.bondVu = false; else if (!e.bondVu) { e.bondVu = true; e.bondCd = Math.random() < Lp.SAUT_DEPART ? rand(0.2, 0.9) : rand(2.5, 7.5); } /* en voyant sa proie : parfois il saute tout de suite, le plus souvent il fonce d'abord la mordre */
+      e.bondCd -= dt; if (!tg || e.bondCd > 0 || e.retreat || e.siege || tg.struct || d < Lp.MIN || d > Lp.MAX || !W.lineClear(e.x, e.y, tg.x, tg.y)) return;
       e.bond = { ph: 0, t: B.prep, ux: (tg.x - e.x) / (d || 1), uy: (tg.y - e.y) / (d || 1), x: e.x, y: e.y }; e.path = null; G.text(e.x, e.y - 46, 'Grrrrr...', '#ffd0a0', true); return; }
     if (b.ph === 0) { e.x = b.x; e.y = b.y; e.moving = false; if (tg && !tg.dead) { const l = dist(e, tg) || 1; b.ux = (tg.x - e.x) / l; b.uy = (tg.y - e.y) / l; } /* il suit sa proie des yeux jusqu'au dernier moment */ e.face = b.ux >= 0 ? 1 : -1; b.t -= dt;
       if (b.t <= 0) { b.ph = 1; b.t = Lp.VOL; b.vus = new Set(); G.puff(e.x, e.y - 2, '#c9b89a', 6, 70, 3); if (CG.onScreen(e.x, e.y)) CG.sfx('swing'); } return; }

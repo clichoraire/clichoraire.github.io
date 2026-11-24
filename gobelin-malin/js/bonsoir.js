@@ -27,7 +27,7 @@
     const quoi = R.fireLit ? 'danse' : S.hour < Bs.A ? 'arrive' : null; R.bsLoin = false; if (!quoi || R.bsFait[quoi]) return r;
     if (saluer(quoi)) R.bsFait[quoi] = true; return r; }; }
   // ---------- au puits magique : la mise, en gros ----------
-  if (CG.Puits && CG.Puits.payer) { const pa0 = CG.Puits.payer; CG.Puits.payer = function () { const c = pa0.apply(this, arguments); try { const p = CG.S.player; if (CG.R) G.text(p.x, p.y - 76, '-' + c + ' 🪙', '#ffe36b', true);
+  if (CG.Puits && CG.Puits.payer) { const pa0 = CG.Puits.payer; CG.Puits.payer = function () { const c = pa0.apply(this, arguments); try { /* un seul « -X » : le petit texte à l'écran, pas en plus celui au-dessus du chef */
       const el = document.createElement('div'); el.className = 'pz-moins'; el.textContent = '-' + c + ' 🪙'; document.body.appendChild(el); setTimeout(() => el.remove(), 1500); } catch (e) { /* rien */ } return c; }; }
   if (!document.getElementById('bs-css')) { const st = document.createElement('style'); st.id = 'bs-css'; st.textContent = '.pz-moins{position:fixed;left:50%;top:34%;z-index:80;pointer-events:none;font:800 clamp(18px,2.4vw,26px)/1 "Trebuchet MS",system-ui,sans-serif;color:#ffe36b;text-shadow:0 2px 0 #5a3a08,0 0 8px rgba(255,220,90,.5);white-space:nowrap;animation:pzMoins 1.45s cubic-bezier(.2,.9,.3,1) both}@keyframes pzMoins{0%{opacity:0;transform:translate(-50%,10px) scale(.5)}15%{opacity:1;transform:translate(-50%,0) scale(1.15)}30%{transform:translate(-50%,0) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-40px) scale(1)}}@media (prefers-reduced-motion:reduce){.pz-moins{animation-duration:.01s;animation-delay:1.2s}}'; document.head.appendChild(st); }
 })(window.CG);

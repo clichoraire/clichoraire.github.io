@@ -15,7 +15,7 @@
     eclair: ['+40 % de dégâts.', '+80 % de dégâts, et chaque ennemi foudroyé reste sonné un instant.'],
     bouclier: ['Absorbe moitié plus, dure plus longtemps.', 'Absorbe le double, dure encore plus longtemps.'],
     murfeu: ['Flammes bleues : +60 % de dégâts, 13 secondes.', 'Flammes mauves : dégâts plus que doublés, mur plus long, 16 secondes.'],
-    poison: ['Venin plus fort : +60 % de dégâts.', 'Venin terrible : dégâts multipliés par 2,4, et le nuage englue les ennemis.'],
+    poison: ['Poison plus fort : +60 % de dégâts.', 'Poison terrible : dégâts multipliés par 2,4, et le nuage englue les ennemis.'],
     passe: ['Dure 16 secondes au lieu de 10.', 'Dure 24 secondes.'],
     meteore: ['Pierre plus grosse : +50 % de dégâts, cratère plus large.', 'Dégâts doublés, cratère immense, et deux éclats retombent juste après.']
   };

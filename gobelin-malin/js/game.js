@@ -20,7 +20,7 @@
     [[42, 31], [53, 38]].forEach(([x, y], i) => B('hut', x, y, 2, 2, i % 3));
     const jobs = ['cueilleur', 'chasseur', 'bucheron', 'garde', 'aucun']; // l'essentiel dès le départ : manger, du bois, un garde, un bricoleur pour bâtir
     const sexes = CG.shuffle(['f', 'm', 'f', 'm', Math.random() < 0.5 ? 'f' : 'm']);
-    jobs.forEach((j, i) => { const g = G.addGoblin(sexes[i], j); g.talent = j; G.makeApt(g); if (j === 'garde') g.equip.epee = 1; /* le garde part avec une épée de base */ g.hp = G.gobMaxHp(g); g.met = true; }); // tes compagnons de toujours : pas besoin de présentations // chacun fait déjà ce qu'il fait le mieux
+    jobs.forEach((j, i) => { const g = G.addGoblin(sexes[i], j); g.talent = j; G.makeApt(g); if (j === 'garde') g.dague = true; /* le garde part avec une dague simple, sans étoile (dague.js) */ g.hp = G.gobMaxHp(g); g.met = true; }); // tes compagnons de toujours : pas besoin de présentations // chacun fait déjà ce qu'il fait le mieux
     return S;
   };
   G.huts = () => S.buildings.filter(b => b.type === 'hut' && !b.site);

@@ -90,7 +90,7 @@
   };
 
   // ---------- le sort : Œil des ombres ----------
-  CG.SPELLS.ombres = { nom: 'Œil des ombres', icon: '🌑', mp: 10, prix: 500, desc: 'Pendant 20 secondes, tout ce qui se cache dans l\'ombre près de toi est débusqué : voleurs qui se faufilent, bandes en embuscade. Surpris, ils restent figés un instant.', color: '#a080ff' };
+  CG.SPELLS.ombres = { nom: 'Œil des ombres', icon: '🌑', mp: 10, prix: 500, desc: 'Pendant 20 secondes, tout ce qui se cache dans l\'ombre près de toi est débusqué : voleurs qui se faufilent, bandes en embuscade. Surpris, ils restent figés un instant. Dans un château, les dalles piégées se mettent à luire.', color: '#a080ff' };
   CG.SCROLL_POOL.push('ombres');
   const cast0 = G.cast;
   G.cast = function (id) {

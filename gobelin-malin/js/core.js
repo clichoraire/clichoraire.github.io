@@ -1,6 +1,6 @@
 // Clan Gobelin — socle : espace de noms, hasard, clavier.
 'use strict';
-window.CG = { VERSION: '0.260.0', TILE: 40, MW: 96, MH: 72, MW0: 96, MH0: 72, MW1: 136, MH1: 102 }; // MW0 × MH0 : la forêt (et les salles) ; MW1 × MH1 : le marais, deux fois plus vaste
+window.CG = { VERSION: '0.275.0', TILE: 40, MW: 96, MH: 72, MW0: 96, MH0: 72, MW1: 136, MH1: 102 }; // MW0 × MH0 : la forêt (et les salles) ; MW1 × MH1 : le marais, deux fois plus vaste
 (function (CG) {
   // ---------- hasard ----------
   CG.makeRng = function (seed) {

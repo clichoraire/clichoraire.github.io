@@ -4,7 +4,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, Art = CG.Art, T = CG.TILE, TAU = Math.PI * 2;
-  const Ec = CG.Enclos = { SONNE: 45, PRES: 62, ENTRE: 110, LAISSE: 46 }; /* SONNE : secondes qu'il reste sonné ; PRES : distance pour l'attraper ; ENTRE : distance de l'enclos où il entre ; LAISSE : longueur de la corde */
+  const Ec = CG.Enclos = { SONNE: 4, PRES: 62, ENTRE: 110, LAISSE: 46 }; /* SONNE : secondes qu'il reste sonné ; PRES : distance pour l'attraper ; ENTRE : distance de l'enclos où il entre ; LAISSE : longueur de la corde */
   const centre = b => ({ x: (b.tx + b.w / 2) * T, y: (b.ty + b.h) * T - 14 });
   const vides = () => (CG.S ? CG.S.buildings.filter(b => b.type === 'enclos' && !b.site && !b.bete) : []);
   Ec.vides = vides;
@@ -62,7 +62,7 @@
     const S = CG.S, R = CG.R; if (S) for (const b of S.buildings) if (b.type === 'enclos' && !b.bete) b.pt = 0; /* le compteur de production reste à zéro tant qu'il est vide */
     up0.apply(this, arguments); if (!S || !R) return; const p = S.player;
     for (const b of S.buildings) if (b.type === 'enclos' && b.bete && !b.site) promener(b, dt);
-    for (const e of R.enemies) { if (!e.sonne || e.dead) continue; e.sonne -= dt; e.daze = Math.max(e.daze || 0, 0.5); e.rooted = Math.max(e.rooted || 0, 0.5); e.path = null; if (e.sonne <= 0) { e.sonne = 0; e.daze = 0; e.rooted = 0; } } /* sonné : il ne bouge plus, un moment */
+    for (const e of R.enemies) { if (!e.sonne || e.dead) continue; e.sonne -= dt; e.daze = Math.max(e.daze || 0, 0.5); e.rooted = Math.max(e.rooted || 0, 0.5); e.path = null; if (e.sonne <= 0) { e.sonne = 0; e.daze = 0; e.rooted = 0; e.calm = false; if (CG.onScreen(e.x, e.y)) G.text(e.x, e.y - 50, '💢', '#fff', true); } } /* il se réveille, et il est de nouveau méchant */ /* sonné : il ne bouge plus, un moment */
     const l = R.laisse; if (!l) return;
     if (R.night || R.alarm || R.ko > 0 || R.death) { R.laisse = null; G.text(l.x, l.y - 40, 'Le sanglier s\'enfuit !', '#ffb0a0', true); G.puff(l.x, l.y - 10, '#c9a56b', 12, 110, 4); CG.sfx('no'); return; }
     const dx = p.x - l.x, dy = p.y - l.y, d = Math.hypot(dx, dy); l.moving = d > Ec.LAISSE; if (l.moving) { const v = Math.min(d - Ec.LAISSE, 260 * dt); l.x += dx / d * v; l.y += dy / d * v; l.step = (l.step || 0) + dt * 2.2; } if (Math.abs(dx) > 3) l.face = dx > 0 ? 1 : -1;

@@ -106,14 +106,17 @@
   const offerte = id => !!(CG.S && CG.S.tech && CG.S.tech.dons && CG.S.tech.dons[id]);
   const reliee = id => (plan(2).acces[id] || []).some(a => a === 'centre' || (!offerte(a) && tenu(a)));
 
+  // un coin de l'arbre (case bonus, jamais apprise) ne bloque pas le passage : les deux cases de son carré qui le touchent se touchent à travers lui
+  V.acces = function (v, id) { const A = plan(v).acces, a = A[id]; if (!a) return a; const r = V.anneau(id), out = a.slice();
+    a.forEach(c => { const n = BY()[c]; if (c === 'centre' || !n || !n.vide || V.anneau(c) !== r) return; (A[c] || []).forEach(x => { if (x !== id && x !== 'centre' && BY()[x] && !BY()[x].vide && V.anneau(x) === r && !out.includes(x)) out.push(x); }); }); return out; };
   G.techAvail = function (n) {
     const v = V.vue();
-    if (n.vide) return false; if (G.tech(n.id) && !enPlan(n.id)) return false; /* une case sous plan peut encore être apprise pour de bon */ const a = plan(v).acces[n.id]; if (!a) return false; if (V.NIVEAU[n.id] && !G.tech(V.NIVEAU[n.id])) return false; /* un niveau 2 attend son niveau 1 */ const r = V.anneau(n.id); return !a.length || a.some(x => tenu(x) && !(offerte(x) && !reliee(x) && V.anneau(x) !== r));
+    if (n.vide) return false; if (G.tech(n.id) && !enPlan(n.id)) return false; /* une case sous plan peut encore être apprise pour de bon */ const a = V.acces(v, n.id); if (!a) return false; if (V.NIVEAU[n.id] && !G.tech(V.NIVEAU[n.id])) return false; /* un niveau 2 attend son niveau 1 */ const r = V.anneau(n.id); return !a.length || a.some(x => tenu(x) && !(offerte(x) && !reliee(x) && V.anneau(x) !== r));
   };
   // une case « proche » : pas encore possible, mais la suivante sur le chemin
   V.proche = function (n) {
     const v = V.vue();
-    return (plan(v).acces[n.id] || []).some(id => id !== 'centre' && G.techAvail(BY()[id]));
+    return (V.acces(v, n.id) || []).some(id => id !== 'centre' && BY()[id] && G.techAvail(BY()[id]));
   };
   V.manque = n => n && V.NIVEAU[n.id] && !G.tech(V.NIVEAU[n.id]) ? '« ' + BY()[V.NIVEAU[n.id]].nom + ' » (c\'en est la suite)' : 'une case qui touche celle-ci';
 
