@@ -6,10 +6,10 @@
   const G = CG.G, Bq = CG.Banque, Art = CG.Art, TAU = Math.PI * 2;
   const Ou = CG.Outils = { FOIS: 3 };
   Ou.L = {
-    panier: { nom: 'Panier d\'osier', ic: '🧺', job: 'cueilleur', prix: 70, quoi: 'cueille', phrase: 'Pour un cueilleur. Avec son panier, il vide trois buissons avant de rentrer : il rapporte trois fois plus de baies à chaque voyage.' },
-    brouette: { nom: 'Brouette', ic: '🛒', job: 'mineur', prix: 110, quoi: 'pioche', phrase: 'Pour un mineur. Il remplit sa brouette avant de rentrer : il rapporte trois fois plus de minerai à chaque voyage.' },
-    traineau: { nom: 'Traîneau à bûches', ic: '🛷', job: 'bucheron', prix: 90, quoi: 'coupe', phrase: 'Pour un bûcheron. Il charge son traîneau avant de rentrer : il rapporte trois fois plus de bois à chaque voyage.' },
-    gibeciere: { nom: 'Gibecière', ic: '👝', job: 'chasseur', prix: 90, quoi: 'chasse', phrase: 'Pour un chasseur. Un grand sac pour le gibier : il chasse trois bêtes avant de rentrer, et rapporte trois fois plus de viande et de cuir.' }
+    panier: { nom: 'Panier d\'osier', ic: '🧺', job: 'cueilleur', prix: 250, quoi: 'cueille', phrase: 'Pour un cueilleur. Avec son panier, il vide trois buissons avant de rentrer : il rapporte trois fois plus de baies à chaque voyage.' },
+    brouette: { nom: 'Brouette', ic: '🛒', job: 'mineur', prix: 350, quoi: 'pioche', phrase: 'Pour un mineur. Il remplit sa brouette avant de rentrer : il rapporte trois fois plus de minerai à chaque voyage.' },
+    traineau: { nom: 'Traîneau à bûches', ic: '🛷', job: 'bucheron', prix: 300, quoi: 'coupe', phrase: 'Pour un bûcheron. Il charge son traîneau avant de rentrer : il rapporte trois fois plus de bois à chaque voyage.' },
+    gibeciere: { nom: 'Gibecière', ic: '👝', job: 'chasseur', prix: 300, quoi: 'chasse', phrase: 'Pour un chasseur. Un grand sac pour le gibier : il chasse trois bêtes avant de rentrer, et rapporte trois fois plus de viande et de cuir.' }
   };
   Object.keys(Ou.L).forEach(k => { const o = Ou.L[k], J = CG.JOBS[o.job]; o.effet = J.nom + ' : il ' + o.quoi + ' ' + Ou.FOIS + ' fois avant de rentrer, et rapporte ' + Ou.FOIS + ' fois plus d\'un coup'; if (Bq) { Bq.NOMS[k] = ['', o.nom, o.nom, o.nom]; Bq.IC[k] = o.ic; } });
   if (Bq) { const e0 = Bq.effet; Bq.effet = function (k) { return Ou.L[k] ? Ou.L[k].effet : e0.apply(this, arguments); }; }

@@ -37,8 +37,8 @@
     const face = o.face < 0 ? -1 : 1, s = o.s || 1, t = o.t || 0, sw = o.moving ? Math.sin(o.step * TAU) : 0, w = o.weapon, A = Hu.ARME, F = Hu.FRAPPE;
     const bob = o.moving ? Math.abs(sw) * 1.4 : Math.sin(t * 2.4) * 0.5, u = o.atk > 0 ? 1 - Math.min(1, o.atk) : -1, tranche = w === 'epee' || w === 'massue';
     let lean = 0; if (u >= 0 && (tranche || w === 'fourche')) lean = u < A ? -0.1 * doux(u / A) : u < F ? mix(-0.1, 0.2, vif((u - A) / (F - A))) : 0.2 * (1 - doux((u - F) / (1 - F)));
-    const fente = Math.max(0, lean) * 14, tunic = o.tunic || '#8a6a3c', peau = o.skin || '#f0c8a0', jambes = o.armor ? FER2 : o.legs || '#3a3026', manche = o.armor ? FER : o.sleeve || tunic;
-    g.save(); g.translate(o.x, o.y); Art.shadow(g, 0, 1, 12 * s); g.scale(face * s, s);
+    const fente = Math.max(0, lean) * (w === 'fourche' ? 24 : 14), tunic = o.tunic || '#8a6a3c', peau = o.skin || '#f0c8a0', jambes = o.armor ? FER2 : o.legs || '#3a3026', manche = o.armor ? FER : o.sleeve || tunic;
+    g.save(); g.translate(o.x, o.y); Art.shadow(g, 0, 1, 12 * s); g.scale(face * s, s); if (w === 'fourche' && lean > 0) g.translate(lean * 70, 0); /* il se fend : tout le corps part en avant avec la fourche */
     const by = -15 - bob, sh = by - 15.5, hy = sh - 9.4;
     // ----- la cape, derrière tout -----
     if (o.cape) { const v = Math.sin(t * 3) * 1.2 + sw * 1.5; poly(g, [-6, sh + 1, 4, sh + 1, 6, by + 9 + v, -13 - Math.max(0, lean) * 20, by + 11 - v], o.cape); poly(g, [-6, sh + 1, -1, sh + 1, -4, by + 10, -13 - Math.max(0, lean) * 20, by + 11 - v], OMBRE); }

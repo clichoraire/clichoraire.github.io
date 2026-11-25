@@ -2,10 +2,10 @@
 'use strict';
 (function (CG) {
   const G = CG.G, Tv = CG.Trouve = { DUR: 3.6, POP: 0.8 }, TAU = Math.PI * 2;
-  Tv.play = function (icon, cb, ids) { const R = CG.R, p = CG.S.player; if (R.trouve) return false; R.trouve = { t: 0, icon: icon || '📜', cb, x: p.x, y: p.y, ids: ids || null, avant: Object.keys(p.scrolls || {}) }; R.dir = { x: 0, y: 1 }; CG.keys.clear(); CG.sfx('spell'); return true; };
+  Tv.play = function (icon, cb, ids) { const R = CG.R, p = CG.S.player; if (R.trouve) return false; R.trouve = { t: 0, icon: icon || '📖', cb, x: p.x, y: p.y, ids: ids || null, avant: Object.keys(p.scrolls || {}) }; R.dir = { x: 0, y: 1 }; CG.keys.clear(); CG.sfx('spell'); return true; };
   // le piédestal : la scène d'abord, le parchemin au moment où il le lève
   const take0 = CG.Autels.take;
-  CG.Autels.take = function (a) { if (!a || a.st !== 'ouvert' || CG.R.trouve) return; Tv.play('📜', () => take0.call(CG.Autels, a)); };
+  CG.Autels.take = function (a) { if (!a || a.st !== 'ouvert' || CG.R.trouve) return; Tv.play('📖', () => take0.call(CG.Autels, a)); };
   const hp0 = G.hurtPlayer; G.hurtPlayer = function () { if (CG.R.trouve) return; return hp0.apply(this, arguments); }; // rien ne le blesse pendant qu'il savoure
   const up0 = G.update;
   G.update = function (dt) {

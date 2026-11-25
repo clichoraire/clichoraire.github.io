@@ -197,10 +197,10 @@
     Mo.partir('portail');
   };
 
-  // ---------- le sort : Passage entre les mondes ----------
+  // ---------- le sort : Rappel ----------
   // Il ouvre un portail vers un de tes villages. Un seul village : c'est le portail bleu habituel, vers celui de ce monde.
   // Deux villages (un feu et une hutte de chef dans l'autre monde) : on choisit lequel. Le portail violet mène à l'autre monde.
-  CG.SPELLS.mondes = { nom: 'Passage entre les mondes', icon: '🌀', mp: 30, prix: 0, desc: 'Ouvre un portail à côté de toi, vers un de tes villages : entre dedans pour arriver près de son feu. Si tu as un village dans chaque monde (un feu de camp et une hutte de chef), tu choisis lequel. Le monde que tu quittes reste figé jusqu\'à ton retour.', color: '#c070ff' };
+  CG.SPELLS.mondes = { nom: 'Rappel', icon: '🌀', mp: 30, prix: 0, desc: 'Ouvre un portail à côté de toi, vers un de tes villages : entre dedans pour arriver près de son feu. Si tu as un village dans chaque monde (un feu de camp et une hutte de chef), tu choisis lequel. Le monde que tu quittes reste figé jusqu\'à ton retour.', color: '#c070ff' };
   if (CG.Effets && CG.Effets.FICHE) CG.Effets.FICHE.mondes = ['🌀', null, 'Portail ouvert 1 minute'];
   Mo.PORTAIL = 60;
   let direct = false;
@@ -250,7 +250,7 @@
 
   // ---------- bâtir au marais : la hutte du chef, le feu, la réserve ; et dans la forêt, la hutte du sous-chef ----------
   CG.BUILDS.chief = { nom: 'Hutte du chef', icon: '🏠', w: 3, h: 2, cat: 'clan', cout: { bois: 40 }, desc: 'Ta hutte dans ce monde : tu y dors, et elle rouvre le portail vers la forêt. Une seule.' };
-  CG.BUILDS.fire = { nom: 'Feu de camp', icon: '🔥', w: 1, h: 1, cat: 'clan', cout: { bois: 10 }, desc: 'Le cœur du village : la fête du soir, et l\'endroit où t\'amène le sort Passage entre les mondes. Un seul. Laisse de la place autour.' };
+  CG.BUILDS.fire = { nom: 'Feu de camp', icon: '🔥', w: 1, h: 1, cat: 'clan', cout: { bois: 10 }, desc: 'Le cœur du village : la fête du soir, et l\'endroit où t\'amène le sort Rappel. Un seul. Laisse de la place autour.' };
   CG.BUILDS.stock = { nom: 'Réserve', icon: '📦', w: 2, h: 1, cat: 'clan', cout: { bois: 15 }, desc: 'Là où tes gobelins déposent ce qu\'ils rapportent. Une seule.' };
   CG.BUILDS.souschef = { nom: 'Hutte du sous-chef', icon: '👑', w: 2, h: 2, cat: 'clan', cout: { bois: 40, or: 30 }, desc: 'Une fois bâtie, parle à un gobelin pour l\'élire sous-chef : c\'est à lui que les autres iront poser leurs questions.' };
   const bu0 = G.buildUnlocked; G.buildUnlocked = function (k) {

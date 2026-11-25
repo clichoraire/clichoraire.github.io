@@ -39,7 +39,7 @@
   Ar.Q[Gn.ID] = { mondes: [], qui: 'La grotte du nid', lieu: 'La grotte des araignées', theme: 'grotte', vagues: true, E: [[], [], []],
     entree: 'Une grotte sombre, pleine de toiles et de cocons. La reine des araignées attend tout au fond. Dehors, le temps s\'est arrêté.',
     recompense(A) { const S = CG.S, p = S.player, d = S.day, or = 90 + 16 * d + (A.palier || 0) * 40, xp = 45 + 8 * d; if (S.grotteNid) S.grotteNid.fait = true;
-      G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.6 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un parchemin, pris dans sa toile !'; }
+      G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.6 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un tome de sort, pris dans sa toile !'; }
       G.banner('La reine des araignées est tombée', 'La grotte se referme derrière toi. (+' + or + ' 🪙, +' + xp + ' XP, moral +4.)' + plus, '#e0d0ff'); CG.sfx('victory'); } };
   const gueule = { draw(g, o, t) { const x = o.x, y = o.y; t = t || 0;
     g.fillStyle = 'rgba(0,0,0,0.28)'; g.beginPath(); g.ellipse(x, y + 4, 40, 10, 0, 0, TAU); g.fill();
@@ -61,7 +61,7 @@
   let planC = null, planS = null;
   function plan() {
     const seed = CG.S.arene.seed, cle = seed + '|' + CG.S.arene.id; if (planC && planS === cle) return planC; const rng = CG.makeRng(seed + 71), r0 = CG.makeRng(seed + 1), salles = [{ x0: Ar.CX - 5, y0: Ar.CY, w: 11, h: Ar.RY + 1 }], couloirs = [], recoins = [];
-    const lave = mode() === 'lave', glace = mode() === 'glace', eau = mode() === 'eau', ch = mode() === 'chateau' || lave || glace || eau, Q = Ar.Q[CG.S.arene.id] || {}, tire = r0(), trone = ch && !!Q.chef && !!CG.ENEMIES[Q.chef[0]] && (r0() < Gn.TRONE || eau || !!Q.roi), NB = ch ? (trone ? 4 + Math.floor(tire * 2) : 4 + Math.floor(tire * 3)) : Gn.SALLES; /* le château : de quatre à six salles, jamais deux fois le même */
+    const lave = mode() === 'lave', glace = mode() === 'glace', eau = mode() === 'eau', ch = mode() === 'chateau' || lave || glace || eau, Q = Ar.Q[CG.S.arene.id] || {}, tire = r0(), trone = ch && !!Q.chef && !!CG.ENEMIES[Q.chef[0]] && (r0() < Gn.TRONE || eau || !!Q.roi), NB = Q.nbSalles ? Q.nbSalles : ch ? (trone ? 4 + Math.floor(tire * 2) : 4 + Math.floor(tire * 3)) : Gn.SALLES; /* le château : de quatre à six salles, jamais deux fois le même */
     for (let i = 1; i < NB; i++) { const p = salles[i - 1], fin = i === NB - 1, grand = fin && (!ch || trone), w = grand ? (ch ? 22 : 14) : (ch ? 7 : 8) + Math.floor(rng() * (ch ? 3 : 4)), h = grand ? (ch ? 9 : 11) : 6 + Math.floor(rng() * 4), gap = (ch ? 3 : 4) + Math.floor(rng() * (ch ? 2 : 3)), pcy = p.y0 + Math.floor(p.h / 2);
       const cy = CG.clamp(pcy + Math.round((rng() - 0.5) * 16), 13, MH - 14), s = { x0: p.x0 + p.w + gap, y0: cy - Math.floor(h / 2), w, h }; salles.push(s);
       couloirs.push({ x1: p.x0 + p.w - 1, y1: pcy, mx: p.x0 + p.w + Math.floor(gap / 2), x2: s.x0, y2: cy });
@@ -362,14 +362,15 @@
   // ---------- des barils (ou des jarres, selon l'endroit) : un coup de bâton les casse, et il en tombe parfois quelque chose ----------
   Gn.BARIL = { PAR_SALLE: [0, 2], RIEN: 0.4, PRES: 52, CORPS: 15, LARGE: 14 }; /* LARGE : le baril est gros, le coup le touche avant d'arriver à son milieu */
   function barils(m) {
+    const Qv = Ar.Q[CG.S.arene.id] || {}; if (Qv.vases) m = 'sable'; /* un temple des sables : des vases peints à la place des barils, et davantage */
     const R = CG.R, P = plan(), p = CG.S.player, B = R.barils = [], pris = (x, y) => B.some(b => Math.hypot(b.x - x, b.y - y) < 30) || R.chests.some(c => Math.hypot(c.x - x, c.y - y) < 44) || Math.hypot(p.x - x, p.y - y) < 90 || (P.cage && Math.hypot(P.cage.x - x, P.cage.y - y) < 90);
     const libre = (x, y) => W.walkPx(x, y) && W.walkPx(x - 12, y) && W.walkPx(x + 12, y) && W.walkPx(x, y - 10) && ![[0, 0], [-12, 0], [12, 0], [0, 10]].some(q => cols.has(Math.floor((x + q[0]) / T) + Math.floor((y + q[1]) / T) * 1000));
-    P.salles.concat(P.recoins).forEach(s => { const n = CG.irand(Gn.BARIL.PAR_SALLE[0], Gn.BARIL.PAR_SALLE[1]); for (let i = 0, k = 0; i < n && k < 30; k++) { const bord = Math.floor(Math.random() * 4), u = Math.random();
+    P.salles.concat(P.recoins).forEach(s => { const n = CG.irand(Gn.BARIL.PAR_SALLE[0], Gn.BARIL.PAR_SALLE[1]) + (m === 'sable' ? 2 : 0); for (let i = 0, k = 0; i < n && k < 30; k++) { const bord = Math.floor(Math.random() * 4), u = Math.random();
         const x = bord < 2 ? s.x0 * T + 18 + u * (s.w * T - 36) : bord === 2 ? s.x0 * T + 18 : (s.x0 + s.w) * T - 18, y = bord === 0 ? s.y0 * T + 24 : bord === 1 ? (s.y0 + s.h) * T - 12 : s.y0 * T + 24 + u * (s.h * T - 40);
         if (!libre(x, y) || pris(x, y)) continue; B.push({ x, y, biome: m, v: Math.random() }); i++; if (Math.random() < 0.4 && libre(x + 24, y + 4) && !pris(x + 24, y + 4)) { B.push({ x: x + 24, y: y + 4, biome: m, v: Math.random() }); i++; } } });
   }
   function casser(b) {
-    const R = CG.R, S = CG.S, i = R.barils.indexOf(b); if (i < 0) return; R.barils.splice(i, 1); const col = { lave: '#5a4a44', glace: '#bfe6ff', eau: '#b06a48' }[b.biome] || '#8a5a2a';
+    const R = CG.R, S = CG.S, i = R.barils.indexOf(b); if (i < 0) return; R.barils.splice(i, 1); const col = { lave: '#5a4a44', glace: '#bfe6ff', eau: '#b06a48', sable: '#d8a85a' }[b.biome] || '#8a5a2a';
     G.puff(b.x, b.y - 12, col, 16, 150, 4); G.puff(b.x, b.y - 12, '#e8dcc0', 6, 90, 3); if (CG.onScreen(b.x, b.y)) CG.sfx('chop');
     const q = Math.random(); if (q < Gn.BARIL.RIEN) return;
     if (q < 0.76) G.dropRes(b.x, b.y, 'or', CG.irand(4, 9) + S.day); else if (q < 0.88) for (let k = 0; k < 2; k++) G.drop(b.x, b.y, { kind: 'xp', n: 3 + S.day }); else if (q < 0.96) G.drop(b.x, b.y, { kind: 'potion', n: 1 }); else { G.dropRes(b.x, b.y, 'or', 30 + S.day * 4); G.text(b.x, b.y - 40, 'Un magot !', '#ffe36b', true); }
@@ -381,8 +382,8 @@
       B.filter(b => { const dx = b.x - p.x, dy = b.y - 10 - p.y, d = Math.hypot(dx, dy) || 1; return d < portee && (tour || d < 28 || (dx * d0.x + dy * d0.y) / d > 0); }).forEach(casser); return r; };
     const bl1 = G.blast; G.blast = function (x, y, r) { const res = bl1.apply(this, arguments), B = mode() && CG.R.barils; if (B) B.filter(b => Math.hypot(b.x - x, b.y - 12 - y) < r).forEach(casser); return res; };
     const ub = G.update; G.update = function (dt) { ub.apply(this, arguments); const R = CG.R, B = R && mode() && R.barils; if (!B || !B.length || R.passe > 0 || R.ko > 0) return; const p = CG.S.player; for (const b of B) { const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy); if (d < Gn.BARIL.CORPS) { const m = Gn.BARIL.CORPS - d; G.slide(p, (d ? dx / d : 1) * m, (d ? dy / d : 0) * m, 8); } } };
-    const PB = { bois: ['#8e6638', '#6a4722', '#4a4a50'], nid: ['#8e6638', '#6a4722', '#4a4a50'], chateau: ['#6a4a3a', '#4a3226', '#3a3a42'], glace: ['#9cc8e8', '#6ea4d0', '#e8f4ff'], lave: ['#4a3a38', '#2e2224', '#ff8a1e'], eau: ['#b8704a', '#8a4e32', '#58b05a'] };
-    const barilO = { draw(g, o) { const b = o.b, C = PB[b.biome] || PB.chateau, x = b.x, y = b.y, jarre = b.biome === 'lave' || b.biome === 'eau';
+    const PB = { bois: ['#8e6638', '#6a4722', '#4a4a50'], nid: ['#8e6638', '#6a4722', '#4a4a50'], chateau: ['#6a4a3a', '#4a3226', '#3a3a42'], glace: ['#9cc8e8', '#6ea4d0', '#e8f4ff'], lave: ['#4a3a38', '#2e2224', '#ff8a1e'], eau: ['#b8704a', '#8a4e32', '#58b05a'], sable: ['#e0b468', '#b88440', '#2f7ac0'] };
+    const barilO = { draw(g, o) { const b = o.b, C = PB[b.biome] || PB.chateau, x = b.x, y = b.y, jarre = b.biome === 'lave' || b.biome === 'eau' || b.biome === 'sable';
       g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(x, y + 1, 12, 4.5, 0, 0, TAU); g.fill();
       if (jarre) { g.fillStyle = C[1]; g.beginPath(); g.ellipse(x, y - 11, 10.5, 12.5, 0, 0, TAU); g.fill(); g.fillStyle = C[0]; g.beginPath(); g.ellipse(x - 1.5, y - 12, 8.5, 11, 0, 0, TAU); g.fill(); g.fillStyle = C[1]; g.fillRect(x - 5.5, y - 27, 11, 5); g.fillStyle = C[0]; g.fillRect(x - 7, y - 29, 14, 3.4); g.fillStyle = 'rgba(255,255,255,0.16)'; g.beginPath(); g.ellipse(x - 5, y - 15, 2.2, 5.5, 0.3, 0, TAU); g.fill();
         if (b.biome === 'lave') { g.strokeStyle = C[2]; g.lineWidth = 1.3; g.beginPath(); g.moveTo(x - 4, y - 20); g.lineTo(x, y - 13); g.lineTo(x - 3, y - 6); g.moveTo(x + 4, y - 16); g.lineTo(x + 6, y - 9); g.stroke(); }

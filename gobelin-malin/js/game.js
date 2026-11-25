@@ -42,7 +42,8 @@
     S.goblins.push(g); G.resetGoblin(g); return g;
   };
   G.copyCost = id => Math.round(CG.SPELLS[id].prix * 0.5);
-  G.gobMaxHp = g => (g.job === 'garde' ? (42 + g.lvl * 9 + Math.min(2, G.count('caserne')) * 12) * (G.tech('d13') ? 1.25 : 1) : 20 + g.lvl * 3) + (g.equip.armure ? 15 : 0);
+  G.GOB_VIE = { BASE: 39, NIV: 6, GARDE: 58, GARDE_NIV: 12 }; /* un gobelin commence à 45 de vie (39 + 6), un garde à 70 */
+  G.gobMaxHp = g => (g.job === 'garde' ? (G.GOB_VIE.GARDE + g.lvl * G.GOB_VIE.GARDE_NIV + Math.min(2, G.count('caserne')) * 12) * (G.tech('d13') ? 1.25 : 1) : G.GOB_VIE.BASE + g.lvl * G.GOB_VIE.NIV) + (g.equip.armure ? 15 : 0);
   G.resetGoblin = function (g) {
     if (R && g.tree !== undefined && g.tree !== null) R.reserved.delete(g.tree);
     if (g.log) { g.log.by = null; g.log = null; }
@@ -156,8 +157,10 @@
     if (g.xp >= need) { g.xp -= need; g.lvl++; if (R.dayStats) (R.dayStats.ups = R.dayStats.ups || []).push(g.name + ' (niv. ' + g.lvl + ')'); G.text(g.x, g.y - 44, g.name + ' niv. ' + g.lvl + ' !', '#ffe36b'); /* le chapeau ne se mérite plus au niveau 3 : il se coud à l'atelier */ }
   }
   G.gobXp = gobXp;
+  G.XP_COMBAT = 1 / 3; G.XP_VILLAGE = 0.5; G.XP_AUTRE = { autre: true }; // XP du combat : un gobelin qui n'est pas garde en compte le tiers (sa barre est 3 fois plus courte) ; la part des tours et des pièges va à moitié au chef
   function partyRole(g) { const r = (g.id * 37) % 20; return g.sex === 'f' ? (r < 15 ? 'dance' : 'drink') : (r < 3 ? 'drum' : r < 8 ? 'dance' : 'drink'); }
   function updateGoblin(g, dt) {
+    if (g.ko === true || g.enSoin) { g.moving = false; g.hidden = true; return; } /* à terre, ou au lit chez le guérisseur (relever.js) */
     g.atkCd -= dt; if (g.atkAnim > 0) g.atkAnim -= dt * 4;
     if (g.emoteT > 0) g.emoteT -= dt;
     if (g.boost > 0) { g.boost -= dt; if (!g.hidden && Math.random() < dt * 6) R.parts.push({ x: g.x - g.face * 8, y: g.y - 4, vx: rand(-10, 10), vy: rand(-26, -8), life: 0.4, max: 0.4, col: '#e8dcc0', size: 3, float: true }); }
@@ -168,6 +171,7 @@
     if (g.cine) { if (R.alarm) CG.Soc.endCine(); else { G.cineStep(g, dt); return; } }
     if (g.job === 'guerisseur' && G.healerStep(g, dt)) return; // à son poste, même pendant une attaque
     if (g.migre && CG.Mondes && CG.Mondes.step(g, dt)) return; // invité dans l'autre monde : il marche vers le portail
+    if (g.escorte && CG.Escorte && CG.Escorte.step(g, dt)) return; // il escorte le chef (escorte.js)
     if (g.demenage && CG.Demenager && CG.Demenager.step(g, dt)) return; // il suit le chef pour déménager dans l'autre monde (demenager.js)
     if (g.aide && CG.Aide && CG.Aide.step(g, dt)) return; // il est venu chercher le chef pour chasser un monstre (aide.js)
     if (g.job === 'chasseur' && CG.Gibier && CG.Gibier.defend(g, dt)) return; // un monstre approche : le chasseur lui tire dessus au lieu de se cacher (gibier.js)
@@ -233,7 +237,7 @@
           g.tree = W.idx(tr.x, tr.y); R.reserved.add(g.tree); g.node = tr;
           if (!goTo(g, tr.x * T + T / 2, tr.y * T + T / 2)) { g.timer = 2; return; }
         } else {
-          const ns = W.nodes.filter(n => n.type === job.node && !n.gone); if (!ns.length) { g.timer = 5; g.bubble = '❓'; return; } g.node = pick(CG.Aide ? CG.Aide.ailleurs(g, ns) : ns);
+          const ns = W.nodes.filter(n => (n.type === job.node || (job.node === 'bush' && n.type === 'fraise' && n.pres)) && !n.gone); /* les plants de fraises de l'orée comptent aussi (fraises.js) ; ceux du fond de la forêt sont pour le chef */ if (!ns.length) { g.timer = 5; g.bubble = '❓'; return; } g.node = pick(CG.Aide ? CG.Aide.ailleurs(g, ns) : ns);
           if (!goTo(g, g.node.x * T + T / 2 + rand(-14, 14), g.node.y * T + T / 2 + rand(4, 16))) { g.timer = 2; return; }
         }
         g.state = 'toNode'; g.bubble = null;
@@ -356,15 +360,18 @@
   }
   G.guardFight = guardFight;
   G.hurtGoblin = function (g, dmg) {
+    if (g.perch) return; /* dans une tour de guet, on ne le touche pas : il faut d'abord abattre la tour */
+    if ((g.ko === true || g.enSoin) && !g.mourir) return; /* déjà à terre, ou au lit chez le guérisseur (relever.js) */
     g.hp -= dmg; G.text(g.x, g.y - 40, '-' + Math.round(dmg), R.dmgCol || (R.feuSrc ? CG.DMG.feu : '#ff9a8a')); G.puff(g.x, g.y - 16, '#7ab850', 4);
     if (g.hp > 0 && CG.onScreen(g.x, g.y)) CG.sfx('hit');
-    if (g.hp <= 0 && G.count('chaman') && Math.random() < 0.5) { // le chaman le rattrape de justesse
+    if (g.hp <= 0 && !g.mourir && G.count('chaman') && Math.random() < 0.5) { // le chaman le rattrape de justesse
       G.resetGoblin(g); g.hp = 1; const d = G.door(S.buildings[g.home]); g.x = d.x; g.y = d.y; g.hidden = R.alarm && g.job !== 'garde'; if (g.job === 'garde') g.hp = G.gobMaxHp(g) * 0.3;
       G.text(d.x, d.y - 50, '💀 ' + g.name + ' est sauvé par le chaman', '#b8ffb0'); return;
     }
-    if (g.hp <= 0 && (G.militia(g) || g.cls === 'loup')) { // un villageois sorti se battre la nuit n'en meurt pas : il est assommé et rentre
+    if (g.hp <= 0 && !g.mourir && (G.militia(g) || g.cls === 'loup')) { // un villageois sorti se battre la nuit n'en meurt pas : il est assommé et rentre
       G.resetGoblin(g); g.hp = 1; const d = G.door(S.buildings[g.home]); G.text(g.x, g.y - 70, g.name + ' est assommé', '#ffb0a0', true); (R.etoilesKO = R.etoilesKO || []).push({ x: g.x, y: g.y, fin: R.t + 2.6, g: { sex: g.sex, hue: g.hue, lum: g.lum, job: g.job, look: g.look, equip: g.equip, cls: g.cls || (g.nomme ? 'hob' : null), noHat: !g.hat, hatJob: g.hat } }); /* on le voit un instant par terre, des étoiles autour de la tête, avant qu'on le rentre chez lui */ G.puff(g.x, g.y - 14, '#ddd', 12, 90, 4); g.x = d.x; g.y = d.y; g.koNight = S.day; return;
     }
+    if (g.hp <= 0 && !g.mourir && CG.Relever && CG.Relever.tomber && CG.Relever.tomber(g)) return; /* assommé : 30 secondes pour qu'un guérisseur vienne le chercher */
     if (g.hp <= 0) {
       G.resetGoblin(g); S.goblins.splice(S.goblins.indexOf(g), 1); g.dead = true;
       G.text(g.x, g.y - 50, '☠ ' + g.name, '#ffb0a0', true); G.puff(g.x, g.y - 14, '#ddd', 16, 90, 4);
@@ -442,7 +449,7 @@
       if (d < 90 && spd) { const dx = e.x - tg.x, dy = e.y - tg.y; if (slide(e, dx / d * spd * 0.6 * dt, dy / d * spd * 0.6 * dt)) { e.moving = true; e.step += dt * 2; } }
       return;
     }
-    if (d > e.r + 22) { if (spd) chase(e, tg.x, tg.y, spd, dt); return; }
+    if (d > e.r + 22 + (CG.ENEMIES[e.type].allonge || 0)) { if (spd) chase(e, tg.x, tg.y, spd, dt); return; } /* allonge : une arme longue (la fourche) touche de plus loin */
     e.face = tg.x > e.x ? 1 : -1;
     if (e.atkCd <= 0) { e.atkCd = 1.15; e.atkAnim = 1; if (tg === S.player) G.hurtPlayer(e.dmg); else if (tg.type && CG.ENEMIES[tg.type]) G.hurtEnemy(tg, e.dmg, e); else if (tg.summon) CG.Magie.hurt(tg, e.dmg); else if (tg.pet) CG.P.hurt(tg, e.dmg); else G.hurtGoblin(tg, e.dmg); }
   }
@@ -450,7 +457,10 @@
     if (e.dead) return;
     if (e.charm > 0 && !(src && src.type && CG.ENEMIES[src.type])) return; // tant qu'il est charmé, on ne peut pas le frapper : seuls ses anciens amis le peuvent
     if (e.sleepT > 0) { e.sleepT = 0; dmg *= 2; G.text(e.x, e.y - 62, 'Réveil brutal !', '#ffd0a0'); }
-    dmg = Math.max(1, Math.round(dmg)); e.hp -= dmg; e.calm = false;
+    dmg = Math.max(1, Math.round(dmg));
+    { // on retient qui lui a enlevé combien de vie : l'XP se partagera selon ces parts (plus bas). Sans auteur connu (poison, sort) = le chef ; tour, piège, golem... = « autre »
+      const q = !src || src === S.player ? S.player : src.job !== undefined || src.pet ? src : G.XP_AUTRE, m = e.dgt || (e.dgt = new Map()); m.set(q, (m.get(q) || 0) + Math.max(0, Math.min(dmg, e.hp))); }
+    e.hp -= dmg; e.calm = false;
     if (playerAttack && dist(e, S.player) <= 550) R.playerCombatUntil = R.t + 5;
     const onScreen = CG.onScreen(e.x, e.y);
     G.text(e.x + rand(-8, 8), e.y - 44, '' + dmg, R.dmgCol || '#fff'); G.puff(e.x, e.y - 18, CG.ENEMIES[e.type].race === 'mort' ? '#eee' : '#c8281e', 5); if (onScreen) CG.sfx('hit');
@@ -470,9 +480,16 @@
       if (e.struct) CG.Camps.destroyed(e);
       if (CG.ENEMIES[e.type].boss) { S.tech.points++; CG.UI.toast('🌳 Chef ennemi vaincu : +1 point de technologie !'); }
       const byPlayer = !src || src === p;
-      G.addXp(Math.round(d.xp * (1 + 0.05 * (S.day - 1)) * (byPlayer ? 1 : 0.5)));
-      if (src && src !== p && src.job) gobXp(src, d.xp, 10);
-      if (src && src.pet) CG.P.xp(src, d.xp);
+      // l'XP se partage selon la vie enlevée : qui a fait 60 % des dégâts reçoit 60 % de l'XP, peu importe qui achève le monstre
+      { const m = e.dgt || new Map(); let tot = 0; m.forEach(n => { tot += n; }); if (!(tot > 0)) { m.clear(); m.set(!src || src === p ? p : src.job !== undefined || src.pet ? src : G.XP_AUTRE, 1); tot = 1; }
+        const chefXp = d.xp * (1 + 0.05 * (S.day - 1));
+        m.forEach((n, q) => { const k = n / tot; if (!(k > 0)) return;
+          if (q === p) G.addXp(chefXp * k);
+          else if (q === G.XP_AUTRE) G.addXp(chefXp * k * G.XP_VILLAGE); // tours, pièges, golem : le chef en reçoit la moitié, comme avant
+          else if (q.dead || q.exile) return; // mort avant la fin : sa part est perdue
+          else if (q.pet) CG.P.xp(q, d.xp * k);
+          else G.gobXp(q, d.xp * k * (q.job === 'garde' ? 1 : G.XP_COMBAT), 10); }); /* par G.gobXp : la fête du niveau (niveauup.js) */
+        e.dgt = null; }
       // le butin tombe par terre autour de lui : il faut passer dessus pour le ramasser
       if (d.or) G.dropRes(e.x, e.y, 'or', d.or + Math.floor(S.day / 3));
       if (d.food) G.dropRes(e.x, e.y, 'food', d.food);
@@ -481,9 +498,9 @@
   };
   G.giveScroll = function (id, x, y) {
     const p = S.player, sp = CG.SPELLS[id];
-    if (p.spells.includes(id) || p.scrolls[id]) { G.gain('or', 15, x, y - 30); G.text(x, y - 60, 'Parchemin en double : vendu', '#ffe36b'); return; }
-    p.scrolls[id] = 1; G.text(x === undefined ? p.x : x, (y === undefined ? p.y : y) - 60, '📜 ' + sp.nom + ' !', '#ffe36b', true); CG.sfx('page');
-    CG.UI.toast('📜 Parchemin trouvé : ' + sp.nom + '. Ouvre ton grimoire (G) pour le copier.');
+    if (p.spells.includes(id) || p.scrolls[id]) { G.gain('or', 15, x, y - 30); G.text(x, y - 60, 'Tome en double : vendu', '#ffe36b'); return; }
+    p.scrolls[id] = 1; G.text(x === undefined ? p.x : x, (y === undefined ? p.y : y) - 60, '📖 ' + sp.nom + ' !', '#ffe36b', true); CG.sfx('page');
+    CG.UI.toast('📖 Tome trouvé : ' + sp.nom + '. Ouvre ton grimoire (G) pour le copier.');
   };
 
   G.retreatAll = function () { for (const e of R.enemies) if (e.event && !e.dead) { e.retreat = true; e.path = null; } if (R.event) R.event.fled = true; };
@@ -499,7 +516,7 @@
     while (p.xp >= G.xpNeed(p.lvl)) {
       p.xp -= G.xpNeed(p.lvl); p.lvl++; p.maxhp += 12; p.maxmp += 6; p.hp += 12; p.mp += 6; if (CG.Evo) CG.Evo.chief(true); /* plus de guérison complète : seulement la vie et le mana gagnés */
       const pts = G.pointsNiveau(p.lvl); S.tech.points += pts; CG.UI.toast((pts >= 4 ? '🌟 ' : '🌳 ') + 'Niveau ' + p.lvl + ' : +' + pts + ' point' + (pts > 1 ? 's' : '') + ' de technologie' + (pts === 5 ? ' — le gros lot !' : pts === 4 ? ' — quelle chance !' : '.') + ' Ouvre l\'arbre avec T.');
-      G.text(p.x, p.y - 70, 'NIVEAU ' + p.lvl + ' !', '#ffe36b', true); G.puff(p.x, p.y - 20, '#ffe36b', 24, 140, 4); CG.sfx('level');
+      if (CG.NiveauUp) CG.NiveauUp.lancer(p); else G.text(p.x, p.y - 70, 'NIVEAU ' + p.lvl + ' !', '#ffe36b', true); /* le cercle doré, comme pour les gobelins (niveauup.js) */ G.puff(p.x, p.y - 20, '#ffe36b', 24, 140, 4); CG.sfx('level');
     }
   };
   G.playerDmg = () => 4 + S.player.lvl * 1.5 + S.player.weapon * 3 + (G.tech('g2') ? 3 : 0);

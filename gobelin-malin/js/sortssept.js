@@ -2,7 +2,7 @@
 //   4e cercle : Invocation (une créature se bat avec toi ; le parchemin donne la plus petite, le slime, et d'autres parchemins
 //               « Invocation : ... » ajoutent les suivantes, jusqu'au grand démon. Avec plusieurs créatures, on choisit en lançant).
 //   6e cercle : Esprit des lames (un tourbillon de lames posé au sol, qui fonce sur les ennemis), Mur de poison (comme le mur
-//               de feu, mais il empoisonne), et le Passage entre les mondes, qui avale le Retour au village : en plus des
+//               de feu, mais il empoisonne), et le Rappel, qui avale le Retour au village : en plus des
 //               portails vers tes villages, on marque des runes (achetées aux elfes) et on s'y téléporte.
 //   7e cercle : Vampire de mana (un fantôme boit la magie des monstres et te la rapporte), Séisme (tout tremble : les monstres
 //               ne bougent plus et n'attaquent plus, puis ils encaissent quand ça s'arrête).
@@ -36,7 +36,7 @@
   def('vampmana', 'Vampire de mana', '👻', '#9ab6ff', 'Un petit fantôme bleu vole de monstre en monstre pour boire leur magie, puis revient te donner tout le mana qu\'il a pris.');
   def('seisme', 'Séisme', '🌋', '#c9a56b', 'La terre tremble ! Tant que ça secoue, les monstres ne peuvent ni bouger ni attaquer. Toi, tu fais ce que tu veux. Quand le séisme s\'arrête, tous les monstres sont blessés.');
   def('rayons', 'Rayons tournants', '✴️', '#ffe36b', 'Des rayons de lumière partent de toi et tournent tout seuls pendant quelques secondes : ils brûlent fort tous les monstres qu\'ils balaient. Pendant ce temps, tu peux faire autre chose.');
-  def('invoc', 'Invocation', '🐾', '#c8a0ff', 'Tu appelles une créature qui se bat à tes côtés. Ce parchemin t\'apprend la plus petite : le slime. D\'autres parchemins d\'invocation t\'en apprendront de plus fortes.');
+  def('invoc', 'Invocation', '🐾', '#c8a0ff', 'Tu appelles une créature qui se bat à tes côtés. Ce tome t\'apprend la plus petite : le slime. D\'autres tomes d\'invocation t\'en apprendront de plus fortes.');
   IV.ORDRE.slice(1).forEach(k => { const b = IV.B[k]; def(PARCH(k), 'Invocation : ' + b.nom, b.ic, '#c8a0ff', 'Ajoute une créature à ton sort Invocation : ' + b.nom.charAt(0).toLowerCase() + b.nom.slice(1) + ' (' + b.don + ').', false); });
   S7.T = {
     lames: ['Des lames plus tranchantes, qui tiennent plus longtemps.', 'Des lames terribles, très solides, qui restent encore plus longtemps.'],
@@ -128,7 +128,7 @@
     UI.dialog({ who: SP.mondes.nom, tag: '🔷 runes', text: 'Où veux-tu aller ?', options: opts }); }
   // les elfes vendent les runes vierges ; plus personne ne vend le Retour au village
   { const sh0 = UI.shop; UI.shop = function (v) { try { if (v && v.shop) { for (let i = v.shop.length - 1; i >= 0; i--) if (v.shop[i].scroll === 'retour') v.shop.splice(i, 1);
-      if (v.role === 'elfe' && v.runeVu === undefined) { v.runeVu = true; v.shop.push({ rune: true, icon: '🔷', label: 'Rune vierge', desc: 'Avec ton sort Passage entre les mondes, tu marques un endroit sur la rune. Ensuite, le sort t\'y ramène quand tu veux.', prix: S7.RUNES.prix, stock: S7.RUNES.stock, buy: () => { runes().vierges++; UI.toast('🔷 Une rune vierge de plus (' + runes().vierges + '). Lance le Passage entre les mondes pour la marquer.'); } }); } } } catch (e) { /* jamais bloquant */ } return sh0.apply(this, arguments); }; }
+      if (v.role === 'elfe' && v.runeVu === undefined) { v.runeVu = true; v.shop.push({ rune: true, icon: '🔷', label: 'Rune vierge', desc: 'Avec ton sort Rappel, tu marques un endroit sur la rune. Ensuite, le sort t\'y ramène quand tu veux.', prix: S7.RUNES.prix, stock: S7.RUNES.stock, buy: () => { runes().vierges++; UI.toast('🔷 Une rune vierge de plus (' + runes().vierges + '). Lance le Rappel pour la marquer.'); } }); } } } catch (e) { /* jamais bloquant */ } return sh0.apply(this, arguments); }; }
   // le Retour au village n'existe plus à part : c'est le Passage
   if (SP.mondes) { SP.mondes.desc = 'Le sort des voyages. Il ouvre un portail vers ton village (et vers celui de l\'autre monde, si tu en as un). Avec des runes vierges, achetées aux elfes, tu peux aussi marquer un endroit : le sort t\'y ramènera d\'un coup, quand tu veux.'; SP.mondes.court = 'Un portail vers ton village, ou un saut vers une de tes runes.'; if (!CG.SCROLL_POOL.includes('mondes')) CG.SCROLL_POOL.push('mondes'); }
   { const i = CG.SCROLL_POOL.indexOf('retour'); if (i >= 0) CG.SCROLL_POOL.splice(i, 1); }

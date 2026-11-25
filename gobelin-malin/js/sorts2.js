@@ -33,7 +33,7 @@
   So.cout = lvl => So.RES.base + So.RES.parNiveau * (lvl || 1);
 
   // ---------- le cimetière du clan : on garde ceux qui tombent, pour pouvoir les ramener ----------
-  const GARDE = ['hat', 'hats', 'lazy', 'cls', 'fun', 'look', 'nomme', 'apt', 'weak', 'jobs', 'ami', 'child', 'met', 'perso', 'bio', 'talent', 'id', 'name', 'sex', 'job', 'lvl', 'xp', 'hue', 'lum', 'equip', 'outil'];
+  const GARDE = ['hat', 'hats', 'lazy', 'cls', 'fun', 'look', 'nomme', 'apt', 'weak', 'jobs', 'ami', 'child', 'met', 'perso', 'bio', 'talent', 'id', 'name', 'sex', 'job', 'lvl', 'xp', 'hue', 'lum', 'equip', 'outil', 'coiffe'];
   const hg = G.hurtGoblin;
   G.hurtGoblin = function (g) {
     const r = hg.apply(this, arguments);
@@ -60,7 +60,7 @@
     (S.morts || []).slice().reverse().forEach(c => { const cout = So.cout(c.lvl), job = CG.JOBS[c.job] || CG.JOBS.aucun, plein = S.goblins.length >= G.capacity();
       opts.push({ label: '☠ ' + c.name + ' — ' + (c.sex === 'f' && job.nomF ? job.nomF : job.nom) + ' niv. ' + c.lvl, sub: plein ? 'Plus de place dans les huttes' : p.mp < cout ? 'Il te faut ' + cout + ' mana (tu en as ' + Math.floor(p.mp) + ')' : cout + ' mana · tombé au jour ' + c.jour, disabled: plein || p.mp < cout,
         fn: () => { if (p.mp < cout) return; p.mp -= cout; R.castCd = 0.8; R.castAnim = 1; const g = relever(c); lumiere(g.x, g.y, g.name); if (G.say) G.say(g, CG.pick(['Hein ? J\'ai dormi longtemps ?', 'J\'ai vu une grande lumière... et un buffet !', 'Chef ! Tu es venu me chercher !', 'Aïe. Tout est à sa place ? ... Oui. Ouf.', 'Là-bas, c\'était calme. Trop calme. Merci, chef.']), 4, 1.2); } }); });
-    S.pets.filter(a => a.ko).forEach(a => { const cout = So.cout(a.lvl), K = CG.P.KINDS[a.kind];
+    S.pets.filter(a => a.ko && !a.tombe && !a.enSoin).forEach(a => { /* pas ceux qui sont seulement assommés ou déjà chez le guérisseur (relever.js) */ const cout = So.cout(a.lvl), K = CG.P.KINDS[a.kind];
       opts.push({ label: (K.icon || '🐾') + ' ' + a.name + ' — ' + (a.evo ? K.evo : K.nom) + ' niv. ' + a.lvl, sub: p.mp < cout ? 'Il te faut ' + cout + ' mana (tu en as ' + Math.floor(p.mp) + ')' : cout + ' mana · mort', disabled: p.mp < cout,
         fn: () => { if (p.mp < cout) return; p.mp -= cout; R.castCd = 0.8; R.castAnim = 1; a.ko = false; a.hp = CG.P.maxHp(a); lumiere(a.x, a.y, a.name); } }); });
     if (!opts.length) { CG.sfx('no'); G.text(p.x, p.y - 56, 'Personne à ramener', '#fff3b0'); return; }

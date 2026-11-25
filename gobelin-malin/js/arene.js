@@ -78,7 +78,7 @@
   function recompense(A) {
     if (Ar.Q[A.id].recompense) return Ar.Q[A.id].recompense(A);
     const S = CG.S, p = S.player, Q = Ar.Q[A.id], or = 40 + 12 * S.day + A.palier * 30, xp = 30 + 6 * S.day; G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 3);
-    let plus = ''; if (Math.random() < 0.35) { const id = G.newScroll(); if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un parchemin !'; } }
+    let plus = ''; if (Math.random() < 0.35) { const id = G.newScroll(); if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un tome de sort !'; } }
     G.banner(Q.qui + ' te remercie', Q.merci + ' (+' + or + ' 🪙, +' + xp + ' XP, moral +3.)' + plus, '#c8ffb0'); CG.sfx('victory');
   }
   // ---------- la petite carte ----------
@@ -94,6 +94,7 @@
     crypte: { fond: '#07040c', h: 268, s: 24, l: 22, bord: 'roche' },
     clairiere: { fond: '#0c1a0c', h: 108, s: 40, l: 34, bord: 'arbre' }, mare: { fond: '#0a1410', h: 150, s: 26, l: 28, bord: 'arbre' }
   };
+  Ar.TH = TH; /* d'autres fichiers y ajoutent leurs décors (sablestemples.js) */
   const pa0 = W.paint; W.paint = function () {
     if (!dans()) return pa0.apply(this, arguments);
     const th = TH[Ar.Q[CG.S.arene.id].theme], c = W.terrain = document.createElement('canvas'); c.width = MW * T; c.height = MH * T; const g = c.getContext('2d'), I = W.idx, rng = CG.makeRng(CG.S.arene.seed + 3);
@@ -141,9 +142,9 @@
   Ar.gagner = function () {
     const S = CG.S, R = CG.R, A = S.arene; if (!A || A.gagne) return;
     A.gagne = true; R.sortiePy = null; const o = Mo.portailPos(); G.puff(o.x, o.y - 30, '#c090ff', 40, 220, 5); for (let i = 0; i < 3; i++) R.rings.push({ x: o.x, y: o.y - 10, r: 70 + i * 50, life: 0.5 + i * 0.15, col: '#c090ff' });
-    G.banner('Victoire !', A.piedestal ? 'Un piédestal est sorti du sol au milieu de la salle, déjà ouvert : prends le parchemin (E) avant de repartir par le portail de pierre.' : 'Plus personne ne bouge. Reprends le portail de pierre par lequel tu es arrivé (E) pour revenir où tu étais.', '#ffe9a8'); CG.sfx('victory'); try { CG.save(); } catch (e) { /* rien */ }
+    G.banner('Victoire !', A.lot ? 'Quelque chose est apparu au milieu de la salle : ' + A.lot.ic + ' va le prendre avant de repartir par le portail de pierre.' : A.piedestal ? 'Un piédestal est sorti du sol au milieu de la salle, déjà ouvert : prends le tome (E) avant de repartir par le portail de pierre.' : 'Plus personne ne bouge. Reprends le portail de pierre par lequel tu es arrivé (E) pour revenir où tu étais.', '#ffe9a8'); CG.sfx('victory'); try { CG.save(); } catch (e) { /* rien */ }
   };
   const fi0 = D.findInteract; D.findInteract = function () {
-    const it = fi0.apply(this, arguments); if (it && it.type === 'pyramideSortie' && dans()) it.label = CG.S.arene.gagne ? 'Prendre le portail du retour' : 'Fuir par le portail (pas de récompense)'; return it;
+    const it = fi0.apply(this, arguments); if (it && it.type === 'pyramideSortie' && dans()) it.label = CG.S.arene.gagne ? 'Prendre le portail du retour' : 'Fuir par le portail'; return it;
   };
 })(window.CG);

@@ -19,15 +19,20 @@
   CG.ENEMIES[Dh.TYPE] = { nom: 'Le Six-Lames', race: 'demon', hp: 130, dmg: 9, spd: 84, xp: 220, or: 130, cost: 99, r: 19 };
   const la = l => l.filter(t => CG.ENEMIES[t]);
   Ar.Q[Dh.ID] = { mondes: [], qui: 'Le donjon de la horde', lieu: 'Le donjon de la horde', titre: 'Le donjon de la horde', theme: 'lave', donjon: true, roi: true, chef: [Dh.TYPE, 'Le Six-Lames'],
-    entree: 'La sphère t\'a avalé ! Te voilà chez la horde des enfers. Avance de salle en salle : le parchemin est tout au fond, et quelqu\'un le garde.',
+    entree: 'La sphère t\'a avalé ! Te voilà chez la horde des enfers. Avance de salle en salle : le tome de sort est tout au fond, et quelqu\'un le garde.',
     E: [la(['diablotin', 'diablotinLance', 'molosseCornu', 'squelette']), la(['diablotin', 'diablotinLance', 'demon', 'cerbere', 'squeletteRouge']), la(['demon', 'cerbere3', 'cerbere', 'squeletteNoir', 'diablotinLance', 'spectreRouge'])],
     recompense(A) { const S = CG.S, p = S.player, d = S.day, or = 90 + 15 * d + (A.palier || 0) * 40, xp = 45 + 8 * d; G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 4);
       G.banner('Le Six-Lames est tombé', 'Le donjon de la horde se referme derrière toi. (+' + or + ' 🪙, +' + xp + ' XP, moral +4.)', '#ffb49a'); CG.sfx('victory'); } };
   const dedans = () => Ar.dans() && CG.S.arene && CG.S.arene.id === Dh.ID; Dh.dedans = dedans;
+  // ---------- pas de retour en arrière : en Normal et en Difficile, le portail d'arrivée reste là pour s'enfuir ; en Élite et en Cauchemar, il se referme ----------
+  Dh.SANS_RETOUR = { elite: 1, cauchemar: 1 }; Dh.sansRetour = () => !!(CG.Diff && CG.Diff.id && Dh.SANS_RETOUR[CG.Diff.id()]);
+  if (CG.Pyramide && CG.Pyramide.generer) { const ge0 = CG.Pyramide.generer; CG.Pyramide.generer = function () { const r = ge0.apply(this, arguments), S = CG.S;
+    if (S && S.arene && S.arene.id === Dh.ID && !S.arene.gagne && Dh.sansRetour() && W.POI.portail) Object.assign(W.POI.portail, { x: 2, y: 2, r: 0 }); /* le portail est rangé dans un coin noir de la carte : ni dessin ni touche E. La seule sortie est le passage qui s'ouvre quand le Six-Lames tombe */
+    return r; }; }
   // ---------- la sphère : parfois, elle avale le chef ----------
   { const br0 = Au.break; Au.break = function (a) {
     const S = CG.S, R = CG.R; if (a && a.st === 'scelle' && !R.horde && Math.random() < Dh.CHANCE) { const i = S.autels.indexOf(a), p = S.player;
-      if (Ar.partir(Dh.ID)) { Dh.enCours = { i, S, gagne: false }; /* le piédestal reste dehors, dans son monde : on le videra au retour */ for (let k = 0; k < 30; k++) { const an = Math.random() * TAU, v = rand(60, 220); R.parts.push({ x: p.x, y: p.y - 30, vx: Math.cos(an) * v, vy: Math.sin(an) * v, life: rand(0.4, 0.9), max: 0.9, col: pick(['#ff7a3a', '#a060ff', '#ffd060']), size: rand(3, 6) }); } CG.sfx('warning'); return; } }
+      if (Ar.partir(Dh.ID)) { Dh.enCours = { i, S, gagne: false }; a.st = 'vide'; a.day = S.day; /* la sphère est brisée pour de bon : même si le chef s'enfuit par le portail, le piédestal reste nu (pas de deuxième essai, pas de vagues) */ for (let k = 0; k < 30; k++) { const an = Math.random() * TAU, v = rand(60, 220); R.parts.push({ x: p.x, y: p.y - 30, vx: Math.cos(an) * v, vy: Math.sin(an) * v, life: rand(0.4, 0.9), max: 0.9, col: pick(['#ff7a3a', '#a060ff', '#ffd060']), size: rand(3, 6) }); } CG.sfx('warning'); if (Dh.sansRetour()) setTimeout(() => { try { CG.UI.toast('🔥 Le portail s\'est refermé derrière toi. Il n\'y a plus qu\'une sortie : battre le gardien.'); } catch (e) { /* rien */ } }, 2600); return; } }
     return br0.apply(this, arguments);
   }; }
   Dh.forcer = () => Ar.partir(Dh.ID); // pour les essais
@@ -76,7 +81,7 @@
   }
   const up0 = G.update; G.update = function (dt) {
     up0.apply(this, arguments); const R = CG.R, S = CG.S; if (!R || !S || !R.enemies) return;
-    { const h = Dh.enCours; if (h && !dedans() && !(CG.Mondes && CG.Mondes.pending) && !Ar.attente) { Dh.enCours = null; const a = h.gagne && S.autels ? S.autels[h.i] : null; if (a && a.st === 'scelle') { a.st = 'vide'; a.day = S.day; S.autelsDone = (S.autelsDone || 0) + 1; } } } // de retour dehors : le piédestal est vide, son parchemin a été gagné en bas
+    { const h = Dh.enCours; if (h && !dedans() && !(CG.Mondes && CG.Mondes.pending) && !Ar.attente) { Dh.enCours = null; if (h.gagne) S.autelsDone = (S.autelsDone || 0) + 1; } } // de retour dehors : le piédestal est vide, son parchemin a été gagné en bas
     for (const e of R.enemies) { if (e.type !== Dh.TYPE) continue; if (e.dead) { if (!e.slFini) fin(e); continue; } boss(e, dt); }
     if (R.slBoss && !R.slBoss.slFini && (R.slBoss.dead || !R.enemies.includes(R.slBoss)) && R.slBoss.hp <= 0) fin(R.slBoss);
     for (const e of R.enemies) if (e.type === Dh.TYPE && !e.dead) R.slBoss = e;
@@ -89,7 +94,7 @@
     e.slFini = true; const S = CG.S, R = CG.R; if (!dedans()) return; R.slTerre = [];
     for (const o of R.enemies) if (o.slFils && !o.dead) G.hurtEnemy(o, 99999, null); // ses créatures retournent à la terre
     const id = G.newScroll(true); if (id) G.drop(e.x, e.y, { kind: 'scroll', id }); else { G.dropRes(e.x, e.y, 'or', 120); G.drop(e.x, e.y, { kind: 'potion', n: 1 }); }
-    R.rings.push({ x: e.x, y: e.y - 10, r: 130, life: 0.7, col: '#ffe36b' }); G.text(e.x, e.y - 90, id ? '📜 Le parchemin !' : '🪙', '#ffe36b', true);
+    R.rings.push({ x: e.x, y: e.y - 10, r: 130, life: 0.7, col: '#ffe36b' }); G.text(e.x, e.y - 90, id ? '📖 Le tome !' : '🪙', '#ffe36b', true);
     if (Dh.enCours) Dh.enCours.gagne = true;
   }
   // en l'air, rien ne l'atteint

@@ -16,7 +16,8 @@
     VENIN: { vipereCornes: [6, 2], scorpionGeant: [8, 3], cobraCracheur: [5, 2] }, /* [secondes, vie par seconde] */
     CRACHAT: { VUE: 240, CD: 2.3, V: 300 }, ENFOUIE: 105 /* à cette distance, la vipère enfouie bondit */
   };
-  const ici = () => Te.ici() === Ds.MONDE;
+  Ds.MONDES = [4, 6]; Ds.PASSAGE = 49; /* 6 : les Sables sans fin (sables.js), du désert partout ; PASSAGE : la colonne du passage vers le sud, en bas de la carte 4 */
+  const ici = () => Ds.MONDES.includes(Te.ici()), tout = () => Te.ici() === 6, BORD = () => (tout() ? -9 : Ds.BORD), PLUS = () => (tout() ? 1.9 : 1);
   // ---------- les bêtes et les nomades ----------
   Object.assign(CG.ENEMIES, {
     serpentSable: { nom: 'Serpent des sables', race: 'bete', hp: 22, dmg: 5, spd: 118, xp: 9, or: 0, cost: 1.5, food: 1 },
@@ -36,22 +37,23 @@
   Ds.dans = (px, py) => { if (!plan) return false; const tx = Math.max(0, Math.min(CG.MW - 1, Math.floor(px / T))); return py / T > plan.bord[tx]; };
   function generer(seed) {
     const tile = W.tile, I = W.idx, MW = CG.MW, MH = CG.MH, rng = CG.makeRng(seed + 4411), noise = W.noise, bord = [];
-    for (let x = 0; x < MW; x++) bord.push(Ds.BORD + (noise(x / 9 + 3.3, 7.7) - 0.5) * 9);
+    for (let x = 0; x < MW; x++) bord.push(BORD() + (noise(x / 9 + 3.3, 7.7) - 0.5) * 9);
+    if (!tout()) for (let y = MH - 8; y < MH; y++) for (let a = -1; a <= 1; a++) tile[I(Ds.PASSAGE + a, y)] = W.PATH; /* le passage du sud : une piste qui sort par le bas */
     const des = (x, y) => y > bord[x], libre = (x, y) => x >= 3 && y >= 3 && x < MW - 3 && y < MH - 3 && tile[I(x, y)] === W.GRASS && des(x, y);
-    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { if (!des(x, y)) continue; const i = I(x, y), t = tile[i], rim = x < 2 || y >= MH - 2 || x >= MW - 2;
-      if (rim) tile[i] = W.BUILD; else if (t === W.TREE || t === W.WATER) tile[i] = W.GRASS; }
+    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { if (!des(x, y)) continue; const i = I(x, y), t = tile[i], rim = x < 2 || y >= MH - 2 || x >= MW - 2 || (tout() && y < 2);
+      if (rim) { if (t !== W.PATH) tile[i] = W.BUILD; } else if (t === W.TREE || t === W.WATER) tile[i] = W.GRASS; }
     const pres = (x, y, m, quoi) => { for (let b = -m; b <= m; b++) for (let a = -m; a <= m; a++) { if (!W.inMap(x + a, y + b)) continue; const t = tile[I(x + a, y + b)]; if (quoi.includes(t)) return true; } return false; };
     const buttes = [], pris = new Set();
-    const poser = (rx, ry, H, essais) => { for (let k = 0; k < essais; k++) { const cx = 6 + Math.floor(rng() * (MW - 12)), cy = Math.ceil(Ds.BORD + 7 + rng() * (MH - Ds.BORD - 13)), ph = rng() * 6, l = []; let ok = true;
+    const poser = (rx, ry, H, essais) => { for (let k = 0; k < essais; k++) { const cx = 6 + Math.floor(rng() * (MW - 12)), cy = Math.ceil(BORD() + 7 + rng() * (MH - BORD() - 13)), ph = rng() * 6, l = []; let ok = true;
         for (let b = -Math.ceil(ry) - 2; b <= Math.ceil(ry) + 2 && ok; b++) for (let a = -Math.ceil(rx) - 2; a <= Math.ceil(rx) + 2 && ok; a++) { const x = cx + a, y = cy + b, an = Math.atan2(b, a), k2 = 1 + Math.sin(an * 3 + ph) * 0.16, d = (a * a) / (rx * rx * k2) + (b * b) / (ry * ry * k2);
           if (d < 2.6 && (!libre(x, y) || pris.has(I(x, y)) || pres(x, y, 1, [W.PATH, W.ROCK, W.BUILD]))) ok = false; else if (d < 1) l.push([x, y]); }
         if (!ok || !l.length) continue; l.forEach(q => { tile[I(q[0], q[1])] = W.BUILD; }); for (let b = -Math.ceil(ry) - 2; b <= Math.ceil(ry) + 2; b++) for (let a = -Math.ceil(rx) - 2; a <= Math.ceil(rx) + 2; a++) if (W.inMap(cx + a, cy + b)) pris.add(I(cx + a, cy + b));
         const xs = l.map(q => q[0]), ys = l.map(q => q[1]); buttes.push({ l, x0: Math.min.apply(null, xs), x1: Math.max.apply(null, xs), y0: Math.min.apply(null, ys), y1: Math.max.apply(null, ys), H, seed: Math.floor(rng() * 1e6) }); return true; } return false; };
-    const mouvants = []; for (let k = 0; k < 900 && mouvants.length < Ds.MOUVANTS; k++) { const x = 8 + Math.floor(rng() * (MW - 16)), y = Math.ceil(Ds.BORD + 6 + rng() * (MH - Ds.BORD - 12)), rx = 2 + rng() * 1.6, ry = 1.3 + rng() * 0.9; let ok = !mouvants.some(m => Math.hypot(m.tx - x, m.ty - y) < 12);
+    const mouvants = []; for (let k = 0; k < 900 && mouvants.length < Ds.MOUVANTS * PLUS(); k++) { const x = 8 + Math.floor(rng() * (MW - 16)), y = Math.ceil(BORD() + 6 + rng() * (MH - BORD() - 12)), rx = 2 + rng() * 1.6, ry = 1.3 + rng() * 0.9; let ok = !mouvants.some(m => Math.hypot(m.tx - x, m.ty - y) < 12);
       for (let b = -3; b <= 3 && ok; b++) for (let a = -4; a <= 4 && ok; a++) if (!libre(x + a, y + b) || pris.has(I(x + a, y + b))) ok = false; if (!ok) continue; for (let b = -3; b <= 3; b++) for (let a = -4; a <= 4; a++) pris.add(I(x + a, y + b)); mouvants.push({ tx: x, ty: y, x: (x + 0.5) * T, y: (y + 0.5) * T, rx: rx * T, ry: ry * T, seed: rng() * 10 }); }
-    for (let i = 0; i < Ds.BUTTES; i++) poser(2 + rng() * 2.8, 1.1 + rng() * 1.3, 58 + rng() * 44, 60);
-    for (let i = 0; i < Ds.AIGUILLES; i++) poser(0.7, 0.7, 70 + rng() * 50, 40);
-    const cactus = []; for (let k = 0; k < 900 && cactus.length < Ds.CACTUS; k++) { const x = 4 + Math.floor(rng() * (MW - 8)), y = Math.ceil(Ds.BORD + 2 + rng() * (MH - Ds.BORD - 6)); if (!libre(x, y) || pris.has(I(x, y)) || pres(x, y, 1, [W.PATH, W.BUILD, W.ROCK])) continue; tile[I(x, y)] = W.BUILD; pris.add(I(x, y)); cactus.push({ x, y, v: Math.floor(rng() * 3), s: 0.85 + rng() * 0.4 }); }
+    for (let i = 0; i < Ds.BUTTES * PLUS(); i++) poser(2 + rng() * 2.8, 1.1 + rng() * 1.3, 58 + rng() * 44, 60);
+    for (let i = 0; i < Ds.AIGUILLES * PLUS(); i++) poser(0.7, 0.7, 70 + rng() * 50, 40);
+    const cactus = []; for (let k = 0; k < 900 && cactus.length < Ds.CACTUS * PLUS(); k++) { const x = 4 + Math.floor(rng() * (MW - 8)), y = Math.ceil(BORD() + 2 + rng() * (MH - BORD() - 6)); if (!libre(x, y) || pris.has(I(x, y)) || pres(x, y, 1, [W.PATH, W.BUILD, W.ROCK])) continue; tile[I(x, y)] = W.BUILD; pris.add(I(x, y)); cactus.push({ x, y, v: Math.floor(rng() * 3), s: 0.85 + rng() * 0.4 }); }
     W.nodes = (W.nodes || []).filter(n => !des(n.x, n.y) || tile[I(n.x, n.y)] === W.GRASS); W.ponds = (W.ponds || []).filter(p => !des(p.x, p.y)); W.fieldDirty = true; W.miniDirty = true;
     plan = { bord, buttes, cactus, mouvants, seed };
   }
@@ -61,13 +63,13 @@
     const r = pa0.apply(this, arguments); if (!ici() || !plan || !W.terrain) return r;
     const g = W.terrain.getContext('2d'), tile = W.tile, I = W.idx, MW = CG.MW, MH = CG.MH, noise = W.noise, rng = CG.makeRng(plan.seed + 91), bord = plan.bord, des = (x, y) => y > bord[x];
     const el = (x, y, rx, ry, c, rot) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); g.fill(); };
-    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { if (!des(x, y)) continue; const n = noise(x / 6 + 2, y / 6 + 9), rim = x < 2 || y >= MH - 2 || x >= MW - 2; g.fillStyle = rim ? 'hsl(16,' + (44 + n * 8) + '%,' + (30 + n * 8) + '%)' : 'hsl(' + (38 + n * 6) + ',' + (54 + n * 8) + '%,' + (66 + n * 8) + '%)'; g.fillRect(x * T, y * T, T, T); }
+    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { if (!des(x, y)) continue; const n = noise(x / 6 + 2, y / 6 + 9), rim = (x < 2 || y >= MH - 2 || x >= MW - 2 || (tout() && y < 2)) && tile[I(x, y)] !== W.PATH; g.fillStyle = rim ? 'hsl(16,' + (44 + n * 8) + '%,' + (30 + n * 8) + '%)' : 'hsl(' + (38 + n * 6) + ',' + (54 + n * 8) + '%,' + (66 + n * 8) + '%)'; g.fillRect(x * T, y * T, T, T); }
     for (let x = 0; x < MW; x++) { const by = bord[x] * T; for (let k = 0; k < 9; k++) { const up = rng() < 0.5; el(x * T + rng() * T, by + (up ? -rng() * 46 : rng() * 46) + T, 14 + rng() * 26, 8 + rng() * 14, up ? 'hsla(40,56%,' + (64 + rng() * 8) + '%,' + (0.35 + rng() * 0.4) + ')' : 'hsla(' + (78 + rng() * 20) + ',36%,' + (38 + rng() * 10) + '%,' + (0.25 + rng() * 0.3) + ')', rng() * 3); } } /* la lisière : le sable mord sur l'herbe, quelques touffes mordent sur le sable */
-    const y0 = (Ds.BORD + 5) * T, hh = MH * T - y0;
-    for (let i = 0; i < 3000; i++) { const x = rng() * MW * T, y = y0 - 3 * T + rng() * (hh + 3 * T); if (!Ds.dans(x, y)) continue; const n = noise(x / T / 6 + 2, y / T / 6 + 9); el(x, y, 18 + rng() * 30, 9 + rng() * 15, 'hsla(' + (36 + n * 8) + ',' + (50 + rng() * 12) + '%,' + (62 + n * 12 + rng() * 5) + '%,0.45)', rng() * 0.6 - 0.3); }
-    g.lineCap = 'round'; for (let i = 0; i < 1500; i++) { const x = rng() * MW * T, y = y0 - 2 * T + rng() * (hh + 2 * T); if (!Ds.dans(x, y)) continue; const w = 16 + rng() * 34; g.strokeStyle = 'rgba(150,104,52,' + (0.12 + rng() * 0.16) + ')'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x - w / 2, y); g.quadraticCurveTo(x, y - 4 - rng() * 5, x + w / 2, y + rng() * 3); g.stroke(); } /* les rides du vent */
+    const y0 = Math.max(0, (BORD() + 5) * T), hh = MH * T - y0, NB = PLUS();
+    for (let i = 0; i < 3000 * NB; i++) { const x = rng() * MW * T, y = y0 - 3 * T + rng() * (hh + 3 * T); if (!Ds.dans(x, y)) continue; const n = noise(x / T / 6 + 2, y / T / 6 + 9); el(x, y, 18 + rng() * 30, 9 + rng() * 15, 'hsla(' + (36 + n * 8) + ',' + (50 + rng() * 12) + '%,' + (62 + n * 12 + rng() * 5) + '%,0.45)', rng() * 0.6 - 0.3); }
+    g.lineCap = 'round'; for (let i = 0; i < 1500 * NB; i++) { const x = rng() * MW * T, y = y0 - 2 * T + rng() * (hh + 2 * T); if (!Ds.dans(x, y)) continue; const w = 16 + rng() * 34; g.strokeStyle = 'rgba(150,104,52,' + (0.12 + rng() * 0.16) + ')'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x - w / 2, y); g.quadraticCurveTo(x, y - 4 - rng() * 5, x + w / 2, y + rng() * 3); g.stroke(); } /* les rides du vent */
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { if (!des(x, y) || tile[I(x, y)] !== W.PATH) continue; for (let k = 0; k < 3; k++) el(x * T + rng() * T, y * T + rng() * T, 16 + rng() * 12, 11 + rng() * 8, 'rgba(176,134,82,' + (0.28 + rng() * 0.2) + ')', rng() * 3); if (rng() < 0.5) el(x * T + rng() * T, y * T + rng() * T, 2 + rng() * 3, 1.5 + rng() * 2, 'rgba(120,96,70,0.6)'); } /* la piste : du sable tassé, des cailloux */
-    for (let i = 0; i < 260; i++) { const x = rng() * MW * T, y = y0 + rng() * hh; if (!Ds.dans(x, y) || !W.walkPx(x, y)) continue; const q = rng();
+    for (let i = 0; i < 260 * NB; i++) { const x = rng() * MW * T, y = y0 + rng() * hh; if (!Ds.dans(x, y) || !W.walkPx(x, y)) continue; const q = rng();
       if (q < 0.5) { g.strokeStyle = 'rgba(122,110,62,0.8)'; g.lineWidth = 1.4; g.beginPath(); for (let a = -1.2; a <= 1.2; a += 0.4) { g.moveTo(x, y); g.lineTo(x + Math.sin(a) * 9, y - Math.cos(a) * (7 + rng() * 5)); } g.stroke(); } /* une touffe sèche */
       else if (q < 0.85) { el(x, y, 4 + rng() * 5, 3 + rng() * 3, 'rgba(150,126,98,0.9)'); el(x - 1, y - 1.5, 2.5, 1.6, 'rgba(210,190,160,0.5)'); }
       else { el(x, y, 6, 4.6, '#efe8d4'); el(x - 2, y - 0.5, 1.4, 1.6, '#5a4a3a'); el(x + 2, y - 0.5, 1.4, 1.6, '#5a4a3a'); g.strokeStyle = '#efe8d4'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(x + 9, y + 3); g.lineTo(x + 22, y + 7); g.moveTo(x + 10, y + 8); g.lineTo(x + 21, y + 1); g.stroke(); } } /* un crâne blanchi et deux os */
@@ -150,7 +152,7 @@
     const S = CG.S, R0 = CG.R;
     if (S && R0 && R0.enemies && ici()) for (const e of R0.enemies) { if (e.dead) continue; e._da = e.atkAnim || 0; if (e.enfouie) { const p = S.player, vu = !(R0.ko > 0) && !(R0.invis > 0); if (!e.calm || e.hp < e.maxhp || (vu && Math.hypot(p.x - e.x, p.y - e.y) < Ds.ENFOUIE)) { e.enfouie = false; e.calm = false; e.aggroR = 320; e.rooted = 0; e.seek = 1.5; if (vu) e.target = p; e.atkCd = 0.35; G.text(e.x, e.y - 40, '❗', '#ffe36b', true); G.puff(e.x, e.y - 6, '#e0c080', 16, 120, 3); if (CG.onScreen(e.x, e.y)) CG.sfx('warning'); } else { e.rooted = Math.max(e.rooted || 0, 0.2); e.target = null; e.path = null; e.moving = false; } } }
     const r = up0.apply(this, arguments), R = CG.R; if (!S || !R || CG.S !== S || !ici() || !plan) { if (R) { R.sableK = 0; R.sableM = 0; } return r; } const p = S.player;
-    if (R.terreM === Ds.MONDE && !R.desertFait) remplacer(R);
+    if (R.terreM === Te.ici() && !R.desertFait) remplacer(R);
     // le venin des morsures : au moment où le coup part
     for (const e of R.enemies) { if (e.dead || !e.desert) continue; const V = Ds.VENIN[e.type];
       if (V && e.type !== 'cobraCracheur' && (e.atkAnim || 0) > (e._da || 0) + 0.5) { const tg = cible(e); if (tg && Math.hypot(tg.x - e.x, tg.y - e.y) < (e.r || 12) + 34 && CG.Marais && CG.Marais.venin) CG.Marais.venin(tg, V[0], V[1]); }

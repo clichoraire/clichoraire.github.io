@@ -41,7 +41,7 @@
     return r;
   };
   const carquois = () => ({ icon: '🏹', label: 'Carquois de ' + Ar.CARQUOIS[0] + ' flèches', desc: 'Pour ton arc.', prix: Ar.CARQUOIS[1], stock: 3, buy: () => { Ar.ajouter(Ar.CARQUOIS[0]); } });
-  if (CG.Lapins && CG.Lapins.stock) { const s0 = CG.Lapins.stock; CG.Lapins.stock = function () { const l = s0.apply(this, arguments) || []; try { if (Math.random() < 0.5) l.push({ icon: '🪄', label: 'Bâton magique', desc: '★ ' + CG.Objets.PHRASE.baton, prix: 60, stock: 1, buy: () => { const z = Bq.deposer('baton', 1, 1, 'sac'); UI.toast('🪄 Bâton magique : rangé ' + (Iv ? Iv.ou(z) : 'dans le coffre') + '.'); } }); if (CG.S && aUnArc()) l.push(carquois()); } catch (e) { /* rien */ } return l; }; }
+  if (CG.Lapins && CG.Lapins.stock) { const s0 = CG.Lapins.stock; CG.Lapins.stock = function () { const l = s0.apply(this, arguments) || []; try { if (Math.random() < 0.5) l.push({ icon: '🪄', label: 'Bâton magique', desc: '★ ' + CG.Objets.PHRASE.baton, prix: 300, stock: 1, buy: () => { const z = Bq.deposer('baton', 1, 1, 'sac'); UI.toast('🪄 Bâton magique : rangé ' + (Iv ? Iv.ou(z) : 'dans le coffre') + '.'); } }); if (CG.S && aUnArc()) l.push(carquois()); } catch (e) { /* rien */ } return l; }; }
   // ---------- le compteur de flèches, à côté des fioles, quand le chef tient un arc ----------
   let el = null, vu = '';
   window.addEventListener('load', () => { const rf0 = UI.refresh; UI.refresh = function () { const r = rf0.apply(this, arguments); try { const S = CG.S; if (!S || !S.player) return r; const on = !!Ar.arc(), cle = on ? 'f' + Ar.fleches() : '';

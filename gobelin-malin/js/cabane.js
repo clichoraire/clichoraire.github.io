@@ -26,7 +26,7 @@
   Ca.ouvrir = function () {
     const S = CG.S, c = S.cabane; if (!c) return; const l = Nv.dispo(), q = lieu(c);
     if (!l.length) return UI.dialog({ who: Ca.NOM, tag: '🕸️ une cabane délabrée', text: '« Hi hi hi... Tu ne connais rien qu\'on puisse rendre plus fort, petit chef. Reviens avec de nouveaux sorts. »', options: [{ label: 'Je reviendrai' }] });
-    const v = Ca.v = { role: 'vieilles', look: 'sorciere', x: q.x, y: q.y, shop: l.map(id => ({ scroll: id, icon: '📜', label: 'Parchemin : ' + CG.SPELLS[id].nom, desc: 'Ton sort devient plus fort.', prix: Ca.prix(id), stock: 1 })) };
+    const v = Ca.v = { role: 'vieilles', look: 'sorciere', x: q.x, y: q.y, shop: l.map(id => ({ scroll: id, icon: '📖', label: 'Tome : ' + CG.SPELLS[id].nom, desc: 'Ton sort devient plus fort.', prix: Ca.prix(id), stock: 1 })) };
     UI.shop(v, { nom: Ca.NOM, hello: 'Hi hi hi ! Des sorts plus forts, petit chef ? Ça se paie. Très cher.' });
   };
   const fi0 = D.findInteract; D.findInteract = function () {

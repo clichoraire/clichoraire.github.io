@@ -25,4 +25,13 @@
     let l = ns; if (ns && ns.some(n => n.epars)) { let f = null; try { f = G.firePos(); } catch (e) { f = null; } const ok = ns.filter(n => !n.epars || (f && Math.hypot(n.x * T + T / 2 - f.x, n.y * T + T / 2 - f.y) < Ro.MINEURS * T)); if (ok.length) l = ok; }
     return ai0.call(this, g, l);
   }; }
+  // ---------- les rochers qu'on mine sont durs : le chef ne passe plus à travers, il les contourne (DUR : demi-largeur et demi-hauteur du caillou, en pixels) ----------
+  // Seulement le chef : les mineurs se placent tout contre la roche pour piocher, on ne les repousse pas.
+  Ro.DUR = [17, 11];
+  { const upD = CG.G.update; CG.G.update = function () {
+    const r = upD.apply(this, arguments), S = CG.S, R = CG.R, T = CG.TILE; if (!S || !R || !W.nodes || R.cine || R.monte) return r; const p = S.player, rx = Ro.DUR[0], ry = Ro.DUR[1];
+    for (const n of W.nodes) { if (n.type !== 'ore' || n.gone) continue; const cx = n.x * T + T / 2, cy = n.y * T + T / 2 + 2, dx = p.x - cx, dy = p.y - cy; if (Math.abs(dx) > rx || Math.abs(dy) > ry) continue;
+      const k = Math.hypot(dx / rx, dy / ry); if (k >= 1) continue; const a = k < 0.01 ? Math.PI / 2 : Math.atan2(dy / ry, dx / rx), nx = cx + Math.cos(a) * rx, ny = cy + Math.sin(a) * ry;
+      if (W.walkPx(nx, ny)) { p.x = nx; p.y = ny; } }
+    return r; }; }
 })(window.CG);

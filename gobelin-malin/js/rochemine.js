@@ -17,6 +17,7 @@
   }
   const fi0 = D.findInteract; D.findInteract = function () {
     const it = fi0.apply(this, arguments); if (it) return it; const R = CG.R; if (!R || R.ko > 0 || R.cine || R.build || !dehors()) return it;
+    if (CG.OutilChef && !CG.OutilChef.a('pioche')) return it; /* sans pioche sur lui, le chef ne casse pas la roche (outilchef.js) */
     const a = rochePres(); if (!a) return it; const n = faits()[a.x + ',' + a.y] || 0;
     return { type: 'rocheChef', obj: a, label: n ? 'Encore un coup de pioche (' + n + '/' + Pi.nb() + ')' : 'Casser la roche ⛏️' };
   };
@@ -35,6 +36,7 @@
     delete M[c]; W.tile[i] = W.GRASS; (S.terra || (S.terra = {}))[i] = W.GRASS; W.fieldDirty = true; W.miniDirty = true; if (W.terrain && W.repaintArea) W.repaintArea(a.x, a.y);
     G.puff(x, y - 10, '#9aa0a8', 18, 140, 5); R.shake = Math.max(R.shake || 0, 0.12); if (CG.onScreen(x, y)) CG.sfx('hit');
     if (CG.Equipement) CG.Equipement.ctx = 'pioche'; try { G.gain('minerai', Pi.GAIN, x, y - 30); } finally { if (CG.Equipement) CG.Equipement.ctx = null; }
+    if (CG.Scarabees && CG.Scarabees.trouver && Math.random() < CG.Scarabees.ROCHER) CG.Scarabees.trouver(x, y); /* rarement, un scarabée d'or dormait dessous */
   };
   // ---------- les sorts : le double ----------
   Object.keys(CG.SPELLS).forEach(id => { const sp = CG.SPELLS[id]; if (typeof sp.prix === 'number') sp.prix = Math.round(sp.prix * Pi.SORTS); });

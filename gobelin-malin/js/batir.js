@@ -48,7 +48,7 @@
     if (!list.length) h += '<p class="bb-empty">Rien à bâtir ici pour l\'instant : apprends de nouvelles technologies (T).</p>';
     list.forEach((k, i) => {
       const b = CG.BUILDS[k], can = G.canPay(b.cout), img = thumb(k);
-      h += '<button class="bb-card' + (sel === k ? ' on' : '') + (can ? '' : ' poor') + '" data-bb="' + k + '"><i>' + (i + 1) + '</i>' + (img ? '<img src="' + img + '" alt="">' : '<span class="em">' + b.icon + '</span>') + '<b>' + esc(b.nom) + '</b><small>' + Object.keys(b.cout).map(r => '<span class="' + (S.res[r] < b.cout[r] ? 'lack' : '') + '">' + CG.RES[r].icon + ' ' + b.cout[r] + '</span>').join(' ') + '</small></button>';
+      h += '<button class="bb-card' + (sel === k ? ' on' : '') + (can ? '' : ' poor') + '" data-bb="' + k + '"><i>' + (i + 1) + '</i>' + (b.tombe && CG.Pierres && CG.Pierres.demanderOubli ? '<span class="bb-oubli" data-oubli="' + k + '" title="Oublier ce gobelin pour toujours">✕</span>' : '') + (img ? '<img src="' + img + '" alt="">' : '<span class="em">' + b.icon + '</span>') + '<b>' + esc(b.nom) + '</b><small>' + Object.keys(b.cout).map(r => '<span class="' + (S.res[r] < b.cout[r] ? 'lack' : '') + '">' + CG.RES[r].icon + ' ' + b.cout[r] + '</span>').join(' ') + '</small></button>';
     });
     if (np > 1) h += '<button class="bb-fl" data-pg="1" title="Page suivante">▶<small>' + (Bt.page + 1) + '/' + np + '</small></button>';
     h += '</div>'; // plus de bandeau de description : elle s'affiche en bulle quand la souris passe sur une carte (voir bulle())
@@ -56,6 +56,7 @@
     el.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => { Bt.tab = b.dataset.bt; Bt.page = 0; CG.sfx('ok'); render(); });
     el.querySelectorAll('[data-pg]').forEach(b => b.onclick = () => Bt.tourner(+b.dataset.pg));
     el.querySelectorAll('[data-bb]').forEach(b => b.onclick = () => Bt.pick(b.dataset.bb));
+    el.querySelectorAll('[data-oubli]').forEach(x => x.onclick = ev => { ev.stopPropagation(); ev.preventDefault(); CG.Pierres.demanderOubli(x.dataset.oubli); }); /* le ✕ d'une pierre tombale : oublier ce gobelin (pierres.js) */
     el.querySelector('[data-bx]').onclick = () => Bt.toggle(false);
     if (!el.dataset.bulle) { el.dataset.bulle = '1'; el.addEventListener('pointerover', ev => bulle(ev.target.closest('[data-bb]'))); el.addEventListener('pointerleave', () => bulle(null)); el.addEventListener('wheel', ev => { ev.preventDefault(); const m = Math.abs(ev.deltaX) > Math.abs(ev.deltaY) ? ev.deltaX : ev.deltaY; if (Math.abs(m) < 8 || performance.now() - (Bt.roule || 0) < 260) return; Bt.roule = performance.now(); Bt.tourner(m > 0 ? 1 : -1); }, { passive: false }); }
     if (tipK) bulle(el.querySelector('[data-bb="' + tipK + '"]')); // la barre vient d'être redessinée : la bulle suit la carte encore survolée

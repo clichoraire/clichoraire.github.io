@@ -2,5 +2,6 @@
 'use strict';
 (function (CG) {
   const G = CG.G, A = CG.audio, c0 = G.cast;
-  G.cast = function (id) { A.swap = A.SORTS[id] || null; try { return c0.apply(this, arguments); } finally { A.swap = null; } };
+  // le branchement se fait maintenant dans sortsvisuel.js, autour de tous les sorts (ceux des fichiers chargés après celui-ci y échappaient)
+  void c0; void A;
 })(window.CG);

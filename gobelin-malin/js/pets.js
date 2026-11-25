@@ -12,7 +12,8 @@
   };
   const NAMES = ['Croc', 'Mousse', 'Griffe', 'Plume', 'Flocon', 'Ombre', 'Truffe', 'Éclair', 'Noisette', 'Tonnerre', 'Pépite', 'Brume', 'Caillou', 'Ronron', 'Tempête', 'Biscuit'];
   P.EVO_LVL = 5; P.MAX = 8; P.ADOPT = 6;
-  P.maxHp = p => Math.round(K[p.kind].hp * 1.3 * (1 + 0.12 * (p.lvl - 1)) * (p.evo ? 1.8 : 1));
+  P.VIE = 1.8; /* la vie de tous les animaux, par rapport à leur fiche (c'était 1,3) */
+  P.maxHp = p => Math.round(K[p.kind].hp * P.VIE * (1 + 0.12 * (p.lvl - 1)) * (p.evo ? 1.8 : 1));
   P.dmg = p => (p.buffT > 0 && p.buff === 'atk' ? 1.4 : 1) * K[p.kind].dmg * (1 + 0.12 * (p.lvl - 1)) * (p.evo ? 1.5 : 1) * (1 + CG.S.day * 0.03);
   P.eats = p => { const k = K[p.kind] || {}; return (k.faim || 2) + (p.evo ? (k.faim ? 2 : 1) : 0); }; // orcs, trolls, ettins : forts, mais ils mangent beaucoup
   P.title = p => p.evo ? K[p.kind].evo : K[p.kind].nom;
@@ -65,7 +66,7 @@
   }
   P.hurt = function (p, dmg) {
     if (p.ko || p.evoT > 0) return; dmg *= (p.evo ? 0.75 : 1) * (p.buffT > 0 && p.buff === 'def' ? 0.55 : 1); p.hp -= dmg; G.text(p.x, p.y - 40, '-' + Math.round(dmg), '#ffb0a0'); G.puff(p.x, p.y - 14, '#ddd', 3);
-    if (p.hp <= 0) { p.hp = 0; p.ko = true; p.target = null; G.text(p.x, p.y - 54, p.name + ' est mort', '#ffb0a0', true); G.puff(p.x, p.y - 14, '#ddd', 14, 90, 4); CG.sfx('die'); }
+    if (p.hp <= 0) { p.hp = 0; p.ko = true; p.target = null; G.puff(p.x, p.y - 14, '#ddd', 14, 90, 4); if (CG.Relever && CG.Relever.tomberAnimal) CG.Relever.tomberAnimal(p); else { G.text(p.x, p.y - 54, p.name + ' est mort', '#ffb0a0', true); CG.sfx('die'); } }
   };
 
   // ---------- comportement ----------
@@ -150,8 +151,8 @@
     const S = CG.S, f = G.firePos();
     if (!fed) for (const p of S.pets.slice()) if (Math.random() < 0.3) { S.pets.splice(S.pets.indexOf(p), 1); lines.push(K[p.kind].icon + ' ' + p.name + ' n\'a rien eu à manger : il est reparti dans la forêt.'); }
     // un compagnon tombé au combat est mort : son corps reste par terre jusqu'au matin (le temps d'une Résurrection), puis il n'est plus là
-    for (const p of S.pets.slice()) if (p.ko) { S.pets.splice(S.pets.indexOf(p), 1); if (CG.R && CG.R.mount === p) CG.R.mount = null; if (lines) lines.push('💀 ' + p.name + ' est mort au combat.'); }
-    S.pets.forEach((p, i) => { p.ko = false; p.evoT = 0; p.hp = P.maxHp(p); P.reset(p); p.x = f.x + Math.cos(i * 1.3) * 110; p.y = f.y + 70 + Math.sin(i * 1.3) * 30; });
+    for (const p of S.pets.slice()) if (p.ko && !p.enSoin && !p.tombe) { S.pets.splice(S.pets.indexOf(p), 1); if (CG.R && CG.R.mount === p) CG.R.mount = null; if (lines) lines.push('💀 ' + p.name + ' est mort au combat.'); }
+    S.pets.forEach((p, i) => { if (p.enSoin || p.tombe) return; /* chez le guérisseur, ou encore à terre (relever.js) */ p.ko = false; p.evoT = 0; p.hp = P.maxHp(p); P.reset(p); p.x = f.x + Math.cos(i * 1.3) * 110; p.y = f.y + 70 + Math.sin(i * 1.3) * 30; });
   };
   // ---------- l'onglet Animaux du village : une grande fiche par compagnon, avec son portrait vivant ----------
   const TEINTE = { loup: '120,170,230', ours: '214,150,84', felin: '190,120,255', hibou: '150,160,255', faucon: '110,200,255', gelee: '130,230,130', orc: '255,150,80', orcChaman: '120,220,200', troll: '160,180,205', ettin: '230,180,90' };
@@ -310,9 +311,9 @@
     if (N) { g.fillStyle = L.eye; g.beginPath(); g.moveTo(hx + 0.4, hy - 0.8); g.quadraticCurveTo(hx + 2.6, hy - 3.6, hx + 5, hy - 1.4); g.quadraticCurveTo(hx + 2.8, hy + 0.4, hx + 0.4, hy - 0.8); g.fill(); ell(g, hx + 2.9, hy - 1.4, 0.55, 1.4, '#1a1020'); circ(g, hx + 2.9, hy - 1.4, 3.6, L.glow); line(g, hx + 0.2, hy - 0.8, hx - 3.6, hy - 2.4 + Math.sin(t * 5) * 0.6, 'rgba(255,216,74,0.45)', 1.1); }
     else { ell(g, hx + 2.6, hy - 1.2, 2.2, 2.4, '#2a2218'); ell(g, hx + 2.6, hy - 1.2, 1.7, 1.9, L.eye); ell(g, hx + 2.8, hy - 1.2, 0.6, 1.5, '#1c1a20'); circ(g, hx + 3.3, hy - 2.1, 0.55, '#fff'); }
   }
-  const PROPRE = { loup, felin };
+  const PROPRE = { loup, felin, hibou: (g, o, L, t) => (L.tufts ? grandDuc(g, o, L, t) : bird(g, o, L, t)) }; /* le hibou évolué a son propre dessin (grandDuc, plus bas) */
   const BIRD = {
-    hibou: [{ s: 0.85, col: '#a88a60', dark: '#7a6240', belly: '#e8d8b4', eye: '#ffd84a', round: true }, { s: 1.45, col: '#e4e0f2', dark: '#a8a0c8', belly: '#ffffff', eye: '#7dc8ff', round: true, tufts: true, glow: 'rgba(200,216,255,0.22)', stars: true }],
+    hibou: [{ s: 0.85, col: '#a88a60', dark: '#7a6240', belly: '#e8d8b4', eye: '#ffd84a', round: true }, { s: 1, col: '#e4e0f2', dark: '#a8a0c8', belly: '#ffffff', eye: '#7dc8ff', round: true, tufts: true, glow: 'rgba(200,216,255,0.22)', stars: true }],
     faucon: [{ s: 0.8, col: '#8a745c', dark: '#5e4c3a', belly: '#e8dcc8', eye: '#221' }, { s: 1.35, col: '#f0c838', dark: '#b88a18', belly: '#fff6d0', eye: '#2a6ad8', glow: 'rgba(255,230,110,0.22)', bolt: true }]
   };
   function bird(g, o, L, t) {
@@ -330,6 +331,44 @@
     poly(g, [-3, 3, 2, 4, 0, 8], '#d8402a');
     if (L.stars) for (let i = 0; i < 3; i++) { const a = t * 1.8 + i * 2.1; circ(g, Math.cos(a) * 19, Math.sin(a) * 11 - 2, 1.8, '#fff'); }
     if (L.bolt && Math.sin(t * 13) > 0.3) { g.strokeStyle = '#7dc8ff'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(-12, -6); g.lineTo(-17, 0); g.lineTo(-13, 1); g.lineTo(-19, 8); g.stroke(); }
+  }
+  // ---------- le Grand-duc lunaire : de face, les ailes grandes ouvertes, plume par plume ----------
+  const plume = (g, a, l, w, col, d0) => { const c = Math.cos(a), sn = Math.sin(a), m = (d0 || 0) + l / 2; g.fillStyle = col; g.beginPath(); g.ellipse(c * m, sn * m, l / 2, w, a, 0, TAU); g.fill(); };
+  function grandDuc(g, o, L, t) {
+    const ko = !!o.ko, alt = ko ? 5 : 36 + Math.sin(t * 2.2) * 4 - (o.atkAnim > 0 ? Math.sin(o.atkAnim * Math.PI) * 22 : 0), fl = ko ? 1.5 : Math.sin(t * (o.moving ? 13 : 7)), res = Math.sin(t * 2.2 + 1) * 0.5;
+    ell(g, 0, 1, 12, 3.4, 'rgba(0,0,0,0.18)'); g.translate(0, -alt);
+    if (!ko) { circ(g, 0, -4, 27, 'rgba(190,210,255,0.13)'); circ(g, 0, -4, 19, 'rgba(215,228,255,0.15)'); }
+    // la queue : un éventail de cinq plumes barrées
+    for (let i = -2; i <= 2; i++) { g.save(); g.translate(i * 1.6, 7); const a = Math.PI / 2 + i * 0.2; plume(g, a, 10 - Math.abs(i) * 1.2, 2, i % 2 ? '#b9b2da' : '#cfc9ea'); plume(g, a, 2.6, 1.9, '#8d86b6', 7 - Math.abs(i) * 1.2); g.restore(); }
+    // une aile : les grandes plumes du bout (sombres, la pointe barrée de bleu), puis les moyennes, puis le duvet de l'épaule
+    const aile = sd => { g.save(); g.translate(sd * 6, -4); g.scale(sd, 1); g.rotate(-0.12 + fl * 0.42);
+      for (let i = 0; i < 7; i++) { const k = i / 6, a = -0.95 + k * 1.75, l = 22 - Math.abs(k - 0.3) * 9; plume(g, a, l, 2.5, i % 2 ? '#9690bc' : '#a7a1cb', 3); plume(g, a, 4.6, 2.2, '#6f6a9c', l - 2.6); plume(g, a, 2.2, 1.4, '#9fd4ff', l - 6.4); }
+      for (let i = 0; i < 6; i++) { const k = i / 5, a = -0.75 + k * 1.55; plume(g, a, 13.5 - Math.abs(k - 0.35) * 4, 2.3, i % 2 ? '#c9c3e6' : '#d6d1ee', 2); }
+      for (let i = 0; i < 5; i++) { const k = i / 4, a = -0.55 + k * 1.3; plume(g, a, 7.5, 2.2, i % 2 ? '#f1eefb' : '#ffffff', 1); }
+      ell(g, 2.5, 0.5, 5, 4, '#f6f4fd'); g.restore(); };
+    aile(-1); aile(1);
+    // les serres
+    if (!ko) for (const sx of [-3.4, 3.4]) { g.strokeStyle = '#e8a030'; g.lineWidth = 1.2; g.lineCap = 'round'; g.beginPath(); for (const d of [-1.5, 0, 1.5]) { g.moveTo(sx, 9.2); g.lineTo(sx + d, 12.4); } g.stroke(); }
+    // le corps : un plumage blanc lunaire, des écailles de plumes sur le poitrail
+    ell(g, 0, 1, 9.2, 10.4, '#dcd8f0'); ell(g, 0, 2, 7.4, 8.8, '#f7f5ff');
+    g.strokeStyle = 'rgba(140,136,190,0.55)'; g.lineWidth = 0.8; g.lineCap = 'round';
+    for (let r = 0; r < 4; r++) for (let i = -2 + (r % 2 ? 0.5 : 0); i <= 2; i++) { const x = i * 3, y = -1.5 + r * 2.9; if (Math.abs(x) > 6.4 - r * 0.6) continue; g.beginPath(); g.arc(x, y, 1.5, 0.15, Math.PI - 0.15); g.stroke(); }
+    // la tête : large, un disque en cœur autour des yeux, de longues aigrettes en arrière
+    const hx = 0, hy = -11 + res;
+    for (const sd of [-1, 1]) { poly(g, [hx + sd * 3.5, hy - 5, hx + sd * 12.5, hy - 14.5 - res, hx + sd * 9.4, hy - 3.2], '#a7a1cb'); poly(g, [hx + sd * 5.6, hy - 5.6, hx + sd * 11.3, hy - 12.4 - res, hx + sd * 8.6, hy - 4.4], '#e9e6f8'); poly(g, [hx + sd * 10.6, hy - 11.4 - res, hx + sd * 12.5, hy - 14.5 - res, hx + sd * 11.4, hy - 10.6 - res], '#6f6a9c'); }
+    ell(g, hx, hy, 9.6, 8.2, '#dcd8f0');
+    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(hx, hy - 4.2); g.bezierCurveTo(hx - 4.5, hy - 8.6, hx - 10, hy - 3.2, hx - 7, hy + 3.2); g.quadraticCurveTo(hx - 3.6, hy + 7.2, hx, hy + 6); g.quadraticCurveTo(hx + 3.6, hy + 7.2, hx + 7, hy + 3.2); g.bezierCurveTo(hx + 10, hy - 3.2, hx + 4.5, hy - 8.6, hx, hy - 4.2); g.fill();
+    g.strokeStyle = 'rgba(150,146,200,0.6)'; g.lineWidth = 0.8; g.stroke();
+    for (const sd of [-1, 1]) { const ex = hx + sd * 3.9, ey = hy - 0.2;
+      if (ko) { line(g, ex - 2, ey - 1.6, ex + 2, ey + 1.6, '#4a4670', 1.1); line(g, ex - 2, ey + 1.6, ex + 2, ey - 1.6, '#4a4670', 1.1); continue; }
+      circ(g, ex, ey, 4.6, 'rgba(125,200,255,0.3)'); circ(g, ex, ey, 3.3, '#2a2848'); circ(g, ex, ey, 2.8, L.eye || '#7dc8ff'); circ(g, ex, ey, 1.9, '#c4ecff'); circ(g, ex, ey, 1.15, '#14122a'); circ(g, ex - 0.9, ey - 1, 0.75, '#fff');
+      line(g, ex - sd * 3.4, ey - 3.6, ex + sd * 2.6, ey - 4.6, '#8d86b6', 1.2); } /* le sourcil : il a l'air sévère */
+    poly(g, [hx - 1.5, hy + 1.6, hx + 1.5, hy + 1.6, hx, hy + 5.4], '#f0a82e'); poly(g, [hx - 0.2, hy + 1.6, hx + 1.5, hy + 1.6, hx, hy + 5.4], '#c98016');
+    // le croissant de lune sur son front, et sa lueur
+    g.fillStyle = 'rgba(160,215,255,' + (0.3 + Math.sin(t * 3) * 0.12).toFixed(2) + ')'; g.beginPath(); g.arc(hx, hy - 6.2, 3.4, 0, TAU); g.fill();
+    g.fillStyle = '#8fd0ff'; g.beginPath(); g.arc(hx, hy - 6.2, 2.1, 0.5, TAU - 0.5); g.arc(hx + 1.1, hy - 6.2, 1.6, TAU - 0.9, 0.9, true); g.closePath(); g.fill();
+    // des étincelles d'étoile qui tournent autour de lui
+    if (!ko) for (let i = 0; i < 4; i++) { const a = t * 1.5 + i * (TAU / 4), x = Math.cos(a) * 23, y = Math.sin(a) * 12 - 3, r = 1.9 + Math.sin(t * 5 + i * 1.7) * 0.8; g.fillStyle = i % 2 ? '#ffffff' : '#bfe4ff'; g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r * 0.28, y - r * 0.28); g.lineTo(x + r, y); g.lineTo(x + r * 0.28, y + r * 0.28); g.lineTo(x, y + r); g.lineTo(x - r * 0.28, y + r * 0.28); g.lineTo(x - r, y); g.lineTo(x - r * 0.28, y - r * 0.28); g.closePath(); g.fill(); }
   }
   // o : animal du clan ou visiteur ; p.evoT > 0 pendant la transformation
   Art.pet = function (g, o, t) {

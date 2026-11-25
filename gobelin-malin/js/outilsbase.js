@@ -68,7 +68,7 @@
   // ---------- la fiche : le métier dans une liste déroulante ----------
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   Ob.choix = function (g) {
-    const dispo = CG.jobsAvail(), l = dispo.includes(g.job) ? dispo : dispo.concat([g.job]), fixe = g.cls === 'loup' || g.bebe, nom = j => (g.sex === 'f' && CG.JOBS[j].nomF ? CG.JOBS[j].nomF : CG.JOBS[j].nom);
+    const dispo = CG.jobsAvail(g), l = dispo.includes(g.job) ? dispo : dispo.concat([g.job]), fixe = g.cls === 'loup' || g.bebe, nom = j => (g.sex === 'f' && CG.JOBS[j].nomF ? CG.JOBS[j].nomF : CG.JOBS[j].nom);
     return '<select class="iv-job" data-ivjob="' + g.id + '"' + (fixe ? ' disabled' : '') + '>' + l.map(j => { const non = j !== g.job && CG.jobOk && !CG.jobOk(j, g), k = Ob.BESOIN[j]; return '<option value="' + j + '"' + (j === g.job ? ' selected' : '') + (non ? ' disabled' : '') + '>' + CG.JOBS[j].icon + ' ' + esc(nom(j)) + (non ? (k && !Ob.peut(g, j) ? ' (pas d\'outil)' : ' (pas encore)') : '') + '</option>'; }).join('') + '</select>';
   };
   ['keydown', 'keyup'].forEach(ev => document.addEventListener(ev, e => { if (e.target && e.target.classList && e.target.classList.contains('iv-job')) e.stopPropagation(); }, true));

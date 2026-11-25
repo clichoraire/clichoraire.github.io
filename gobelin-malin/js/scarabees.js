@@ -39,5 +39,10 @@
       if (tw > 0.02) { g.globalAlpha = tw; g.strokeStyle = '#fffbe0'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-7, -1); g.lineTo(7, -1); g.moveTo(0, -8); g.lineTo(0, 6); g.stroke(); g.fillStyle = 'rgba(255,240,150,0.5)'; g.beginPath(); g.arc(0, -1, 7, 0, TAU); g.fill(); }
       g.restore(); }
   };
+  // un scarabée d'or trouvé ailleurs que sur un tronc (sous un rocher qu'on casse, rochemine.js) : il compte comme les autres
+  Sc.ROCHER = 0.05;
+  Sc.trouver = function (x, y) { const S = CG.S, R = CG.R, p = S.player; if (monde() !== 0) return false; Sc.liste(); if (!S.scarab) return false;
+    S.scarab.n = (S.scarab.n || 0) + 1; const n = S.scarab.n; G.puff(x, y - 18, '#ffe36b', 14, 100, 3); CG.sfx(n >= Sc.IL_EN_FAUT ? 'discovery' : 'ok'); G.text(x, y - 46, '🪲 Un scarabée d\'or ! ' + n + ' / ' + Sc.IL_EN_FAUT, '#ffe36b', true); R.rings.push({ x, y: y - 16, r: 44, life: 0.45, col: '#ffe36b' });
+    if (n >= Sc.IL_EN_FAUT) { S.scarab.n = 0; R.scarabFee = 1.1; for (let i = 0; i < 3; i++) R.rings.push({ x: p.x, y: p.y - 10, r: 60 + i * 40, life: 0.5 + i * 0.15, col: '#ffe36b' }); } return true; };
   Sc.essai = function (n) { const S = CG.S, p = S.player; Sc.liste(); S.scarab.l = []; for (let d = 1; d < 30 && S.scarab.l.length < (n || 1); d++) for (let dy = -d; dy <= d; dy++) for (let dx = -d; dx <= d; dx++) { const x = Math.floor(p.x / T) + dx, y = Math.floor(p.y / T) + dy; if (S.scarab.l.length < (n || 1) && W.inMap(x, y) && W.tile[W.idx(x, y)] === W.TREE && W.walkTile(x, y + 1) && !S.scarab.l.some(o => o.x === x && o.y === y)) S.scarab.l.push({ x, y, pris: false }); } return S.scarab.l; }; // pour les essais
 })(window.CG);

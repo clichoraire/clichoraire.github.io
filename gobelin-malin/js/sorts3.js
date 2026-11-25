@@ -4,7 +4,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, Art = CG.Art, TAU = Math.PI * 2, rand = CG.rand, pick = CG.pick;
-  const S3 = CG.Sorts3 = { CHARGE: 2.2, TIR: 0.9, TIC: 0.15, RAYON_DMG: 22, RAYON_LONG: 640, RAYON_MANA: 0.6, BETE: 12, PARA: 8, FLECHE: 7, DEBUT: 0.45, DEBUT_JOUR: 6, BETES: ['rat', 'cobaye', 'poule', 'lapin', 'grenouille'] };
+  const S3 = CG.Sorts3 = { CHARGE: 2.2, TIR: 0.9, TIC: 0.15, RAYON_DMG: 22, RAYON_LONG: 640, RAYON_MANA: 0.6, BETE: 12, PARA: 4, SECOUE: 2, AMPLI: 2.4, /* SECOUE : les dernières secondes, le paralysé se met à trembler, de plus en plus fort (AMPLI : pixels, tout à la fin) */ FLECHE: 7, DEBUT: 0.45, DEBUT_JOUR: 6, BETES: ['rat', 'cobaye', 'poule', 'lapin', 'grenouille'] };
   const NOMS = { rat: 'un rat', cobaye: 'un cochon d\'Inde', poule: 'une poule', lapin: 'un lapin', grenouille: 'une grenouille' };
   Object.assign(CG.SPELLS, {
     fleche: { nom: 'Flèche magique', icon: '🏹', mp: 3, prix: 25, color: '#9adcff', desc: 'Une petite flèche de lumière, rapide, qui va loin.' },
@@ -97,7 +97,8 @@
   }
   const en0 = Art.enemy; Art.enemy = function (g, e, t) {
     if (e.poly) return bete(g, e, t);
-    en0.apply(this, arguments);
+    if (e.para > 0 && e.para < S3.SECOUE && !e.dead) { const k = 1 - e.para / S3.SECOUE; g.save(); g.translate(Math.sin(t * 58 + (e.id || 0)) * S3.AMPLI * k * k, 0); try { en0.apply(this, arguments); } finally { g.restore(); } } /* il lutte contre le sort : ça va lâcher */
+    else en0.apply(this, arguments);
     if (e.para > 0) { const h = 20 + (e.r || 12) * 1.6; g.save(); g.strokeStyle = '#fff6a0'; g.lineWidth = 2; g.lineJoin = 'round'; g.globalAlpha = e.para < 1.5 ? 0.45 + Math.sin(t * 20) * 0.3 : 0.9;
       for (let i = 0; i < 3; i++) { const sd = Math.floor(t * 9) * 7 + i * 31 + e.id, a = (sd * 2.399) % TAU, x = e.x + Math.cos(a) * (e.r + 6), y = e.y - h * 0.5 + Math.sin(a) * h * 0.45, z = (sd % 5) - 2; g.beginPath(); g.moveTo(x - 5, y - 7); g.lineTo(x + 2 + z, y - 2); g.lineTo(x - 3, y + 1); g.lineTo(x + 5, y + 7); g.stroke(); }
       g.restore(); }

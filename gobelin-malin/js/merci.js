@@ -22,7 +22,7 @@
       S.autels = (S.autels || []).filter(o => !o.crypte); S.autels.push({ tx: Ar.CX, ty: Ar.CY, st: 'ouvert', id: null, day: S.day, crypte: true });
       if (Math.hypot(p.x - c.x, p.y - c.y) < 34) { p.y = c.y + 40; G.unstick(p, 9); }
       G.puff(c.x, c.y - 20, '#c090ff', 34, 200, 5); G.puff(c.x, c.y - 30, '#ffe36b', 20, 140, 4); for (let i = 0; i < 3; i++) R.rings.push({ x: c.x, y: c.y - 6, r: 50 + i * 40, life: 0.45 + i * 0.15, col: i % 2 ? '#ffe36b' : '#c090ff' });
-      if (R.pings) R.pings.push({ x: c.x, y: c.y, t0: performance.now(), icon: '📜', dur: 5000 }); CG.sfx('discovery');
+      if (R.pings) R.pings.push({ x: c.x, y: c.y, t0: performance.now(), icon: '📖', dur: 5000 }); CG.sfx('discovery');
     }
     return ga0.apply(this, arguments);
   };

@@ -16,12 +16,15 @@
   Te.L = {
     3: { par: 'ouest', titre: 'La forêt de l\'ouest', col: '#c8e8b0' },
     4: { par: 'sud', titre: 'La forêt du sud', col: '#c8e8b0' },
-    5: { par: 'est', titre: 'La forêt de l\'est', col: '#c8e8b0' }
+    5: { par: 'est', titre: 'La forêt de l\'est', col: '#c8e8b0' },
+    6: { par: 'sud', titre: 'Les Sables sans fin', col: '#ffe0a0', sous: 'Rien que du sable, à perte de vue. Tout ce qui vit ici est rapide, rusé et dangereux.' } /* le grand désert, tout au sud : on y entre par le bas de la forêt du sud (sables.js) */
   };
+  Te.DERNIER = 6;
   const PAR = { ouest: 3, sud: 4, est: 5 }, SOUS = 'Les sentiers d\'ici ne mènent nulle part, et les bêtes sont plus coriaces que chez toi.';
   // par où l'on arrive : en face de la sortie qu'on a prise ([case d'arrivée], [bout du sentier, sur le bord])
-  const arrivee = m => m === 3 ? { x: CG.MW - 3, y: 35, bx: CG.MW - 1, by: 35 } : m === 4 ? { x: 49, y: 2, bx: 49, by: 0 } : { x: 2, y: 33, bx: 0, by: 33 };
-  Te.ici = () => { const m = Mo.ici(); return m >= 3 && m <= 5 ? m : 0; };
+  const arrivee = m => m === 6 ? { x: 49, y: 2, bx: 49, by: 0 } : m === 3 ? { x: CG.MW - 3, y: 35, bx: CG.MW - 1, by: 35 } : m === 4 ? { x: 49, y: 2, bx: 49, by: 0 } : { x: 2, y: 33, bx: 0, by: 33 };
+  Te.ici = () => { const m = Mo.ici(); return m >= 3 && m <= Te.DERNIER ? m : 0; };
+  Te.arrivee = arrivee;
   let plan = null; Te.plan = () => plan;
   const etat = () => { const S = CG.S; return S.terre || (S.terre = {}); };
   // ce qu'on a déjà tué et ouvert là-bas aujourd'hui : on ne le retrouve pas en revenant le même jour
@@ -91,16 +94,16 @@
     const data = JSON.parse(JSON.stringify(CG.pack())), ici = {}, N = {}; Object.keys(data).forEach(k => { if (!GL.includes(k)) ici[k] = data[k]; });
     const partent = (ici.pets || []).filter(a => suiv.includes(a.id)); ici.pets = (ici.pets || []).filter(a => !suiv.includes(a.id));
     GL.forEach(k => { if (data[k] !== undefined) N[k] = data[k]; });
-    if (entre) { ici.attH = ((CG.R && CG.R.schedule) || []).filter(e => e.type === 'attack' && !e.done).map(e => e.h); ici.depart = { h: data.hour, r: ry }; } // les attaques prévues, et le rythme du clan au départ
+    if (entre && !de) { ici.attH = ((CG.R && CG.R.schedule) || []).filter(e => e.type === 'attack' && !e.done).map(e => e.h); ici.depart = { h: data.hour, r: ry }; } // les attaques prévues, et le rythme du clan au départ
     const la = entre ? neuf(data, ici) : data.foret; if (!la) return;
     Object.keys(la).forEach(k => { if (!GL.includes(k)) N[k] = la[k]; });
-    if (entre) { N.foret = ici; N.monde = dest; } else { delete N.foret; N.monde = 0; N.res = JSON.parse(JSON.stringify(ici.res || N.res)); } // ses ressources suivent le chef, à l'aller comme au retour
+    if (entre) { if (!de) N.foret = ici; /* d'une terre à une autre : le village qui attend reste celui de la forêt */ N.monde = dest; } else { delete N.foret; N.monde = 0; N.res = JSON.parse(JSON.stringify(ici.res || N.res)); } // ses ressources suivent le chef, à l'aller comme au retour
     N.pets = (N.pets || []).concat(partent);
     const attH = N.attH || [], dp = N.depart, heure = minuit ? 24 : Math.min(data.hour, 24), hp = N.player.hp, mp = N.player.mp; delete N.attH; delete N.depart;
     CG.S = N; G.initRuntime(); D.startDay();
     const R = CG.R, q = N.player; q.hp = hp; q.mp = mp; N.hour = heure; // l'heure a tourné pendant ce temps
     let a = null;
-    if (entre) a = W.center(arrivee(dest).x, arrivee(dest).y);
+    if (entre) { const ar = (Te.arriveeDe && Te.arriveeDe(dest, de)) || arrivee(dest); a = W.center(ar.x, ar.y); }
     else { let k = attH.filter(h => h > N.hour).length; (R.schedule || []).forEach(e => { if (e.h <= N.hour) e.done = true; else if (e.type === 'attack') { if (k > 0) k--; else e.done = true; } }); // personne n'attaque un village sans son chef : ce qui devait venir pendant son absence ne vient pas
       R.terreH0 = Math.min(N.hour, 19);
       if (dp && dp.r) { const hr = Math.max(0, Math.min(N.hour, 19) - Math.min(dp.h, 19)), l = []; RES.forEach(r => { const n = Math.floor((dp.r[r] || 0) * hr * Te.PART); if (n > 0) { N.res[r] = (N.res[r] || 0) + n; l.push('+' + n + ' ' + IC[r]); } }); if (l.length) setTimeout(() => UI.toast('Pendant ton absence, le clan a tourné au ralenti : ' + l.join(' · ')), 1600); }
@@ -109,7 +112,7 @@
     if (a) { q.x = a.x; q.y = a.y; q.path = null; G.unstick(q, 9); }
     N.pets.forEach(o => { if (suiv.includes(o.id)) { o.x = q.x + rand(-20, 20); o.y = q.y + 18; o.path = null; } });
     W.drawMini(); R.invuln = 2.5;
-    if (entre) G.banner(Te.L[dest].titre, SOUS, Te.L[dest].col); else if (minuit) UI.toast('🌙 Minuit : le sommeil t\'a ramené à ta hutte.'); else G.banner('De retour dans la forêt', 'Ton village t\'attendait.', '#ffe9a8');
+    if (entre) G.banner(Te.L[dest].titre, Te.L[dest].sous || SOUS, Te.L[dest].col); else if (minuit) UI.toast('🌙 Minuit : le sommeil t\'a ramené à ta hutte.'); else G.banner('De retour dans la forêt', 'Ton village t\'attendait.', '#ffe9a8');
     try { CG.save(); } catch (e) { /* rien */ }
   }
   const du0 = D.update; D.update = function (dt) {
@@ -162,13 +165,13 @@
       for (const par of ['ouest', 'sud', 'est']) { const e = W.EXITS[par], c = W.center(e.x, e.y); if (Math.hypot(p.x - c.x, p.y - c.y) < 84) return { type: 'terreChemin', par, obj: { x: p.x, y: p.y - 30 }, label: p.lvl >= Te.NIV ? NOMS_PAR[par] : NOMS_PAR[par] + ' : il faut être niveau ' + Te.NIV }; }
       return it; }
     if (it) return it;
-    const a = arrivee(m), c = W.center(a.x, a.y); if (Math.hypot(p.x - c.x, p.y - c.y) < 84) return { type: 'terreRetour', obj: { x: p.x, y: p.y - 30 }, label: 'Reprendre le chemin du village' };
+    const a = arrivee(m), c = W.center(a.x, a.y); if (Math.hypot(p.x - c.x, p.y - c.y) < 84) return { type: 'terreRetour', obj: { x: p.x, y: p.y - 30 }, label: m === 6 ? 'Remonter vers la forêt du sud' : 'Reprendre le chemin du village' };
     return it;
   };
   const in0 = D.interact; D.interact = function () {
     const it = D.findInteract(), p = CG.S.player; if (!it) return in0.apply(this, arguments);
     if (it.type === 'terreChemin') { if (p.lvl < Te.NIV) { CG.sfx('no'); return UI.toast('🚧 Ce chemin mène loin de chez toi. Reviens quand tu seras niveau ' + Te.NIV + ' (tu es niveau ' + p.lvl + ').'); } return Te.partir(PAR[it.par]); }
-    if (it.type === 'terreRetour') return Te.partir(0);
+    if (it.type === 'terreRetour') return Te.partir(Te.ici() === 6 ? 4 : 0);
     return in0.apply(this, arguments);
   };
 })(window.CG);

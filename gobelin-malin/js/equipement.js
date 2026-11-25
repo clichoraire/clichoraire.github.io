@@ -11,7 +11,7 @@
 })(window.CG);
 (function (CG) {
   const G = CG.G, D = CG.D, Bq = CG.Banque, Iv = CG.Inventaire; if (!Bq || !Iv) return;
-  const Eq = CG.Equipement = { CHEF: [0, 0.5, 1, 1.5], GOB: [0, 1, 2, 3], PRIX: [0, 90, 240, 520], COFFRE: 0.03, DONJON: 0.08, QUAL: [0.8, 0.97] };
+  const Eq = CG.Equipement = { CHEF: [0, 0.5, 1, 1.5], GOB: [0, 1, 2, 3], PRIX: [0, 300, 500, 900], COFFRE: 0.03, DONJON: 0.08, QUAL: [0.8, 0.97] };
   Eq.L = {
     pioche: { ic: '⛏️', noms: ['', 'Pioche', 'Pioche solide', 'Pioche de maître'], job: 'mineur', res: 'minerai', chef: 'de minerai et d\'or quand tu pioches un rocher toi-même' },
     hache: { ic: '🪓', noms: ['', 'Hache', 'Hache affûtée', 'Hache de maître'], job: 'bucheron', res: 'bois', chef: 'de bois quand tu débites un tronc ou que tu en ramasses. Elle te permet aussi d\'abattre un arbre toi-même' },

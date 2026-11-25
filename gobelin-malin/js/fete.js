@@ -12,7 +12,13 @@
   Fe.mult = () => Math.max(0.1, 1 - (G.tech('b27') ? Fe.RABAIS.b27 : 0) - (G.tech('b28') ? Fe.RABAIS.b28 : 0));
   Fe.cout = () => Math.max(1, Math.ceil(CG.S.goblins.length * Fe.PAR_TETE * Fe.mult()));
 
-  const fe0 = D.feast; D.feast = function () { const S0 = CG.S, f0 = S0.res.food, m0 = S0.morale, r = fe0.apply(this, arguments), S = CG.S, R = CG.R; R.feteH = Math.floor(S.hour);
+  // ---------- le feu brûle du bois : quelques bûches pour l'allumer, puis à chaque heure de fête. Sans bois, pas de feu ----------
+  Fe.BOIS_ALLUMER = 5; Fe.BOIS_HEURE = 3; Fe.SANS_BOIS = 6; /* SANS_BOIS : le moral perdu un soir sans feu */
+  const fe0 = D.feast; D.feast = function () { const S0 = CG.S, f0 = S0.res.food, m0 = S0.morale;
+    if (Math.floor(S0.res.bois || 0) < 1) { const R1 = CG.R; R1.feast = true; R1.fireLit = false; R1.feastOk = false; S0.feastDay = S0.day; S0.sansFeteDay = S0.day; if (R1.dayStats) R1.dayStats.eaten = 0; S0.morale = Math.max(0, S0.morale - Fe.SANS_BOIS);
+      G.banner('Pas de feu ce soir', 'Il ne reste plus une bûche : impossible d\'allumer le feu. Le clan va se coucher dans le noir. (moral -' + Fe.SANS_BOIS + ')', '#ff9a8a'); CG.sfx('no'); return; }
+    const r = fe0.apply(this, arguments), S = CG.S, R = CG.R; R.feteH = Math.floor(S.hour);
+    if (R.fireLit && S === S0) { const b = Math.min(Fe.BOIS_ALLUMER, Math.floor(S.res.bois || 0)), f = G.firePos(); if (b > 0) { S.res.bois -= b; G.text(f.x, f.y - 114, '-' + b + ' 🪵', '#e0c090', true); } }
     if (R.feastOk && S === S0) { const f = G.firePos(), c = Math.round(f0 - S.res.food), m = Math.round(S.morale - m0); if (c > 0) G.text(f.x, f.y - 70, '-' + c + ' 🍖', '#ffb08a', true); if (m > 0) G.text(f.x, f.y - 92, '😄 +' + m + ' moral', '#ffe9a8', true); } // ce que coûte et rapporte la fête se lit au-dessus du feu, sans message
     return r; };
   const up0 = D.update; D.update = function (dt) {
@@ -21,6 +27,8 @@
     const h = Math.floor(S.hour); if (R.feteH === undefined || R.feteH === null) R.feteH = h; // partie rechargée en pleine fête : on ne fait pas payer les heures passées
     if (h <= R.feteH || h >= 24) return r; R.feteH = h;
     const c = Fe.cout(), f = G.firePos();
+    if (Math.floor(S.res.bois || 0) < 1) { UI.toast('🪵 Plus une seule bûche : le feu s\'éteint, la fête est finie et tout le monde va se coucher. (moral -3)'); CG.sfx('no'); S.morale = Math.max(0, S.morale - 3); R.fireLit = false; if (D.canSleep() && !R.fadeDir) D.startNight(); return r; }
+    { const b = Math.min(Fe.BOIS_HEURE, Math.floor(S.res.bois)); S.res.bois -= b; G.text(f.x, f.y - 114, '-' + b + ' 🪵', '#e0c090', true); }
     if (S.res.food >= c) { G.gain('food', -c, f.x, f.y - 70); Fe.joie(Fe.MORAL, f); return r; }
     S.res.food = 0; S.morale = Math.max(0, S.morale - 3); UI.toast('😟 Plus rien à manger : la fête s\'arrête et tout le monde va se coucher le ventre creux. (moral -3)'); CG.sfx('no');
     if (D.canSleep() && !R.fadeDir) D.startNight();

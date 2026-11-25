@@ -211,8 +211,9 @@
   function menu() {
     view = 'menu'; root.className = '';
     box().innerHTML = '<div class="acc-menu"><div class="acc-logo"><span>Goblin</span><b>Malin</b></div><p class="acc-tag">Tu es le seul gobelin malin du clan.<br>Fais grandir ton village, et protège-le.</p>' +
-      '<div class="acc-btns">' + big('a-jouer', '▶', 'Jouer', '', 'go') + big('a-config', '⚙️', 'Configuration') + '' + big('a-debug', '🛠️', 'Debug') + '</div></div><div class="acc-ver">v' + CG.VERSION + '</div>';
+      '<div class="acc-btns">' + big('a-jouer', '▶', 'Jouer', '', 'go') + big('a-diam', '💎', 'Améliorations') + big('a-config', '⚙️', 'Configuration') + '' + big('a-debug', '🛠️', 'Debug') + '</div></div><div class="acc-ver">v' + CG.VERSION + '</div>';
     box().querySelector('#a-jouer').onclick = () => { if (aucune()) { CG.choisirPartie(1); debut(); } else parties(); };
+    { const bd = box().querySelector('#a-diam'); if (bd) { bd.onclick = () => { if (CG.Diamants) CG.Diamants.ouvrir(); }; if (CG.Diamants) { const sp = bd.querySelector('span:last-child') || bd; sp.textContent = 'Améliorations · 💎 ' + CG.Diamants.total(); } } } /* diamants.js */
     box().querySelector('#a-config').onclick = config;
     box().querySelector('#a-debug').onclick = () => CG.Debug.show();
     if (box().querySelector('#a-tombes')) box().querySelector('#a-tombes').onclick = () => CG.Tombes.ouvrir();
@@ -254,8 +255,8 @@
   // dernier choix avant de partir : la difficulté
   function difficulte(n) {
     view = 'diff'; root.className = ''; const L = CG.Diff.LIST;
-    box().innerHTML = '<div class="acc-menu acc-diff"><h2 class="acc-h">Quel genre de chef es-tu ?</h2><div class="acc-btns">' + Object.keys(L).map(k => { const ok = CG.Diff.ouvert(k); return '<button class="acc-btn diff-' + k + (ok ? '' : ' verrou') + '" id="d-' + k + '"><span class="ic">' + (ok ? L[k].icon : '🔒') + '</span><span class="tx">' + L[k].nom + '<small>' + esc(ok ? L[k].titre : CG.Diff.verrou(k)) + '</small></span></button>'; }).join('') + big('d-back', '←', 'Retour', '', 'low') + '</div></div>';
-    Object.keys(L).forEach(k => { box().querySelector('#d-' + k).onclick = () => { if (!CG.Diff.ouvert(k)) { CG.sfx('no'); return; } CG.Diff.pending = k; UI.close(); CG.start(true, n); }; });
+    box().innerHTML = '<div class="acc-menu acc-diff"><h2 class="acc-h">Quel genre de chef es-tu ?</h2><div class="acc-btns">' + Object.keys(L).filter(k => !CG.Diff.cache(k)).map(k => { const ok = CG.Diff.ouvert(k); return '<button class="acc-btn diff-' + k + (ok ? '' : ' verrou') + '" id="d-' + k + '"><span class="ic">' + (ok ? L[k].icon : '🔒') + '</span><span class="tx">' + L[k].nom + '<small>' + esc(ok ? L[k].titre : CG.Diff.verrou(k)) + '</small></span></button>'; }).join('') + big('d-back', '←', 'Retour', '', 'low') + '</div></div>';
+    Object.keys(L).filter(k => !CG.Diff.cache(k)).forEach(k => { box().querySelector('#d-' + k).onclick = () => { if (!CG.Diff.ouvert(k)) { CG.sfx('no'); return; } CG.Diff.pending = k; UI.close(); CG.start(true, n); }; });
     box().querySelector('#d-back').onclick = () => creer();
   }
   function creer(evo) {

@@ -12,7 +12,7 @@
   Tb.clan = function () {
     const S = CG.S, gobs = S.goblins.filter(g => !g.exile), jobs = CG.JOB_ORDER.concat(Object.keys(CG.JOBS).filter(j => !CG.JOB_ORDER.includes(j))).filter(j => gobs.some(g => g.job === j)), dispo = CG.jobsAvail();
     const compte = jobs.map(j => '<span class="cl-jeton" title="' + esc(CG.JOBS[j].nom) + '">' + CG.JOBS[j].icon + ' ' + esc(CG.JOBS[j].nom) + ' <b>' + gobs.filter(g => g.job === j).length + '</b></span>').join('');
-    const ligne = g => { const fixe = g.cls === 'loup' || g.bebe, choix = dispo.includes(g.job) ? dispo : dispo.concat([g.job]);
+    const ligne = g => { const fixe = g.cls === 'loup' || g.bebe, choix = (dispo.includes(g.job) ? dispo : dispo.concat([g.job])).filter(j => j === g.job || !(CG.Ateliers && CG.Ateliers.plein && CG.Ateliers.plein(j, g)));
       return '<div class="cl-gob"><span class="cl-ic">' + (CG.JOBS[g.job] || {}).icon + '</span><div class="cl-nom"><b>' + esc(g.name) + '</b><small>' + (g.sex === 'f' ? '♀' : '♂') + ' niv. ' + g.lvl + (g.child ? ' · petit' : '') + '</small></div>'
         + '<select data-job="' + g.id + '"' + (fixe ? ' disabled' : '') + '>' + choix.map(j => '<option value="' + j + '"' + (j === g.job ? ' selected' : '') + (j !== g.job && CG.jobOk && !CG.jobOk(j, g) ? ' disabled' : '') + '>' + CG.JOBS[j].icon + ' ' + esc(nomJ(g, j)) + '</option>').join('') + '</select>'
         + '<button data-fiche="' + g.id + '" title="Voir sa fiche">📊 Fiche</button></div>'; };

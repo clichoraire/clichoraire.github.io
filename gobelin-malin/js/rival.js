@@ -42,11 +42,21 @@
   };
   // ---------- le duel ----------
   function sortsDe(p) { const l = Rv.SORTS.filter(id => CG.SPELLS[id] && (id === 'etincelle' || (p.spells || []).includes(id))); if (l.length < 2 && CG.SPELLS.soin) l.push('soin'); return l; }
+  /* personne d'autre ne s'en mêle : pendant que le village, les animaux et les tours réfléchissent, le rival a l'air paisible (calm),
+     donc personne ne le prend pour cible. Il redevient un ennemi pour lui-même (W.foe) et pour le chef (ses coups, ses sorts). */
+  let enJeu = 0, chef = 0, pose = false;
+  Rv.cacher = function (e) {
+    Object.defineProperty(e, 'calm', { configurable: true, enumerable: true, get: () => enJeu > 0 && chef === 0 && !W.foe, set: () => {} });
+    if (pose) return; pose = true;
+    const u0 = G.update; G.update = function () { enJeu++; try { return u0.apply(this, arguments); } finally { enJeu--; } };
+    ['attack', 'cast'].forEach(k => { const f0 = G[k]; if (typeof f0 !== 'function') return; G[k] = function () { chef++; try { return f0.apply(this, arguments); } finally { chef--; } }; });
+  };
   Rv.commencer = function (v) {
     const S = CG.S, R = CG.R, p = S.player, q = v.rival; if (duel() || !R.visitors.includes(v)) return false;
     const e = G.spawnEnemy(Rv.TYPE, v.x, v.y, { wild: true, exact: true }); if (!e) return false; R.visitors.splice(R.visitors.indexOf(v), 1);
     const plus = q.lvl - p.lvl; e.hp = e.maxhp = Math.round(p.maxhp * 0.85 + q.lvl * 6 + plus * 8); e.dmg = Math.round(3 + q.lvl + p.maxhp * 0.03); e.spd = 100 + Math.min(20, q.lvl * 2);
     { const k = CG.Diff && CG.Diff.cur ? CG.Diff.cur() : null; if (k) { e.hp = e.maxhp = Math.max(1, Math.round(e.hp * (k.hp || 1))); e.dmg = Math.max(1, Math.round(e.dmg * (k.dmg || 1))); } } /* il suit la difficulté, comme tous les ennemis */
+    Rv.cacher(e);
     e.duel = true; e.rv = { v, q, sex: v.sex, hue: v.hue, mp: 30 + q.lvl * 6, mpMax: 30 + q.lvl * 6, cd: rand(1.5, 2.5), sorts: sortsDe(p), bouclier: 0, hate: 0, prep: null };
     e.leash = 99999; e.aggroR = 9999; e.calm = false; e.target = p; e.rooted = 1.6; e.xp = 0; e.or = 0;
     R.duel = { e, v, q }; R.invuln = Math.max(R.invuln || 0, 1.2); G.banner('Duel !', q.nom + ' (niv. ' + q.lvl + ') contre toi. Personne d\'autre ne s\'en mêle.', '#ffd0a0'); CG.sfx('warning');

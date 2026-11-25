@@ -57,7 +57,7 @@
 
   // Ennemis. cost = poids dans le budget d'une attaque.
   CG.ENEMIES = {
-    milicien: { nom: 'Milicien', race: 'humain', hp: 18, dmg: 3, spd: 68, xp: 6, or: 3, cost: 1, look: { tunic: '#8a6a3c', hair: '#5a3a1c', weapon: 'fourche' } },
+    milicien: { nom: 'Milicien', race: 'humain', hp: 18, dmg: 3, spd: 68, xp: 6, or: 3, cost: 1, allonge: 34, /* sa fourche pique jusqu'à une case de lui */ look: { tunic: '#8a6a3c', hair: '#5a3a1c', weapon: 'fourche' } },
     soldat: { nom: 'Soldat', race: 'humain', hp: 30, dmg: 5, spd: 74, xp: 10, or: 5, cost: 2, look: { tunic: '#4a6aa8', hair: '#3a2a1a', weapon: 'epee', helmet: true } },
     archer: { nom: 'Archer', race: 'humain', hp: 20, dmg: 4, spd: 72, xp: 10, or: 5, cost: 2, range: 230, look: { tunic: '#3f7a3f', hair: '#c9a24a', weapon: 'arc', hood: true } },
     chevalier: { nom: 'Chevalier', race: 'humain', hp: 70, dmg: 9, spd: 58, xp: 25, or: 12, cost: 5, r: 15, look: { tunic: '#b8bcc8', hair: '#888', weapon: 'epee', helmet: true, armor: true } },
@@ -108,7 +108,7 @@
   CG.TIPS = [
     'Parle à un gobelin (E) pour lui donner un métier.',
     'Le soir, va à ta hutte de chef (E) pour dormir et passer au lendemain.',
-    'Copie un parchemin dans ton grimoire (G) pour connaître le sort à jamais : l\'encre coûte de l\'or.',
+    'Copie un tome dans ton grimoire (G) pour connaître le sort à jamais : l\'encre coûte de l\'or.',
     'Les bûcherons font reculer la forêt : plus de place pour bâtir.',
     'Explore les alentours : des coffres se cachent dans la forêt.',
     'Ta vie ne remonte pas toute seule : bâtis une hutte de guérisseur, garde des potions (Q), ou dors jusqu\'au matin.',

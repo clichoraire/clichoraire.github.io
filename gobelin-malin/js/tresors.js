@@ -46,7 +46,7 @@
   // la peau du chef devient grise comme la pierre tant qu'un pouvoir le durcit : Statue de Pierre, Peau de pierre de Dame Ortie, Pierre du puits
   CG.peauDePierre = () => { const S = CG.S; if (!S) return false; if (CG.Statues && CG.Statues.actif && CG.Statues.actif('pierre')) return true; const e = CG.Sorciere && CG.Sorciere.actif(); if (e && e.id === 'pierre') return true; const v = S.voix; return !!(v && v.t > 0 && v.id === 'peau'); };
   // ---------- 3. le puits magique ----------
-  const Pu = CG.Puits = { MIN: 16, LANCERS: 6, REPOND: { 1: 0.22, 2: 0.36, 5: 0.6 }, NIVEAU: { 1: [[1, 0.82], [2, 0.16], [3, 0.02]], 2: [[1, 0.66], [2, 0.28], [3, 0.06]], 5: [[1, 0.44], [2, 0.38], [3, 0.18]] }, DUREE: [0, 180, 240, 300], TAILLE: ['', 'petit', 'moyen', 'gros'],
+  const Pu = CG.Puits = { COUPS: [1, 7], MIN: 16, LANCERS: 7, REPOND: { 1: 0.22, 2: 0.36, 5: 0.6 }, NIVEAU: { 1: [[1, 0.82], [2, 0.16], [3, 0.02]], 2: [[1, 0.66], [2, 0.28], [3, 0.06]], 5: [[1, 0.44], [2, 0.38], [3, 0.18]] }, DUREE: [0, 180, 240, 300], TAILLE: ['', 'petit', 'moyen', 'gros'],
     DON: 0.25, DON_VIE: [0, 10, 20, 35], DON_MANA: [0, 5, 10, 18] }; // DON : quand le puits répond, la chance que ce soit un don pour toujours (vie ou mana maximum) plutôt qu'un pouvoir qui passe
   Pu.V = {
     vit: { ic: '🌬️', nom: 'Souffle du puits', v: [0, 0.08, 0.16, 0.3], txt: n => 'Tu cours ' + Math.round(n * 100) + ' % plus vite.' },
@@ -81,9 +81,10 @@
     return q.x >= 0 ? q : null;
   };
   // le puits devient gourmand : chaque pièce jetée fait monter le prix de la suivante, pour toujours (HAUSSE). Une vieille partie démarre déjà haut (DEPART par jour passé).
-  Pu.HAUSSE = 1.15; Pu.DEPART = 2; Pu.DEPART_MAX = 30;
+  Pu.HAUSSE = 1; Pu.DEPART = 0; Pu.DEPART_MAX = 30; /* plus de hausse (avant : 1,15 par pièce jetée, pour toujours, et 2 crans par jour passé : au jour 5 une pièce coûtait déjà 80). Remettre HAUSSE au-dessus de 1 pour qu'il redevienne gourmand */
   Pu.fois = () => { const S = CG.S; if (S.puitsN === undefined) S.puitsN = Math.min(Pu.DEPART_MAX, Math.max(0, (S.day - 1) * Pu.DEPART)); return Math.pow(Pu.HAUSSE, S.puitsN); };
-  Pu.prix = n => Math.max(n, Math.round(n * Pu.fois()));
+  Pu.CHER = 2; /* tout coûte le double au puits */
+  Pu.prix = n => Math.max(n, Math.round(n * Pu.CHER * Pu.fois()));
   Pu.payer = n => { const S = CG.S, c = Pu.prix(n); S.res.or -= c; S.puitsN++; return c; };
   if (CG.Mondes && CG.Mondes.GLOBAL && !CG.Mondes.GLOBAL.includes('puitsN')) CG.Mondes.GLOBAL.push('puitsN');
   const pos = q => ({ x: q.x * T + T / 2, y: q.y * T + T / 2 });
@@ -91,7 +92,8 @@
   Pu.jeter = function (n) {
     const S = CG.S, R = CG.R, q = Pu.ici(), p = S.player; if (!q || S.res.or < Pu.prix(n) || q.parle || q.lancers >= Pu.LANCERS || R.puitsT) return; Pu.payer(n); q.lancers++; const c = pos(q);
     CG.sfx('coin'); R.puitsPiece = { t: 0, x0: p.x, y0: p.y - 30, x1: c.x, y1: c.y - 9 }; // la pièce part de la main du chef et tombe dans le puits (voir le dessin plus bas)
-    R.puitsT = { t: 1.5, n, repond: Math.random() < Pu.REPOND[n] };
+    if (!(q.sourd >= 1)) q.sourd = Pu.COUPS[0] + Math.floor(Math.random() * (Pu.COUPS[1] - Pu.COUPS[0] + 1)); /* chaque jour, le puits choisit en secret combien de pièces il veut (de 1 à 7) : rien avant, et à celle-là il répond à coup sûr */
+    R.puitsT = { t: 1.5, n, repond: q.lancers >= q.sourd };
   };
   function reponse(n, repond, muet) {
     const S = CG.S, R = CG.R, q = Pu.ici(), p = S.player; if (!q) return; const c = pos(q);

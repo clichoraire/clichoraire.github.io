@@ -19,6 +19,7 @@
     if (S.buildings.some(b => x + m >= b.tx - 2 && x - m <= b.tx + b.w + 1 && y + m >= b.ty - 2 && y - m <= b.ty + b.h + 1)) return false;
     if ((W.sites || []).some(s => Math.hypot(s.x - x, s.y - y) < (s.r || 3) + m + 3) || (S.camps || []).some(c => Math.hypot(c.x - x, c.y - y) < 7 + m)) return false;
     if (l.some(d => Math.hypot(d.x - x, d.y - y) < De.ECART)) return false;
+    if ((S.autels || []).some(a => Math.hypot(a.tx - x, a.ty - y) < m + 5)) return false; /* jamais sur un piédestal, ni collée dessus */
     if (CG.R && (CG.R.chests || []).some(c => Math.hypot(c.x / T - x, c.y / T - y) < m + 4)) return false;
     try { if (W.reachable && !W.reachable(x, y)) return false; } catch (e) { /* rien */ } return true;
   }

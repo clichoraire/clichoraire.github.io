@@ -15,7 +15,9 @@
   Df.record = k => Df.records()[k] || 0;
   Df.noter = function () { const S = CG.S; if (!S || !S.day) return; const k = Df.id(), r = Df.records(), boss = !!(S.demon && S.demon.mort && !S.demon.triche); if ((r[k] || 0) >= S.day && (!boss || r['boss_' + k])) return;
     r[k] = Math.max(r[k] || 0, S.day); if (boss) r['boss_' + k] = 1; try { localStorage.setItem(CLE, JSON.stringify(r)); } catch (e) { /* rien */ } };
-  Df.ouvert = k => { const b = Df.BESOIN[k]; return !b || !!Df.record('boss_' + b); };
+  /* le Cauchemar ne se gagne plus : il s'achète avec des diamants (voir diamants.js), et tant qu'il n'est pas acheté, il n'est même pas dans la liste */
+  Df.ACHAT = { cauchemar: 1 }; Df.achete = k => !!(CG.Diamants && CG.Diamants.niv(k) > 0); Df.cache = k => !!Df.ACHAT[k] && !Df.achete(k);
+  Df.ouvert = k => { if (Df.ACHAT[k]) return Df.achete(k); const b = Df.BESOIN[k]; return !b || !!Df.record('boss_' + b); };
   Df.verrou = k => { const b = Df.BESOIN[k], r = Df.record(b); return 'Bats le Demon Lord en ' + Df.LIST[b].nom + (r ? ' (ton record : jour ' + r + ')' : ''); };
   /* la fiole de vie de base : 45 en Normal, 30 dans toutes les difficultés au-dessus */
   Df.FIOLE = { normal: 45 }; Df.FIOLE_DUR = 30; CG.fiole = () => Df.FIOLE[Df.id()] || Df.FIOLE_DUR;
@@ -58,9 +60,14 @@
     })();
   };
   // le départ en Normal : l'Étincelle, une troisième hutte et deux compagnons de plus
+  // ---------- la vie du clan : plus c'est dur, moins le chef et ses gobelins ont de vie (VIE). Le chef : au départ et à chaque niveau gagné ----------
+  Df.VIE = { normal: 1, difficile: 0.9, elite: 0.8, cauchemar: 0.7 }; Df.vie = () => Df.VIE[Df.id()] || 1;
+  { const mh0 = G.gobMaxHp; G.gobMaxHp = function () { const v = mh0.apply(this, arguments), k = Df.vie(); return k === 1 ? v : Math.max(1, Math.round(v * k)); };
+    const ax0 = G.addXp; if (ax0) G.addXp = function () { const p = CG.S && CG.S.player, l0 = p ? p.lvl : 0, m0 = p ? p.maxhp : 0, r = ax0.apply(this, arguments), k = Df.vie(); if (p && k !== 1 && p.lvl > l0 && p.maxhp > m0) { const moins = Math.round((p.maxhp - m0) * (1 - k)); p.maxhp -= moins; p.hp = Math.max(1, Math.min(p.maxhp, p.hp - moins)); } return r; }; }
+  Df.vieChef = function () { const S = CG.S, p = S && S.player; if (!p || S.vieDiff) return; S.vieDiff = 1; const k = Df.vie(); if (k === 1) return; p.maxhp = Math.max(1, Math.round(p.maxhp * k)); p.hp = Math.max(1, Math.min(p.maxhp, Math.round(p.hp * k))); }; /* une seule fois par partie (les parties d'avant aussi) */
   const st = CG.start;
   CG.start = function (isNew) {
-    const r = st.apply(this, arguments); if (isNew) Df.iris(); Df.prix();
+    const r = st.apply(this, arguments); if (isNew) Df.iris(); Df.prix(); try { Df.vieChef(); } catch (e) { /* jamais bloquant */ }
     if (isNew && Df.cur().seul) { const S = CG.S; S.goblins.slice().forEach(g => G.resetGoblin(g)); S.goblins.length = 0; CG.save(); return r; } // en Cauchemar, le chef commence seul : il faudra accueillir ceux qui passent
     if (!isNew || Df.id() !== 'normal') return r;
     const S = CG.S, p = S.player; S.tech.owned.d24 = 1; S.tech.owned.d25 = 1; // en Normal, on sait déjà bâtir clôtures, portails et palissades if (!p.spells.includes('etincelle')) p.spells.push('etincelle');

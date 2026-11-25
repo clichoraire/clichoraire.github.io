@@ -11,8 +11,8 @@
     let neufs = null; for (const id in sc) if (sc[id] && !R.parchVus.has(id)) (neufs = neufs || []).push(id); if (!neufs) return;
     if (R.trouve || document.getElementById('butin')) { neufs.forEach(id => R.parchVus.add(id)); return; } // il vient d'une scène : elle a déjà fait la fête
     if (UI.modal || R.ko > 0 || R.night || R.cine || R.rayon || R.chambre || (CG.Mondes && CG.Mondes.pending)) return; // on attend que la boutique soit fermée, que le combat de scène finisse...
-    neufs.forEach(id => R.parchVus.add(id)); const p = S.player, nom = neufs.length === 1 ? CG.SPELLS[neufs[0]].nom : neufs.length + ' parchemins';
-    Tv.play('📜', () => { G.text(p.x, p.y - 120, '📜 ' + nom + ' !', '#ffe36b', true); }, neufs);
+    neufs.forEach(id => R.parchVus.add(id)); const p = S.player, nom = neufs.length === 1 ? CG.SPELLS[neufs[0]].nom : neufs.length + ' tomes';
+    Tv.play('📖', () => { G.text(p.x, p.y - 120, '📖 ' + nom + ' !', '#ffe36b', true); }, neufs);
   }; }
   // ---------- chez un gobelin : seulement ce qu'on peut vraiment choisir ----------
   const dl0 = UI.dialog; UI.dialog = function (o) {

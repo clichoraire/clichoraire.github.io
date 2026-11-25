@@ -150,7 +150,8 @@
     Art.bar(ctx, x + w / 2, y - 8, Math.max(30, w - 16), pr, '#ffe36b'); CG.Chantier.draw(ctx, b, t);
   }
   let shA = null, shB = null, ringCv = null;
-  function drawChief(c, p, t, alpha) { const cp = p === S.player && R.chefPose && R.chefPose.fin > R.t && !(R.swing > 0.02) && !(R.castAnim > 0) ? R.chefPose : null; /* au travail : cueillir, piocher, bâtir (pas de coup d'arme) */ const up = R.mount && p === S.player ? CG.Monture.pre(c, p, t) : 0; Art.goblin(c, { dir: CG.Art8.dirFrom(R.dir.x, R.dir.y), x: p.x, y: p.y - up, face: p.face, t: t, moving: up ? false : p.moving, noLegs: !!up, step: p.step, sex: 'm', hue: 112, lum: 46, chief: true, pierre: p === S.player && CG.peauDePierre(), tool: cp ? (cp.k === 'mine' ? 'pioche' : cp.k === 'chop' ? 'hache' : cp.k === 'build' ? 'marteau' : 'baton') : 'baton', glow: R.castAnim > 0 ? '#fff' : '#b070ff', atk: cp ? 0 : R.ruee && R.ruee.ph === 'course' && p === S.player ? 0.42 : Math.max(R.swing, R.castAnim || 0), equip: { armure: p.armor > 0 }, s: 1.12 * (CG.Evo ? CG.Evo.chefScale() : 1), alpha: alpha, workP: cp && cp.dur ? Math.max(0, Math.min(0.99, (R.t - cp.d) / cp.dur)) : undefined, pose: cp ? 'work' : (R.trouve || R.criShout > 0) && p === S.player ? 'cheer' : undefined }); }
+  function drawChief(c, p, t, alpha) { const gl = p === S.player && R.glisse && CG.Banane; if (!gl) return drawChief1(c, p, t, alpha); c.save(); try { CG.Banane.tourner(c, p, R.glisse); drawChief1(c, p, t, alpha); } finally { c.restore(); } } /* il a glissé sur une peau de banane (banane.js) */
+  function drawChief1(c, p, t, alpha) { const cp = p === S.player && R.chefPose && R.chefPose.fin > R.t && !(R.swing > 0.02) && !(R.castAnim > 0) ? R.chefPose : null; /* au travail : cueillir, piocher, bâtir (pas de coup d'arme) */ const up = R.mount && p === S.player ? CG.Monture.pre(c, p, t) : 0; Art.goblin(c, { dir: CG.Art8.dirFrom(R.dir.x, R.dir.y), x: p.x, y: p.y - up, face: p.face, t: t, moving: up ? false : p.moving, noLegs: !!up, step: p.step, sex: 'm', hue: 112, lum: 46, chief: true, pierre: p === S.player && CG.peauDePierre(), tool: cp ? (cp.k === 'mine' ? 'pioche' : cp.k === 'chop' ? 'hache' : cp.k === 'build' ? 'marteau' : 'baton') : 'baton', glow: R.castAnim > 0 ? '#fff' : '#b070ff', atk: cp ? 0 : R.ruee && R.ruee.ph === 'course' && p === S.player ? 0.42 : Math.max(R.swing, R.castAnim || 0), equip: { armure: p.armor > 0 }, s: 1.12 * (CG.Evo ? CG.Evo.chefScale() : 1), alpha: alpha, workP: cp && cp.dur ? Math.max(0, Math.min(0.99, (R.t - cp.d) / cp.dur)) : undefined, pose: cp ? 'work' : (R.trouve || R.criShout > 0) && p === S.player ? 'cheer' : undefined }); }
   // rond de terre autour du feu, de la taille exacte de la zone où l'on ne peut pas bâtir (dessiné une fois, en double résolution)
   function fireRing() {
     if (ringCv) return ringCv;
@@ -236,7 +237,7 @@
           else {
             /* le bouclier est dessiné dans effets.js */
             const gz = CG.Potions ? CG.Potions.taille() : 1; if (gz !== 1) { ctx.save(); ctx.translate(p.x, p.y); ctx.scale(gz, gz); ctx.translate(-p.x, -p.y); }
-            drawChief(ctx, p, t, R.invis > 0 ? 0.3 + Math.sin(t * 5) * 0.06 : R.passe > 0 ? (R.passe <= 3 && Math.floor(t * 8) % 2 ? 0.85 : 0.55 + Math.sin(t * 6) * 0.07) : (R.hurtFlash > 0 || R.invuln > 0) && Math.floor(t * 30) % 2 ? 0.5 : 1);
+            drawChief(ctx, p, t, R.pecheJeu ? 1 : R.invis > 0 ? 0.3 + Math.sin(t * 5) * 0.06 : R.passe > 0 ? (R.passe <= 3 && Math.floor(t * 8) % 2 ? 0.85 : 0.55 + Math.sin(t * 6) * 0.07) : (R.hurtFlash > 0 || R.invuln > 0) && Math.floor(t * 30) % 2 ? 0.5 : 1);
             if (gz !== 1) ctx.restore();
             if (R.swing > 0) { const a0 = Math.atan2(R.dir.y, R.dir.x); ctx.strokeStyle = 'rgba(255,255,255,' + R.swing * 0.8 + ')'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); if (R.spin) ctx.arc(p.x, p.y - 16, 54, a0 + (1 - R.swing) * 6.3, a0 + 2.6 + (1 - R.swing) * 6.3); else ctx.arc(p.x, p.y - 16, 40, a0 - 1 + (1 - R.swing) * 1.2, a0 + 0.2 + (1 - R.swing) * 1.2); ctx.stroke(); }
           }
@@ -285,7 +286,7 @@
     /* un animal tombé au combat est mort : son corps reste par terre, sans étoiles */
     if (R.etoilesKO) { R.etoilesKO = R.etoilesKO.filter(q => q.fin > R.t); for (const q of R.etoilesKO) if (CG.onScreen(q.x, q.y)) { ctx.globalAlpha = Math.min(1, (q.fin - R.t) * 2); if (q.g) { ctx.save(); ctx.translate(q.x, q.y - 6); ctx.rotate(1.45); try { Art.goblin(ctx, Object.assign({ x: 0, y: 0, face: 1, t: 0 }, q.g)); } catch (er) { /* rien */ } ctx.restore(); CG.etoiles(ctx, q.x + 14, q.y - 30, 17, t, 1); } else CG.etoiles(ctx, q.x, q.y - 44, 17, t, 1); } ctx.globalAlpha = 1; } /* là où un gobelin vient de tomber */
     for (const a of S.pets) { if (a.ko || !CG.onScreen(a.x, a.y)) continue; const mh = CG.P.maxHp(a), fly = CG.P.KINDS[a.kind].fly; if (a.hp < mh - 0.5) hpBar(a.x, a.y - (fly ? 74 : 44) * (a.evo ? 1.3 : 1), 30, a.hp, mh, '#4ad8c8'); if (a.buffT > 0 || a.eat) { ctx.fillStyle = '#fff'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(a.eat ? '🥣' : CG.P.BUFFS[a.buff].icon, a.x + 16, a.y - (fly ? 70 : 40) * (a.evo ? 1.3 : 1) + Math.sin(t * 5 + a.id) * 2); } }
-    const ev = R.event; if (ev && ev.type === 'demande' && ev.lord.state === 'wait') { Art.bubble(ctx, ev.lord.x, ev.lord.y - 90 + Math.sin(t * 4) * 3, '❗'); Art.bar(ctx, ev.lord.x, ev.lord.y - 72, 50, ev.timer / 80, '#c070ff'); }
+    // le seigneur démon qui attend : seulement le rond qui se vide au-dessus de sa tête (demandechrono.js), plus de bulle « ! » ni de barre
     for (const v of R.visitors) if (v.state === 'wait' && v.role !== 'seigneur' && v.role !== 'escorte') Art.bubble(ctx, v.x, v.y - (v.role === 'animal' ? 58 : v.role === 'monstre' ? 50 + (CG.P.KINDS[v.kind].min > 6 ? 34 : v.kind === 'gelee' ? -8 : 12) : v.role === 'esprit' ? 82 : 66) + Math.sin(t * 3 + v.seed) * 2, v.role === 'nomade' || v.role === 'monstre' ? '👋' : v.role === 'esprit' ? '🎁' : v.role === 'animal' ? '🍖' : v.role === 'fee' ? '✨' : '💰');
     const it = UI.modal ? null : D.findInteract();
     if (it && it.obj && it.obj.x !== undefined && it.type !== 'chestDay') Art.toucheE(ctx, it.obj.x, it.obj.y - (it.type === 'visitor' ? 88 : it.type === 'pet' ? (CG.P.KINDS[it.obj.kind] && CG.P.KINDS[it.obj.kind].monstre ? 66 : 52) + (it.obj.evo ? 8 : 0) : 60), t); // au-dessus de la plaque des aptitudes quand elle est affichée
@@ -317,10 +318,12 @@
       for (const b of S.buildings) { if (b.site) continue; const bx = (b.tx + b.w / 2) * T, by = (b.ty + b.h) * T; if (b.type === 'hut' || b.type === 'chief' || b.type === 'taverne') light(bx, by, 70, 0.6); else if (b.type === 'torche') light(bx, by - 46, 170 + Math.sin(t * 9 + bx) * 6, 0.95); else if (b.type === 'cristal' || b.type === 'tourMagie') light(bx, by - (b.type === 'cristal' ? 36 : 134), 80, 0.6); }
       light(po.x * T + T / 2, (po.y - 2) * T - 20, 90, 0.5);
       for (const s of R.shots) if (s.kind !== 'arrow') light(s.x, s.y, 60, 0.7);
+      if (CG.lumieres) CG.lumieres(light, t); /* d'autres lueurs dans la nuit (sables.js) */
       g2.globalAlpha = 1;
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(nightC, 0, 0, cv.width, cv.height);
       if (R.fireLit) { ctx.setTransform(k, 0, 0, k, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, dark * 1.5); ctx.drawImage(Art.glow(), f.x - cam.x - 300, f.y - 20 - cam.y - 300, 600, 600); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       ctx.setTransform(k, 0, 0, k, 0, 0); ctx.translate(-cam.x, -cam.y);
+      if (CG.lueurs) CG.lueurs(ctx, t); /* ce qui brille par-dessus le noir (sables.js) */
     }
     // bulles de parole (par-dessus la nuit)
     for (const sp of R.speech) {

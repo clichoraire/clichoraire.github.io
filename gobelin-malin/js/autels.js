@@ -45,7 +45,7 @@
     R.horde = { a, pw, wave: 0, waves: 3 + Math.min(3, Math.floor(pw / 4)), q: [], list: [], t: 0, day: S.day };
     for (let i = 0; i < 26; i++) { const an = Math.random() * TAU, v = rand(90, 240); R.parts.push({ x: c.x, y: c.y - 44, vx: Math.cos(an) * v, vy: Math.sin(an) * v - 40, life: rand(0.4, 0.9), max: 0.9, col: pick(['#d9a0ff', '#a060ff', '#ffffff']), size: rand(3, 6) }); }
     R.rings.push({ x: c.x, y: c.y - 10, r: 150, life: 0.6, col: '#c080ff' }); CG.sfx('zap'); CG.sfx('fire');
-    G.banner('La sphère vole en éclats !', 'Le sol tremble. Une horde des enfers vient défendre le parchemin...', '#e0a0ff');
+    G.banner('La sphère vole en éclats !', 'Le sol tremble. Une horde des enfers vient défendre le tome...', '#e0a0ff');
     wave(R.horde);
   };
   function step(dt) {
@@ -67,7 +67,7 @@
     h.t += dt; if (h.t < 2.2) return; h.t = 0; h.wave++;
     if (h.wave < h.waves) return wave(h);
     h.a.st = 'ouvert'; S.autelsDone = (S.autelsDone || 0) + 1; R.horde = null; CG.sfx('victory');
-    G.banner('La horde est vaincue !', 'Le parchemin est à toi : va le prendre sur le piédestal.', '#ffe36b'); R.rings.push({ x: c.x, y: c.y - 10, r: 120, life: 0.6, col: '#ffe36b' });
+    G.banner('La horde est vaincue !', 'Le tome de sort est à toi : va le prendre sur le piédestal.', '#ffe36b'); R.rings.push({ x: c.x, y: c.y - 10, r: 120, life: 0.6, col: '#ffe36b' });
   }
   Au.take = function (a) {
     const S = CG.S, c = pos(a); if (a.st !== 'ouvert') return;
@@ -81,7 +81,7 @@
   const near = () => { const S = CG.S, p = S.player; if (!S.autels) return null; for (const a of S.autels) { const c = pos(a); if (Math.hypot(c.x - p.x, c.y + 10 - p.y) < 58) return a; } return null; };
   const find0 = D.findInteract;
   D.findInteract = function () {
-    const R = CG.R; if (!(R.ko > 0) && !R.cine && !R.build) { const a = near(); if (a && a.st === 'scelle' && !R.horde) return { type: 'autel', obj: a, label: 'Examiner le piédestal' }; if (a && a.st === 'ouvert') return { type: 'autel', obj: a, label: 'Prendre le parchemin 📜' }; }
+    const R = CG.R; if (!(R.ko > 0) && !R.cine && !R.build) { const a = near(); if (a && a.st === 'scelle' && !R.horde) return { type: 'autel', obj: a, label: 'Examiner le piédestal' }; if (a && a.st === 'ouvert') return { type: 'autel', obj: a, label: 'Prendre le tome de sort 📖' }; }
     return find0.apply(this, arguments);
   };
   const inter0 = D.interact;
@@ -94,6 +94,14 @@
   // ---------- dessin ----------
   const ell = (g, x, y, rx, ry, f) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); g.fill(); };
   const rr = (g, x, y, w, h, f) => { g.fillStyle = f; g.fillRect(x, y, w, h); };
+  // le tome de sort qui flotte au-dessus du piédestal : un gros livre fermé, cuir mauve, coins et fermoir dorés, un signet rouge
+  Au.tome = function (g, t) {
+    rr(g, -12, -9, 25, 19, '#3a1c5e'); rr(g, -10, -8, 22, 16, '#f0e6c8'); rr(g, -10, 6, 22, 1.2, '#cdbf98'); rr(g, -10, 3.6, 22, 1, '#d9cca6'); /* le dos, puis la tranche des pages */
+    rr(g, -13, -11, 24, 17, '#6a34a8'); rr(g, -13, -11, 24, 3, '#8a52cc'); rr(g, -13, -11, 4.5, 17, '#4a2280'); rr(g, -8.5, -11, 1.2, 17, '#e8c860'); /* la couverture et sa reliure */
+    [[-7, -11], [8, -11], [-7, 3], [8, 3]].forEach(q => rr(g, q[0], q[1], 3, 3, '#e8c860'));
+    g.fillStyle = '#ffe36b'; g.beginPath(); g.moveTo(2, -8); g.lineTo(5.4, -2.5); g.lineTo(2, 3); g.lineTo(-1.4, -2.5); g.closePath(); g.fill(); ell(g, 2, -2.5, 1.5, 1.5, 'rgba(255,255,255,' + (0.6 + Math.sin(t * 3) * 0.35) + ')'); /* le signe du sort, sur la couverture */
+    rr(g, 11, -4.5, 3.4, 4, '#e8c860'); rr(g, 3, 6, 2.6, 6.5, '#c0392b'); /* le fermoir, le signet */
+  };
   Au.draw = function (g, a, t) {
     const c = pos(a), x = c.x, y = c.y + 12, lit = a.st !== 'vide', fy = y - 62 + Math.sin(t * 2 + a.tx) * 3;
     ell(g, x, y + 2, 30, 9, 'rgba(0,0,0,0.28)');
@@ -102,10 +110,10 @@
     rr(g, x - 18, y - 46, 36, 7, '#8d9398'); rr(g, x - 18, y - 46, 36, 2.5, '#aab0b5');
     if (lit) { g.fillStyle = a.st === 'horde' ? 'rgba(255,90,70,' + (0.6 + Math.sin(t * 8) * 0.3) + ')' : 'rgba(200,130,255,' + (0.6 + Math.sin(t * 3) * 0.25) + ')'; [[-3, -34], [3, -28], [-2, -22]].forEach(q => g.fillRect(x + q[0] - 2, y + q[1], 4, 3)); }
     if (a.st === 'vide') return;
-    // le parchemin qui flotte
+    // le tome qui flotte
     if (a.st === 'ouvert') ell(g, x, fy, 22 + Math.sin(t * 4) * 3, 22 + Math.sin(t * 4) * 3, 'rgba(255,227,107,0.28)');
     g.save(); g.translate(x, fy); g.rotate(Math.sin(t * 1.3) * 0.12 - 0.25);
-    rr(g, -11, -6, 22, 12, '#f0dfb4'); rr(g, -11, -6, 22, 3, '#fff3d0'); ell(g, -11, 0, 3.5, 7, '#d9bf86'); ell(g, 11, 0, 3.5, 7, '#d9bf86'); rr(g, -2, -6.5, 4, 13, '#c0392b');
+    Au.tome(g, t);
     g.restore();
     if (a.st === 'horde') { g.strokeStyle = 'rgba(255,80,60,0.75)'; g.lineWidth = 2.5; for (let i = 0; i < 2; i++) { g.beginPath(); g.ellipse(x, fy, 20, 8, t * 2.4 + i * 1.57, 0, TAU); g.stroke(); } return; }
     if (a.st !== 'scelle') return;

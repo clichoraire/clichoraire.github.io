@@ -25,7 +25,7 @@
   // au-dessus de sa tête : un petit rond qui se vide
   const mk0 = CG.Magie.marks; CG.Magie.marks = function (g, t) {
     mk0.apply(this, arguments); const ev = attente(); if (!ev) return; const v = ev.lord; if (!CG.onScreen(v.x, v.y)) return;
-    const k = Math.max(0, Math.min(1, ev.timer / (ev.timerMax || (ev.timerMax = Math.max(ev.timer, 1))))), rouge = ev.timer <= Dc.ROUGE, x = v.x, y = v.y - 112 + Math.sin(t * 3) * 2, r = 11 * (rouge ? 1 + Math.sin(t * 12) * 0.08 : 1);
+    const k = Math.max(0, Math.min(1, ev.timer / (ev.timerMax || (ev.timerMax = Math.max(ev.timer, 1))))), rouge = ev.timer <= Dc.ROUGE, x = v.x, y = v.y - 96 + Math.sin(t * 3) * 2, r = 13 * (rouge ? 1 + Math.sin(t * 12) * 0.08 : 1);
     g.fillStyle = 'rgba(20,8,20,0.75)'; g.beginPath(); g.arc(x, y, r + 2.5, 0, 6.3); g.fill();
     g.fillStyle = rouge ? '#ff5a4a' : '#c890ff'; g.beginPath(); g.moveTo(x, y); g.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); g.closePath(); g.fill();
     g.fillStyle = '#fff'; g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; g.fillText('💬', x, y + 4);

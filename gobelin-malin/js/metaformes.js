@@ -17,14 +17,14 @@
   // ---------- le sort : un nom, une page ----------
   AUTRES.forEach(id => { const i = CG.SCROLL_POOL.indexOf(id); if (i >= 0) CG.SCROLL_POOL.splice(i, 1); }); // plus jamais en parchemin
   { const nom = 'Métamorphose', court = 'Tu te changes en créature. Ta première forme : le squelette !',
-      desc = 'Tu te changes en créature ! Ce parchemin t\'apprend une première forme : le squelette qui fait clic-clac. On raconte qu\'il existe d\'autres formes, mais aucun parchemin ne les donne... Ta mana baisse tout le temps que tu es transformé : quand il n\'y en a plus, pouf, tu redeviens toi. Tes sorts sont remplacés par les deux attaques de la créature, en bas à gauche.';
+      desc = 'Tu te changes en créature ! Ce tome t\'apprend une première forme : le squelette qui fait clic-clac. On raconte qu\'il existe d\'autres formes, mais aucun tome ne les donne... Ta mana baisse tout le temps que tu es transformé : quand il n\'y en a plus, pouf, tu redeviens toi. Tes sorts sont remplacés par les deux attaques de la créature, en bas à gauche.';
     SP[BASE].nom = nom; SP[BASE].desc = desc; SP[BASE].court = court; if (Nv && Nv.BASE && Nv.BASE[BASE]) { Nv.BASE[BASE].nom = nom; Nv.BASE[BASE].desc = desc; } if (Nv && Nv.rafraichir) Nv.rafraichir(); }
   if (CG.SortsDesc && CG.SortsDesc.livre) { const l0 = CG.SortsDesc.livre; CG.SortsDesc.livre = function (id) { const t = l0.apply(this, arguments); if (id !== BASE || !CG.S) return t; return t + '<br><b>Formes connues</b> : ' + Mf.connues().map(f => Me.F[f].icon + ' ' + Me.F[f].nom).join(' · '); }; }
 
   // ---------- apprendre une forme ----------
   Mf.apprendre = function (id) { if (!Me.F[id] || Mf.a(id)) return false; formes()[id] = true; const f = Me.F[id], p = joueur(); CG.sfx('level'); G.puff(p.x, p.y - 24, f.col, 30, 180, 5);
-    G.banner('Nouvelle forme !', f.icon + ' ' + f.nom + ' : lance Métamorphose pour la choisir.', '#ffe36b'); try { CG.save(); } catch (e) { /* rien */ } return true; };
-  Mf.article = function (id) { const f = Me.F[id]; return { forme: id, icon: f.icon, label: 'Secret de forme : ' + f.nom, desc: 'Une nouvelle forme pour ton sort Métamorphose : ' + f.coup + ', ' + f.desc + '.', prix: Mf.PRIX[id], stock: 1, buy: () => Mf.apprendre(id) }; };
+    G.banner('Métamorphose : ' + f.nom, f.icon + ' Une nouvelle forme : lance Métamorphose pour la choisir.', '#ffe36b'); try { CG.save(); } catch (e) { /* rien */ } return true; };
+  Mf.article = function (id) { const f = Me.F[id]; return { forme: id, icon: f.icon, label: 'Métamorphose : ' + f.nom, desc: 'Une nouvelle forme pour ton sort Métamorphose : ' + f.coup + ', ' + f.desc + '.', prix: Mf.PRIX[id], stock: 1, buy: () => Mf.apprendre(id) }; };
   { const sh0 = UI.shop; UI.shop = function (v) {
     try { if (v && v.shop) { for (let i = v.shop.length - 1; i >= 0; i--) if (AUTRES.includes(v.shop[i].scroll)) v.shop.splice(i, 1); /* un vieux parchemin de forme n'a plus cours */
       if (v.formeVu === undefined && sait()) { v.formeVu = true; const l = AUTRES.filter(id => !Mf.a(id) && Mf.VEND[id].includes(v.role)); if (l.length && Math.random() < Mf.CHANCE) v.shop.push(Mf.article(l[0])); }
@@ -38,7 +38,7 @@
     AUTRES.forEach(id => { const i = p.spells.indexOf(id); if (i >= 0) { p.spells.splice(i, 1); formes()[id] = true; eu = true; } if (p.scrolls && p.scrolls[id]) { delete p.scrolls[id]; formes()[id] = true; eu = true; }
       if (CG.Barre && CG.Barre.cases) { const C = CG.Barre.cases(); for (let k = 0; k < C.length; k++) if (C[k] === id) C[k] = null; } });
     if (eu && !p.spells.includes(BASE)) { if (p.scrolls) delete p.scrolls[BASE]; p.spells.push(BASE); } }
-  { const up = D.update; D.update = function () { const R = CG.R; if (R && CG.S && R.mfVu !== CG.S) { R.mfVu = CG.S; try { ranger(); } catch (e) { /* rien */ } } return up.apply(this, arguments); }; }
+  { const up = D.update; D.update = function () { const R = CG.R; if (R && CG.S && (R.mfVu !== CG.S || !(R.t < R.mfT))) { R.mfVu = CG.S; R.mfT = (R.t || 0) + 1; try { ranger(); } catch (e) { /* rien */ } } /* repassé chaque seconde : un sort de forme arrivé en cours de partie redevient une forme du sort Métamorphose */ return up.apply(this, arguments); }; }
 
   // ---------- lancer : le choix de la forme ----------
   let el = null, touche = null;

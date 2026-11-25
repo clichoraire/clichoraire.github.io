@@ -31,7 +31,8 @@
     }
     return false;
   }
-  function fuir(a, de, sec) { const dx = a.x - de.x, dy = a.y - de.y, d = Math.hypot(dx, dy) || 1; a.fx = dx / d; a.fy = dy / d; a.fuite = Math.max(a.fuite, sec); }
+  function fuir(a, de, sec) { a.fuite = Math.max(a.fuite, sec); if (a.detour > 0) return; /* elle contourne un obstacle : on ne la renvoie pas dedans */ const dx = a.x - de.x, dy = a.y - de.y, d = Math.hypot(dx, dy) || 1; a.fx = dx / d; a.fy = dy / d; }
+  Gi.DETOURS = [0.8, -0.8, 1.57, -1.57, 2.4, -2.4, 3.14]; Gi.DEMI_TOUR = 0.5; /* bloquée : les angles qu'elle essaie, dans l'ordre ; et le temps minimum entre deux demi-tours (sinon elle clignote gauche-droite) */
   function bete(a, dt) {
     const R = CG.R, S = CG.S, K = Gi.SORTES[a.k];
     if (a.mort) { a.mortT += dt; if (a.pris) a.parti = (a.parti || 0) + dt; return; }
@@ -48,7 +49,12 @@
       if (a.va) v = 34;
     }
     a.moving = v > 0;
-    if (v) { if (!G.slide(a, a.fx * v * dt, a.fy * v * dt, 6)) { const x = a.fx; a.fx = -a.fy; a.fy = x; } /* un obstacle : elle tourne */ a.step += dt * v / 18; if (Math.abs(a.fx) > 0.2) a.face = a.fx > 0 ? 1 : -1; }
+    if (a.detour > 0) a.detour -= dt; if (a.bloque > 0) { a.bloque -= dt; v = 0; a.moving = false; } a.faceT = (a.faceT || 0) - dt;
+    if (v) { if (!G.slide(a, a.fx * v * dt, a.fy * v * dt, 6)) { // un obstacle : elle cherche par où passer, et garde ce cap un moment
+        const a0 = Math.atan2(a.fy, a.fx), sens = (a.seed || 0) % 2 < 1 ? 1 : -1; let ok = false;
+        for (const da of Gi.DETOURS) { const an = a0 + da * sens, fx = Math.cos(an), fy = Math.sin(an); if (G.slide(a, fx * v * dt, fy * v * dt, 6)) { a.fx = fx; a.fy = fy; a.detour = 0.7; ok = true; break; } }
+        if (!ok) { a.bloque = 0.8; a.fuite = 0; a.va = false; a.t = rand(1, 2); a.moving = false; } } /* coincée de partout : elle s'arrête au lieu de trembler */
+      a.step += dt * v / 18; const f = Math.abs(a.fx) > 0.2 ? (a.fx > 0 ? 1 : -1) : a.face; if (f !== a.face && a.faceT <= 0) { a.face = f; a.faceT = Gi.DEMI_TOUR; } }
   }
   // une bête est touchée ; « par » : le chef ou un gobelin
   Gi.touche = function (a, dmg, par) {

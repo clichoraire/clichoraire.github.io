@@ -4,7 +4,7 @@
 (function (CG) {
   const G = CG.G, D = CG.D, UI = CG.UI, Si = CG.Sieste = { SOIN: 2 };
   Si.debut = function () {
-    const S = CG.S, R = CG.R, p = S.player; if (R.sieste || R.alarm || R.ko > 0 || R.cine) return;
+    const S = CG.S, R = CG.R, p = S.player; if (!Si.PERMIS) { UI.toast('Tu pourras dormir ici à la tombée du soir (19 h).'); return; } /* plus de sieste : on ne dort que la nuit (remettre Si.PERMIS à true pour la ravoir) */ if (R.sieste || R.alarm || R.ko > 0 || R.cine || S.hour >= 19) return;
     const d = G.door(G.find('chief')); p.x = d.x; p.y = d.y + 10; p.path = null; p.moving = false; R.build = null; if (R.ruee) R.ruee = null;
     R.sieste = { demi: Math.floor(S.hour * 2), t: 0, gagne: 0, x: d.x, y: d.y }; CG.keys.clear(); G.puff(d.x, d.y - 18, '#d8e4ff', 12, 80, 3); CG.sfx('uiClose');
     UI.toast('😴 Tu fais la sieste : +' + Si.SOIN + ' ❤ par demi-heure. Appuie sur une touche pour ressortir.');

@@ -12,7 +12,7 @@
     entree: 'Une vieille pyramide pleine de singes. Avance de salle en salle : leur roi attend tout au fond. Dehors, le temps s\'est arrêté.',
     E: [['chimpanze1', 'macaque1', 'gibbon1', 'babouin1'], ['chimpanze1', 'bonobo1', 'babouin2', 'orangOutan1', 'macaque2'], ['gorille1', 'orangOutan2', 'siamang2', 'babouin2', 'chimpanze2', 'gibbon2']],
     recompense(A) { const S = CG.S, p = S.player, d = S.day, or = 100 + 16 * d + (A.palier || 0) * 45, xp = 45 + 8 * d, miam = Ts.BANANES + 3 * d; if (S.templeSinges) S.templeSinges.fait = true;
-      G.gain('or', or, p.x - 16, p.y - 50); G.gain('food', miam, p.x + 16, p.y - 62); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.55 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un parchemin, caché sous le trône !'; }
+      G.gain('or', or, p.x - 16, p.y - 50); G.gain('food', miam, p.x + 16, p.y - 62); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.55 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un tome de sort, caché sous le trône !'; }
       G.banner('Le roi des singes est tombé', 'La porte de la pyramide se referme. (+' + or + ' 🪙, +' + miam + ' 🍖 de bananes, +' + xp + ' XP, moral +4.)' + plus, '#ffe9a8'); CG.sfx('victory'); } };
   // ---------- où se dresse la pyramide : dans la jungle, adossée aux arbres, pas collée au passage du bois des loups ----------
   let posC = null, posCle = null;

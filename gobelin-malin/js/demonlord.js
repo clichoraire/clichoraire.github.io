@@ -1,7 +1,7 @@
 // Goblin Malin — le Demon Lord. Quand le chef est de niveau 10 et que 14 jours ont passé, le vieux portail du nord se réveille :
 // le chef peut l'activer (E). La terre tremble, tout le clan court autour du feu, et le Demon Lord surgit avec sa petite armée.
 // Le chef s'avance devant les siens, ils échangent quelques mots (« Tu ne nous auras jamais ! »), et le combat commence.
-// Le vaincre ouvre pour de bon le portail démoniaque du nord (voir mondes.js) et donne le sort Passage entre les mondes.
+// Le vaincre ouvre pour de bon le portail démoniaque du nord (voir mondes.js) et donne le sort Rappel.
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, W = CG.W, UI = CG.UI, Art = CG.Art, DL = CG.DemonLord = { JOUR: 14, NIVEAU: 10, TARD: 22.5 }, Mo = CG.Mondes;
@@ -125,8 +125,8 @@
     }
     if (q.ph === 'combat') {
       if (!q.fini && q.lord && (q.lord.dead || !R.enemies.includes(q.lord))) { if (q.lord.hp <= 0) victoire(q); else { rouge(false); R.seisme = null; } return; }
-      if (q.fini) { q.t2 += dt; if (q.t2 > 5 && !q.dit) { q.dit = true; G.banner('Le Demon Lord est tombé !', 'Tu lui arraches un sort : Passage entre les mondes (🌀). Et au nord, son portail est resté ouvert...', '#e0b0ff'); CG.sfx('victory');
-        setTimeout(() => UI.toast('📜 Sur lui, un parchemin : Antidote. Copie-le dans ton grimoire (G) : là où mène ce portail, tout est poison.'), 4500); R.seisme = null; } }
+      if (q.fini) { q.t2 += dt; if (q.t2 > 5 && !q.dit) { q.dit = true; G.banner('Le Demon Lord est tombé !', 'Tu lui arraches un sort : Rappel (🌀). Et au nord, son portail est resté ouvert...', '#e0b0ff'); CG.sfx('victory');
+        setTimeout(() => UI.toast('📖 Sur lui, un tome : Antidote. Copie-le dans ton grimoire (G) : là où mène ce portail, tout est poison.'), 4500); R.seisme = null; } }
     }
   }
   const du0 = D.update; D.update = function (dt) {

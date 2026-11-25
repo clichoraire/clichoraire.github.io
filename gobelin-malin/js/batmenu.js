@@ -27,7 +27,7 @@
     const S = CG.S, p = S.player, Bq = CG.Banque, Ou = CG.Outils, Eq = CG.Equipement, c = S.banque || {}, puce = (ic, n, nom, gris) => '<span class="bm-p' + (gris ? ' vide' : '') + '"><i>' + ic + '</i><b>' + n + '</b><em>' + esc(nom) + '</em></span>';
     const F = p.fioles && typeof p.fioles === 'object' ? p.fioles : {}, somme = re => Object.keys(F).reduce((t, k) => t + (re.test(k) ? F[k] || 0 : 0), 0), vieN = (p.potions || 0) + somme(/^vie/), manaN = somme(/^mana/) + (typeof p.fioles === 'number' ? p.fioles : 0); /* les potions de tous les niveaux, ensemble */
     let h = '<div class="bm-inv"><h4>Vivres et matériaux</h4><div class="bm-l">' + Object.keys(CG.RES).map(k => puce(CG.RES[k].icon, Math.floor(S.res[k] || 0), CG.RES[k].nom, !(S.res[k] > 0))).join('') + '</div>';
-    h += '<h4>Potions et parchemins</h4><div class="bm-l">' + puce('🧪', vieN, 'Potions de vie', !vieN) + puce('💧', manaN, 'Potions de mana', !manaN) + puce('📜', Object.keys(p.scrolls || {}).length, 'Parchemins à copier', !Object.keys(p.scrolls || {}).length) + (S.runes ? puce('🔷', S.runes.vierges || 0, 'Runes vierges', !S.runes.vierges) : '') + '</div>';
+    h += '<h4>Potions et tomes</h4><div class="bm-l">' + puce('🧪', vieN, 'Potions de vie', !vieN) + puce('💧', manaN, 'Potions de mana', !manaN) + puce('📖', Object.keys(p.scrolls || {}).length, 'Tomes à copier', !Object.keys(p.scrolls || {}).length) + (S.runes ? puce('🔷', S.runes.vierges || 0, 'Runes vierges', !S.runes.vierges) : '') + '</div>';
     const enReserve = k => [1, 2, 3].reduce((a, n) => a + (c[k + n] || 0), 0);
     if (Ou && Ou.L) h += '<h4>Outils de travail</h4><div class="bm-l">' + Object.keys(Ou.L).map(k => { const r = enReserve(k), porte = S.goblins.filter(g => g.outil === k).length; return puce(Ou.L[k].ic, r, Ou.L[k].nom + (porte ? ' (+' + porte + ' porté' + (porte > 1 ? 's' : '') + ')' : ''), !r); }).join('') + '</div>';
     const autres = Object.keys(c).filter(k => c[k] > 0).map(k => { const m = /^([a-zA-Z]+)(\d)$/.exec(k); return m ? { k: m[1], n: +m[2], q: c[k] } : null; }).filter(o => o && !(Ou && Ou.L && Ou.L[o.k]));
@@ -43,8 +43,9 @@
     if (b.type === 'chief') {
       const peut = D.canSleep();
       opts.push({ label: '🌙 Dormir jusqu\'au matin', sub: peut ? 'La nuit passe d\'un coup' : R.alarm ? 'Pas pendant une attaque' : S.hour < 19 ? 'À partir de 19 h' : 'Pas maintenant', disabled: !peut, fn: () => D.sleep() });
-      if (CG.Sieste) opts.push({ label: '😴 Faire la sieste', sub: R.alarm ? 'Pas pendant une attaque' : '+' + CG.Sieste.SOIN + ' ❤ par demi-heure', disabled: !!R.alarm || !!R.sieste, fn: () => CG.Sieste.debut() });
-      if (Fa && Fa.sieste) { const ok = Fa.peutSieste(); opts.push({ label: '🥱 Dormir ' + Fa.SIESTE.heures + ' heures d\'un coup', sub: ok ? 'Enlève ' + Fa.SIESTE.heures + ' crans de fatigue' : Fa.crans() < 1 ? 'Tu n\'es pas fatigué' : S.siesteJour === S.day ? 'Déjà fait aujourd\'hui' : 'Seulement de jour, au calme', disabled: !ok, fn: () => Fa.sieste() }); }
+      const soir = S.hour >= 19; /* le soir, on ne fait plus la sieste : on dort */
+      if (false && CG.Sieste && !soir) opts.push({ /* plus de sieste : on ne dort que la nuit (fatigue.js) */ label: '😴 Faire la sieste', sub: R.alarm ? 'Pas pendant une attaque' : '+' + CG.Sieste.SOIN + ' ❤ par demi-heure', disabled: !!R.alarm || !!R.sieste, fn: () => CG.Sieste.debut() });
+      if (Fa && Fa.sieste && !soir) { const ok = Fa.peutSieste(); opts.push({ label: '🥱 Dormir ' + Fa.SIESTE.heures + ' heures d\'un coup', sub: ok ? 'Enlève ' + Fa.SIESTE.heures + ' crans de fatigue' : Fa.crans() < 1 ? 'Tu n\'es pas fatigué' : S.siesteJour === S.day ? 'Déjà fait aujourd\'hui' : 'Seulement de jour, au calme', disabled: !ok, fn: () => Fa.sieste() }); }
       opts.push({ label: '🎒 Mon sac et le coffre du camp', fn: () => { if (CG.Inventaire) CG.Inventaire.ouvrir({ force: true }); } });
     }
     if (b.type === 'hut') opts.push({ label: '👥 Voir qui habite ici', fn: () => UI.hut(b) });

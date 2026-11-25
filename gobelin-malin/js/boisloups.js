@@ -10,7 +10,7 @@
   Ar.Q[Bl.ID] = { mondes: [], qui: 'Le bois des loups', lieu: 'Le bois des loups', theme: 'grotte', vagues: true, E: [[], [], []],
     entree: 'Un bois épais, plein de loups. Le chef de meute rôde tout au fond. Dehors, le temps s\'est arrêté.',
     recompense(A) { const S = CG.S, p = S.player, d = S.day, or = 80 + 15 * d + (A.palier || 0) * 40, xp = 40 + 8 * d; if (S.boisLoups) { S.boisLoups.fait = true; S.boisLoups.fuite = true; }
-      G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.5 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un parchemin, caché dans sa tanière !'; }
+      G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.5 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un tome de sort, caché dans sa tanière !'; }
       G.banner('Le chef de meute est tombé', 'Le passage se referme entre les arbres. (+' + or + ' 🪙, +' + xp + ' XP, moral +4.)' + plus, '#d8f0c0'); CG.sfx('victory'); } };
   // ---------- où s'ouvre le passage : un coin d'herbe collé à des arbres, tout près de la cachette ----------
   let posC = null, posCle = null;

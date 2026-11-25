@@ -225,7 +225,7 @@
       ell(g, d.x, d.y + 2, 9 * (fly ? 0.6 : 1), 3.5, 'rgba(0,0,0,0.28)');
       if (!fly && (d.kind === 'scroll' || d.kind === 'recette' || d.kind === 'potion' || d.kind === 'xp' || d.kind === 'mystere')) circ(g, d.x, y - 4, 13 + Math.sin(t * 4 + d.seed) * 2, d.kind === 'xp' ? 'rgba(150,210,255,0.3)' : d.kind === 'mystere' ? 'rgba(190,150,255,0.35)' : d.kind === 'scroll' ? 'rgba(255,227,107,0.3)' : 'rgba(255,90,100,0.3)');
       g.save(); g.translate(d.x, y); g.scale(1, sq); if (fly) g.rotate(d.f * 9 + d.seed);
-      g.fillStyle = '#fff'; g.font = (d.kind === 'res' ? 19 : 21) + 'px sans-serif'; if (d.kind === 'potion' && Art.fiole) Art.fiole(g, 0, 2, 1); else if (d.kind === 'mystere' && Art.bouleMystere) { if (fly) g.rotate(-(d.f * 9 + d.seed)); Art.bouleMystere(g, t + d.seed); } else g.fillText(d.kind === 'res' ? CG.RES[d.res].icon : d.kind === 'scroll' ? '📜' : d.kind === 'recette' ? '📄' : '✨', 0, 4);
+      g.fillStyle = '#fff'; g.font = (d.kind === 'res' ? 19 : 21) + 'px sans-serif'; if (d.kind === 'potion' && Art.fiole) Art.fiole(g, 0, 2, 1); else if (d.kind === 'mystere' && Art.bouleMystere) { if (fly) g.rotate(-(d.f * 9 + d.seed)); Art.bouleMystere(g, t + d.seed); } else g.fillText(d.kind === 'res' ? CG.RES[d.res].icon : d.kind === 'scroll' ? '📖' : d.kind === 'recette' ? '📄' : '✨', 0, 4);
       g.restore();
     }
   };
@@ -275,7 +275,7 @@
     if (Math.random() < dt * 6) G.puff(x + rand(-12, 12), y - 8 - rand(0, 10), Math.random() < 0.6 ? '#3a8a44' : (CG.Art.baie ? CG.Art.baie(k.n).col : '#d8264a'), 1, 40, 3);
     if (Math.random() < dt * 3) CG.sfx('chop');
     if (k.t < k.max) return;
-    R.picking = null; k.n.gone = true; const dore = CG.Art.baie && CG.Art.baie(k.n) === CG.Art.BAIES[3]; G.gain('food', CG.D.BUSH_FOOD * (dore ? CG.Art.DOREE_FOIS : 1), x, y - 30); if (dore) G.text(x, y - 56, '✨ Baies dorées : le double !', '#ffe36b', true); G.puff(x, y - 10, '#3a8a44', 16, 110, 5); G.puff(x, y - 14, '#d8264a', 8, 90, 3); CG.sfx('coin');
+    R.picking = null; k.n.gone = true; const dore = CG.Art.baie && CG.Art.baie(k.n) === CG.Art.BAIES[3]; G.gain('food', k.n.type === 'fraise' && CG.Fraises ? CG.Fraises.CHEF : CG.D.BUSH_FOOD * (dore ? CG.Art.DOREE_FOIS : 1), x, y - 30); if (dore) G.text(x, y - 56, '✨ Baies dorées : le double !', '#ffe36b', true); G.puff(x, y - 10, '#3a8a44', 16, 110, 5); G.puff(x, y - 14, '#d8264a', 8, 90, 3); CG.sfx('coin');
   };
 
   // ---------- dessins ----------

@@ -18,7 +18,7 @@
     entree: 'Tu es sous l\'eau ! Ton souffle baisse : reviens respirer près des algues qui font des bulles. Bats tout ce qui nage ici, jusqu\'au gardien. Dehors, le temps s\'est arrêté.',
     E: [['meduse', 'meduse', 'murene', 'crabeTemple'], ['meduse', 'murene', 'murene', 'crabeTemple', 'crabeTemple'], ['meduse', 'meduse', 'murene', 'murene', 'crabeTemple', 'crabeTemple']],
     recompense(A) { const S = CG.S, p = S.player, d = S.day, or = 120 + 18 * d + (A.palier || 0) * 50, xp = 60 + 9 * d; if (S.tourbillon) S.tourbillon.fait = true;
-      G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.7 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un parchemin tout mouillé !'; }
+      G.gain('or', or, p.x, p.y - 50); G.addXp(xp); S.morale = Math.min(100, S.morale + 4); let plus = ''; const id = Math.random() < 0.7 ? G.newScroll() : null; if (id) { G.giveScroll(id, p.x, p.y); plus = ' Et un tome de sort tout mouillé !'; }
       G.banner('Le gardien englouti est vaincu', 'Le tourbillon te recrache sur la rive. (+' + or + ' 🪙, +' + xp + ' XP, moral +4.)' + plus, '#bfe6ff'); CG.sfx('victory'); } };
   // ---------- le tourbillon, dans un étang ----------
   const eau = (x, y) => W.inMap(x, y) && W.tile[W.idx(x, y)] === W.WATER, fond = (x, y) => eau(x, y) && eau(x + 1, y) && eau(x - 1, y) && eau(x, y + 1) && eau(x, y - 1);

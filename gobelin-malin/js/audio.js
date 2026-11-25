@@ -24,11 +24,28 @@
     nuitAnim: 'ambiance/goblin-sound-animation-night.mp3', marcheHumains: 'ambiance/goblin-sound-humans-walking-in-group.mp3', mauvaisEndroit: 'ambiance/wrong-place.mp3',
     gobNiveau: 'village/gobelin-lvl-up.mp3', visiteurs: 'village/we-have-visitors.mp3', achat: 'village/we-bought-something.mp3', poser: 'village/put-a-construction-on-the-floor.mp3',
     entreDonjon: 'ambiance/enter-dungeon.mp3', bouleFeu: 'sorts/fireball-1.mp3', bouleFeu2: 'sorts/fireball-2.mp3',
-    coupChef: 'sfx/hero-swing-weapon.mp3', coffre: 'sfx/ouvre-coffre.mp3', lieuNettoye: 'sfx/on-nettoie-secteur-map-bonus-xp.mp3', feeDon: 'sfx/fee-upgrade.mp3', sortPoison: 'poison.mp3'
+    coupChef: 'sfx/hero-swing-weapon.mp3', coffre: 'sfx/ouvre-coffre.mp3', lieuNettoye: 'sfx/on-nettoie-secteur-map-bonus-xp.mp3', feeDon: 'sfx/fee-upgrade.mp3', sortPoison: 'poison.mp3',
+    sortVent: 'elemental-air.mp3', sortFoudre: 'elemental-electric.mp3', sortMagie: 'freesound_community-magic-6976.mp3', sortGuerison: 'heal.mp3', sortMaladresse: 'maladresse.mp3', sortReveler: 'reveal.mp3',
+    sortFumee: 'spell-chimney-sound-1.mp3', sortPierre: 'spell-earth-very-small-sound.mp3', sortFlammes: 'spell-fire-2s.mp3', sortGivre: 'spell-ice.mp3', sortOmbres: 'spell-oeil-ombre.mp3'
   };
   const fichier = file => DIR + (LIBRES[file] || 'sfx/' + file + '.wav');
   // le son propre à chaque sort : il prend la place du son de sort ordinaire
   A.SORTS = { etincelle: 'sortEtincelle', feu: 'sortFeu', golem: 'sortTerre', glace: 'sortGlace', invisible: 'sortInvisible', soin: 'sortSoin', vision: 'sortOeil', venin: 'sortPoison' };
+  A.SWAP = ['spell', 'heal', 'fire', 'zap', 'level']; // les sons ordinaires qu'un sort peut remplacer par le sien
+  // les autres sorts, par son : chaque liste peut être changée ici (un sort absent garde le son ordinaire)
+  { const son = (k, l) => l.split(' ').forEach(id => { A.SORTS[id] = k; });
+    son('sortVent', 'hate onde armVent passe inv_air');
+    son('sortFoudre', 'eclair electro paralysie champpara rayon rayons');
+    son('sortMagie', 'teleport retour mondes temps hatetemps charme sommeil caboche bestiole fleche lames ruse batisseur miroir bouclier protec');
+    son('sortGuerison', 'antidote repousse coeur resurrection cigogne');
+    son('sortMaladresse', 'maladroit tetevide faiblesse');
+    son('sortReveler', 'faucon flair');
+    son('sortFumee', 'illusion invoc inv_squelette inv_chevalier inv_eau inv_feu inv_terre inv_demon metaSquelette metaLoup metaOurs metaDemon');
+    son('sortPierre', 'murpierre seisme coffrepiege');
+    son('sortFlammes', 'murfeu parefeu armFeu meteore bombe');
+    son('sortGivre', 'verglas armGlace');
+    son('sortOmbres', 'ombres vampmana');
+    son('sortPoison', 'poison armPoison murpoison'); }
 
   // Niveau, délai minimum entre deux déclenchements (ms), durée de priorité sur la musique (ms).
   const EFFECTS = {
@@ -41,7 +58,7 @@
     bell: [0.72, 3200, 2600], warning: [0.68, 475, 650],
     glas: [0.68, 3500, 3500], tombe: [0.65, 1800, 1800],
     drumLow: [0.31, 130], drumHigh: [0.24, 130],
-    sortEtincelle: [0.5, 90], sortFeu: [0.55, 150], sortTerre: [0.6, 300], sortGlace: [0.55, 300], sortInvisible: [0.55, 300], sortSoin: [0.5, 400], sortOeil: [0.55, 300], sortPoison: [0.6, 300],
+    sortEtincelle: [0.5, 90], sortFeu: [0.55, 150], sortTerre: [0.6, 300], sortGlace: [0.55, 300], sortInvisible: [0.55, 300], sortSoin: [0.5, 400], sortOeil: [0.55, 300], sortPoison: [0.6, 300], sortVent: [0.55, 300], sortFoudre: [0.5, 600], sortMagie: [0.5, 300], sortGuerison: [0.5, 400], sortMaladresse: [0.55, 300], sortReveler: [0.55, 300], sortFumee: [0.55, 300], sortPierre: [0.6, 300], sortFlammes: [0.55, 300], sortGivre: [0.55, 300], sortOmbres: [0.55, 300],
     nuitAnim: [0.6, 4000], marcheHumains: [0.5, 5800],
     mauvaisEndroit: [0.7, 20000, 5000], gobNiveau: [0.6, 500, 800], visiteurs: [0.65, 2500, 1500],
     achat: [0.6, 250], poser: [0.6, 150], entreDonjon: [0.7, 6000, 3000], bouleFeu: [0.45, 180], coupChef: [0.5, 82], coffre: [0.65, 200], lieuNettoye: [0.65, 1500, 1200], feeDon: [0.7, 2000, 2000], secret: [0.62, 3000, 2600]
@@ -233,7 +250,7 @@
     if (priority) duckUntil = Math.max(duckUntil, performance.now() + priority);
   }
   CG.sfx = function (name) {
-    if (A.swap && (name === 'spell' || name === 'heal')) { name = A.swap; A.swap = null; }
+    if (A.swap && A.SWAP.includes(name)) { name = A.swap; A.swap = null; }
     if (name === 'horn') name = 'warning'; /* le vieux cor est parti : deux coups de marteau à la place */
     if (name === 'attaque') { CG.sfx('marcheHumains'); name = 'warning'; } /* une attaque : l'alerte, et le pas de la troupe qui approche */
     const effect = EFFECTS[name];

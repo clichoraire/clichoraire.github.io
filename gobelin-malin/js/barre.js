@@ -10,16 +10,19 @@
   // chaque sort a sa case, où l'on veut : p.cases[i] = le sort de la case i (ou rien). Les touches 1 à 0 sont les dix premières cases.
   Ba.cases = function () {
     const p = CG.S.player; let c = p.cases; if (!Array.isArray(c)) c = p.cases = p.spells.slice();
-    for (let i = 0; i < c.length; i++) if (!c[i] || !p.spells.includes(c[i]) || c.indexOf(c[i]) !== i) c[i] = null;
-    for (const id of p.spells) if (!c.includes(id)) { let i = 0; while (i < c.length && c[i]) i++; c[i] = id; }
+    for (let i = 0; i < c.length; i++) if (!c[i] || !(p.spells.includes(c[i]) || Ba.unOk(c[i])) || c.indexOf(c[i]) !== i) c[i] = null;
+    for (const id of p.spells.concat(Object.keys(p.parchUn || {}).filter(b => p.parchUn[b] > 0 && CG.SPELLS[b] && p.parchBarre && p.parchBarre[b]).map(b => 'u:' + b))) if (!c.includes(id)) { /* les parchemins à usage unique (parchun.js) prennent une case, comme un sort */ let i = 0; while (i < c.length && c[i]) i++; c[i] = id; }
     while (c.length && !c[c.length - 1]) c.pop(); return c;
   };
+  Ba.un = id => (typeof id === 'string' && id.slice(0, 2) === 'u:' ? id.slice(2) : null); // « u:feu » : un parchemin à usage unique du sort feu
+  Ba.unOk = id => { const b = Ba.un(id), p = CG.S.player; return !!b && !!CG.SPELLS[b] && !!p.parchUn && p.parchUn[b] > 0 && !!(p.parchBarre && p.parchBarre[b]); }; /* seulement ceux qu'on a sortis du sac (double-clic dans l'inventaire) */
   Ba.a = i => Ba.cases()[i] || null;
-  Ba.cle = () => Ba.rangs() + (prise && prise.bouge ? 'p' + prise.i : '') + 'c' + Ba.cases().join(',');
+  Ba.cle = () => Ba.rangs() + (prise && prise.bouge ? 'p' + prise.i : '') + 'c' + Ba.cases().join(',') + 'u' + JSON.stringify(CG.S.player.parchUn || 0);
   Ba.html = function (reste) {
     const p = CG.S.player, n = Ba.rangs(), C = Ba.cases(); let h = '<div class="br-cadre"><div class="br-rangs">';
     for (let r = 0; r < n; r++) { h += '<div class="br-rang">';
-      for (let c = 0; c < Ba.PAR; c++) { const i = r * Ba.PAR + c, id = C[i], sp = id && CG.SPELLS[id], k = r ? '' : '<i>' + (c + 1) % 10 + '</i>';
+      for (let c = 0; c < Ba.PAR; c++) { const i = r * Ba.PAR + c, id = C[i], un = Ba.un(id), sp = id && CG.SPELLS[un || id], k = r ? '' : '<i>' + (c + 1) % 10 + '</i>';
+        if (sp && un) { h += '<div class="spell parch' + (prise && prise.bouge && prise.i === i ? ' prise' : '') + '" data-i="' + i + '" title="' + esc('Parchemin : ' + sp.nom + ' — un seul usage, sans mana. ' + (sp.court || sp.desc)) + '">' + k + '<b>' + sp.icon + '</b><u>×' + p.parchUn[un] + '</u></div>'; continue; }
         h += sp ? '<div class="spell' + (p.mp < G.spellCost(id) ? ' low' : '') + (prise && prise.bouge && prise.i === i ? ' prise' : '') + '" data-i="' + i + '" title="' + esc(sp.nom + ' — ' + (sp.court || sp.desc)) + '">' + k + sp.icon + '<u>' + G.spellCost(id) + '</u></div>' : '<div class="spell vide" data-i="' + i + '">' + k + '</div>'; }
       h += '</div>'; }
     const cache = C.slice(n * Ba.PAR).filter(Boolean).length;
@@ -33,7 +36,7 @@
     const t = ev.target && ev.target.closest ? ev.target : null; if (!t) return; const b = t.closest('#spells [data-br]');
     if (b) { ev.preventDefault(); if (!CG.S) return; CG.S.barre = CG.clamp(Ba.rangs() + (+b.dataset.br), 1, Ba.MAX); CG.sfx('click'); return; }
     const s = t.closest('#spells .spell[data-i]'); if (!s) return; ev.preventDefault(); if (s.classList.contains('vide') || !libre()) return;
-    prise = { i: +s.dataset.i, x: ev.clientX, y: ev.clientY, bouge: false, fant: null, ic: CG.SPELLS[Ba.a(+s.dataset.i)].icon };
+    prise = { i: +s.dataset.i, x: ev.clientX, y: ev.clientY, bouge: false, fant: null, ic: (CG.SPELLS[Ba.un(Ba.a(+s.dataset.i)) || Ba.a(+s.dataset.i)] || {}).icon || '📜' };
   });
   document.addEventListener('pointermove', ev => {
     if (!prise) return; if (!prise.bouge) { if (Math.hypot(ev.clientX - prise.x, ev.clientY - prise.y) < Ba.SEUIL) return; prise.bouge = true; const f = prise.fant = document.createElement('div'); f.className = 'spell br-fant'; f.textContent = prise.ic; document.body.appendChild(f); document.body.classList.add('br-glisse'); }
@@ -51,6 +54,7 @@
   css.textContent = '#spells{align-items:flex-end;gap:8px}'
     + '.br-cadre{display:flex;align-items:flex-end;gap:5px;padding:6px;border-radius:14px;pointer-events:auto;background:linear-gradient(180deg,rgba(58,44,26,.94),rgba(26,19,10,.96));border:2px solid #b08a3a;box-shadow:0 4px 14px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.6),inset 0 1px 0 2px rgba(255,220,140,.14);touch-action:none;user-select:none;-webkit-user-select:none}'
     + '.br-rangs{display:flex;flex-direction:column-reverse;gap:5px}.br-rang{display:flex;gap:5px}'
+    + '.br-cadre .spell.parch{background:linear-gradient(#c9a85c 0,#c9a85c 6px,#8a6a2c 6px,#8a6a2c 7px,#f6e8bc 7px,#ecd9a0 calc(100% - 7px),#8a6a2c calc(100% - 7px),#8a6a2c calc(100% - 6px),#c9a85c calc(100% - 6px));border-color:#b8923a;box-shadow:inset 0 0 5px rgba(120,80,20,.45),0 0 6px rgba(255,227,107,.35)}.br-cadre .spell.parch b{font-weight:400;filter:drop-shadow(0 1px 0 rgba(90,60,10,.5))}.br-cadre .spell.parch u{color:#fff;background:#7a4a14;border-radius:6px;padding:0 3px}.br-cadre .spell.parch i{color:#5a3a10}'
     + '.br-cadre .spell{width:46px;height:46px;border-radius:8px;cursor:pointer;background:radial-gradient(circle at 50% 35%,#3a2c18,#17100a);border:2px solid #6e5524;box-shadow:inset 0 0 6px rgba(0,0,0,.8);touch-action:none}'
     + '.br-cadre .spell:hover{border-color:#ffe08a}.br-cadre .spell.vide{cursor:default;background:rgba(0,0,0,.45);border-color:#4a3a1c}.br-cadre .spell.vide:hover{border-color:#4a3a1c}'
     + '.br-cadre .spell.prise{opacity:.3}.br-cadre .spell.vise{border-color:#fff;box-shadow:0 0 0 2px #ffe08a,inset 0 0 8px rgba(255,224,138,.5)}'

@@ -76,7 +76,7 @@
   Nv.permis = function () { const S = CG.S, Mo = CG.Mondes; if (!S || !Mo) return false; let m = Mo.ici(); if (m === 2) m = S.arene && S.arene.de !== undefined ? S.arene.de : (S.ailleurs && S.ailleurs.monde) || 0; return m === 1; };
   const ns0 = G.newScroll; G.newScroll = function () { const d = Nv.permis() ? Nv.dispo() : [], a = ns0.apply(this, arguments); if (!d.length || !a) return d.length ? pick(d) : a; const p = CG.S.player, n = CG.SCROLL_POOL.filter(i => !p.spells.includes(i) && !p.scrolls[i]).length; return Math.random() < d.length / (n + d.length) ? pick(d) : a; }; // une amélioration a la même chance que n'importe quel autre parchemin, pas plus
   const sh0 = UI.shop; UI.shop = function (v) {
-    if (v && v.shop && v.nivVu === undefined && ['nain', 'elfe', 'sorciere', 'demonMarchand'].includes(v.role)) { v.nivVu = true; const d = Nv.permis() ? Nv.dispo() : []; if (d.length && Math.random() < Nv.MARCHAND) { const id = pick(d), sp = CG.SPELLS[id]; v.shop.unshift({ scroll: id, icon: '📜', label: 'Parchemin : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: sp.prix, stock: 1 }); } }
+    if (v && v.shop && v.nivVu === undefined && ['nain', 'elfe', 'sorciere', 'demonMarchand'].includes(v.role)) { v.nivVu = true; const d = Nv.permis() ? Nv.dispo() : []; if (d.length && Math.random() < Nv.MARCHAND) { const id = pick(d), sp = CG.SPELLS[id]; v.shop.unshift({ scroll: id, icon: '📖', label: 'Tome : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: sp.prix, stock: 1 }); } }
     return sh0.apply(this, arguments);
   };
   document.addEventListener('click', () => { if (CG.S && CG.running) setTimeout(() => { try { if (Nv.ranger() && UI.modal && UI.modal.name === 'grimoire') UI.grimoire(); } catch (e) { /* rien */ } }, 0); });

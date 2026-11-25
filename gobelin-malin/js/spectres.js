@@ -5,7 +5,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, W = CG.W, UI = CG.UI, Art = CG.Art, T = CG.TILE, TAU = Math.PI * 2, rand = CG.rand, pick = CG.pick;
-  const Sp = CG.Spectres = { AMI: 0.35, AME_JOUR: 6, VEILLE: 0.8, DRAIN: 0.5 };
+  const Sp = CG.Spectres = { AMI: 0.35, AME_JOUR: 6, VEILLE: 0.8, DRAIN: 0.5, XP: [60, 10, 0.15] };
   Object.assign(CG.ENEMIES, {
     spectre: { nom: 'Spectre', race: 'mort', hp: 28, dmg: 6, spd: 72, xp: 22, or: 4, cost: 3, r: 12 },
     wraith: { nom: 'Âme en peine', race: 'mort', hp: 90, dmg: 11, spd: 58, xp: 60, or: 12, cost: 7, r: 15 }
@@ -23,6 +23,10 @@
     if (e && e.type === 'spectre' && e.vide > 0 && !e.dead) { if (CG.onScreen(e.x, e.y) && !(e.videDit > 0)) { e.videDit = 0.8; G.text(e.x, e.y - 50, 'À travers !', '#cfe0ff'); } return; }
     return he0.apply(this, arguments);
   };
+  // impalpable = personne ne le vise non plus : pendant que le village, les animaux et les tours réfléchissent, le spectre transparent
+  // a l'air paisible (calm), comme le rival en duel (rival.js). Pour lui-même (W.foe, le tour des ennemis), il reste un ennemi.
+  { let enJeu = 0; const u0 = G.update; G.update = function () { enJeu++; try { return u0.apply(this, arguments); } finally { enJeu--; } };
+    const se0 = G.spawnEnemy; G.spawnEnemy = function (type) { const e = se0.apply(this, arguments); if (e && type === 'spectre') Object.defineProperty(e, 'calm', { configurable: true, enumerable: true, get: () => enJeu > 0 && e.vide > 0 && !e.dead && !W.foe, set: () => {} }); return e; }; }
   const hp0 = G.hurtPlayer; G.hurtPlayer = function (dmg) { // l'âme en peine boit la vie qu'elle prend
     const S = CG.S, R = CG.R, p = S.player; if (S.veille === S.day) dmg *= Sp.VEILLE;
     if (!(R.invuln > 0) && !(R.ko > 0)) for (const e of R.enemies) if (!e.dead && e.type === 'wraith' && e.atkAnim > 0.4 && Math.hypot(e.x - p.x, e.y - p.y) < 60 + e.r) { const n = Math.min(e.maxhp - e.hp, Math.ceil(dmg * Sp.DRAIN)); if (n > 0) { e.hp += n; G.text(e.x, e.y - 60, '+' + n, '#b0ffb8'); R.bolts.push({ x1: p.x, y1: p.y - 24, x2: e.x, y2: e.y - 26, life: 0.2 }); } break; }
@@ -70,7 +74,7 @@
   Sp.parler = function (v) {
     const S = CG.S, R = CG.R, p = S.player, f = G.firePos();
     const parti = txt => { if (!R.visitors.includes(v)) return; R.visitors.splice(R.visitors.indexOf(v), 1); S.spectreAmi.vu = true; G.puff(v.x, v.y - 30, '#cfe0ff', 30, 160, 4); R.rings.push({ x: v.x, y: v.y - 10, r: 80, life: 0.5, col: '#cfe0ff' }); CG.sfx('heal'); if (txt) UI.toast(txt); try { CG.save(); } catch (e) { /* rien */ } };
-    const pos = q => CG.Secrets.pos(q), sec = CG.Secrets ? CG.Secrets.liste().filter(q => { const c = pos(q); return c && isFinite(c.x) && isFinite(c.y); }).sort((a, b) => Math.hypot(pos(a).x - f.x, pos(a).y - f.y) - Math.hypot(pos(b).x - f.x, pos(b).y - f.y))[0] || null : null, /* le secret le plus proche du feu, et dont on connaît l'endroit exact */ xp = 25 + 5 * S.day, opts = [];
+    const pos = q => CG.Secrets.pos(q), sec = CG.Secrets ? CG.Secrets.liste().filter(q => { const c = pos(q); return c && isFinite(c.x) && isFinite(c.y); }).sort((a, b) => Math.hypot(pos(a).x - f.x, pos(a).y - f.y) - Math.hypot(pos(b).x - f.x, pos(b).y - f.y))[0] || null : null, /* le secret le plus proche du feu, et dont on connaît l'endroit exact */ xp = Math.max(Sp.XP[0] + Sp.XP[1] * S.day, Math.round(G.xpNeed(p.lvl) * Sp.XP[2])), /* ses batailles : au moins XP[0] + XP[1] par jour, et jamais moins que XP[2] du niveau en cours */ opts = [];
     opts.push({ label: '🛡️ Veille sur moi', sub: 'Jusqu\'à demain matin, tu reçois 20 % de dégâts en moins', fn: () => { S.veille = S.day; parti('👻 Les ancêtres veillent sur toi jusqu\'à demain matin : 20 % de dégâts en moins.'); } });
     if (sec) opts.push({ label: '🗝️ Dis-moi un secret', sub: 'Les morts voient ce que les vivants ne remarquent pas', fn: () => { const c = pos(sec), dx = c.x - f.x, dy = c.y - f.y, d = Math.round(Math.hypot(dx, dy) / T), dir = DIRS[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
       parti(); S.secretDit = { day: S.day, monde: CG.Mondes ? CG.Mondes.ici() : 0, x: c.x, y: c.y }; if (R.pings && Sp.carte()) R.pings.push({ x: c.x, y: c.y, t0: performance.now(), icon: '🗝️', dur: 9000 });

@@ -116,8 +116,8 @@
   So.PLAN = 0.3; So.PLAN_PRIX = 1.6; So.OS = [5, 30];
   So.panier = function () {
     const S = CG.S, p = S.player, A = CG.Alchimie, svg = k => (A && A.svg ? A.svg(k) : k === 'vie' ? '🧪' : '💧'), l = [
-      { icon: svg('vie'), label: 'Fiole de vie', desc: 'Te redonne de la vie.', prix: 10, stock: 3, buy: () => { p.potions++; } },
-      { icon: svg('mana'), label: 'Fiole de mana', desc: 'Te redonne du mana.', prix: 12, stock: 3, buy: () => { p.fioles = p.fioles || {}; p.fioles.mana1 = (p.fioles.mana1 || 0) + 1; } },
+      { icon: svg('vie'), label: 'Fiole de vie', desc: 'Te redonne de la vie.', prix: 80, stock: 3, buy: () => { p.potions++; } },
+      { icon: svg('mana'), label: 'Fiole de mana', desc: 'Te redonne du mana.', prix: 80, stock: 3, buy: () => { p.fioles = p.fioles || {}; p.fioles.mana1 = (p.fioles.mana1 || 0) + 1; } },
       { icon: '🦴', label: So.OS[0] + ' os', desc: 'Pour les potions de tes alchimistes.', prix: So.OS[1], stock: 3, buy: () => { S.res.os = (S.res.os || 0) + So.OS[0]; } }];
     if (CG.Feu && CG.Feu.stock) l.push.apply(l, CG.Feu.stock());
     const Pl = CG.Plans; if (Pl && Math.random() < So.PLAN) { const m = Pl.dispo().filter(n => n.br === 'sorc' || (n.unlock || []).some(b => CG.BUILDS[b] && CG.BUILDS[b].cat === 'magie')); if (m.length) { const a = Pl.article(pick(m)); a.prix = Math.round(a.prix * So.PLAN_PRIX / 10) * 10; a.desc = 'Un secret de sorcière : tu pourras le bâtir.'; l.push(a); } }

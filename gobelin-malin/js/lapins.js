@@ -6,7 +6,7 @@
 'use strict';
 (function (CG) {
   const G = CG.G, D = CG.D, UI = CG.UI, Art = CG.Art, W = CG.W, T = CG.TILE, TAU = Math.PI * 2, pick = CG.pick, rand = CG.rand;
-  const Lp = CG.Lapins = { CHANCE: 0.3, JOUR: 2, PARIS: 5, MISES: [20, 50, 100], MISE_FOOD: 20, TROC: 20, PRIX: { epee: [0, 40, 90, 220], arc: [0, 35, 80, 200], armure: [0, 50, 110, 260] }, PARCHEMIN: 0.8 };
+  const Lp = CG.Lapins = { CHANCE: 0.3, JOUR: 2, PARIS: 5, MISES: [20, 50, 100], MISE_FOOD: 20, TROC: 20, PRIX: { epee: [0, 320, 540, 950], arc: [0, 300, 500, 900], armure: [0, 350, 600, 1100] }, PARCHEMIN: 0.8 };
   Lp.NOMS = ['Maître Trèfle', 'Dame Pissenlit', 'Oncle Luzerne', 'Carotin', 'Mademoiselle Radis', 'Pimprenelle', 'Grand-Oreille', 'Compère Museau'];
   const DES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   // ce qu'un Lapin a dans son sac ; « gros » : le comptoir du marais, mieux garni
@@ -14,28 +14,28 @@
     const S = CG.S, p = S.player, Bq = CG.Banque, l = [];
     if (Bq) ['epee', 'arc', 'armure'].forEach(k => [1, 2, 3].forEach(n => { if (CG.Qualite ? !CG.Qualite.enVente(n, gros) : n === 1 || Math.random() > (n === 2 ? 0.8 : gros ? 0.75 : 0.4)) return; /* les premiers jours : des 1 étoile, parfois une 2 ; les 3 étoiles viennent bien plus tard */
       l.push({ icon: Bq.IC[k], label: Bq.NOMS[k][n], desc: '★'.repeat(n) + ' ' + ((CG.Objets && CG.Objets.PHRASE[k]) || 'Pour un gobelin.'), prix: Lp.PRIX[k][n], stock: n === 2 ? (gros ? 3 : 2) : 1, buy: () => { const z = Bq.deposer(k, n, 1, 'sac'); UI.toast(Bq.IC[k] + ' ' + Bq.NOMS[k][n] + ' : rangé ' + (CG.Inventaire ? CG.Inventaire.ou(z) : 'dans le coffre du camp') + '.'); } }); }));
-    const vus = {}; for (let i = 0; i < (gros ? 3 : 2); i++) { const id = G.newScroll && G.newScroll(); if (!id || vus[id] || Math.random() < 0.25) continue; vus[id] = 1; const sp = CG.SPELLS[id]; l.push({ scroll: id, icon: '📜', label: 'Parchemin : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: Math.round(sp.prix * Lp.PARCHEMIN), stock: 1 }); }
+    const vus = {}; for (let i = 0; i < (gros ? 3 : 2); i++) { const id = G.newScroll && G.newScroll(); if (!id || vus[id] || Math.random() < 0.25) continue; vus[id] = 1; const sp = CG.SPELLS[id]; l.push({ scroll: id, icon: '📖', label: 'Tome : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: Math.round(sp.prix * Lp.PARCHEMIN), stock: 1 }); }
     l.push({ icon: '🥕', label: 'Panier de carottes', desc: '+25 nourriture.', prix: 20, stock: gros ? 5 : 3, buy: () => { S.res.food += 25; } });
-    l.push({ icon: '🧪', label: 'Fiole de vie', desc: 'Une potion de plus dans ta besace.', prix: 30, stock: 2, buy: () => { p.potions = (p.potions || 0) + 1; } });
+    l.push({ icon: '🧪', label: 'Fiole de vie', desc: 'Une potion de plus dans ta besace.', prix: 80, stock: 2, buy: () => { p.potions = (p.potions || 0) + 1; } });
     return l;
   };
   const qui = v => v.nom + (v.comptoir ? ', du comptoir des Lapins' : ', colporteur Lapin');
   Lp.parler = function (v) {
     const S = CG.S, p = S.player, nb = Object.keys(p.scrolls || {}).length;
     UI.dialog({ visitor: v, who: qui(v), tag: '🐇 Lapin · neutre',
-      text: v.salue ? pick(['Encore toi, peau verte ! Tant mieux, j\'aime les bons clients.', 'On marchande, on troque, ou on joue ? Dis-moi tout.', 'Mes oreilles frétillent : tu as de l\'or sur toi, je le sens.']) : pick(['Bien le bonjour, peau verte ! Chez nous, les Lapins, on ne se bat pas : on marchande. Et on parie, aussi. Surtout.', 'Hop hop hop ! Des lames fines, des cottes solides, des parchemins... et un dé qui ne demande qu\'à rouler.', 'Ni ami ni ennemi : commerçant ! Regarde mon sac, ou tente ta chance aux dés.']),
+      text: v.salue ? pick(['Encore toi, peau verte ! Tant mieux, j\'aime les bons clients.', 'On marchande, on troque, ou on joue ? Dis-moi tout.', 'Mes oreilles frétillent : tu as de l\'or sur toi, je le sens.']) : pick(['Bien le bonjour, peau verte ! Chez nous, les Lapins, on ne se bat pas : on marchande. Et on parie, aussi. Surtout.', 'Hop hop hop ! Des lames fines, des cottes solides, des tomes de sorts... et un dé qui ne demande qu\'à rouler.', 'Ni ami ni ennemi : commerçant ! Regarde mon sac, ou tente ta chance aux dés.']),
       options: [
-        { label: '🛒 Voir ses marchandises', sub: 'Armes et armures pour tes gobelins, parchemins, carottes · il rachète aussi tes ressources', fn: () => UI.shop(v, { nom: qui(v), hello: 'Tout est de première qualité, parole de Lapin. Les armes et les armures iront droit dans le coffre de ta hutte.' }) },
-        { label: '🔁 Troquer un parchemin', sub: nb ? 'Un parchemin pas encore copié + ' + Lp.TROC + ' 🍖 contre un autre, au hasard' : 'Tu n\'as aucun parchemin à troquer (seulement ceux que tu n\'as pas copiés)', disabled: !nb || S.res.food < Lp.TROC, fn: () => Lp.troc(v) },
+        { label: '🛒 Voir ses marchandises', sub: 'Armes et armures pour tes gobelins, tomes de sorts, carottes · il rachète aussi tes ressources', fn: () => UI.shop(v, { nom: qui(v), hello: 'Tout est de première qualité, parole de Lapin. Les armes et les armures iront droit dans le coffre de ta hutte.' }) },
+        { label: '🔁 Troquer un tome', sub: nb ? 'Un tome pas encore copié + ' + Lp.TROC + ' 🍖 contre un autre, au hasard' : 'Tu n\'as aucun tome à troquer (seulement ceux que tu n\'as pas copiés)', disabled: !nb || S.res.food < Lp.TROC, fn: () => Lp.troc(v) },
         { label: '🎲 Parier aux dés', sub: (v.paris || 0) >= Lp.PARIS ? 'Il a assez joué pour aujourd\'hui' : 'Chacun lance un dé : le plus haut rafle la mise', disabled: (v.paris || 0) >= Lp.PARIS, fn: () => Lp.pari(v) },
         { label: '👋 Au revoir' }] });
     v.salue = true;
   };
   Lp.troc = function (v) {
     const S = CG.S, p = S.player, ids = Object.keys(p.scrolls || {}).filter(id => CG.SPELLS[id]);
-    UI.dialog({ visitor: v, who: qui(v), tag: '🔁 troc de parchemins', text: 'Un parchemin contre un autre, et ' + Lp.TROC + ' 🍖 pour ma peine. Tu ne choisis pas ce que tu reçois : c\'est ça qui est drôle ! Lequel me donnes-tu ?', grid: true,
-      options: ids.map(id => ({ label: '📜 ' + CG.SPELLS[id].nom, sub: 'Tu le donnes, avec ' + Lp.TROC + ' 🍖', disabled: S.res.food < Lp.TROC, fn: () => {
-        if (!p.scrolls[id] || S.res.food < Lp.TROC) return; const neuf = G.newScroll && G.newScroll(true); if (!neuf) return UI.dialog({ visitor: v, who: qui(v), text: 'Ah, zut : tu connais déjà tout ce que j\'ai dans mon sac. Garde ton parchemin.', options: [{ label: '↩ Retour', fn: () => Lp.parler(v) }] });
+    UI.dialog({ visitor: v, who: qui(v), tag: '🔁 troc de tomes', text: 'Un tome contre un autre, et ' + Lp.TROC + ' 🍖 pour ma peine. Tu ne choisis pas ce que tu reçois : c\'est ça qui est drôle ! Lequel me donnes-tu ?', grid: true,
+      options: ids.map(id => ({ label: '📖 ' + CG.SPELLS[id].nom, sub: 'Tu le donnes, avec ' + Lp.TROC + ' 🍖', disabled: S.res.food < Lp.TROC, fn: () => {
+        if (!p.scrolls[id] || S.res.food < Lp.TROC) return; const neuf = G.newScroll && G.newScroll(true); if (!neuf) return UI.dialog({ visitor: v, who: qui(v), text: 'Ah, zut : tu connais déjà tout ce que j\'ai dans mon sac. Garde ton tome.', options: [{ label: '↩ Retour', fn: () => Lp.parler(v) }] });
         S.res.food -= Lp.TROC; delete p.scrolls[id]; G.giveScroll(neuf, p.x, p.y); G.say(v, pick(['Marché conclu ! Tiens, celui-là sent encore l\'encre.', 'Topons là ! Tu ne le regretteras pas. Enfin, j\'espère.']), 3.5); } })).concat([{ label: '↩ Retour', fn: () => Lp.parler(v) }]) });
   };
   Lp.pari = function (v) {

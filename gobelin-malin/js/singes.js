@@ -29,7 +29,8 @@
   Si.lancer = lancer;
   function tombe(s) { const R = CG.R, r = s.bombe ? Si.BOMBE_R : Si.BANANE_R;
     if (s.bombe) { G.puff(s.x1, s.y1 - 6, '#ff8a1e', 18, 160, 4); G.puff(s.x1, s.y1 - 6, '#4a4040', 10, 90, 4); R.rings.push({ x: s.x1, y: s.y1, r: r + 10, life: 0.35, col: '#ffb432' }); if (CG.onScreen(s.x1, s.y1)) CG.sfx('hit'); } else G.puff(s.x1, s.y1 - 4, '#ffe36b', 7, 80, 3);
-    for (const o of nous()) if (Math.hypot(o.x - s.x1, (o.y - s.y1) / 0.8) < r) frappe(o, s.dmg); }
+    for (const o of nous()) if (Math.hypot(o.x - s.x1, (o.y - s.y1) / 0.8) < r) frappe(o, s.dmg);
+    if (!s.bombe && CG.Banane) CG.Banane.poser(s.x1, s.y1); } /* la peau reste par terre quelques secondes (banane.js) */
   // ---------- chacun sa façon ----------
   function pas(e, dt) {
     const R = CG.R, I = INFO[e.type], q = e.sg;

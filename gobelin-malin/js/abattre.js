@@ -36,9 +36,9 @@
     if (k.t < k.max) return; R.coupe = null;
     if (k.a) { // l'arbre tombe : comme pour un bûcheron
       const i = W.idx(k.a.x, k.a.y); W.cutTree(k.a.x, k.a.y); S.cuts.push(i); G.puff(c.x, c.y - 20, '#3a8a44', 14, 110, 5);
-      const log = { tx: k.a.x, ty: k.a.y, halves: 2, cut: false, dir: p.face, fall: R.t, by: null }; S.logs.push(log); (R.chutes = R.chutes || []).push({ l: log, t: R.t + 0.9 }); if (CG.onScreen(p.x, p.y)) CG.sfx('swing'); G.text(c.x, c.y - 60, 'TIMBER !', '#e8ffb0', true); G.unstick(p, 9); return; }
+      const log = { tx: k.a.x, ty: k.a.y, halves: 2, cut: false, dir: p.face, fall: R.t, by: null }; S.logs.push(log); (R.chutes = R.chutes || []).push({ l: log, t: R.t + 0.9 }); if (CG.onScreen(p.x, p.y)) CG.sfx('swing'); G.text(c.x, c.y - 60, 'TIMBER !', '#e8ffb0', true); G.unstick(p, 9); if (CG.XpTravail) CG.XpTravail.donner(CG.XpTravail.ARBRE, c.x, c.y); return; }
     const l = k.l; l.cut = true; l.halves--; l.by = null; if (l.halves <= 0) S.logs.splice(S.logs.indexOf(l), 1);
     if (CG.Equipement) CG.Equipement.ctx = 'hache'; try { G.gain('bois', Ab.GAIN, c.x, c.y - 30); } finally { if (CG.Equipement) CG.Equipement.ctx = null; }
-    G.puff(c.x, c.y - 8, '#c9a56b', 14, 110, 4); CG.sfx('coin');
+    G.puff(c.x, c.y - 8, '#c9a56b', 14, 110, 4); CG.sfx('coin'); if (CG.XpTravail) CG.XpTravail.donner(CG.XpTravail.TRONC, c.x, c.y);
   };
 })(window.CG);

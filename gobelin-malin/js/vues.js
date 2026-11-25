@@ -39,10 +39,10 @@
   V.ANNEAUX = [
     ['d25', 'b1', 'd1', 'fm1'],
     ['d4', 'g2', 'b3', 'b2', 'b21', 'b18', 'b25', 'd10', 'g3', 'b41', 's6', 'm0'],
-    ['d23', 'd26', 'd3', 'd17', 'x12', 'x11', 'b6', 'b4', 'b10', 'b42', 'd11', 'x16', 'g20', 'x1', 'g4', 's2', 'x9', 'al1', 's12', 'm1'],
+    ['d23', 'd26', 'd3', 'd17', 'x12', 'x11', 'b6', 'b4', 'b10', 'b42', 'b51', 'd11', 'x16', 'g20', 'x1', 'g4', 's2', 'x9', 'al1', 's12', 'm1'],
     ['d5', 'x6', 'd9', 'd27', 'x19', 'b17', 'd8', 'b22', 'x5', 'b23', 'b7', 'b11', 'x17', 'b8', 'b5', 'b29', 'g6', 'g5', 'g21', 'x13', 'g7', 'x2', 's20', 'cm1', 's3', 'x18', 'm2', 'm3'],
-    ['x3', 'd6', 'd7', 'd18', 'd12', 'x15', 'd28', 'd20', 'd19', 'x7', 'b13', 'b14', 'b24', 'b20', 'x14', 'b9', 'b19', 'b27', 'b12', 'b30', 'x4', 'g8', 'g10', 'g13', 'x8', 'g11', 'g15', 'al2', 's21', 's10', 's5', 's4', 's14', 's7', 'm4', 'm5'],
-    ['m7', 'd15', 'd13', 'd21', 'd22', 'b31', 'b15', 'b26', 'b40', 'b28', 'b16', 'g9', 'x20', 'g14', 'g12', 'x10', 's8', 'al3', 's9', 's11', 'm6']];
+    ['x3', 'd6', 'd7', 'd18', 'd12', 'x15', 'd28', 'd20', 'd19', 'x7', 'b13', 'b14', 'b24', 'b52', 'b20', 'x14', 'b9', 'b19', 'b27', 'b12', 'b30', 'x4', 'g8', 'g10', 'g13', 'x8', 'g11', 'g15', 'al2', 's21', 's10', 's5', 's4', 's14', 's7', 'm4', 'm5'],
+    ['m7', 'd15', 'd13', 'd21', 'd22', 'b31', 'b15', 'b26', 'b40', 'b53', 'b28', 'b16', 'g9', 'x20', 'g14', 'g12', 'x10', 's8', 'al3', 's9', 's11', 'm6']];
   V.ranger = function (files) { const tous = [].concat.apply([], files), par = {}, vu = {}, out = []; tous.forEach(n => { par[n.id] = n; });
     [].concat.apply([], V.ANNEAUX).forEach(id => { if (par[id] && !vu[id]) { vu[id] = 1; out.push(par[id]); } }); tous.forEach(n => { if (!vu[n.id]) out.push(n); }); files.length = 0; files.push(out); };
   // ---------- la forme de chaque famille ----------
@@ -65,9 +65,9 @@
     grille[cle(0, 0)] = 'centre';
     for (let k = 1; reste > 0 && k < 12; k++) {
       if (k > 2 && reste < 8 * k - 4) { // pas de quoi remplir un carré entier : deux petites ailes, de part et d'autre, collées aux deux passages
-        K = k; partiel = true; const axe = (k - 1) % 2 ? [[1, 0], [-1, 0]] : [[0, -1], [0, 1]], suite = [].concat.apply([], files.map(f => f.splice(0))); reste = 0;
+        K = k; partiel = true; const suite = [].concat.apply([], files.map(f => f.splice(0))), deux = (k - 1) % 2 ? [[1, 0], [-1, 0]] : [[0, -1], [0, 1]], axe = suite.length > 2 * (2 * k - 1) ? [[1, 0], [-1, 0], [0, -1], [0, 1]] : deux; reste = 0; /* trop de cases pour deux ailes : quatre ailes, une par côté */
         const ordre = [0]; for (let i = 1; i < k; i++) ordre.push(-i, i);
-        suite.forEach((n, i) => { const d = axe[i % 2], o = ordre[Math.floor(i / 2)], x = d[0] * k + (d[0] ? 0 : o), y = d[1] * k + (d[1] ? 0 : o); grille[cle(x, y)] = n.id; });
+        suite.forEach((n, i) => { const d = axe[i % axe.length], o = ordre[Math.floor(i / axe.length)]; if (o === undefined) return; const x = d[0] * k + (d[0] ? 0 : o), y = d[1] * k + (d[1] ? 0 : o); grille[cle(x, y)] = n.id; });
         break;
       }
       K = k; const tour = anneau(k), libres = tour.filter(c => !(Math.abs(c[0]) === k && Math.abs(c[1]) === k)), m = Math.min(libres.length, reste);

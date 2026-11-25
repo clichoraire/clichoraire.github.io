@@ -7,6 +7,9 @@
   Oc.a = k => { const q = CG.S && CG.S.player.porte; return !!(q && q[k]); };
   const fi0 = D.findInteract; D.findInteract = function () {
     const it = fi0.apply(this, arguments), k = it && Oc.BESOIN[it.type]; if (!k || Oc.a(k)) return it;
-    return null; /* sans l'outil : aucun indice à l'écran, et E ne fait rien */
+    if (it.type !== 'bush') return null; /* sans l'outil : aucun indice à l'écran, et E ne fait rien */
+    // sans gants, le buisson ne compte pas : on regarde ce qu'il y a d'autre ici (un coffre, un animal, un gobelin...) au lieu de ne rien proposer
+    Oc.saute = true; let autre = null; try { autre = fi0.apply(this, arguments); } finally { Oc.saute = false; }
+    return autre && Oc.BESOIN[autre.type] && !Oc.a(Oc.BESOIN[autre.type]) ? null : autre;
   };
 })(window.CG);

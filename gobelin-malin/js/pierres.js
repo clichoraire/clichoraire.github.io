@@ -39,13 +39,30 @@
   }
   function enregistrer(t) {
     const k = type(t), r = t.rec; if (CG.BUILDS[k]) return;
-    CG.BUILDS[k] = { nom: 'Pierre tombale de ' + r.name, icon: '🪦', w: 1, h: 1, cat: 'clan', cout: { minerai: Tm.ROCHE }, tombe: t.id, desc: 'Pour se souvenir de ' + r.name + '. Pose-la là où le clan pourra venir ' + (fem(r) ? 'la' : 'le') + ' saluer.' };
+    CG.BUILDS[k] = { nom: 'Pierre tombale de ' + r.name, icon: '🪦', w: 1, h: 1, cat: 'clan', cout: { minerai: Tm.ROCHE }, tombe: t.id, desc: 'Pour se souvenir de ' + r.name + ', ' + (() => { const J = CG.JOBS[r.job] || CG.JOBS.aucun; return J.icon + ' ' + (fem(r) && J.nomF ? J.nomF : J.nom).toLowerCase(); })() + ' de niveau ' + (r.lvl || 1) + '. Pose-la là où le clan pourra venir ' + (fem(r) ? 'la' : 'le') + ' saluer.' };
     if (Art.extra) Art.extra[k] = { w: 44, h: 60, draw(c) { dessin(c, t.v, r.name); }, anim(g, cx, by, tt) { pied(g, cx, by, tt, t); } };
   }
   function oublier(t) { const S = CG.S, k = type(t); S.buildings.filter(b => b.type === k).forEach(b => G.removeBuilding(b)); const l = liste(), i = l.indexOf(t); if (i >= 0) l.splice(i, 1); delete CG.BUILDS[k]; if (Art.extra) delete Art.extra[k]; }
   const posee = t => CG.S.buildings.find(b => b.type === type(t) && !b.site) || null;
   const enAttente = () => liste().filter(t => t.pose === null || t.pose === undefined);
   Tm.liste = liste; Tm.posee = posee;
+  // ---------- le ✕ sur la pierre qui attend dans la barre de construction : oublier ce gobelin pour de bon ----------
+  // Plus de pierre, plus de souvenirs : personne n'en reparle, on ne peut plus le ramener (ni par le sort, ni par la sorcière). Le clan perd OUBLI de moral.
+  Tm.OUBLI = 3;
+  if (!document.getElementById('tm-css')) { const st = document.createElement('style'); st.id = 'tm-css'; st.textContent = '.bb-oubli{position:absolute;top:-7px;right:-7px;width:19px;height:19px;border-radius:50%;background:#7a2018;border:2px solid #e0a090;color:#fff;font:700 11px/15px "Trebuchet MS",system-ui,sans-serif;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.6);z-index:2}.bb-oubli:hover{background:#c8322a;border-color:#fff}'; document.head.appendChild(st); }
+  Tm.oublierTout = function (t) {
+    const S = CG.S, R = CG.R, r = t.rec, nom = r.name; if (!liste().includes(t)) return false;
+    S.goblins.forEach(g => { if (g.tombeDem && g.tombeDem.id === t.id) g.tombeDem = null; if (g.recueil && g.recueil.t === t) { g.recueil = null; g.cine = false; g.bubble = null; G.resetGoblin(g); } });
+    if (R && R.tombeSoir && R.tombeSoir.t === t) R.tombeSoir = null; if (R && R.build && R.build.type === type(t)) R.build = null;
+    oublier(t); S.morts = (S.morts || []).filter(o => !(o.id === r.id && o.name === nom)); if (S.tombeNotes) S.tombeNotes = S.tombeNotes.filter(n => n.indexOf(nom) < 0);
+    S.morale = Math.max(0, S.morale - Tm.OUBLI); CG.sfx('no'); UI.toast('🕳️ La pierre de ' + nom + ' est brisée. Plus personne ne parlera ' + (fem(r) ? 'd\'elle' : 'de lui') + '. (moral -' + Tm.OUBLI + ')'); if (CG.Bt) CG.Bt.key = null; return true;
+  };
+  Tm.demanderOubli = function (k) {
+    const t = deType(k); if (!t) return; const r = t.rec;
+    UI.dialog({ who: 'Oublier ' + r.name + ' ?', tag: '🪦 sa pierre tombale',
+      text: 'Tu vas briser la pierre de ' + r.name + ' et effacer tous les souvenirs qu\'il en reste. Plus personne ne parlera ' + (fem(r) ? 'd\'elle' : 'de lui') + ', personne ne te demandera sa pierre, et on ne pourra plus jamais ' + (fem(r) ? 'la' : 'le') + ' ramener à la vie. Le clan le sentira passer : moral -' + Tm.OUBLI + ' %.',
+      options: [{ label: '🕳️ Oui, oublier ' + r.name + ' pour toujours', sub: 'Moral -' + Tm.OUBLI + ' % · impossible à défaire', fn: () => Tm.oublierTout(t) }, { label: 'Non, je garde sa pierre', echap: true }] });
+  };
 
   // ---------- un gobelin meurt : sa pierre attend dans la barre de construction ----------
   const hg0 = G.hurtGoblin; G.hurtGoblin = function (g) {

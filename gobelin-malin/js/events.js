@@ -74,14 +74,14 @@
     const bonus = 4 + S.day * 2; S.morale = Math.min(100, S.morale + 3);
     const p = S.player; G.gain('or', bonus, p.x, p.y - 60);
     G.banner('Victoire !', 'Le village est sauf. Les gobelins sortent de leurs huttes. (+' + bonus + ' or)', '#b8ffb0'); CG.sfx('victory');
-    if (ev.lord && R.visitors.includes(ev.lord)) { CG.UI.toast('Le seigneur démon : « Bien combattu, petite peau verte. Prends ceci. »'); G.giveScroll(pick(CG.SCROLL_POOL), ev.lord.x, ev.lord.y); leave(ev.lord); }
+    if (ev.lord && R.visitors.includes(ev.lord)) { CG.UI.toast('Le seigneur démon : « Bien combattu, petite peau verte. Prends ceci. »'); G.giveScroll((G.newScroll && G.newScroll(true)) || 'etincelle', ev.lord.x, ev.lord.y); leave(ev.lord); }
   }
 
   // ---------- visiteurs ----------
   const VIS = {
     nain: { nom: 'Borin, marchand nain', look: 'nain', hello: 'Ho, peau verte ! J\'ai des lames, des potions et de la bonne camelote.' },
     elfe: { nom: 'Élowyn, elfe voyageuse', look: 'elfe', hello: 'Paix, chef gobelin. La forêt m\'a parlé de toi. Veux-tu apprendre ma magie ?' },
-    sorciere: { nom: 'Mémé Crapaude, sorcière', look: 'sorciere', hello: 'Hi hi hi ! Des parchemins pas chers, un peu mâchouillés par mon crapaud.' },
+    sorciere: { nom: 'Mémé Crapaude, sorcière', look: 'sorciere', hello: 'Hi hi hi ! Des tomes de sorts pas chers, un peu mâchouillés par mon crapaud.' },
     demonMarchand: { nom: 'Azgoth, colporteur démon', look: 'demonMarchand', hello: 'Pas de bagarre aujourd\'hui. Que du commerce. De la magie... brûlante.' },
     nomade: { nom: 'Gobelins errants', look: 'gobelin', hello: 'Chef ! Notre clan a été chassé par les humains. On peut rester chez vous ?' }
   };
@@ -89,22 +89,22 @@
     const v = { id: S.nextId++, role, look, x, y, face: 1, step: 0, moving: false, state: 'arrive', dest, exit, seed: Math.random() * 100, leaveAt: Math.min(18.5, S.hour + 4.5) };
     G.goTo(v, dest.x, dest.y); R.visitors.push(v); return v;
   }
-  function scrollItem(id, mul) { const sp = CG.SPELLS[id]; return { scroll: id, icon: '📜', label: 'Parchemin : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: Math.round(sp.prix * mul), stock: 1 }; }
+  function scrollItem(id, mul) { const sp = CG.SPELLS[id]; return { scroll: id, icon: '📖', label: 'Tome : ' + sp.nom, desc: 'Cercle de magie ' + CG.cercle(id), prix: Math.round(sp.prix * mul), stock: 1 }; }
   function stockFor(role) { const l = stockFor0(role), i = l.findIndex(q => q.label === 'Fiole de vie'); /* à côté de la fiole de vie : la fiole de mana */
-    if (i >= 0) l.splice(i + 1, 0, { icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('mana') : '💧', label: 'Fiole de mana', desc: 'Te redonne du mana.', prix: l[i].prix + 2, stock: 2, buy: () => { const p = S.player; p.fioles = p.fioles || {}; p.fioles.mana1 = (p.fioles.mana1 || 0) + 1; } });
+    if (i >= 0) l.splice(i + 1, 0, { icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('mana') : '💧', label: 'Fiole de mana', desc: 'Te redonne du mana.', prix: 80, stock: 2, buy: () => { const p = S.player; p.fioles = p.fioles || {}; p.fioles.mana1 = (p.fioles.mana1 || 0) + 1; } });
     if (!S.chefHatOwned && CG.Mode && CG.Mode.CHEF) l.push({ icon: '🪶', label: 'Coiffe de chef', desc: '+' + Math.round(CG.Mode.CHEF.dmg * 100) + ' % de dégâts · +' + String(CG.Mode.CHEF.mana).replace('.', ',') + ' mana par seconde · se porte sur ta tête', prix: CG.Mode.CHEF.marchand || 450, stock: 1, buy: () => { S.chefHatOwned = true; CG.UI.toast('🪶 Coiffe de chef : dans ton sac. Mets-la dans la case « Chapeau » de ton inventaire.'); } }); /* elle va dans le sac : on la met soi-même */ /* dès le début, tout marchand peut vendre la coiffe à plumes */
     return l.concat(CG.Outils ? CG.Outils.stock(role) : []); } /* et les objets spéciaux des gobelins (outils.js) */
   function stockFor0(role) {
     const p = S.player, potion = (prix, n) => ({ icon: CG.Alchimie && CG.Alchimie.svg ? CG.Alchimie.svg('vie') : '🧪', label: 'Fiole de vie', desc: 'Te redonne de la vie.', prix, stock: n, buy: () => { p.potions++; } });
     // un marchand n'a des parchemins que parfois (ch = chance par parchemin), et de préférence des sorts que tu n'as pas
     const sc = (ids, n, mul, ch) => CG.shuffle(ids.slice()).sort((a, b) => (!!(p.spells.includes(a) || p.scrolls[a])) - (!!(p.spells.includes(b) || p.scrolls[b]))).slice(0, n).filter(() => Math.random() < ch / (CG.SortsRares ? CG.SortsRares.RARE : 1)).map(id => scrollItem(id, mul)); /* deux fois plus rares sur les étals (sortsrares.js) */
-    if (role === 'nain') return [potion(12, 3),
+    if (role === 'nain') return [potion(80, 3),
       { icon: '🗡️', label: 'Lame naine', desc: 'Ton arme frappe plus fort.', prix: 40 + 35 * p.weapon, stock: 1, buy: () => { p.weapon++; } },
       { icon: '🛡️', label: 'Cotte renforcée', desc: 'Ton armure te protège mieux.', prix: 40 + 35 * p.armor, stock: 1, buy: () => { p.armor++; } },
       { icon: '🪨', label: '10 minerais', desc: 'Pour ton forgeron.', prix: 22, stock: 2, buy: () => { S.res.minerai += 10; } }].concat(sc(['feu', 'bouclier', 'cri', 'retour', 'murfeu', 'golem'], 1, 1, 0.35));
-    if (role === 'elfe') return sc(['etincelle', 'soin', 'racines', 'glace', 'bouclier', 'eclair', 'illusion', 'retour', 'hate'], 2, 1, 0.5).concat([potion(10, 3)]);
-    if (role === 'sorciere') return sc(CG.SCROLL_POOL.filter(i => i !== 'meteore'), 2, 0.75, 0.55).concat([potion(9, 3), { icon: '🦴', label: '5 os', desc: 'Pour les potions de tes alchimistes.', prix: 30, stock: 3, buy: () => { S.res.os = (S.res.os || 0) + 5; } }]).concat(CG.Feu ? CG.Feu.stock() : []); // des os pour les potions, et ses poudres pour le feu de camp
-    return sc(['feu', 'meteore', 'cri', 'eclair', 'murfeu'], 2, 1, 0.45).concat([{ icon: '❤️', label: 'Pacte de vigueur', desc: 'Plus de vie, pour toujours.', prix: 80, stock: 1, buy: () => { p.maxhp += 10; p.hp += 10; } }]);
+    if (role === 'elfe') return sc(['etincelle', 'soin', 'racines', 'glace', 'bouclier', 'eclair', 'illusion', 'retour', 'hate'], 2, 1, 0.5).concat([potion(80, 3)]);
+    if (role === 'sorciere') return sc(CG.SCROLL_POOL.filter(i => i !== 'meteore'), 2, 0.75, 0.55).concat([potion(80, 3), { icon: '🦴', label: '5 os', desc: 'Pour les potions de tes alchimistes.', prix: 30, stock: 3, buy: () => { S.res.os = (S.res.os || 0) + 5; } }]).concat(CG.Feu ? CG.Feu.stock() : []); // des os pour les potions, et ses poudres pour le feu de camp
+    return sc(['feu', 'meteore', 'cri', 'eclair', 'murfeu'], 2, 1, 0.45).concat([{ icon: '❤️', label: 'Pacte de vigueur', desc: '+5 de vie maximum, pour toujours.', prix: 1000, stock: 1, buy: () => { p.maxhp += 5; p.hp += 5; } }]);
   }
   // ce que disent les gobelins errants en arrivant : une histoire différente à chaque groupe
   const ERRANTS = [
@@ -172,7 +172,7 @@
   function demandPay() {
     const ev = R.event, d = ev.demand; if (!ev || S.res[d.kind] < d.n) { CG.sfx('no'); CG.UI.toast('Tu n\'as plus de quoi payer !'); return; }
     G.pay({ [d.kind]: d.n }); ev.group.forEach(leave); R.event = null;
-    if (Math.random() < 0.4) { CG.UI.toast('Le seigneur démon : « Sage décision. Voici pour ta peine. »'); G.giveScroll(pick(CG.SCROLL_POOL), ev.lord.x, ev.lord.y); }
+    if (Math.random() < 0.4) { CG.UI.toast('Le seigneur démon : « Sage décision. Voici pour ta peine. »'); G.giveScroll((G.newScroll && G.newScroll(true)) || 'etincelle', ev.lord.x, ev.lord.y); }
     else CG.UI.toast('Les démons repartent vers leur portail, satisfaits.');
   }
   function demandDuel() {
@@ -299,12 +299,16 @@
   // Chaque matin : de nouvelles meutes et de nouveaux coffres, ailleurs dans les alentours.
   const WILD = [['loup', 1], ['sanglier', 1], ['gelee', 1], ['champi', 1], ['araignee', 2], ['brigand', 2], ['follet', 3], ['squelette', 3], ['ours', 4], ['ogre', 5], ['diablotin', 6], ['troll', 9]];
   const CHEST_NAMES = { commun: 'Coffre', vivres: 'Caisse de vivres', precieux: 'Coffre précieux', magique: 'Coffre magique', piege: 'Coffre', savoir: 'Idole ancienne', butin: 'Malle de butin' };
+  D.MEUTES_DEBUT = [3, 4, 5, 6]; D.ROUTE_JOURS = 5; D.ROUTE_LARGE = 7; /* meutes des jours 1 à 4 (ensuite : 7 et plus) ; jusqu'au jour ROUTE_JOURS, aucune meute à moins de ROUTE_LARGE cases des chemins du travail */
   D.rollWild = function () {
-    const f = W.field(), day = S.day, spots = [], nPacks = 7 + Math.min(6, Math.floor(day / 2)), nSpots = nPacks + 11;
+    /* les premiers jours : moins de meutes, et aucune près des chemins du travail (du village aux baies, à la chasse, à la mine) */
+    const f = W.field(), day = S.day, spots = [], nPacks = day <= D.MEUTES_DEBUT.length ? D.MEUTES_DEBUT[day - 1] : 7 + Math.min(6, Math.floor(day / 2)), nSpots = nPacks + 11;
+    const buts = day <= D.ROUTE_JOURS && W.POI ? ['baies', 'chasse', 'mine', 'clairiere'].map(k => W.POI[k]).filter(Boolean) : [];
+    const surRoute = (tx, ty) => buts.some(b => { const vx = b.x - W.CX, vy = b.y - W.CY, L2 = vx * vx + vy * vy || 1, k = CG.clamp(((tx - W.CX) * vx + (ty - W.CY) * vy) / L2, 0, 1); return Math.hypot(tx - (W.CX + vx * k), ty - (W.CY + vy * k)) < D.ROUTE_LARGE; });
     for (let k = 0; k < 900 && spots.length < nSpots; k++) {
       const tx = CG.irand(3, CG.MW - 4), ty = CG.irand(3, CG.MH - 4);
       if (f[W.idx(tx, ty)] < 0 || W.tile[W.idx(tx, ty)] === W.FLAT || Math.hypot(tx - W.CX, ty - W.CY) < 15 || Math.hypot(tx - W.GRAVE.x, ty - W.GRAVE.y) < 9 || (S.camps || []).some(c => Math.hypot(c.x - tx, c.y - ty) < 9) || (W.sites || []).some(s => Math.hypot(s.x - tx, s.y - ty) < s.r + 5)) continue; // ni meute ni repaire dans le cimetière, ni sur un repaire déjà installé
-      if (spots.some(s => Math.hypot(s.x - tx, s.y - ty) < 8) || S.buildings.some(b => Math.hypot(b.tx - tx, b.ty - ty) < 6)) continue;
+      if (spots.some(s => Math.hypot(s.x - tx, s.y - ty) < 8) || S.buildings.some(b => Math.hypot(b.tx - tx, b.ty - ty) < 6) || surRoute(tx, ty)) continue;
       spots.push({ x: tx, y: ty });
     }
     const taken = new Set(W.nodes.map(n => W.idx(n.x, n.y)));
@@ -397,8 +401,8 @@
     for (const v of R.visitors) { if (v.state === 'leave' && !v.rattrape) continue; const d = dist(p, v); if (d < bd) { bd = d; best = { type: 'visitor', obj: v, label: 'Parler' }; } }
     if (best) return best;
     for (let i = 0; i < W.chestDefs.length; i++) { if (S.chests.includes(i)) continue; const c = W.center(W.chestDefs[i].x, W.chestDefs[i].y); if (dist(p, c) < 54) return { type: 'chest', obj: i, label: 'Ouvrir le coffre' }; }
-    for (const n of W.nodes) if (n.type === 'bush' && !n.gone && Math.hypot(n.x * T + T / 2 - p.x, n.y * T + T / 2 - p.y) < 46) return { type: 'bush', obj: n, label: R.picking && R.picking.n === n ? 'Cueillette en cours... (ne bouge pas)' : 'Cueillir ' + (CG.Art.baie ? CG.Art.baie(n).nom : 'le buisson') + ' (+' + D.BUSH_FOOD * (CG.Art.baie && CG.Art.baie(n) === CG.Art.BAIES[3] ? CG.Art.DOREE_FOIS : 1) + ' 🍖)' };
-    for (const c of R.chests) if (!c.open && dist(p, c) < 54) return { type: 'chestDay', obj: c, label: 'Ouvrir : ' + CHEST_NAMES[c.kind] };
+    for (const c of R.chests) if (!c.open && dist(p, c) < 54) return { type: 'chestDay', obj: c, label: 'Ouvrir : ' + CHEST_NAMES[c.kind] }; // le coffre passe avant le buisson d'à côté : sinon on ne pouvait pas l'ouvrir (surtout sans gants, où le buisson ne propose rien)
+    if (!(CG.OutilChef && CG.OutilChef.saute)) for (const n of W.nodes) if ((n.type === 'bush' || n.type === 'fraise') && !n.gone && Math.hypot(n.x * T + T / 2 - p.x, n.y * T + T / 2 - p.y) < 46) return { type: 'bush', obj: n, label: R.picking && R.picking.n === n ? 'Cueillette en cours... (ne bouge pas)' : 'Cueillir ' + (CG.Art.baie ? CG.Art.baie(n).nom : 'le buisson') + ' (+' + (n.type === 'fraise' && CG.Fraises ? CG.Fraises.CHEF : D.BUSH_FOOD * (CG.Art.baie && CG.Art.baie(n) === CG.Art.BAIES[3] ? CG.Art.DOREE_FOIS : 1)) + ' 🍖)' };
     for (const b of S.buildings) if (b.site) { const d = G.door(b); if (Math.hypot(d.x - p.x, d.y - 20 - p.y) < 46 + b.w * 12) return { type: 'site', obj: b, label: 'Donner un coup de marteau' }; }
     for (const a of S.pets) if (!a.ko && dist(p, a) < 44) return { type: 'pet', obj: a, label: 'Voir ' + a.name };
     const door = G.door(G.find('chief')), nearDoor = dist(p, door) < 58;
@@ -407,7 +411,7 @@
     for (const g of S.goblins) { if (g.hidden) continue; const d = dist(p, g); if (d < bd) { bd = d; best = { type: 'goblin', obj: g, label: !g.met ? 'Faire connaissance' : CG.Soc.taskFor(g) ? 'Parler à ' + g.name + ' 📌 (ta promesse)' : R.fireLit && g.state === 'party' && CG.Soc.courtable(g) ? 'Parler à ' + g.name + ' 💕' : 'Parler à ' + g.name }; } }
     if (best) return best;
     for (const b of S.buildings) if (b.type === 'hut' && !b.site && dist(p, G.door(b)) < 50) return { type: 'hut', obj: b, label: 'Voir qui habite ici' };
-    if (nearDoor) return { type: 'home', label: R.alarm ? 'Ta hutte' : 'Faire une sieste dans ta hutte' };
+    if (nearDoor) return { type: 'home', label: 'Ta hutte' };
     return null;
   };
   D.interact = function () {

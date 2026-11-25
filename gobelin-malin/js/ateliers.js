@@ -24,9 +24,11 @@
 
   // un métier se voit une fois son pouvoir appris (ou si son atelier existe déjà, ou si quelqu'un l'exerce déjà : anciennes parties)
   const bati = t => !!CG.S && CG.S.buildings.some(b => b.type === t && !b.site);
-  CG.jobsAvail = () => CG.JOB_ORDER.filter(j => { const J = CG.JOBS[j]; return !J.tech || G.tech(J.tech) || (J.lieu && bati(J.lieu)) || (!!CG.S && CG.S.goblins.some(g => g.job === j)); });
-  CG.jobOk = j => { const J = CG.JOBS[j]; return !J || !J.lieu || bati(J.lieu); }; // on ne peut le donner que si l'atelier est debout
-  CG.jobManque = j => { const J = CG.JOBS[j]; return J && J.lieu && !bati(J.lieu) ? 'Bâtis d\'abord : ' + CG.BUILDS[J.lieu].nom : ''; };
+  /* une hutte de guérisseur = une seule place : quand elles sont toutes prises, le métier n'est plus proposé aux autres gobelins */
+  At.plein = (j, g) => { if (j !== 'guerisseur' || !CG.S) return false; const n = CG.S.buildings.filter(b => b.type === 'guerisseur' && !b.site).length; return n > 0 && CG.S.goblins.filter(q => q !== g && !q.exile && q.job === 'guerisseur').length >= n; };
+  CG.jobsAvail = g => CG.JOB_ORDER.filter(j => { if (g && j !== g.job && At.plein(j, g)) return false; const J = CG.JOBS[j]; return !J.tech || G.tech(J.tech) || (J.lieu && bati(J.lieu)) || (!!CG.S && CG.S.goblins.some(g => g.job === j)); });
+  CG.jobOk = (j, g) => { const J = CG.JOBS[j]; return (!J || !J.lieu || bati(J.lieu)) && !At.plein(j, g); }; // on ne peut le donner que si l'atelier est debout
+  CG.jobManque = (j, g) => { const J = CG.JOBS[j]; return J && J.lieu && !bati(J.lieu) ? 'Bâtis d\'abord : ' + CG.BUILDS[J.lieu].nom : At.plein(j, g) ? 'Plus de place : bâtis une autre hutte du guérisseur' : ''; };
   // l'artisan va travailler à son atelier (le plus proche) ; sans atelier (ancienne partie), il continue chez lui
   At.lieu = function (g) { const J = CG.JOBS[g.job]; if (!J || !J.lieu || !J.craft) return null; let best = null, bd = 1e9; for (const b of CG.S.buildings) { if (b.type !== J.lieu || b.site) continue; const d = Math.hypot((b.tx + 1) * T - g.x, (b.ty + 2) * T - g.y); if (d < bd) { bd = d; best = b; } } return best; };
 

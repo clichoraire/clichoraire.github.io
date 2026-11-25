@@ -15,6 +15,7 @@
     NIV2: 3, NIV3: [8, 10000], /* un parchemin de niveau II vaut 3 fois le sort ; un niveau III, 8 fois et jamais moins de 10 000 */
     CERCLE: {
       etincelle: 1, maladroit: 1, tetevide: 1, faiblesse: 1, vision: 1, caboche: 1, venin: 1, fleche: 1,
+      eauJet: 1, eauVague: 2, eauGeyser: 4, eauTrombe: 6, eauRaz: 8, /* la magie de l'eau (eau.js) */
       frenesie: 2, ruse: 2, murpierre: 2, antidote: 2, bouclier: 2, feu: 2, glace: 2, ombres: 2, paralysie: 2, racines: 2, verglas: 2,
       coffrepiege: 3, flair: 3, protec: 3, force: 3, cri: 3, cigogne: 3, eclair: 3, faucon: 3, metaSquelette: 3, repousse: 3,
       murfeu: 4, invisible: 4, teleport: 4, coeur: 4, parefeu: 4, sommeil: 4, onde: 4, soin: 4, retour: 4, bombe: 4, invoc: 4, inv_squelette: 4,
@@ -24,7 +25,7 @@
       metaDemon: 8, rayon: 8, temps: 8, inv_demon: 8,
       resurrection: 9, rayons: 9
     },
-    FIXE: { teleport: { mp: 20 } } /* la Téléportation coûte cher au niveau I (elle baisse en montant) ; le Passage entre les mondes ne se vend pas */
+    FIXE: { teleport: { mp: 20 } } /* la Téléportation coûte cher au niveau I (elle baisse en montant) ; le Rappel ne se vend pas */
   };
   const base = id => (SP[id] && SP[id].amelio ? SP[id].amelio.base : id);
   // ---------- 1) les cercles ----------
@@ -83,5 +84,5 @@
   if (Nv.rafraichir) { const ir0 = G.initRuntime; G.initRuntime = function () { const r = ir0.apply(this, arguments); try { Nv.rafraichir(); } catch (e) { /* rien */ } return r; }; }
   // ---------- 4) chez les elfes : le niveau II des sorts qu'on connaît ----------
   Cp.elfes = function () { const p = CG.S.player; return Object.keys(Nv.BASE).filter(b => p.spells.includes(b) && niv(b) === 1 && SP[b + '_2'] && SP[b].prix > 0 && !p.scrolls[b + '_2']).sort((a, b) => Cp.cercle(a) - Cp.cercle(b) || SP[a].prix - SP[b].prix)
-    .map(b => { const id = b + '_2', sp = SP[id]; return { scroll: id, icon: '📜', label: 'Parchemin : ' + sp.nom, desc: 'Cercle ' + Cp.cercle(b) + ' · ' + Nv.T[b][0], prix: sp.prix, stock: 1 }; }); };
+    .map(b => { const id = b + '_2', sp = SP[id]; return { scroll: id, icon: '📖', label: 'Tome : ' + sp.nom, desc: 'Cercle ' + Cp.cercle(b) + ' · ' + Nv.T[b][0], prix: sp.prix, stock: 1 }; }); };
 })(window.CG);

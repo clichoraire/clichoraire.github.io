@@ -11,7 +11,8 @@
   const fam = (f, l) => l.split(' ').forEach(id => { F[id] = f; });
   fam('feu', 'feu murfeu meteore parefeu bombe armFeu metaDemon cri force frenesie inv_feu inv_demon');
   fam('glace', 'glace verglas armGlace inv_eau');
-  fam('foudre', 'etincelle eclair electro paralysie rayon rayons');
+  fam('eau', 'eauJet eauVague eauGeyser eauTrombe eauRaz');
+  fam('foudre', 'etincelle eclair electro paralysie champpara rayon rayons');
   fam('nature', 'racines repousse armRonces soin antidote coeur cigogne');
   fam('poison', 'poison venin armPoison murpoison');
   fam('ombre', 'invisible ombres illusion faiblesse tetevide maladroit vampmana invoc inv_squelette inv_chevalier metaSquelette metaLoup');
@@ -21,7 +22,7 @@
   // tout le reste (téléportation, temps, charme, berceuse, caboche…) : arcane
   Sv.famille = id => F[String(id).replace(/_\d$/, '')] || 'arcane';
   // n° de branches de l'étoile du cercle, et seconde couleur de la famille
-  const STYLE = { feu: [3, '#ffe36b'], glace: [6, '#f0fbff'], foudre: [4, '#ffffff'], nature: [5, '#d8ffb0'], poison: [3, '#b070e0'], ombre: [7, '#4a2a78'], lumiere: [8, '#fffbe0'], terre: [4, '#f0dcae'], vent: [0, '#ffffff'], arcane: [5, '#ffffff'] };
+  const STYLE = { feu: [3, '#ffe36b'], glace: [6, '#f0fbff'], eau: [0, '#dff4ff'], foudre: [4, '#ffffff'], nature: [5, '#d8ffb0'], poison: [3, '#b070e0'], ombre: [7, '#4a2a78'], lumiere: [8, '#fffbe0'], terre: [4, '#f0dcae'], vent: [0, '#ffffff'], arcane: [5, '#ffffff'] };
   const h = (s, i, j) => { const v = Math.sin(s * 12.9898 + i * 78.233 + (j || 0) * 37.719) * 43758.5453; return v - Math.floor(v); };
   const liste = () => { const R = CG.R; return R.svFx || (R.svFx = []); };
 
@@ -29,8 +30,10 @@
   const c0 = G.cast;
   G.cast = function (id) {
     const S = CG.S, R = CG.R; if (!S || !R || !R.bolts) return c0.apply(this, arguments);
-    const p = S.player, mp = p.mp, nb = R.bolts.length, an = R.castAnim || 0, avant = new Set(R.bolts), r = c0.apply(this, arguments);
-    if (!(p.mp < mp - 0.01) && !(R.castAnim > an && R.castAnim > 0.9)) return r; // rien n'est parti (pas de mana, pas de cible, visée en cours)
+    const p = S.player, mp = p.mp, nb = R.bolts.length, an = R.castAnim || 0, avant = new Set(R.bolts), A = CG.audio, son = A && A.SORTS ? A.SORTS[String(id).replace(/_\d$/, '')] || null : null; let r;
+    if (A) A.swap = son; try { r = c0.apply(this, arguments); } finally { var reste = A && A.swap; if (A) A.swap = null; }
+    if (!(p.mp < mp - 0.01) && !(R.castAnim > an && R.castAnim > 0.9)) return r;
+    if (reste) CG.sfx(reste); // le sort est parti sans son ordinaire à remplacer : on joue quand même le sien // rien n'est parti (pas de mana, pas de cible, visée en cours)
     const b = String(id).replace(/_\d$/, ''), f = Sv.famille(b), col = (CG.SPELLS[b] || CG.SPELLS[id] || {}).color || '#c8b8ff', L = liste(), seed = Math.random() * 99;
     L.push({ k: 'cercle', f, col, t0: R.t, seed, suit: true, x: p.x, y: p.y }, { k: 'gerbe', f, col, t0: R.t, seed, suit: true, x: p.x, y: p.y, e: 1 });
     for (const q of R.bolts.slice()) { if (avant.has(q)) continue;
@@ -66,6 +69,8 @@
       g.fillStyle = '#fff2a8'; g.beginPath(); g.arc(x, y - r * 0.2, r * 0.45, 0, TAU); g.fill(); } },
     glace(g, q, k, e) { g.lineCap = 'round'; for (let i = 0; i < 9; i++) { const an = i / 9 * TAU + q.seed, rr = (12 + (1 - Math.pow(1 - k, 2)) * (30 + h(q.seed, i) * 26)) * e, x = Math.cos(an) * rr, y = -22 * e + Math.sin(an) * rr * 0.6 + k * k * 14, s = (3.5 + h(q.seed, i, 1) * 4) * e * (1 - k * 0.4), rot = k * 2 + i;
       g.globalAlpha = Math.min(1, (1 - k) * 1.8); g.strokeStyle = i % 2 ? '#f0fbff' : q.col; g.lineWidth = 1.6; g.beginPath(); for (let b = 0; b < 3; b++) { const a2 = rot + b * Math.PI / 3; g.moveTo(x - Math.cos(a2) * s, y - Math.sin(a2) * s); g.lineTo(x + Math.cos(a2) * s, y + Math.sin(a2) * s); } g.stroke(); } },
+    eau(g, q, k, e) { for (let i = 0; i < 12; i++) { const d = h(q.seed, i) * 0.3, kk = (k - d) / (1 - d); if (kk <= 0 || kk >= 1) continue; const an = i / 12 * TAU + q.seed + kk * 6.5, rr = (26 - kk * 14) * e, x = Math.cos(an) * rr, y = -4 - kk * 46 * e + Math.sin(an) * rr * 0.4, r = (2.4 + h(q.seed, i, 1) * 2.6) * e * (1 - kk * 0.3);
+      g.globalAlpha = Math.min(1, (1 - kk) * 2.5, kk * 7); g.fillStyle = i % 3 ? q.col : '#bfe8ff'; g.beginPath(); g.moveTo(x, y - r * 2.1); g.quadraticCurveTo(x + r * 1.5, y + r * 0.3, x, y + r); g.quadraticCurveTo(x - r * 1.5, y + r * 0.3, x, y - r * 2.1); g.fill(); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x - r * 0.3, y, Math.max(0.6, r * 0.28), 0, TAU); g.fill(); } },
     foudre(g, q, k, e, t) { const pas = Math.floor(t * 22); g.lineCap = 'round'; for (let i = 0; i < 5; i++) { if (h(q.seed + pas, i) < 0.3) continue; const an = h(q.seed + pas, i, 1) * TAU, r0 = 8 * e, r1 = (26 + h(q.seed + pas, i, 2) * 20) * e; g.beginPath(); for (let s = 0; s <= 4; s++) { const rr = r0 + (r1 - r0) * s / 4, a2 = an + (h(q.seed + pas, i, 3 + s) - 0.5) * 0.9; const x = Math.cos(a2) * rr, y = -22 * e + Math.sin(a2) * rr * 0.8; s ? g.lineTo(x, y) : g.moveTo(x, y); }
       g.globalAlpha = (1 - k) * 0.5; g.strokeStyle = q.col; g.lineWidth = 5; g.stroke(); g.globalAlpha = 1 - k; g.strokeStyle = '#ffffff'; g.lineWidth = 1.6; g.stroke(); } },
     nature(g, q, k, e) { for (let i = 0; i < 11; i++) { const d = h(q.seed, i) * 0.3, kk = (k - d) / (1 - d); if (kk <= 0 || kk >= 1) continue; const an = h(q.seed, i, 1) * TAU + kk * 4.5, rr = (16 + h(q.seed, i, 2) * 12 + kk * 8) * e, x = Math.cos(an) * rr, y = -4 - kk * (50 + h(q.seed, i, 3) * 24) * e + Math.sin(an) * 5;

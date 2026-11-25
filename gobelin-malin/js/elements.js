@@ -100,4 +100,14 @@
     g.restore();
   };
   if (CG.Buffs) CG.Buffs.LISTE.push({ k: 'manteau', ic: () => El.M[manteau().id].icon, nom: () => El.M[manteau().id].nom, txt: () => { const d = El.M[manteau().id].desc; return d.charAt(0).toUpperCase() + d.slice(1); }, t: () => { const a = manteau(); return a ? a.t : 0; } });
+  // ---------- les araignées ont le venin dans le sang : le poison leur fait moitié moins mal (POISON_ARAIGNEE) ----------
+  // Tout ce qui est du poison passe par la couleur de dégâts CG.DMG.poison : c'est à elle qu'on le reconnaît.
+  // La foudre fait plus mal à ce qui vit dans l'eau. On la reconnaît à l'éclair qui vient de frapper cet ennemi (R.bolts) ou au tir d'étincelle (R.tirK).
+  El.FOUDRE_EAU = 1.5; El.MARINS = { meduse: 1, crabeTemple: 1, murene: 1, gardienEau: 1, alligator: 1, alligatorVenin: 1, alligatorAncien: 1, crapaud: 1 };
+  El.marin = e => { const d = e && CG.ENEMIES[e.type]; return !!d && (!!El.MARINS[e.type] || /m[ée]duse|crabe|mur[èe]ne|poisson|requin|pieuvre|poulpe|anguille|alligator|crocodile|sir[èe]ne|triton|des eaux|englouti/i.test(d.nom || '')); };
+  El.foudre = e => { const R = CG.R; if (R.tirK === 'bolt') return true; const B = R.bolts || []; for (let i = B.length - 1; i >= 0 && i >= B.length - 8; i--) if (B[i].x2 === e.x && Math.abs(B[i].y2 - (e.y - 18)) < 0.01 && (B[i].life === 0.25 || B[i].life === 0.2 || B[i].life === 0.16)) return true; /* un éclair tout neuf, posé juste avant ce coup */ return false; };
+  { const he1 = G.hurtEnemy; G.hurtEnemy = function (e, dmg) { const R = CG.R; if (!e || !R || e.dead || !El.marin(e) || !El.foudre(e)) return he1.apply(this, arguments); const a = Array.prototype.slice.call(arguments); a[1] = dmg * El.FOUDRE_EAU; if (CG.onScreen(e.x, e.y) && !(e.foudreDit > R.t)) { e.foudreDit = R.t + 1; G.text(e.x, e.y - 62, '⚡ Ça conduit !', '#bfe8ff'); } return he1.apply(this, a); }; }
+  El.POISON_ARAIGNEE = 0.5;
+  El.araignee = e => { const d = e && CG.ENEMIES[e.type]; return !!d && (/araign/i.test(e.type) || /araign/i.test(d.nom || '')); };
+  { const he0 = G.hurtEnemy; G.hurtEnemy = function (e, dmg) { const R = CG.R; if (!e || !R || !CG.DMG || R.dmgCol !== CG.DMG.poison || !El.araignee(e)) return he0.apply(this, arguments); const a = Array.prototype.slice.call(arguments); a[1] = dmg * El.POISON_ARAIGNEE; return he0.apply(this, a); }; }
 })(window.CG);
